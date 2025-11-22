@@ -1,10 +1,12 @@
 
+
 import React from 'react';
 import { Card } from '../components/ui/Card';
 import { 
-  LayoutDashboard, Upload, History, PieChart, ArrowDownWideNarrow, 
-  Settings, ShieldCheck, Database, WifiOff, Edit2, Layers,
-  FileSpreadsheet, Filter, CheckCircle, AlertTriangle
+  LayoutDashboard, History, PieChart, ArrowDownWideNarrow, 
+  Settings, ShieldCheck, Database, WifiOff, Layers,
+  FileSpreadsheet, Filter, Link as LinkIcon,
+  Activity, BarChart3, Radar, LayoutGrid, ListOrdered
 } from 'lucide-react';
 
 export const Help: React.FC = () => {
@@ -122,11 +124,46 @@ export const Help: React.FC = () => {
              </div>
           </Card>
 
+          {/* Guide DASHBOARD (NEW) */}
+          <Card title="Tableau de bord & Widgets">
+             <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                   <div className="p-2 bg-blue-50 rounded text-blue-600"><LayoutDashboard className="w-5 h-5" /></div>
+                   <div>
+                      <h4 className="font-bold text-slate-700 text-sm">Visualisations avancées</h4>
+                      <p className="text-xs text-slate-600 mt-1 mb-2">
+                         Créez des widgets sur mesure pour suivre vos indicateurs clés.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
+                          <div className="flex items-center gap-1"><Radar className="w-3 h-3" /> Radar (Araignée)</div>
+                          <div className="flex items-center gap-1"><LayoutGrid className="w-3 h-3" /> Treemap</div>
+                          <div className="flex items-center gap-1"><Filter className="w-3 h-3" /> Entonnoir</div>
+                          <div className="flex items-center gap-1"><ListOrdered className="w-3 h-3" /> Listes (Top X)</div>
+                          <div className="flex items-center gap-1"><Activity className="w-3 h-3" /> Jauges & KPI</div>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="flex items-start gap-3 bg-indigo-50 p-3 rounded border border-indigo-100">
+                   <div className="p-1.5 bg-white rounded text-indigo-600"><LinkIcon className="w-4 h-4" /></div>
+                   <div>
+                      <h4 className="font-bold text-indigo-900 text-sm">Croisement de données (Jointure)</h4>
+                      <p className="text-xs text-indigo-800 mt-1">
+                         Vous pouvez désormais lier deux tableaux différents dans un widget (Data Blending).
+                      </p>
+                      <p className="text-xs text-indigo-700 mt-1 italic">
+                         Exemple : Affichez le "Chiffre d'affaire" (Tableau Ventes) par "Manager" (Tableau RH) en utilisant l'email comme clé commune.
+                      </p>
+                   </div>
+                </div>
+             </div>
+          </Card>
+
           {/* Guide TCD */}
           <Card title="Tableau croisé dynamique (TCD)">
              <div className="space-y-4">
                 <p className="text-sm text-slate-600">
-                   Le module TCD est un outil puissant pour synthétiser vos données.
+                   Le module TCD est un outil puissant pour synthétiser vos données multi-dimensionnelles.
                 </p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -135,25 +172,25 @@ export const Help: React.FC = () => {
                          <Layers className="w-4 h-4 text-slate-400" /> Multi-niveaux
                       </div>
                       <p className="text-xs text-slate-500">
-                         Ajoutez jusqu'à 3 niveaux de regroupement en ligne (ex: Pays > Ville > Magasin).
+                         Ajoutez jusqu'à 3 niveaux de regroupement en ligne (ex: Pays &gt; Ville &gt; Magasin).
                       </p>
                    </div>
 
                    <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                         <ArrowDownWideNarrow className="w-4 h-4 text-slate-400" /> Redimensionnement
+                         <LinkIcon className="w-4 h-4 text-slate-400" /> Sources liées
                       </div>
                       <p className="text-xs text-slate-500">
-                         Glissez les bordures des en-têtes de colonnes pour ajuster la largeur du tableau à votre convenance.
+                         Enrichissez votre TCD avec des colonnes issues d'un autre tableau via la fonction "Lier une autre source".
                       </p>
                    </div>
                    
                    <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                         <Filter className="w-4 h-4 text-slate-400" /> Tri interactif
+                         <ArrowDownWideNarrow className="w-4 h-4 text-slate-400" /> Interactif
                       </div>
                       <p className="text-xs text-slate-500">
-                         Cliquez sur les en-têtes (libellés ou "Total") pour trier les données par ordre alphabétique ou par valeur.
+                         Glissez les colonnes pour redimensionner, cliquez sur les en-têtes pour trier.
                       </p>
                    </div>
                 </div>
@@ -164,7 +201,7 @@ export const Help: React.FC = () => {
           <Card title="Studio d'analyse">
              <div className="flex flex-col gap-4 h-full">
                 <div className="flex gap-3 items-start">
-                   <div className="p-2 bg-indigo-50 rounded text-indigo-600"><PieChart className="w-5 h-5" /></div>
+                   <div className="p-2 bg-teal-50 rounded text-teal-600"><PieChart className="w-5 h-5" /></div>
                    <div>
                       <h4 className="font-bold text-slate-700 text-sm">Deux modes de lecture</h4>
                       <ul className="text-xs text-slate-600 mt-1 space-y-2">
@@ -178,12 +215,6 @@ export const Help: React.FC = () => {
                          </li>
                       </ul>
                    </div>
-                </div>
-                <div className="bg-slate-50 p-3 rounded border border-slate-100 mt-auto">
-                   <h4 className="font-bold text-slate-700 text-xs mb-1 flex items-center gap-1"><Filter className="w-3 h-3" /> Filtres avancés</h4>
-                   <p className="text-xs text-slate-500">
-                      Vous pouvez appliquer plusieurs filtres cumulatifs pour isoler une population précise avant de lancer l'analyse.
-                   </p>
                 </div>
              </div>
           </Card>
@@ -207,12 +238,6 @@ export const Help: React.FC = () => {
                       <h4 className="font-bold text-slate-700 text-xs mb-1 flex items-center gap-1"><FileSpreadsheet className="w-3 h-3" /> Exports</h4>
                       <p className="text-[10px] text-slate-500">
                          Exportez vos données consolidées ou un import spécifique au format CSV standard.
-                      </p>
-                   </div>
-                   <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                      <h4 className="font-bold text-slate-700 text-xs mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Correction</h4>
-                      <p className="text-[10px] text-slate-500">
-                         Un import erroné ? Allez dans "Historique imports" pour supprimer spécifiquement ce lot de données.
                       </p>
                    </div>
                 </div>
