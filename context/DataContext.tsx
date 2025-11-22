@@ -8,8 +8,10 @@ interface DataContextType {
   datasets: Dataset[];
   currentDataset: Dataset | null;
   currentDatasetId: string | null;
-  batches: ImportBatch[]; // Batches filtrés pour le dataset courant
+  batches: ImportBatch[]; // Tous les batches pour permettre le cross-dataset
+  filteredBatches: ImportBatch[]; // Batches du dataset courant
   savedMappings: Record<string, string>;
+  dashboardWidgets: DashboardWidget[];
   
   // Actions Dataset
   switchDataset: (id: string) => void;
@@ -25,11 +27,11 @@ interface DataContextType {
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;
   updateDatasetConfigs: (datasetId: string, configs: Record<string, FieldConfig>) => void;
 
-  // Actions Dashboard Widgets
-  addWidget: (widget: Omit<DashboardWidget, 'id'>) => void;
-  updateWidget: (id: string, updates: Partial<DashboardWidget>) => void;
-  removeWidget: (id: string) => void;
-  moveWidget: (id: string, direction: 'left' | 'right') => void;
+  // Actions Dashboard Widgets (GLOBAL)
+  addDashboardWidget: (widget: Omit<DashboardWidget, 'id'>) => void;
+  updateDashboardWidget: (id: string, updates: Partial<DashboardWidget>) => void;
+  removeDashboardWidget: (id: string) => void;
+  moveDashboardWidget: (id: string, direction: 'left' | 'right') => void;
   resetDashboard: () => void;
 
   // System
@@ -42,22 +44,15 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'app_data_v3_multi';
+const STORAGE_KEY = 'app_data_v4_global';
 
-// Widgets par défaut lors de la création d'un dataset
-const DEFAULT_WIDGETS: DashboardWidget[] = [
-  {
-    id: 'default-1',
-    title: 'Volume total',
-    type: 'kpi',
-    size: 'sm',
-    config: { metric: 'count', showTrend: true }
-  }
-];
+// Widgets par défaut pour un nouveau dashboard vide
+const DEFAULT_WIDGETS: DashboardWidget[] = [];
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [batches, setAllBatches] = useState<ImportBatch[]>([]); // Tous les batches
+  const [batches, setAllBatches] = useState<ImportBatch[]>([]); 
+  const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidget[]>([]);
   const [savedMappings, setSavedMappings] = useState<Record<string, string>>({});
   
   const [currentDatasetId, setCurrentDatasetId] = useState<string | null>(null);
@@ -65,19 +60,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- MIGRATION & LOAD ---
   useEffect(() => {
     try {
-      const storedV3 = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY);
       
-      if (storedV3) {
-        const parsed = JSON.parse(storedV3);
+      if (stored) {
+        const parsed = JSON.parse(stored);
         setDatasets(parsed.datasets || []);
         setAllBatches(parsed.batches || []);
         setSavedMappings(parsed.savedMappings || {});
+        setDashboardWidgets(parsed.dashboardWidgets || []);
         
-        if (parsed.currentDatasetId && parsed.datasets?.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
+        if (parsed.currentDatasetId) {
           setCurrentDatasetId(parsed.currentDatasetId);
         } else if (parsed.datasets && parsed.datasets.length > 0) {
           setCurrentDatasetId(parsed.datasets[0].id);
         }
+      } else {
+         // Tentative de migration depuis V3 (si existe)
+         const storedV3 = localStorage.getItem('app_data_v3_multi');
+         if (storedV3) {
+            const parsedV3 = JSON.parse(storedV3);
+            setDatasets(parsedV3.datasets || []);
+            setAllBatches(parsedV3.batches || []);
+            setSavedMappings(parsedV3.savedMappings || {});
+            // On ne migre pas les widgets V3 car la structure a changé (global vs local)
+            setCurrentDatasetId(parsedV3.currentDatasetId || null);
+         }
       }
     } catch (e) {
       console.error("Failed to load data", e);
@@ -90,13 +97,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const state: AppState = {
         datasets,
         batches, 
+        dashboardWidgets,
         version: APP_VERSION,
         savedMappings,
         currentDatasetId
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
-  }, [datasets, batches, savedMappings, currentDatasetId]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets]);
 
   // --- COMPUTED ---
   const currentDataset = datasets.find(d => d.id === currentDatasetId) || null;
@@ -113,26 +121,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createDataset = useCallback((name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => {
     const newId = Math.random().toString(36).substr(2, 9);
     
-    // Création de widgets par défaut basés sur les champs disponibles
-    const initialWidgets: DashboardWidget[] = [...DEFAULT_WIDGETS];
-    
-    // Si on a des champs, on ajoute un graphe par défaut
-    if (fields.length > 0) {
-      initialWidgets.push({
-        id: `default-chart-${Date.now()}`,
-        title: `Répartition par ${fields[0]}`,
-        type: 'chart',
-        size: 'md',
-        config: { metric: 'count', dimension: fields[0], chartType: 'bar' }
-      });
-    }
-
     const newDataset: Dataset = {
       id: newId,
       name,
       fields,
       fieldConfigs: fieldConfigs || {},
-      widgets: initialWidgets,
       createdAt: Date.now()
     };
     setDatasets(prev => [...prev, newDataset]);
@@ -147,6 +140,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteDataset = useCallback((id: string) => {
     setDatasets(prev => prev.filter(d => d.id !== id));
     setAllBatches(prev => prev.filter(b => b.datasetId !== id));
+    // Remove widgets linked to this dataset
+    setDashboardWidgets(prev => prev.filter(w => w.config.source?.datasetId !== id));
+
     if (currentDatasetId === id) {
       setCurrentDatasetId(null);
     }
@@ -188,60 +184,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAllBatches(prev => prev.filter(b => b.id !== id));
   }, []);
 
-  // --- ACTIONS WIDGETS ---
+  // --- ACTIONS DASHBOARD WIDGETS (GLOBAL) ---
 
-  const addWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
-    if (!currentDatasetId) return;
+  const addDashboardWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
     const newWidget = { ...widget, id: Math.random().toString(36).substr(2, 9) };
-    setDatasets(prev => prev.map(d => {
-      if (d.id !== currentDatasetId) return d;
-      return { ...d, widgets: [...(d.widgets || []), newWidget] };
-    }));
-  }, [currentDatasetId]);
+    setDashboardWidgets(prev => [...prev, newWidget]);
+  }, []);
 
-  const updateWidget = useCallback((widgetId: string, updates: Partial<DashboardWidget>) => {
-    if (!currentDatasetId) return;
-    setDatasets(prev => prev.map(d => {
-      if (d.id !== currentDatasetId) return d;
-      return { 
-        ...d, 
-        widgets: (d.widgets || []).map(w => w.id === widgetId ? { ...w, ...updates } : w) 
-      };
-    }));
-  }, [currentDatasetId]);
+  const updateDashboardWidget = useCallback((widgetId: string, updates: Partial<DashboardWidget>) => {
+    setDashboardWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, ...updates } : w));
+  }, []);
 
-  const removeWidget = useCallback((widgetId: string) => {
-    if (!currentDatasetId) return;
-    setDatasets(prev => prev.map(d => {
-      if (d.id !== currentDatasetId) return d;
-      return { ...d, widgets: (d.widgets || []).filter(w => w.id !== widgetId) };
-    }));
-  }, [currentDatasetId]);
+  const removeDashboardWidget = useCallback((widgetId: string) => {
+    setDashboardWidgets(prev => prev.filter(w => w.id !== widgetId));
+  }, []);
 
-  const moveWidget = useCallback((widgetId: string, direction: 'left' | 'right') => {
-    if (!currentDatasetId) return;
-    setDatasets(prev => prev.map(d => {
-      if (d.id !== currentDatasetId) return d;
-      const widgets = [...(d.widgets || [])];
+  const moveDashboardWidget = useCallback((widgetId: string, direction: 'left' | 'right') => {
+    setDashboardWidgets(prev => {
+      const widgets = [...prev];
       const idx = widgets.findIndex(w => w.id === widgetId);
-      if (idx === -1) return d;
+      if (idx === -1) return prev;
       
       const swapIdx = direction === 'left' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= widgets.length) return d;
+      if (swapIdx < 0 || swapIdx >= widgets.length) return prev;
       
-      // Swap
       [widgets[idx], widgets[swapIdx]] = [widgets[swapIdx], widgets[idx]];
-      return { ...d, widgets };
-    }));
-  }, [currentDatasetId]);
+      return widgets;
+    });
+  }, []);
 
   const resetDashboard = useCallback(() => {
-    if (!currentDatasetId) return;
-    setDatasets(prev => prev.map(d => {
-      if (d.id !== currentDatasetId) return d;
-      return { ...d, widgets: [...DEFAULT_WIDGETS] };
-    }));
-  }, [currentDatasetId]);
+    setDashboardWidgets([]);
+  }, []);
 
   // --- SYSTEM ---
 
@@ -249,40 +223,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDatasets([]);
     setAllBatches([]);
     setSavedMappings({});
+    setDashboardWidgets([]);
     setCurrentDatasetId(null);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('app_data_v3_multi'); // Cleanup old ver
   }, []);
 
   const loadDemoData = useCallback(() => {
     const id1 = 'demo-rh';
+    const id2 = 'demo-sales';
     
-    // Widgets démo RH
-    const demoWidgets: DashboardWidget[] = [
-      { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { metric: 'count', showTrend: true } },
-      { id: 'w2', title: 'Budget Total', type: 'kpi', size: 'sm', config: { metric: 'sum', valueField: 'Budget', showTrend: true } },
-      { id: 'w3', title: 'Organisations', type: 'kpi', size: 'sm', config: { metric: 'distinct', dimension: 'Organisation' } },
-      { id: 'w4', title: 'Répartition par Organisation', type: 'chart', size: 'md', config: { metric: 'count', dimension: 'Organisation', chartType: 'pie' } },
-      { id: 'w5', title: 'Budget par Organisation', type: 'chart', size: 'md', config: { metric: 'sum', dimension: 'Organisation', valueField: 'Budget', chartType: 'bar' } },
-      { id: 'w6', title: 'Évolution des Effectifs', type: 'chart', size: 'full', config: { metric: 'count', dimension: 'DateModif', chartType: 'line' } }
-    ];
-
+    // Create 2 datasets
     const ds1: Dataset = { 
       id: id1, 
       name: 'Effectifs RH', 
       fields: ['Nom', 'Email', 'Organisation', 'DateModif', 'Commentaire', 'Budget', 'Quantité'], 
-      fieldConfigs: {
-        'Budget': { type: 'number', unit: 'k€' },
-        'Quantité': { type: 'number', unit: '' }
-      },
-      widgets: demoWidgets,
+      fieldConfigs: { 'Budget': { type: 'number', unit: 'k€' } },
       createdAt: Date.now() 
     };
-    
-    const demoBatches = generateSyntheticData(id1);
 
+    // Generate Data
+    const batches1 = generateSyntheticData(id1);
+    
     setDatasets([ds1]);
-    setAllBatches(demoBatches);
+    setAllBatches([...batches1]);
     setCurrentDatasetId(id1);
+
+    // Default Widgets
+    setDashboardWidgets([
+       { 
+          id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', 
+          config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } 
+       },
+       { 
+          id: 'w2', title: 'Budget Global', type: 'kpi', size: 'sm', 
+          config: { source: { datasetId: id1, mode: 'latest' }, metric: 'sum', valueField: 'Budget', showTrend: true } 
+       },
+       { 
+          id: 'w3', title: 'Évolution Effectifs', type: 'chart', size: 'full', 
+          config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', dimension: 'DateModif', chartType: 'line' } 
+       }
+    ]);
+
   }, []);
 
   const updateSavedMappings = useCallback((newMappings: Record<string, string>) => {
@@ -293,24 +275,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const state: AppState = { 
       datasets, 
       batches, 
+      dashboardWidgets,
       version: APP_VERSION, 
       savedMappings,
       currentDatasetId,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets]);
 
   const importBackup = useCallback((jsonData: string) => {
     try {
       const parsed = JSON.parse(jsonData);
       if (!parsed.datasets || !Array.isArray(parsed.datasets)) {
-        throw new Error("Format invalide v3");
+        throw new Error("Format invalide");
       }
       
       setDatasets(parsed.datasets);
       setAllBatches(parsed.batches || []);
       setSavedMappings(parsed.savedMappings || {});
+      setDashboardWidgets(parsed.dashboardWidgets || []);
       
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
@@ -331,8 +315,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       datasets,
       currentDataset,
       currentDatasetId,
-      batches: filteredBatches, 
+      batches: batches, // WARNING: Exposes all batches
+      filteredBatches, // Batches for current dataset
       savedMappings,
+      dashboardWidgets,
       switchDataset,
       createDataset,
       updateDatasetName,
@@ -341,10 +327,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateDatasetConfigs,
       addBatch, 
       deleteBatch, 
-      addWidget,
-      updateWidget,
-      removeWidget,
-      moveWidget,
+      addDashboardWidget,
+      updateDashboardWidget,
+      removeDashboardWidget,
+      moveDashboardWidget,
       resetDashboard,
       importBackup, 
       getBackupJson, 

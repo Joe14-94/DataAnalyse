@@ -22,13 +22,27 @@ export type WidgetType = 'kpi' | 'chart';
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'donut';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full'; // 1 col, 2 cols, 3 cols, 4 cols
 
+export interface WidgetSource {
+  datasetId: string;
+  mode: 'latest' | 'specific';
+  batchId?: string; // Requis si mode === 'specific'
+}
+
 export interface WidgetConfig {
+  // Source Config
+  source?: WidgetSource; 
+  
+  // Data Config
   metric: 'count' | 'sum' | 'avg' | 'distinct';
   dimension?: string; // Champ utilisé pour l'axe X ou le groupement
   valueField?: string; // Champ utilisé pour le calcul (si sum/avg)
+  
+  // Visual Config
   chartType?: ChartType;
   target?: number; // Objectif (pour les KPI)
   showTrend?: boolean; // Afficher l'évolution vs période précédente
+  
+  // Filters
   filterField?: string; // Filtre optionnel spécifique au widget
   filterValue?: string;
 }
@@ -45,8 +59,7 @@ export interface Dataset {
   id: string;
   name: string;
   fields: string[]; // Le schéma de ce dataset (liste des noms)
-  fieldConfigs?: Record<string, FieldConfig>; // Configuration avancée (optionnelle pour compatibilité)
-  widgets?: DashboardWidget[]; // Configuration du dashboard liée au dataset
+  fieldConfigs?: Record<string, FieldConfig>; // Configuration avancée
   createdAt: number;
 }
 
@@ -61,11 +74,11 @@ export interface ImportBatch {
 export interface AppState {
   datasets: Dataset[]; // Liste des jeux de données
   batches: ImportBatch[];
+  dashboardWidgets: DashboardWidget[]; // Widgets globaux du tableau de bord
   version: string;
-  savedMappings?: Record<string, string>; // Dictionnaire Global [Nom Colonne CSV] -> [Nom Champ Système]
-  fields?: string[]; // Deprecated
-  currentDatasetId?: string | null; // ID du dataset actif lors de la sauvegarde
-  exportDate?: string; // Date de l'export pour traçabilité
+  savedMappings?: Record<string, string>; // Dictionnaire Global
+  currentDatasetId?: string | null; 
+  exportDate?: string; 
 }
 
 export type ViewMode = 'dashboard' | 'import' | 'history' | 'settings';
