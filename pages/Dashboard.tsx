@@ -37,7 +37,7 @@ const useWidgetData = (widget: DashboardWidget) => {
       // 2. Find Batch(es)
       const dsBatches = batches
          .filter(b => b.datasetId === source.datasetId)
-         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+         .sort((a, b) => new Date(a.date).getTime() - new Date(a.date).getTime());
 
       if (dsBatches.length === 0) return { error: 'Aucune donnée' };
 
@@ -91,6 +91,14 @@ const useWidgetData = (widget: DashboardWidget) => {
          return parseSmartNumber(row[field], unit);
       };
 
+      // Helper to get unit
+      const getUnit = (field: string | undefined) => {
+          if (!field) return '';
+          return dataset.fieldConfigs?.[field]?.unit || secondaryDataset?.fieldConfigs?.[field]?.unit || '';
+      };
+
+      const currentUnit = (metric === 'sum' || metric === 'avg') && valueField ? getUnit(valueField) : '';
+
       // 3. Process Data (Group & Aggregate)
       
       // If LIST widget (Ranking)
@@ -112,7 +120,7 @@ const useWidgetData = (widget: DashboardWidget) => {
             .slice(0, 10); // Top 10
          
          const maxVal = sorted.length > 0 ? sorted[0].value : 0;
-         return { current: sorted, max: maxVal, unit: valueField ? (dataset.fieldConfigs?.[valueField]?.unit || secondaryDataset?.fieldConfigs?.[valueField]?.unit) : '' };
+         return { current: sorted, max: maxVal, unit: currentUnit };
       }
       
       // If CHART or KPI with Dimension
@@ -132,7 +140,7 @@ const useWidgetData = (widget: DashboardWidget) => {
                 value,
                 fill: COLORS[idx % COLORS.length]
              })).sort((a, b) => b.value - a.value).slice(0, 5); // Limit radial to top 5
-             return { data };
+             return { data, unit: currentUnit };
          }
 
          // Format standard {name, value} (+ size for Treemap)
@@ -147,7 +155,7 @@ const useWidgetData = (widget: DashboardWidget) => {
             data.sort((a, b) => b.value - a.value);
          }
 
-         return { data };
+         return { data, unit: currentUnit };
       } 
       
       // If KPI (Single Value)
@@ -155,9 +163,6 @@ const useWidgetData = (widget: DashboardWidget) => {
          let currentVal = 0;
          let prevVal = 0;
 
-         // Note: Le KPI avec jointure ne supporte pas encore l'historique "prev" sur les données jointes
-         // car cela nécessiterait de joindre aussi le batch N-1 avec le batch secondaire N-1...
-         
          const calc = (rows: any[]) => {
             if (!rows) return 0;
             if (metric === 'count') return rows.length;
@@ -189,7 +194,7 @@ const useWidgetData = (widget: DashboardWidget) => {
             current: currentVal, 
             prev: prevVal,
             trend: (prevBatch && !secondarySource) ? ((currentVal - prevVal) / (prevVal || 1)) * 100 : 0,
-            unit: (metric === 'sum' || metric === 'avg') && valueField ? (dataset.fieldConfigs?.[valueField]?.unit || secondaryDataset?.fieldConfigs?.[valueField]?.unit) : '',
+            unit: currentUnit,
             progress,
             target
          };
@@ -204,9 +209,11 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-xs">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-400 text-xs">{data.error}</div>;
 
+   const { unit } = data;
+
    // --- KPI VIEW ---
    if (widget.type === 'kpi') {
-      const { current, trend, unit, progress, target } = data;
+      const { current, trend, progress, target } = data;
       const isPositive = trend >= 0;
       const style = widget.config.kpiStyle || 'simple';
       // Si jointure active, on désactive la tendance car potentiellement incohérente
@@ -251,7 +258,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
 
    // --- LIST VIEW ---
    if (widget.type === 'list') {
-      const { current, max, unit } = data;
+      const { current, max } = data;
       return (
          <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {current.map((item: any, idx: number) => (
@@ -280,6 +287,9 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    // --- CHART VIEW ---
    const chartData = data.data || [];
    const { chartType } = widget.config;
+   
+   const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
+   const axisFormatter = (val: any) => `${val.toLocaleString()} ${unit || ''}`;
 
    if (chartType === 'radial') {
       return (
@@ -298,6 +308,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   align="right"
                />
                <Tooltip 
+                  formatter={tooltipFormatter}
                   cursor={{fill: '#f8fafc'}}
                   contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}}
                />
@@ -320,7 +331,10 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   fill="#3b82f6"
                   fillOpacity={0.4}
                />
-               <Tooltip contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} />
+               <Tooltip 
+                 formatter={tooltipFormatter}
+                 contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} 
+               />
             </RadarChart>
          </ResponsiveContainer>
       );
@@ -349,7 +363,10 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   );
               }}
             >
-               <Tooltip contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} />
+               <Tooltip 
+                 formatter={tooltipFormatter}
+                 contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} 
+               />
             </Treemap>
          </ResponsiveContainer>
       );
@@ -359,7 +376,10 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
       return (
          <ResponsiveContainer width="100%" height="100%">
             <FunnelChart>
-               <Tooltip contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} />
+               <Tooltip 
+                 formatter={tooltipFormatter}
+                 contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} 
+               />
                <Funnel
                   dataKey="value"
                   data={chartData}
@@ -392,7 +412,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                </Pie>
-               <Tooltip />
+               <Tooltip formatter={tooltipFormatter} />
                <Legend wrapperStyle={{ fontSize: '10px' }} />
             </PieChart>
          </ResponsiveContainer>
@@ -406,7 +426,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
                <YAxis fontSize={10} stroke="#94a3b8" />
-               <Tooltip />
+               <Tooltip formatter={tooltipFormatter} />
                <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{r: 2}} />
             </LineChart>
          </ResponsiveContainer>
@@ -419,7 +439,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
             <YAxis fontSize={10} stroke="#94a3b8" />
-            <Tooltip cursor={{fill: '#f8fafc'}} />
+            <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} />
             <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
          </BarChart>
       </ResponsiveContainer>

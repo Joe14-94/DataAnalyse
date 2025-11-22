@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit } from '../utils';
+import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataRow, RawImportData, FieldConfig } from '../types';
-import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, RefreshCw, Trash2, Settings, Ruler } from 'lucide-react';
+import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, RefreshCw, Trash2, Settings, Ruler, Calendar } from 'lucide-react';
 
 export const Import: React.FC = () => {
   const { 
@@ -127,20 +127,15 @@ export const Import: React.FC = () => {
         if (existingConfigs[mappedName]) {
            initialConfigs[mappedName] = existingConfigs[mappedName];
         } else {
-           // Sinon on essaie de deviner sur les 10 premières lignes
-           const sampleValues = rawData.rows.slice(0, 10).map(r => r[index] || '');
-           const detectedUnit = detectUnit(sampleValues);
+           // Sinon on utilise la détection automatique
+           const sampleValues = rawData.rows.slice(0, 20).map(r => r[index] || '');
+           const detectedType = detectColumnType(sampleValues);
            
-           if (detectedUnit) {
-             initialConfigs[mappedName] = { type: 'number', unit: detectedUnit };
+           if (detectedType === 'number') {
+              const detectedUnit = detectUnit(sampleValues);
+              initialConfigs[mappedName] = { type: 'number', unit: detectedUnit };
            } else {
-             // Si pas d'unité, est-ce que ça ressemble à un nombre pur ?
-             const isNumeric = sampleValues.every(v => !v || !isNaN(parseFloat(v.replace(',', '.'))));
-             if (isNumeric && sampleValues.some(v => v !== '')) {
-               initialConfigs[mappedName] = { type: 'number', unit: '' };
-             } else {
-               initialConfigs[mappedName] = { type: 'text', unit: '' };
-             }
+              initialConfigs[mappedName] = { type: detectedType };
            }
         }
       }
@@ -471,6 +466,7 @@ export const Import: React.FC = () => {
                                  >
                                     <option value="text">Texte</option>
                                     <option value="number">Nombre / Montant</option>
+                                    <option value="date">Date</option>
                                     <option value="boolean">Oui / Non</option>
                                  </select>
                               </div>
@@ -489,6 +485,14 @@ export const Import: React.FC = () => {
                                        value={tempFieldConfigs[mappedVal]?.unit || ''}
                                        onChange={(e) => handleConfigChange(mappedVal, 'unit', e.target.value)}
                                     />
+                                 </div>
+                              )}
+
+                              {/* Info Date */}
+                              {tempFieldConfigs[mappedVal]?.type === 'date' && (
+                                 <div className="animate-in fade-in duration-200 bg-blue-50 p-1.5 rounded border border-blue-100 flex items-center gap-1">
+                                    <Calendar className="w-3 h-3 text-blue-500" />
+                                    <span className="text-[10px] text-blue-600">Format détecté auto.</span>
                                  </div>
                               )}
                            </div>

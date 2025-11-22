@@ -3,7 +3,7 @@
 import { DataRow, RawImportData, ImportBatch } from './types';
 
 // Updated version
-export const APP_VERSION = "202511-105";
+export const APP_VERSION = "202511-107";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -207,6 +207,52 @@ export const detectUnit = (values: string[]): string => {
   }
 
   return '';
+};
+
+/**
+ * Détecte le type de colonne le plus probable (Text, Number, Boolean, Date)
+ */
+export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean' | 'date' => {
+  const sample = values.slice(0, 20).filter(v => v && v.trim() !== '');
+  if (sample.length === 0) return 'text';
+
+  let numberCount = 0;
+  let boolCount = 0;
+  let dateCount = 0;
+  
+  // Regex dates communes : YYYY-MM-DD ou DD/MM/YYYY ou DD-MM-YYYY
+  // On exclut les nombres purs (ex: 2025) qui matcheraient YYYY
+  const dateRegex = /^(\d{4}-\d{2}-\d{2})|(\d{2}\/\d{2}\/\d{4})|(\d{2}-\d{2}-\d{4})$/;
+
+  sample.forEach(val => {
+     const lower = val.toLowerCase().trim();
+     
+     // Check Boolean
+     if (['oui', 'non', 'yes', 'no', 'true', 'false', 'vrai', 'faux', '0', '1'].includes(lower)) {
+        boolCount++;
+     }
+     
+     // Check Date
+     // On vérifie d'abord le regex, puis si c'est une date valide JS
+     if (dateRegex.test(val) && !isNaN(Date.parse(val.split('/').reverse().join('-')))) {
+        dateCount++;
+     }
+
+     // Check Number (supporte 1,000.00 ou 1.000,00)
+     const cleanNum = val.replace(/[^0-9.,-]/g, ''); // On garde juste chiffres et separateurs
+     if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) {
+        numberCount++;
+     }
+  });
+
+  const threshold = sample.length * 0.8; // 80% de correspondance requise
+
+  if (dateCount >= threshold) return 'date';
+  if (boolCount >= threshold) return 'boolean';
+  // Priorité à Date sur Nombre si conflit (ex: 2025-01-01 pourrait être mal interprété si on parse mal)
+  if (numberCount >= threshold) return 'number';
+  
+  return 'text';
 };
 
 export const extractDomain = (email: string): string => {

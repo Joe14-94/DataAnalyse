@@ -12,7 +12,7 @@ export interface RawImportData {
 }
 
 export interface FieldConfig {
-  type: 'text' | 'number' | 'boolean';
+  type: 'text' | 'number' | 'boolean' | 'date';
   unit?: string; // Ex: "k€", "kg", "%"
 }
 

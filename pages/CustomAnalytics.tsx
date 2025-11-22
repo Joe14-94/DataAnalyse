@@ -90,7 +90,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
                 <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer">
                    <input
                       type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2 bg-white"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2"
                       checked={selected.includes(option)}
                       onChange={() => handleToggle(option)}
                    />
@@ -424,6 +424,9 @@ export const CustomAnalytics: React.FC = () => {
   const renderVisuals = () => {
     const data = mode === 'snapshot' ? snapshotData : trendData.data;
     if (!data || data.length === 0) return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée disponible</div>;
+    
+    const currentUnit = (metric === 'sum' && valueField) ? currentDataset?.fieldConfigs?.[valueField]?.unit || '' : '';
+    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${currentUnit}`, metric === 'sum' ? 'Somme' : 'Volume'];
 
     // TABLE VIEW
     if (showTable) {
@@ -434,7 +437,7 @@ export const CustomAnalytics: React.FC = () => {
                    <thead className="bg-slate-50 sticky top-0">
                       <tr>
                          <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">{dimension}</th>
-                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Valeur</th>
+                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Valeur {currentUnit ? `(${currentUnit})` : ''}</th>
                          {isCumulative && <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Cumul</th>}
                       </tr>
                    </thead>
@@ -457,7 +460,7 @@ export const CustomAnalytics: React.FC = () => {
                   <thead className="bg-slate-50 sticky top-0">
                      <tr>
                         <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
-                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total</th>
+                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total {currentUnit ? `(${currentUnit})` : ''}</th>
                         {trendData.series.map(s => (
                            <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">{s}</th>
                         ))}
@@ -489,7 +492,7 @@ export const CustomAnalytics: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                   <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
                   <Legend verticalAlign="top" iconType="circle" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
                   {trendData.series.map((s, idx) => (
                      <Area key={s} type="monotone" dataKey={s} stackId="1" stroke={COLORS[idx % COLORS.length]} fill={COLORS[idx % COLORS.length]} />
@@ -504,7 +507,7 @@ export const CustomAnalytics: React.FC = () => {
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                <YAxis stroke="#94a3b8" fontSize={12} />
-               <Tooltip contentStyle={tooltipStyle} />
+               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
                <Legend verticalAlign="top" iconType="circle" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
                {trendData.series.map((s, idx) => (
                   <Line key={s} type="monotone" dataKey={s} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={true} />
@@ -522,7 +525,7 @@ export const CustomAnalytics: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} fontSize={11} height={60} stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" fontSize={12} />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
+              <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
               <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[4, 4, 0, 0]}>
                 {snapshotData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -538,7 +541,7 @@ export const CustomAnalytics: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
               <XAxis type="number" stroke="#94a3b8" fontSize={12} />
               <YAxis dataKey="name" type="category" width={140} tick={{fontSize: 11}} stroke="#94a3b8" />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
+              <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
               <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[0, 4, 4, 0]}>
                 {snapshotData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -566,7 +569,7 @@ export const CustomAnalytics: React.FC = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
             </PieChart>
           </ResponsiveContainer>
@@ -578,7 +581,7 @@ export const CustomAnalytics: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{fontSize: 11}} stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
               <Area type="monotone" dataKey={isCumulative ? "cumulative" : "value"} stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.2} />
             </AreaChart>
           </ResponsiveContainer>
@@ -591,7 +594,7 @@ export const CustomAnalytics: React.FC = () => {
               <PolarAngleAxis dataKey="name" tick={{fontSize: 11, fill: '#64748b'}} />
               <PolarRadiusAxis stroke="#cbd5e1" />
               <Radar name={metric === 'sum' ? 'Somme' : 'Volume'} dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.3} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
             </RadarChart>
           </ResponsiveContainer>
         );
@@ -618,7 +621,7 @@ export const CustomAnalytics: React.FC = () => {
                   );
               }}
             >
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
             </Treemap>
           </ResponsiveContainer>
         );
@@ -628,7 +631,7 @@ export const CustomAnalytics: React.FC = () => {
               {snapshotData.map((item, idx) => (
                 <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col items-center justify-center text-center">
                    <div className="text-xs text-slate-500 uppercase font-bold truncate w-full mb-2" title={item.name}>{item.name}</div>
-                   <div className="text-2xl font-bold text-slate-700">{item.value.toLocaleString()}</div>
+                   <div className="text-2xl font-bold text-slate-700">{item.value.toLocaleString()} {currentUnit}</div>
                    {isCumulative && <div className="text-xs text-slate-400 mt-1">Cumul: {item.cumulative.toLocaleString()}</div>}
                 </div>
               ))}
@@ -700,14 +703,14 @@ export const CustomAnalytics: React.FC = () => {
                     type="date" 
                     value={startDate} 
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
                  />
                  <span className="text-slate-400 text-sm">à</span>
                  <input 
                     type="date" 
                     value={endDate} 
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
                  />
               </div>
            )}
