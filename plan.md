@@ -32,8 +32,18 @@ Ce document liste les fonctionnalités techniques et fonctionnelles à implémen
 - **Technique** : Extension de `FieldConfig` avec des règles de style CSS dynamiques.
 - **Statut** : ✅ Fait (v202511-110).
 
-## 3. Architecture & Performance
+## 3. Contextualisation & Productivité (Nouveau - V2)
 
-### 3.1. Web Workers
+### 3.1. Widgets de Contexte (Texte/Titre)
+- **Objectif** : Ajouter des zones de texte libre sur le dashboard pour expliquer les chiffres ou séparer les sections.
+- **Statut** : 🔄 En cours (v202511-111).
+
+### 3.2. Duplication de Widget
+- **Objectif** : Bouton pour cloner un widget existant et sa configuration pour gagner du temps.
+- **Statut** : 📅 À faire.
+
+## 4. Architecture & Performance
+
+### 4.1. Web Workers
 - **Objectif** : Déporter les calculs lourds (parsing, agrégations TCD) hors du thread principal pour ne pas figer l'UI.
 - **Statut** : À envisager si > 50k lignes.

@@ -39,7 +39,7 @@ export interface CalculatedField {
 
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
 
-export type WidgetType = 'kpi' | 'chart' | 'list';
+export type WidgetType = 'kpi' | 'chart' | 'list' | 'text'; // Ajout de 'text'
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full'; // 1 col, 2 cols, 3 cols, 4 cols
 export type KpiStyle = 'simple' | 'trend' | 'progress';
@@ -72,6 +72,14 @@ export interface WidgetConfig {
   target?: number; // Objectif (pour les KPI ou Jauges)
   showTrend?: boolean; // Afficher l'évolution vs période précédente
   
+  // Text Config (Nouveau pour WidgetType = 'text')
+  textContent?: string;
+  textStyle?: {
+    align?: 'left' | 'center' | 'right';
+    size?: 'normal' | 'large' | 'xl';
+    color?: 'default' | 'primary' | 'muted';
+  };
+
   // Filters
   filterField?: string; // Filtre optionnel spécifique au widget
   filterValue?: string;

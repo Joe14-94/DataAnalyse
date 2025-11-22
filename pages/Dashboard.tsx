@@ -12,7 +12,7 @@ import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
   Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
-  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type
 } from 'lucide-react';
 import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle } from '../types';
 
@@ -26,6 +26,11 @@ const useWidgetData = (widget: DashboardWidget) => {
    const { batches, datasets, dashboardFilters } = useData();
 
    return useMemo(() => {
+      // TEXT WIDGET BYPASS
+      if (widget.type === 'text') {
+         return { text: widget.config.textContent, style: widget.config.textStyle };
+      }
+
       const { source, metric, dimension, valueField, target, secondarySource } = widget.config;
       if (!source) return null;
 
@@ -139,7 +144,9 @@ const useWidgetData = (widget: DashboardWidget) => {
          workingRows.forEach(row => {
             const key = String(row[dimension] || 'Non défini');
             let val = 1;
-            if (metric === 'sum' && valueField) val = parseVal(row, valueField);
+            if (metric === 'sum' && valueField) {
+               val = parseVal(row, valueField);
+            }
             counts[key] = (counts[key] || 0) + val;
          });
          
@@ -210,7 +217,7 @@ const useWidgetData = (widget: DashboardWidget) => {
          };
       }
 
-   }, [batches, datasets, widget.config, dashboardFilters]);
+   }, [batches, datasets, widget.config, dashboardFilters, widget.type]);
 };
 
 // --- SUB COMPONENTS ---
@@ -220,6 +227,20 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-xs">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-400 text-xs">{data.error}</div>;
+
+   // --- TEXT WIDGET DISPLAY ---
+   if (widget.type === 'text') {
+      const style = widget.config.textStyle || {};
+      const alignment = style.align || 'left';
+      const size = style.size === 'large' ? 'text-lg' : style.size === 'xl' ? 'text-2xl' : 'text-sm';
+      const color = style.color === 'primary' ? 'text-blue-600' : style.color === 'muted' ? 'text-slate-400' : 'text-slate-700';
+      
+      return (
+         <div className={`h-full w-full p-2 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: alignment }}>
+            {widget.config.textContent || '...'}
+         </div>
+      );
+   }
 
    const { unit } = data;
 
@@ -509,7 +530,10 @@ export const Dashboard: React.FC = () => {
   });
 
   const handleSaveWidget = () => {
-     if (!tempWidget.title || !tempWidget.config?.source?.datasetId) return;
+     if (!tempWidget.title) return;
+
+     // Validation pour widget non-text
+     if (tempWidget.type !== 'text' && !tempWidget.config?.source?.datasetId) return;
 
      if (editingWidgetId) {
         updateDashboardWidget(editingWidgetId, tempWidget);
@@ -612,17 +636,14 @@ export const Dashboard: React.FC = () => {
                            delete newF[field];
                            if(Object.keys(newF).length === 0) clearDashboardFilters();
                            else {
-                              // Manual reset per key is tedious in context, 
-                              // implementing a simpler full clear for now via clearDashboardFilters
-                              // Ideally update context to remove single key.
-                              // Workaround: re-set all except this one.
-                              // Actually context exposes setDashboardFilter but not remove.
-                              // Let's just provide Clear All for now or hack it by setting empty
+                               // Since setDashboardFilter only sets, clear all is safest for now
+                               // to respect current context limitations. 
+                               // Or implement granular remove in context (future task).
+                               clearDashboardFilters(); 
                            }
                         }}
                         className="ml-2 text-slate-400 hover:text-red-500"
                      >
-                        {/* Allow individual remove later, for now just display */}
                      </button>
                   </div>
                ))}
@@ -656,8 +677,11 @@ export const Dashboard: React.FC = () => {
                   // Data hook wrapper component to respect hooks rules
                   const WidgetWrapper = () => {
                      const data = useWidgetData(widget);
+                     const isText = widget.type === 'text';
+                     const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200';
+
                      return (
-                        <div className={`bg-white rounded-lg border ${isEditMode ? 'border-blue-300 ring-2 ring-blue-50' : 'border-slate-200'} shadow-sm p-4 flex flex-col h-64 relative group transition-all`}>
+                        <div className={`${bgColor} rounded-lg border ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col h-64 relative group transition-all`}>
                            {isEditMode && (
                               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded shadow-sm z-10">
                                  <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowLeft className="w-3 h-3" /></button>
@@ -666,9 +690,12 @@ export const Dashboard: React.FC = () => {
                                  <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600"><Trash2 className="w-3 h-3" /></button>
                               </div>
                            )}
-                           <h3 className="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider truncate" title={widget.title}>
+                           
+                           {/* Title hidden for text widget if it's just for spacing, but shown if present */}
+                           <h3 className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider truncate" title={widget.title}>
                               {widget.title}
                            </h3>
+                           
                            <div className="flex-1 min-h-0">
                               <WidgetDisplay widget={widget} data={data} />
                            </div>
@@ -701,9 +728,38 @@ export const Dashboard: React.FC = () => {
                
                <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
                   
-                  {/* 1. General Info */}
+                  {/* 0. Type Selector (Top Level) */}
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-2">Type de visualisation</label>
+                     <div className="grid grid-cols-4 gap-3">
+                        {[
+                           { id: 'kpi', label: 'Indicateur', icon: Activity },
+                           { id: 'chart', label: 'Graphique', icon: BarChart3 },
+                           { id: 'list', label: 'Classement', icon: ListOrdered },
+                           { id: 'text', label: 'Texte', icon: Type },
+                        ].map(t => {
+                           const Icon = t.icon;
+                           const isSelected = tempWidget.type === t.id;
+                           return (
+                              <button 
+                                 key={t.id}
+                                 onClick={() => setTempWidget({...tempWidget, type: t.id as WidgetType})}
+                                 className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all
+                                    ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <Icon className="w-5 h-5" />
+                                 <span className="font-medium text-xs">{t.label}</span>
+                              </button>
+                           )
+                        })}
+                     </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-4"></div>
+
+                  {/* 1. General Info & Source (Common) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="col-span-2">
+                     <div className={tempWidget.type === 'text' ? 'col-span-2' : ''}>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Titre du widget</label>
                         <input 
                            type="text" 
@@ -714,8 +770,8 @@ export const Dashboard: React.FC = () => {
                         />
                      </div>
                      
-                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Taille</label>
+                     <div className={tempWidget.type === 'text' ? 'hidden' : ''}>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Taille</label>
                         <select 
                            className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
                            value={tempWidget.size}
@@ -728,280 +784,314 @@ export const Dashboard: React.FC = () => {
                         </select>
                      </div>
 
-                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Source de données</label>
-                        <select 
-                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                           value={tempWidget.config?.source?.datasetId || ''}
-                           onChange={e => setTempWidget({
-                              ...tempWidget, 
-                              config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } }
-                           })}
-                        >
-                           {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                        </select>
-                     </div>
-                  </div>
-
-                  {/* DATA BLENDING (Optional) */}
-                  <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                              <LinkIcon className="w-4 h-4" /> Données liées (Jointure)
-                          </h4>
-                          {tempWidget.config?.secondarySource && (
-                              <button 
-                                  onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, secondarySource: undefined } })}
-                                  className="text-xs text-red-600 hover:underline"
-                              >
-                                  Retirer
-                              </button>
-                          )}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                              <label className="block text-xs font-medium text-indigo-800 mb-1">Tableau à lier</label>
-                              <select 
-                                  className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
-                                  value={tempWidget.config?.secondarySource?.datasetId || ''}
-                                  onChange={e => {
-                                      const val = e.target.value;
-                                      setTempWidget({
-                                          ...tempWidget, 
-                                          config: { 
-                                              ...tempWidget.config!, 
-                                              secondarySource: val ? { 
-                                                  datasetId: val, 
-                                                  joinFieldPrimary: '', 
-                                                  joinFieldSecondary: '' 
-                                              } : undefined
-                                          }
-                                      });
-                                  }}
-                              >
-                                  <option value="">-- Aucun --</option>
-                                  {datasets.filter(d => d.id !== tempWidget.config?.source?.datasetId).map(d => (
-                                      <option key={d.id} value={d.id}>{d.name}</option>
-                                  ))}
-                              </select>
-                          </div>
-                          
-                          {tempWidget.config?.secondarySource && (
-                              <>
-                                  <div>
-                                      <label className="block text-xs font-medium text-indigo-800 mb-1">Clé source princ.</label>
-                                      <select 
-                                          className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
-                                          value={tempWidget.config?.secondarySource?.joinFieldPrimary || ''}
-                                          onChange={e => setTempWidget({
-                                              ...tempWidget, 
-                                              config: { 
-                                                  ...tempWidget.config!, 
-                                                  secondarySource: { ...tempWidget.config!.secondarySource!, joinFieldPrimary: e.target.value } 
-                                              }
-                                          })}
-                                      >
-                                          <option value="">-- Choisir --</option>
-                                          {availableFields.map(f => <option key={f} value={f}>{f}</option>)}
-                                      </select>
-                                  </div>
-                                  <div>
-                                      <label className="block text-xs font-medium text-indigo-800 mb-1">Clé source lièe</label>
-                                      <select 
-                                          className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
-                                          value={tempWidget.config?.secondarySource?.joinFieldSecondary || ''}
-                                          onChange={e => setTempWidget({
-                                              ...tempWidget, 
-                                              config: { 
-                                                  ...tempWidget.config!, 
-                                                  secondarySource: { ...tempWidget.config!.secondarySource!, joinFieldSecondary: e.target.value } 
-                                              }
-                                          })}
-                                      >
-                                          <option value="">-- Choisir --</option>
-                                          {/* Need fields from selected secondary dataset */}
-                                          {(() => {
-                                              const secDs = datasets.find(d => d.id === tempWidget.config?.secondarySource?.datasetId);
-                                              return secDs?.fields.map(f => <option key={f} value={f}>{f}</option>);
-                                          })()}
-                                      </select>
-                                  </div>
-                              </>
-                          )}
-                      </div>
-                  </div>
-
-                  {/* 2. Visual Type Selector */}
-                  <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-2">Type de visualisation</label>
-                     <div className="grid grid-cols-3 gap-3">
-                        {[
-                           { id: 'kpi', label: 'Indicateur (KPI)', icon: Activity },
-                           { id: 'chart', label: 'Graphique', icon: BarChart3 },
-                           { id: 'list', label: 'Classement', icon: ListOrdered },
-                        ].map(t => {
-                           const Icon = t.icon;
-                           const isSelected = tempWidget.type === t.id;
-                           return (
-                              <button 
-                                 key={t.id}
-                                 onClick={() => setTempWidget({...tempWidget, type: t.id as WidgetType})}
-                                 className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-all
-                                    ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <Icon className="w-4 h-4" />
-                                 <span className="font-medium text-sm">{t.label}</span>
-                              </button>
-                           )
-                        })}
-                     </div>
-                  </div>
-
-                  {/* 3. Specific Config based on Type */}
-                  <div className="border-t border-slate-100 pt-4 space-y-4">
-                     
-                     {/* Metric Config */}
-                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-1">Métrique</label>
-                           <select 
-                              className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                              value={tempWidget.config?.metric}
-                              onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, metric: e.target.value as any }})}
-                           >
-                              <option value="count">Compte (Nombre de lignes)</option>
-                              <option value="sum">Somme</option>
-                              <option value="avg">Moyenne</option>
-                              <option value="distinct">Compte distinct</option>
-                           </select>
-                        </div>
-                        {['sum', 'avg', 'distinct'].includes(tempWidget.config?.metric || '') && (
-                           <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">Champ valeur</label>
-                              <select 
-                                 className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                                 value={tempWidget.config?.valueField || ''}
-                                 onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, valueField: e.target.value }})}
-                              >
-                                 <option value="">-- Choisir --</option>
-                                 {allFields.map(f => <option key={f} value={f}>{f}</option>)}
-                              </select>
-                           </div>
-                        )}
-                     </div>
-
-                     {/* Dimension Config (for Chart & List) */}
-                     {(tempWidget.type === 'chart' || tempWidget.type === 'list') && (
-                        <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-1">Axe de regroupement (Dimension)</label>
-                           <select 
-                              className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                              value={tempWidget.config?.dimension || ''}
-                              onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value }})}
-                           >
-                              <option value="">-- Choisir --</option>
-                              {allFields.map(f => <option key={f} value={f}>{f}</option>)}
-                           </select>
-                        </div>
+                     {/* Hide Source selector for Text Widgets */}
+                     {tempWidget.type !== 'text' && (
+                         <div className="col-span-2 md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Source de données</label>
+                            <select 
+                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                               value={tempWidget.config?.source?.datasetId || ''}
+                               onChange={e => setTempWidget({
+                                  ...tempWidget, 
+                                  config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } }
+                               })}
+                            >
+                               {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </select>
+                         </div>
                      )}
+                  </div>
 
-                     {/* KPI Specifics */}
-                     {tempWidget.type === 'kpi' && (
-                        <div className="space-y-4">
+                  {/* --- CONDITIONAL CONFIG: TEXT WIDGET --- */}
+                  {tempWidget.type === 'text' && (
+                     <div className="space-y-4 animate-in fade-in">
+                        <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Contenu du texte</label>
+                           <textarea 
+                              className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 min-h-[150px]"
+                              placeholder="Saisissez votre texte ici..."
+                              value={tempWidget.config?.textContent || ''}
+                              onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, textContent: e.target.value }})}
+                           />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">Style du KPI</label>
-                              <div className="flex gap-2">
-                                 {['simple', 'trend', 'progress'].map(s => (
-                                    <button
-                                       key={s}
-                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, kpiStyle: s as KpiStyle } })}
-                                       className={`px-3 py-1.5 rounded text-xs font-medium border ${tempWidget.config?.kpiStyle === s ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-slate-200 text-slate-600'}`}
-                                    >
-                                       {s === 'simple' ? 'Simple' : s === 'trend' ? 'Avec tendance' : 'Progression'}
-                                    </button>
-                                 ))}
-                              </div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">Alignement</label>
+                              <select 
+                                 className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2 text-sm"
+                                 value={tempWidget.config?.textStyle?.align || 'left'}
+                                 onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, textStyle: { ...tempWidget.config?.textStyle, align: e.target.value as any } }})}
+                              >
+                                 <option value="left">Gauche</option>
+                                 <option value="center">Centré</option>
+                                 <option value="right">Droite</option>
+                              </select>
                            </div>
+                           <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">Taille</label>
+                              <select 
+                                 className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2 text-sm"
+                                 value={tempWidget.config?.textStyle?.size || 'normal'}
+                                 onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, textStyle: { ...tempWidget.config?.textStyle, size: e.target.value as any } }})}
+                              >
+                                 <option value="normal">Normal</option>
+                                 <option value="large">Grand</option>
+                                 <option value="xl">Très grand</option>
+                              </select>
+                           </div>
+                           <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">Couleur</label>
+                              <select 
+                                 className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2 text-sm"
+                                 value={tempWidget.config?.textStyle?.color || 'default'}
+                                 onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, textStyle: { ...tempWidget.config?.textStyle, color: e.target.value as any } }})}
+                              >
+                                 <option value="default">Défaut (Gris foncé)</option>
+                                 <option value="primary">Primaire (Bleu)</option>
+                                 <option value="muted">Discret (Gris clair)</option>
+                              </select>
+                           </div>
+                        </div>
+                     </div>
+                  )}
+
+                  {/* --- CONDITIONAL CONFIG: DATA WIDGETS --- */}
+                  {tempWidget.type !== 'text' && (
+                     <>
+                        {/* DATA BLENDING (Optional) */}
+                        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                                    <LinkIcon className="w-4 h-4" /> Données liées (Jointure)
+                                </h4>
+                                {tempWidget.config?.secondarySource && (
+                                    <button 
+                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, secondarySource: undefined } })}
+                                        className="text-xs text-red-600 hover:underline"
+                                    >
+                                        Retirer
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-indigo-800 mb-1">Tableau à lier</label>
+                                    <select 
+                                        className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
+                                        value={tempWidget.config?.secondarySource?.datasetId || ''}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setTempWidget({
+                                                ...tempWidget, 
+                                                config: { 
+                                                    ...tempWidget.config!, 
+                                                    secondarySource: val ? { 
+                                                        datasetId: val, 
+                                                        joinFieldPrimary: '', 
+                                                        joinFieldSecondary: '' 
+                                                    } : undefined
+                                                }
+                                            });
+                                        }}
+                                    >
+                                        <option value="">-- Aucun --</option>
+                                        {datasets.filter(d => d.id !== tempWidget.config?.source?.datasetId).map(d => (
+                                            <option key={d.id} value={d.id}>{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                
+                                {tempWidget.config?.secondarySource && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-medium text-indigo-800 mb-1">Clé source princ.</label>
+                                            <select 
+                                                className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
+                                                value={tempWidget.config?.secondarySource?.joinFieldPrimary || ''}
+                                                onChange={e => setTempWidget({
+                                                    ...tempWidget, 
+                                                    config: { 
+                                                        ...tempWidget.config!, 
+                                                        secondarySource: { ...tempWidget.config!.secondarySource!, joinFieldPrimary: e.target.value } 
+                                                    }
+                                                })}
+                                            >
+                                                <option value="">-- Choisir --</option>
+                                                {availableFields.map(f => <option key={f} value={f}>{f}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-indigo-800 mb-1">Clé source lièe</label>
+                                            <select 
+                                                className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
+                                                value={tempWidget.config?.secondarySource?.joinFieldSecondary || ''}
+                                                onChange={e => setTempWidget({
+                                                    ...tempWidget, 
+                                                    config: { 
+                                                        ...tempWidget.config!, 
+                                                        secondarySource: { ...tempWidget.config!.secondarySource!, joinFieldSecondary: e.target.value } 
+                                                    }
+                                                })}
+                                            >
+                                                <option value="">-- Choisir --</option>
+                                                {(() => {
+                                                    const secDs = datasets.find(d => d.id === tempWidget.config?.secondarySource?.datasetId);
+                                                    return secDs?.fields.map(f => <option key={f} value={f}>{f}</option>);
+                                                })()}
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 3. Specific Config based on Type */}
+                        <div className="border-t border-slate-100 pt-4 space-y-4">
                            
-                           {tempWidget.config?.kpiStyle === 'progress' && (
+                           {/* Metric Config */}
+                           <div className="grid grid-cols-2 gap-4">
                               <div>
-                                 <label className="block text-sm font-medium text-slate-700 mb-1">Objectif cible (Target)</label>
-                                 <input 
-                                    type="number" 
-                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2"
-                                    placeholder="Ex: 10000"
-                                    value={tempWidget.config?.target || ''}
-                                    onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, target: parseFloat(e.target.value) } })}
+                                 <label className="block text-sm font-medium text-slate-700 mb-1">Métrique</label>
+                                 <select 
+                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                    value={tempWidget.config?.metric}
+                                    onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, metric: e.target.value as any }})}
+                                 >
+                                    <option value="count">Compte (Nombre de lignes)</option>
+                                    <option value="sum">Somme</option>
+                                    <option value="avg">Moyenne</option>
+                                    <option value="distinct">Compte distinct</option>
+                                 </select>
+                              </div>
+                              {['sum', 'avg', 'distinct'].includes(tempWidget.config?.metric || '') && (
+                                 <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Champ valeur</label>
+                                    <select 
+                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                       value={tempWidget.config?.valueField || ''}
+                                       onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, valueField: e.target.value }})}
+                                    >
+                                       <option value="">-- Choisir --</option>
+                                       {allFields.map(f => <option key={f} value={f}>{f}</option>)}
+                                    </select>
+                                 </div>
+                              )}
+                           </div>
+
+                           {/* Dimension Config (for Chart & List) */}
+                           {(tempWidget.type === 'chart' || tempWidget.type === 'list') && (
+                              <div>
+                                 <label className="block text-sm font-medium text-slate-700 mb-1">Axe de regroupement (Dimension)</label>
+                                 <select 
+                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                    value={tempWidget.config?.dimension || ''}
+                                    onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value }})}
+                                 >
+                                    <option value="">-- Choisir --</option>
+                                    {allFields.map(f => <option key={f} value={f}>{f}</option>)}
+                                 </select>
+                              </div>
+                           )}
+
+                           {/* KPI Specifics */}
+                           {tempWidget.type === 'kpi' && (
+                              <div className="space-y-4">
+                                 <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Style du KPI</label>
+                                    <div className="flex gap-2">
+                                       {['simple', 'trend', 'progress'].map(s => (
+                                          <button
+                                             key={s}
+                                             onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, kpiStyle: s as KpiStyle } })}
+                                             className={`px-3 py-1.5 rounded text-xs font-medium border ${tempWidget.config?.kpiStyle === s ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-slate-200 text-slate-600'}`}
+                                          >
+                                             {s === 'simple' ? 'Simple' : s === 'trend' ? 'Avec tendance' : 'Progression'}
+                                          </button>
+                                       ))}
+                                    </div>
+                                 </div>
+                                 
+                                 {tempWidget.config?.kpiStyle === 'progress' && (
+                                    <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Objectif cible (Target)</label>
+                                       <input 
+                                          type="number" 
+                                          className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2"
+                                          placeholder="Ex: 10000"
+                                          value={tempWidget.config?.target || ''}
+                                          onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, target: parseFloat(e.target.value) } })}
+                                       />
+                                    </div>
+                                 )}
+
+                                 <Checkbox 
+                                    checked={!!tempWidget.config?.showTrend}
+                                    onChange={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, showTrend: !tempWidget.config?.showTrend } })}
+                                    label="Afficher l'évolution par rapport au précédent import"
                                  />
                               </div>
                            )}
 
-                           <Checkbox 
-                              checked={!!tempWidget.config?.showTrend}
-                              onChange={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, showTrend: !tempWidget.config?.showTrend } })}
-                              label="Afficher l'évolution par rapport au précédent import"
-                           />
+                           {/* Chart Specifics */}
+                           {tempWidget.type === 'chart' && (
+                              <div>
+                                 <label className="block text-sm font-medium text-slate-700 mb-1">Type de graphique</label>
+                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'bar' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'bar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <BarChart3 className="w-4 h-4" /> Barres
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'line' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'line' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <LineChartIcon className="w-4 h-4" /> Courbes
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'pie' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'pie' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <PieIcon className="w-4 h-4" /> Camembert
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'donut' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'donut' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <PieIcon className="w-4 h-4" /> Donut
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radial' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radial' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <Activity className="w-4 h-4" /> Jauge
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radar' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <RadarIcon className="w-4 h-4" /> Radar
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'treemap' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'treemap' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <LayoutGrid className="w-4 h-4" /> Treemap
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'funnel' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'funnel' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <Filter className="w-4 h-4" /> Entonnoir
+                                    </button>
+                                 </div>
+                              </div>
+                           )}
                         </div>
-                     )}
-
-                     {/* Chart Specifics */}
-                     {tempWidget.type === 'chart' && (
-                        <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-1">Type de graphique</label>
-                           <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'bar' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'bar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <BarChart3 className="w-4 h-4" /> Barres
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'line' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'line' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <LineChartIcon className="w-4 h-4" /> Courbes
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'pie' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'pie' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <PieIcon className="w-4 h-4" /> Camembert
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'donut' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'donut' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <PieIcon className="w-4 h-4" /> Donut
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radial' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radial' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <Activity className="w-4 h-4" /> Jauge
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radar' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <RadarIcon className="w-4 h-4" /> Radar
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'treemap' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'treemap' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <LayoutGrid className="w-4 h-4" /> Treemap
-                              </button>
-                              <button
-                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'funnel' }})}
-                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'funnel' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
-                              >
-                                 <Filter className="w-4 h-4" /> Entonnoir
-                              </button>
-                           </div>
-                        </div>
-                     )}
-                  </div>
+                     </>
+                  )}
 
                </div>
                
