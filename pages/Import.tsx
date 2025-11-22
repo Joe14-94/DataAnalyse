@@ -1,12 +1,11 @@
 
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType } from '../utils';
+import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType, readExcelFile } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataRow, RawImportData, FieldConfig } from '../types';
-import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, RefreshCw, Trash2, Settings, Ruler, Calendar } from 'lucide-react';
+import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX } from 'lucide-react';
 
 export const Import: React.FC = () => {
   const { 
@@ -22,6 +21,12 @@ export const Import: React.FC = () => {
   const [rawData, setRawData] = useState<RawImportData | null>(null);
   const [mapping, setMapping] = useState<Record<number, string | 'ignore'>>({});
   const [autoMappedIndices, setAutoMappedIndices] = useState<number[]>([]);
+  const [selectedColIndex, setSelectedColIndex] = useState<number | null>(null); // For Cleaning
+
+  // Drag & Drop State
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Configuration des champs (Types & Unités)
   const [tempFieldConfigs, setTempFieldConfigs] = useState<Record<string, FieldConfig>>({});
@@ -47,9 +52,7 @@ export const Import: React.FC = () => {
 
   // --- Handlers ---
 
-  const handleAnalyze = () => {
-    if (!text.trim()) return;
-    const result = parseRawData(text);
+  const processImportData = (result: RawImportData) => {
     setRawData(result);
     
     // 1. Détection de structure
@@ -75,6 +78,102 @@ export const Import: React.FC = () => {
     setUpdateMode('merge'); 
     setTempFieldConfigs({}); // Reset configs
   };
+
+  const handleAnalyzeText = () => {
+    if (!text.trim()) return;
+    const result = parseRawData(text);
+    processImportData(result);
+  };
+
+  // FILE HANDLING
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await processFile(e.target.files[0]);
+    }
+    // Reset input to allow re-selection
+    e.target.value = '';
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const processFile = async (file: File) => {
+    setIsProcessingFile(true);
+    try {
+      let result: RawImportData;
+
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        result = await readExcelFile(file);
+      } else {
+        // Assume text/csv
+        const textContent = await file.text();
+        result = parseRawData(textContent);
+      }
+
+      if (result.totalRows === 0) {
+        alert("Le fichier semble vide ou mal formaté.");
+      } else {
+        processImportData(result);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la lecture du fichier.");
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
+
+  // DATA CLEANING ACTIONS
+  const handleCleanColumn = (action: 'trim' | 'upper' | 'lower' | 'proper' | 'empty_zero') => {
+     if (selectedColIndex === null || !rawData) return;
+     
+     const newRows = rawData.rows.map(row => {
+        const newRow = [...row];
+        let val = String(newRow[selectedColIndex] || '');
+
+        if (action === 'trim') val = val.trim();
+        if (action === 'upper') val = val.toUpperCase();
+        if (action === 'lower') val = val.toLowerCase();
+        if (action === 'proper') val = val.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+        if (action === 'empty_zero') {
+           if (!val || val.trim() === '') val = '0';
+        }
+
+        newRow[selectedColIndex] = val;
+        return newRow;
+     });
+
+     setRawData({ ...rawData, rows: newRows });
+  };
+
+  const handleRemoveDuplicates = () => {
+     if (selectedColIndex === null || !rawData) return;
+
+     // Keep track of seen values
+     const seen = new Set<string>();
+     const newRows = rawData.rows.filter(row => {
+        const val = String(row[selectedColIndex]).trim().toLowerCase();
+        if (seen.has(val)) return false;
+        seen.add(val);
+        return true;
+     });
+
+     if (newRows.length < rawData.rows.length) {
+        const removed = rawData.rows.length - newRows.length;
+        if (window.confirm(`${removed} doublons détectés sur cette colonne. Voulez-vous les supprimer ?`)) {
+           setRawData({ ...rawData, rows: newRows, totalRows: newRows.length });
+           setSuccessMessage(`${removed} doublons supprimés.`);
+        }
+     } else {
+        alert("Aucun doublon trouvé sur cette colonne.");
+     }
+  };
+
 
   // Recalculer le mapping et les configs par défaut
   useEffect(() => {
@@ -238,51 +337,97 @@ export const Import: React.FC = () => {
   // --- Renders ---
 
   const renderInputStep = () => (
-    <Card className="p-6 space-y-6">
+    <div className="space-y-6">
        {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4 flex items-center">
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative flex items-center animate-in fade-in slide-in-from-top-2">
              <Check className="w-5 h-5 mr-2" />
              <span>{successMessage}</span>
+             <button onClick={() => setSuccessMessage(null)} className="absolute right-3 top-3 text-green-600 hover:text-green-800">
+               <X className="w-4 h-4" />
+             </button>
           </div>
        )}
 
-      <div>
-        <label htmlFor="import-date" className="block text-sm font-medium text-slate-700 mb-1">
-          Date de l'extraction
-        </label>
-        <input
-          type="date"
-          id="import-date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="block w-full max-w-xs rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-          required
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Date & DropZone */}
+        <div className="space-y-6">
+          <Card className="p-6">
+             <label htmlFor="import-date" className="block text-sm font-bold text-slate-700 mb-2">
+               1. Date de l'extraction
+             </label>
+             <input
+               type="date"
+               id="import-date"
+               value={date}
+               onChange={(e) => setDate(e.target.value)}
+               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5"
+               required
+             />
+          </Card>
 
-      <div>
-        <label htmlFor="paste-area" className="block text-sm font-medium text-slate-700 mb-1">
-          Contenu du tableau (copier/coller)
-        </label>
-        <div className="relative mt-1">
-          <textarea
-            id="paste-area"
-            rows={12}
-            className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm font-mono p-3"
-            placeholder={`Copiez ici les données de votre tableau Excel, CSV ou Web.\nAssurez-vous que la première ligne contient les titres des colonnes.`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+          <Card className="p-6 flex flex-col h-64">
+             <label className="block text-sm font-bold text-slate-700 mb-3">
+               2. Fichier source
+             </label>
+             
+             <div 
+                className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200
+                   ${isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}
+                `}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+             >
+                {isProcessingFile ? (
+                   <div className="animate-pulse flex flex-col items-center">
+                      <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3" />
+                      <span className="text-blue-600 font-medium">Lecture du fichier...</span>
+                   </div>
+                ) : (
+                   <>
+                      <div className="p-4 bg-white rounded-full shadow-sm mb-3">
+                         <UploadCloud className="w-8 h-8 text-blue-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-700">Cliquez ou glissez un fichier ici</h3>
+                      <p className="text-xs text-slate-500 mt-1">Supporte .xlsx, .xls, .csv, .txt</p>
+                      <input 
+                         type="file" 
+                         ref={fileInputRef} 
+                         className="hidden" 
+                         accept=".xlsx,.xls,.csv,.txt" 
+                         onChange={handleFileSelect}
+                      />
+                   </>
+                )}
+             </div>
+          </Card>
         </div>
-      </div>
 
-      <div className="flex justify-end pt-4">
-        <Button onClick={handleAnalyze} disabled={!text.trim()}>
-          <UploadCloud className="w-4 h-4 mr-2" />
-          Analyser les données
-        </Button>
+        {/* Right: Copy Paste Fallback */}
+        <Card className="p-6 flex flex-col">
+           <div className="flex justify-between items-center mb-3">
+              <label htmlFor="paste-area" className="block text-sm font-bold text-slate-700">
+                3. Ou coller le contenu (Legacy)
+              </label>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Texte brut</span>
+           </div>
+           <textarea
+             id="paste-area"
+             className="flex-1 w-full rounded-md border border-slate-300 bg-slate-50 text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs font-mono p-3 resize-none"
+             placeholder={`Alternative : Copiez ici les données de votre tableau Excel...\nHeader 1 \t Header 2\nVal 1 \t Val 2`}
+             value={text}
+             onChange={(e) => setText(e.target.value)}
+           />
+           <div className="flex justify-end pt-4">
+             <Button onClick={handleAnalyzeText} disabled={!text.trim()}>
+               Analyser le texte
+               <ArrowRight className="w-4 h-4 ml-2" />
+             </Button>
+           </div>
+        </Card>
       </div>
-    </Card>
+    </div>
   );
 
   const renderMappingStep = () => {
@@ -297,7 +442,7 @@ export const Import: React.FC = () => {
     const hasStructureChanges = selectedDS && (newFields.length > 0 || missingFields.length > 0);
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in slide-in-from-right duration-300">
         
         {/* Choix du Dataset Cible */}
         <Card className="p-6 border-blue-200 bg-blue-50">
@@ -368,6 +513,37 @@ export const Import: React.FC = () => {
            </div>
         </Card>
 
+        {/* TOOLBAR CLEANING (Appears when a column is selected) */}
+        <div className={`transition-all duration-300 overflow-hidden ${selectedColIndex !== null ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+           <div className="bg-white border border-purple-200 rounded-lg p-4 shadow-sm bg-gradient-to-r from-white to-purple-50">
+               <div className="flex items-center gap-2 mb-2 text-purple-800 text-xs font-bold uppercase tracking-wider">
+                  <Wand2 className="w-4 h-4" /> 
+                  Outils de nettoyage : {selectedColIndex !== null ? rawData.headers[selectedColIndex] : ''}
+               </div>
+               <div className="flex flex-wrap gap-2">
+                  <button onClick={() => handleCleanColumn('trim')} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 rounded text-xs text-slate-700 transition-colors shadow-sm">
+                     <Eraser className="w-3 h-3" /> Trim (Espaces)
+                  </button>
+                  <button onClick={() => handleCleanColumn('upper')} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 rounded text-xs text-slate-700 transition-colors shadow-sm">
+                     <CaseUpper className="w-3 h-3" /> MAJUSCULE
+                  </button>
+                  <button onClick={() => handleCleanColumn('lower')} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 rounded text-xs text-slate-700 transition-colors shadow-sm">
+                     <CaseLower className="w-3 h-3" /> minuscule
+                  </button>
+                  <button onClick={() => handleCleanColumn('proper')} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 rounded text-xs text-slate-700 transition-colors shadow-sm">
+                     <CaseUpper className="w-3 h-3" /> Nom Propre
+                  </button>
+                  <div className="w-px bg-slate-300 mx-1"></div>
+                  <button onClick={handleRemoveDuplicates} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-700 rounded text-xs text-slate-700 transition-colors shadow-sm">
+                     <CopyX className="w-3 h-3" /> Dédupliquer
+                  </button>
+                  <button onClick={() => handleCleanColumn('empty_zero')} className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-purple-300 hover:bg-purple-50 rounded text-xs text-slate-700 transition-colors shadow-sm">
+                     Vide → 0
+                  </button>
+               </div>
+           </div>
+        </div>
+
         {/* Alerte Evolution */}
         {targetDatasetId !== 'NEW' && hasStructureChanges && (
            <Card className="p-4 border-amber-300 bg-amber-50">
@@ -397,7 +573,7 @@ export const Import: React.FC = () => {
         )}
 
         {/* Tableau de Mapping */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-slate-200 shadow-md">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-100">
@@ -406,13 +582,20 @@ export const Import: React.FC = () => {
                     const mappedVal = mapping[idx];
                     const isMapped = mappedVal && mappedVal !== 'ignore';
                     const isAutoDetected = autoMappedIndices.includes(idx);
+                    const isSelected = selectedColIndex === idx;
                     
                     return (
-                      <th key={idx} className={`px-4 py-3 text-left w-64 min-w-[220px] border-b-2 ${isMapped ? 'border-blue-500 bg-blue-50' : 'border-transparent'}`}>
-                        {/* En-tête original */}
+                      <th 
+                        key={idx} 
+                        className={`px-4 py-3 text-left w-64 min-w-[220px] border-b-2 transition-colors cursor-pointer relative group
+                           ${isSelected ? 'bg-purple-50 border-purple-500' : (isMapped ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-slate-200')}
+                        `}
+                        onClick={() => setSelectedColIndex(idx)}
+                      >
+                        {/* Header Info */}
                         <div className="mb-2 flex items-center justify-between gap-1">
                            <div className="flex items-center gap-1 text-xs font-bold text-slate-500 tracking-wider">
-                              <Edit2 className="w-3 h-3" />
+                              {targetDatasetId === 'NEW' ? <FileText className="w-3 h-3" /> : <FileSpreadsheet className="w-3 h-3" />}
                               Source
                            </div>
                            {isAutoDetected && isMapped && (
@@ -422,10 +605,14 @@ export const Import: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <div className="text-sm font-bold text-slate-900 mb-3 truncate" title={header}>{header}</div>
+                        
+                        <div className="flex items-center justify-between">
+                           <div className="text-sm font-bold text-slate-900 mb-3 truncate" title={header}>{header}</div>
+                           {isSelected && <Wand2 className="w-4 h-4 text-purple-600 mb-3 animate-pulse" />}
+                        </div>
                         
                         {/* Sélecteur Mapping */}
-                        <div className="mb-3">
+                        <div className="mb-3" onClick={e => e.stopPropagation()}>
                           <div className="text-xs font-medium text-slate-500 mb-1">Destination :</div>
                           {targetDatasetId === 'NEW' ? (
                             <input 
@@ -436,7 +623,7 @@ export const Import: React.FC = () => {
                             />
                           ) : (
                             <select
-                                className={`block w-full rounded-md border-slate-300 text-sm bg-white focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5 ${isMapped ? 'bg-white font-medium text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500'}`}
+                                className={`block w-full rounded-md border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5 ${isMapped ? 'bg-white font-medium text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500'}`}
                                 value={mapping[idx] || 'ignore'}
                                 onChange={(e) => handleMappingChange(idx, e.target.value)}
                             >
@@ -453,51 +640,34 @@ export const Import: React.FC = () => {
 
                         {/* CONFIGURATION TYPE ET UNITE */}
                         {isMapped && (
-                           <div className="bg-white border border-slate-200 rounded p-2 space-y-2">
-                              <div className="flex items-center gap-2">
-                                 <Settings className="w-3 h-3 text-slate-400" />
-                                 <span className="text-[10px] font-bold text-slate-500">Type de donnée</span>
-                              </div>
+                           <div className="bg-white border border-slate-200 rounded p-2 space-y-2 shadow-sm" onClick={e => e.stopPropagation()}>
                               <div className="flex gap-1">
                                  <select
-                                    className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1"
+                                    className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-blue-500"
                                     value={tempFieldConfigs[mappedVal]?.type || 'text'}
                                     onChange={(e) => handleConfigChange(mappedVal, 'type', e.target.value)}
                                  >
                                     <option value="text">Texte</option>
-                                    <option value="number">Nombre / Montant</option>
+                                    <option value="number">Nombre</option>
                                     <option value="date">Date</option>
-                                    <option value="boolean">Oui / Non</option>
+                                    <option value="boolean">Oui/Non</option>
                                  </select>
                               </div>
                               
                               {/* Input Unité si Nombre */}
                               {tempFieldConfigs[mappedVal]?.type === 'number' && (
                                  <div className="animate-in fade-in duration-200">
-                                    <div className="flex items-center gap-2 mb-1">
-                                       <Ruler className="w-3 h-3 text-slate-400" />
-                                       <span className="text-[10px] font-bold text-slate-500">Unité (ex: k€)</span>
-                                    </div>
                                     <input
                                        type="text"
-                                       className="block w-full text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300"
-                                       placeholder="Aucune"
+                                       className="block w-full text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-blue-500"
+                                       placeholder="Unité (ex: €)"
                                        value={tempFieldConfigs[mappedVal]?.unit || ''}
                                        onChange={(e) => handleConfigChange(mappedVal, 'unit', e.target.value)}
                                     />
                                  </div>
                               )}
-
-                              {/* Info Date */}
-                              {tempFieldConfigs[mappedVal]?.type === 'date' && (
-                                 <div className="animate-in fade-in duration-200 bg-blue-50 p-1.5 rounded border border-blue-100 flex items-center gap-1">
-                                    <Calendar className="w-3 h-3 text-blue-500" />
-                                    <span className="text-[10px] text-blue-600">Format détecté auto.</span>
-                                 </div>
-                              )}
                            </div>
                         )}
-
                       </th>
                     );
                   })}
@@ -534,10 +704,10 @@ export const Import: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-       <div className="space-y-6 pb-12"> {/* Removed max-w-6xl */}
+       <div className="space-y-6 pb-12"> 
          <div className="flex items-center justify-between">
            <h2 className="text-2xl font-bold text-slate-800">Importation des données</h2>
-           <div className="text-sm text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200">
+           <div className="text-sm text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
              Étape {step === 'input' ? '1/2' : '2/2'}
            </div>
          </div>

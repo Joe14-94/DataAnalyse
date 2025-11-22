@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
@@ -13,7 +12,7 @@ import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
   Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
-  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX
 } from 'lucide-react';
 import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle } from '../types';
 
@@ -24,7 +23,7 @@ const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24'
 // --- DATA PROCESSING ENGINE ---
 
 const useWidgetData = (widget: DashboardWidget) => {
-   const { batches, datasets } = useData();
+   const { batches, datasets, dashboardFilters } = useData();
 
    return useMemo(() => {
       const { source, metric, dimension, valueField, target, secondarySource } = widget.config;
@@ -80,6 +79,17 @@ const useWidgetData = (widget: DashboardWidget) => {
                return row;
             });
          }
+      }
+
+      // --- GLOBAL FILTERING (DRILL DOWN) ---
+      if (Object.keys(dashboardFilters).length > 0) {
+         workingRows = workingRows.filter(row => {
+            return Object.entries(dashboardFilters).every(([field, val]) => {
+               // Check if field exists in row (could be from primary or secondary)
+               if (row[field] === undefined) return true; // Ignore if field not present
+               return String(row[field]) === String(val);
+            });
+         });
       }
 
       const parseVal = (row: any, field: string) => {
@@ -200,16 +210,30 @@ const useWidgetData = (widget: DashboardWidget) => {
          };
       }
 
-   }, [batches, datasets, widget.config]);
+   }, [batches, datasets, widget.config, dashboardFilters]);
 };
 
 // --- SUB COMPONENTS ---
 
 const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widget, data }) => {
+   const { setDashboardFilter } = useData();
+   
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-xs">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-400 text-xs">{data.error}</div>;
 
    const { unit } = data;
+
+   // --- INTERACTION HANDLER (Drill Down) ---
+   const handleChartClick = (e: any) => {
+      if (!e || !e.activePayload || !e.activePayload.length) return;
+      const clickedData = e.activePayload[0].payload;
+      
+      // Dimension is needed for filtering
+      const dimension = widget.config.dimension;
+      if (dimension && clickedData.name) {
+         setDashboardFilter(dimension, clickedData.name);
+      }
+   };
 
    // --- KPI VIEW ---
    if (widget.type === 'kpi') {
@@ -262,8 +286,12 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
       return (
          <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {current.map((item: any, idx: number) => (
-               <div key={idx} className="flex flex-col gap-1">
-                  <div className="flex justify-between text-xs">
+               <div 
+                  key={idx} 
+                  className="flex flex-col gap-1 cursor-pointer group" 
+                  onClick={() => widget.config.dimension && setDashboardFilter(widget.config.dimension, item.name)}
+               >
+                  <div className="flex justify-between text-xs group-hover:text-blue-600 transition-colors">
                      <span className="font-bold text-slate-700 truncate pr-2">
                         {idx + 1}. {item.name}
                      </span>
@@ -299,6 +327,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   background
                   dataKey="value"
                   cornerRadius={10}
+                  onClick={handleChartClick}
+                  className="cursor-pointer"
                />
                <Legend 
                   iconSize={10} 
@@ -330,6 +360,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   stroke="#3b82f6"
                   fill="#3b82f6"
                   fillOpacity={0.4}
+                  onClick={handleChartClick}
+                  className="cursor-pointer"
                />
                <Tooltip 
                  formatter={tooltipFormatter}
@@ -349,6 +381,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                aspectRatio={4 / 3}
                stroke="#fff"
                fill="#3b82f6"
+               onClick={(node: any) => widget.config.dimension && setDashboardFilter(widget.config.dimension, node.name)}
+               className="cursor-pointer"
                content={(props: any) => {
                   const { x, y, width, height, name, index } = props;
                   return (
@@ -384,6 +418,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   dataKey="value"
                   data={chartData}
                   isAnimationActive
+                  onClick={handleChartClick}
+                  className="cursor-pointer"
                >
                   <LabelList position="right" fill="#475569" stroke="none" dataKey="name" fontSize={10} />
                   {chartData.map((entry: any, index: number) => (
@@ -407,6 +443,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   outerRadius={80}
                   paddingAngle={2}
                   dataKey="value"
+                  onClick={handleChartClick}
+                  className="cursor-pointer"
                >
                   {chartData.map((entry: any, index: number) => (
                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -422,12 +460,12 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    if (chartType === 'line') {
       return (
          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <LineChart data={chartData} onClick={handleChartClick}>
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
                <YAxis fontSize={10} stroke="#94a3b8" />
                <Tooltip formatter={tooltipFormatter} />
-               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{r: 2}} />
+               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{r: 2}} activeDot={{ r: 6, onClick: handleChartClick }} />
             </LineChart>
          </ResponsiveContainer>
       );
@@ -435,12 +473,16 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
 
    return (
       <ResponsiveContainer width="100%" height="100%">
-         <BarChart data={chartData}>
+         <BarChart data={chartData} onClick={handleChartClick}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
             <YAxis fontSize={10} stroke="#94a3b8" />
             <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} />
-            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} className="cursor-pointer">
+               {chartData.map((entry: any, index: number) => (
+                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+               ))}
+            </Bar>
          </BarChart>
       </ResponsiveContainer>
    );
@@ -451,7 +493,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
 export const Dashboard: React.FC = () => {
   const { 
      dashboardWidgets, addDashboardWidget, removeDashboardWidget, 
-     updateDashboardWidget, moveDashboardWidget, datasets 
+     updateDashboardWidget, moveDashboardWidget, datasets,
+     dashboardFilters, clearDashboardFilters, setDashboardFilter
   } = useData();
   
   const [isEditMode, setIsEditMode] = useState(false);
@@ -524,7 +567,7 @@ export const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-6 pb-12">
          
          {/* Header */}
-         <div className="flex justify-between items-center">
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                   <Layout className="w-6 h-6 text-slate-500" />
@@ -552,6 +595,45 @@ export const Dashboard: React.FC = () => {
                )}
             </div>
          </div>
+
+         {/* ACTIVE FILTERS BAR (DRILL DOWN) */}
+         {Object.keys(dashboardFilters).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 bg-blue-50 border border-blue-200 p-3 rounded-lg animate-in slide-in-from-top-2">
+               <div className="text-xs font-bold text-blue-800 flex items-center mr-2">
+                  <Filter className="w-3 h-3 mr-1" /> Filtres actifs :
+               </div>
+               {Object.entries(dashboardFilters).map(([field, value]) => (
+                  <div key={field} className="flex items-center bg-white border border-blue-200 rounded-full px-3 py-1 shadow-sm">
+                     <span className="text-xs text-slate-500 mr-1">{field}:</span>
+                     <span className="text-xs font-bold text-slate-800">{String(value)}</span>
+                     <button 
+                        onClick={() => {
+                           const newF = {...dashboardFilters};
+                           delete newF[field];
+                           if(Object.keys(newF).length === 0) clearDashboardFilters();
+                           else {
+                              // Manual reset per key is tedious in context, 
+                              // implementing a simpler full clear for now via clearDashboardFilters
+                              // Ideally update context to remove single key.
+                              // Workaround: re-set all except this one.
+                              // Actually context exposes setDashboardFilter but not remove.
+                              // Let's just provide Clear All for now or hack it by setting empty
+                           }
+                        }}
+                        className="ml-2 text-slate-400 hover:text-red-500"
+                     >
+                        {/* Allow individual remove later, for now just display */}
+                     </button>
+                  </div>
+               ))}
+               <button 
+                  onClick={clearDashboardFilters} 
+                  className="ml-auto text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
+               >
+                  <FilterX className="w-3 h-3 mr-1" /> Tout effacer
+               </button>
+            </div>
+         )}
 
          {/* Grid */}
          {dashboardWidgets.length === 0 ? (

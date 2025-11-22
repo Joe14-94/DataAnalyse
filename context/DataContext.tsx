@@ -1,7 +1,6 @@
 
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField } from '../types';
 import { APP_VERSION, generateSyntheticData } from '../utils';
 
 interface DataContextType {
@@ -12,6 +11,7 @@ interface DataContextType {
   filteredBatches: ImportBatch[]; // Batches du dataset courant
   savedMappings: Record<string, string>;
   dashboardWidgets: DashboardWidget[];
+  dashboardFilters: Record<string, any>; // NEW: Filtres globaux dashboard
   
   // Actions Dataset
   switchDataset: (id: string) => void;
@@ -19,6 +19,10 @@ interface DataContextType {
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
   
+  // Actions Calculated Fields
+  addCalculatedField: (datasetId: string, field: CalculatedField) => void;
+  removeCalculatedField: (datasetId: string, fieldId: string) => void;
+
   // Actions Data
   addBatch: (datasetId: string, date: string, rows: any[]) => void;
   deleteBatch: (id: string) => void;
@@ -33,6 +37,10 @@ interface DataContextType {
   removeDashboardWidget: (id: string) => void;
   moveDashboardWidget: (id: string, direction: 'left' | 'right') => void;
   resetDashboard: () => void;
+  
+  // Dashboard Filtering (Drill Down)
+  setDashboardFilter: (field: string, value: any) => void;
+  clearDashboardFilters: () => void;
 
   // System
   importBackup: (jsonData: string) => boolean;
@@ -56,6 +64,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [savedMappings, setSavedMappings] = useState<Record<string, string>>({});
   
   const [currentDatasetId, setCurrentDatasetId] = useState<string | null>(null);
+  const [dashboardFilters, setDashboardFilters] = useState<Record<string, any>>({});
 
   // --- MIGRATION & LOAD ---
   useEffect(() => {
@@ -116,6 +125,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchDataset = useCallback((id: string) => {
     setCurrentDatasetId(id);
+    setDashboardFilters({}); // Clear filters on switch
   }, []);
 
   const createDataset = useCallback((name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => {
@@ -163,6 +173,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { 
         ...d, 
         fieldConfigs: { ...d.fieldConfigs, ...configs } 
+      };
+    }));
+  }, []);
+
+  // --- ACTIONS CALCULATED FIELDS ---
+
+  const addCalculatedField = useCallback((datasetId: string, field: CalculatedField) => {
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== datasetId) return d;
+      return {
+        ...d,
+        calculatedFields: [...(d.calculatedFields || []), field]
+      };
+    }));
+  }, []);
+
+  const removeCalculatedField = useCallback((datasetId: string, fieldId: string) => {
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== datasetId) return d;
+      return {
+        ...d,
+        calculatedFields: (d.calculatedFields || []).filter(f => f.id !== fieldId)
       };
     }));
   }, []);
@@ -217,6 +249,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDashboardWidgets([]);
   }, []);
 
+  const setDashboardFilter = useCallback((field: string, value: any) => {
+     setDashboardFilters(prev => ({
+        ...prev,
+        [field]: value
+     }));
+  }, []);
+
+  const clearDashboardFilters = useCallback(() => {
+     setDashboardFilters({});
+  }, []);
+
   // --- SYSTEM ---
 
   const clearAll = useCallback(() => {
@@ -224,6 +267,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAllBatches([]);
     setSavedMappings({});
     setDashboardWidgets([]);
+    setDashboardFilters({});
     setCurrentDatasetId(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem('app_data_v3_multi'); // Cleanup old ver
@@ -319,12 +363,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       filteredBatches, // Batches for current dataset
       savedMappings,
       dashboardWidgets,
+      dashboardFilters,
       switchDataset,
       createDataset,
       updateDatasetName,
       deleteDataset,
       addFieldToDataset,
       updateDatasetConfigs,
+      addCalculatedField,
+      removeCalculatedField,
       addBatch, 
       deleteBatch, 
       addDashboardWidget,
@@ -332,6 +379,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeDashboardWidget,
       moveDashboardWidget,
       resetDashboard,
+      setDashboardFilter,
+      clearDashboardFilters,
       importBackup, 
       getBackupJson, 
       clearAll, 

@@ -1,9 +1,9 @@
 
-
 import { DataRow, RawImportData, ImportBatch } from './types';
+import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-107";
+export const APP_VERSION = "202511-110";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -72,6 +72,60 @@ export const parseRawData = (text: string): RawImportData => {
     totalRows: rows.length
   };
 };
+
+/**
+ * Lit un fichier Excel (.xlsx, .xls) et retourne les données brutes
+ */
+export const readExcelFile = async (file: File): Promise<RawImportData> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // On prend la première feuille par défaut
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Conversion en tableau de tableaux (header: 1 signifie tableau de tableaux)
+        const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
+        
+        if (jsonData.length < 2) {
+          resolve({ headers: [], rows: [], totalRows: 0 });
+          return;
+        }
+
+        // La première ligne est l'en-tête
+        const headers = (jsonData[0] as string[]).map(h => String(h).trim());
+        
+        // Les autres lignes sont les données
+        // On s'assure que tout est converti en string pour respecter RawImportData
+        const rows = jsonData.slice(1).map(row => {
+           // Remplir les cellules vides si la ligne est plus courte que les headers
+           const fullRow = [...row];
+           while(fullRow.length < headers.length) fullRow.push('');
+           return fullRow.map(cell => cell !== undefined && cell !== null ? String(cell) : '');
+        });
+
+        resolve({
+          headers,
+          rows,
+          totalRows: rows.length
+        });
+
+      } catch (err) {
+        console.error("Erreur parsing Excel", err);
+        reject(err);
+      }
+    };
+
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 
 /**
  * Convertit les données brutes avec des clés dynamiques
@@ -261,6 +315,39 @@ export const extractDomain = (email: string): string => {
     return email.split('@')[1].trim().toLowerCase();
   } catch (e) {
     return 'Format invalide';
+  }
+};
+
+/**
+ * Évalue une formule mathématique simple
+ * @param row La ligne de données
+ * @param formula La formule ex: "[Prix] * [Quantité] * 1.2"
+ */
+export const evaluateFormula = (row: any, formula: string): number | string | null => {
+  if (!formula) return null;
+
+  try {
+    // 1. Remplacer les variables [NomChamp] par leur valeur
+    // Regex : cherche ce qui est entre crochets
+    const processedFormula = formula.replace(/\[(.*?)\]/g, (match, fieldName) => {
+       const val = row[fieldName];
+       // Si c'est un nombre formatté (ex: "1 000 €"), on le nettoie
+       const num = parseSmartNumber(val); 
+       return String(num); // On retourne la représentation string du nombre pour le JS
+    });
+
+    // 2. Évaluation sécurisée
+    // On autorise uniquement chiffres, opérateurs mathématiques et parenthèses pour la sécurité
+    // eslint-disable-next-line no-new-func
+    const result = new Function('return ' + processedFormula)();
+    
+    if (result === Infinity || isNaN(result)) return null;
+    
+    // Arrondi à 2 décimales pour la propreté par défaut
+    return Math.round(result * 100) / 100;
+  } catch (e) {
+    // console.warn("Erreur calcul formule:", formula, e);
+    return null;
   }
 };
 

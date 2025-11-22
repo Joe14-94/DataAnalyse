@@ -1,5 +1,4 @@
 
-
 export interface DataRow {
   id: string;
   [key: string]: any; // Permet des champs dynamiques
@@ -11,9 +10,31 @@ export interface RawImportData {
   totalRows: number;
 }
 
+// --- FORMATAGE CONDITIONNEL ---
+export interface ConditionalRule {
+  id: string;
+  operator: 'gt' | 'lt' | 'eq' | 'contains' | 'empty';
+  value: string | number;
+  style: {
+    color?: string; // Text color class (ex: text-red-600)
+    backgroundColor?: string; // Bg color class (ex: bg-red-100)
+    fontWeight?: string; // font-bold
+  };
+}
+
 export interface FieldConfig {
   type: 'text' | 'number' | 'boolean' | 'date';
   unit?: string; // Ex: "k€", "kg", "%"
+  conditionalFormatting?: ConditionalRule[]; // NOUVEAU
+}
+
+// --- CHAMPS CALCULÉS ---
+export interface CalculatedField {
+  id: string;
+  name: string;
+  formula: string; // Ex: "[Prix] * [Quantite]"
+  outputType: 'number' | 'text' | 'boolean';
+  unit?: string;
 }
 
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
@@ -69,6 +90,7 @@ export interface Dataset {
   name: string;
   fields: string[]; // Le schéma de ce dataset (liste des noms)
   fieldConfigs?: Record<string, FieldConfig>; // Configuration avancée
+  calculatedFields?: CalculatedField[]; // NOUVEAU : Champs calculés
   createdAt: number;
 }
 

@@ -1,17 +1,17 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr } from '../utils';
+import { formatDateFr, evaluateFormula, generateId, parseSmartNumber } from '../utils';
 import { Button } from '../components/ui/Button';
+import { CalculatedField, ConditionalRule } from '../types';
 import { 
   Search, Download, Database, ChevronLeft, ChevronRight, Table2, 
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
-  History, GitCommit, ArrowRight
+  History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette
 } from 'lucide-react';
 
 export const DataExplorer: React.FC = () => {
-  const { currentDataset, batches } = useData();
+  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs } = useData();
   
   // --- State ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +30,20 @@ export const DataExplorer: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [trackingKey, setTrackingKey] = useState<string>('');
 
+  // CALCULATED FIELDS MODAL
+  const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+  const [newField, setNewField] = useState<Partial<CalculatedField>>({
+     name: '',
+     formula: '',
+     outputType: 'number',
+     unit: ''
+  });
+
+  // CONDITIONAL FORMATTING MODAL
+  const [isFormatModalOpen, setIsFormatModalOpen] = useState(false);
+  const [selectedFormatCol, setSelectedFormatCol] = useState<string>('');
+  const [newRule, setNewRule] = useState<Partial<ConditionalRule>>({ operator: 'lt', value: 0, style: { color: 'text-red-600', fontWeight: 'font-bold' } });
+
   // Initialize tracking key (Smart default)
   useEffect(() => {
      if (currentDataset && currentDataset.fields.length > 0 && !trackingKey) {
@@ -37,6 +51,12 @@ export const DataExplorer: React.FC = () => {
         const candidates = ['email', 'id', 'reference', 'ref', 'code', 'matricule', 'nom'];
         const found = currentDataset.fields.find(f => candidates.includes(f.toLowerCase()));
         setTrackingKey(found || currentDataset.fields[0]);
+     }
+  }, [currentDataset]);
+
+  useEffect(() => {
+     if (currentDataset && !selectedFormatCol) {
+        setSelectedFormatCol(currentDataset.fields[0]);
      }
   }, [currentDataset]);
 
@@ -70,19 +90,80 @@ export const DataExplorer: React.FC = () => {
      setIsDrawerOpen(true);
   };
 
+  const handleAddCalculatedField = () => {
+    if (!currentDataset || !newField.name || !newField.formula) return;
+    
+    const field: CalculatedField = {
+      id: generateId(),
+      name: newField.name,
+      formula: newField.formula,
+      outputType: newField.outputType as any,
+      unit: newField.unit
+    };
+    
+    addCalculatedField(currentDataset.id, field);
+    setNewField({ name: '', formula: '', outputType: 'number', unit: '' });
+  };
+
+  const handleAddConditionalRule = () => {
+     if (!currentDataset || !selectedFormatCol) return;
+     
+     const rule: ConditionalRule = {
+        id: generateId(),
+        operator: newRule.operator as any,
+        value: newRule.value as any,
+        style: newRule.style as any
+     };
+
+     const currentConfig = currentDataset.fieldConfigs?.[selectedFormatCol] || { type: 'text' };
+     const currentRules = currentConfig.conditionalFormatting || [];
+
+     updateDatasetConfigs(currentDataset.id, {
+        [selectedFormatCol]: {
+           ...currentConfig,
+           conditionalFormatting: [...currentRules, rule]
+        }
+     });
+  };
+
+  const handleRemoveConditionalRule = (colName: string, ruleId: string) => {
+     if (!currentDataset) return;
+     const currentConfig = currentDataset.fieldConfigs?.[colName];
+     if (!currentConfig) return;
+     
+     updateDatasetConfigs(currentDataset.id, {
+        [colName]: {
+           ...currentConfig,
+           conditionalFormatting: (currentConfig.conditionalFormatting || []).filter(r => r.id !== ruleId)
+        }
+     });
+  };
+
   // --- Data Processing ---
 
-  // 1. Flatten Data
+  // 1. Flatten Data AND Calculate Fields
   const allRows = useMemo(() => {
     if (!currentDataset) return [];
+    const calcFields = currentDataset.calculatedFields || [];
+
     return batches
       .filter(b => b.datasetId === currentDataset.id)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .flatMap(batch => batch.rows.map(r => ({
-        ...r,
-        _importDate: batch.date,
-        _batchId: batch.id
-      })));
+      .flatMap(batch => batch.rows.map(r => {
+         const extendedRow: any = {
+            ...r,
+            _importDate: batch.date,
+            _batchId: batch.id
+         };
+         
+         // Evaluation des champs calculés
+         calcFields.forEach(cf => {
+            const val = evaluateFormula(r, cf.formula);
+            extendedRow[cf.name] = val;
+         });
+
+         return extendedRow;
+      }));
   }, [currentDataset, batches]);
 
   // 2. Process: Filter (Global & Column) + Sort
@@ -166,11 +247,38 @@ export const DataExplorer: React.FC = () => {
      return history;
   }, [selectedRow, trackingKey, batches, currentDataset]);
 
+  // 5. HELPER: Get Cell Style based on conditional formatting
+  const getCellStyle = (fieldName: string, value: any) => {
+     if (!currentDataset?.fieldConfigs) return '';
+     const rules = currentDataset.fieldConfigs[fieldName]?.conditionalFormatting;
+     if (!rules || rules.length === 0) return '';
+
+     for (const rule of rules) {
+        const numValue = parseSmartNumber(value);
+        const targetValue = Number(rule.value);
+        
+        let match = false;
+        if (rule.operator === 'gt') match = numValue > targetValue;
+        if (rule.operator === 'lt') match = numValue < targetValue;
+        if (rule.operator === 'eq') match = String(value) == String(rule.value);
+        if (rule.operator === 'contains') match = String(value).toLowerCase().includes(String(rule.value).toLowerCase());
+        if (rule.operator === 'empty') match = !value || value === '';
+
+        if (match) {
+           return `${rule.style.color || ''} ${rule.style.backgroundColor || ''} ${rule.style.fontWeight || ''}`;
+        }
+     }
+     return '';
+  };
+
   // --- Export ---
   const handleExportFullCSV = () => {
     if (!currentDataset || processedRows.length === 0) return;
     
-    const headers = ['Date import', 'Id', ...currentDataset.fields];
+    // Inclure les champs calculés
+    const calcFieldNames = (currentDataset.calculatedFields || []).map(f => f.name);
+    const headers = ['Date import', 'Id', ...currentDataset.fields, ...calcFieldNames];
+    
     const csvContent = [
       headers.join(';'),
       ...processedRows.map(row => {
@@ -184,6 +292,10 @@ export const DataExplorer: React.FC = () => {
                 stringVal = `"${stringVal.replace(/"/g, '""')}"`;
               }
               return stringVal;
+           }),
+           ...calcFieldNames.map(f => {
+              let val = row[f];
+              return val !== undefined ? String(val) : '';
            })
         ];
         return cols.join(';');
@@ -211,6 +323,8 @@ export const DataExplorer: React.FC = () => {
       </div>
     );
   }
+
+  const calculatedFields = currentDataset.calculatedFields || [];
 
   return (
     <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
@@ -259,6 +373,16 @@ export const DataExplorer: React.FC = () => {
               />
            </div>
            
+           <Button variant="secondary" onClick={() => setIsFormatModalOpen(true)} className="whitespace-nowrap">
+               <Palette className="w-4 h-4 md:mr-2" />
+               <span className="hidden md:inline">Formatage</span>
+           </Button>
+
+           <Button variant="secondary" onClick={() => setIsCalcModalOpen(true)} className="whitespace-nowrap">
+               <FunctionSquare className="w-4 h-4 md:mr-2" />
+               <span className="hidden md:inline">Calculs</span>
+           </Button>
+
            <Button 
               variant={showFilters ? "primary" : "outline"} 
               onClick={() => setShowFilters(!showFilters)}
@@ -300,7 +424,7 @@ export const DataExplorer: React.FC = () => {
                         </div>
                      </th>
 
-                     {/* Colonnes Dynamiques */}
+                     {/* Colonnes Standard */}
                      {currentDataset.fields.map(field => (
                         <th 
                            key={field} 
@@ -314,6 +438,26 @@ export const DataExplorer: React.FC = () => {
                                  sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
                               ) : (
                                  <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                           </div>
+                        </th>
+                     ))}
+
+                     {/* Colonnes Calculées */}
+                     {calculatedFields.map(cf => (
+                        <th 
+                           key={cf.id} 
+                           scope="col" 
+                           className="px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group"
+                           onClick={() => handleSort(cf.name)}
+                        >
+                           <div className="flex items-center gap-2">
+                              <Calculator className="w-3 h-3" />
+                              <span>{cf.name}</span>
+                              {sortConfig?.key === cf.name ? (
+                                 sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />
+                              ) : (
+                                 <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                               )}
                            </div>
                         </th>
@@ -343,6 +487,18 @@ export const DataExplorer: React.FC = () => {
                               />
                            </th>
                         ))}
+                        {/* Filtres pour colonnes calculées */}
+                        {calculatedFields.map(cf => (
+                           <th key={`filter-${cf.id}`} className="px-2 py-2 border-b border-indigo-200 bg-indigo-50">
+                              <input 
+                                 type="text" 
+                                 className="w-full px-2 py-1 text-xs border border-indigo-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-normal"
+                                 placeholder={`Filtre...`}
+                                 value={columnFilters[cf.name] || ''}
+                                 onChange={(e) => handleColumnFilterChange(cf.name, e.target.value)}
+                              />
+                           </th>
+                        ))}
                      </tr>
                   )}
                </thead>
@@ -359,9 +515,12 @@ export const DataExplorer: React.FC = () => {
                            <td className="px-6 py-3 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600">
                               {formatDateFr(row._importDate)}
                            </td>
+                           
+                           {/* Standard Fields */}
                            {currentDataset.fields.map(field => {
                               const val = row[field];
                               let displayVal: React.ReactNode = val;
+                              const cellStyle = getCellStyle(field, val);
                               
                               if (typeof val === 'boolean') {
                                  displayVal = val ? (
@@ -374,8 +533,20 @@ export const DataExplorer: React.FC = () => {
                               }
 
                               return (
-                                 <td key={field} className="px-6 py-3 whitespace-nowrap text-sm text-slate-700 max-w-xs truncate" title={String(val)}>
+                                 <td key={field} className={`px-6 py-3 whitespace-nowrap text-sm text-slate-700 max-w-xs truncate ${cellStyle}`} title={String(val)}>
                                     {displayVal}
+                                 </td>
+                              );
+                           })}
+
+                           {/* Calculated Fields */}
+                           {calculatedFields.map(cf => {
+                              const val = row[cf.name];
+                              return (
+                                 <td key={cf.id} className="px-6 py-3 whitespace-nowrap text-sm text-indigo-700 font-medium max-w-xs truncate bg-indigo-50/30">
+                                    {val !== undefined && val !== null ? (
+                                        <span>{val} {cf.unit && <span className="text-xs text-indigo-400 ml-1">{cf.unit}</span>}</span>
+                                    ) : <span className="text-indigo-200">-</span>}
                                  </td>
                               );
                            })}
@@ -383,7 +554,7 @@ export const DataExplorer: React.FC = () => {
                      ))
                   ) : (
                      <tr>
-                        <td colSpan={currentDataset.fields.length + 1} className="px-6 py-16 text-center">
+                        <td colSpan={currentDataset.fields.length + 1 + calculatedFields.length} className="px-6 py-16 text-center">
                            <div className="flex flex-col items-center justify-center text-slate-400">
                               {Object.keys(columnFilters).length > 0 || searchTerm ? (
                                  <>
@@ -574,6 +745,247 @@ export const DataExplorer: React.FC = () => {
                   )}
                </div>
 
+            </div>
+         </div>
+      )}
+
+      {/* CALCULATED FIELDS MODAL */}
+      {isCalcModalOpen && (
+         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[90%]">
+               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-lg">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                     <FunctionSquare className="w-5 h-5 text-indigo-600" />
+                     Champs calculés
+                  </h3>
+                  <button onClick={() => setIsCalcModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                     <X className="w-5 h-5" />
+                  </button>
+               </div>
+
+               <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                  
+                  {/* List existing */}
+                  {calculatedFields.length > 0 ? (
+                     <div className="space-y-3">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase">Champs actifs</h4>
+                        {calculatedFields.map(field => (
+                           <div key={field.id} className="flex justify-between items-center bg-indigo-50 border border-indigo-100 rounded p-3">
+                              <div>
+                                 <div className="font-bold text-indigo-900 text-sm">{field.name}</div>
+                                 <div className="text-xs text-indigo-700 font-mono mt-1">{field.formula}</div>
+                              </div>
+                              <button 
+                                 onClick={() => removeCalculatedField(currentDataset.id, field.id)} 
+                                 className="text-slate-400 hover:text-red-500 p-1"
+                              >
+                                 <Trash2 className="w-4 h-4" />
+                              </button>
+                           </div>
+                        ))}
+                     </div>
+                  ) : (
+                     <div className="text-center py-6 text-slate-400 italic border-2 border-dashed border-slate-100 rounded">
+                        Aucun champ calculé défini.
+                     </div>
+                  )}
+
+                  {/* Create new */}
+                  <div className="border-t border-slate-100 pt-6 space-y-4">
+                     <h4 className="text-sm font-bold text-slate-800">Nouveau champ</h4>
+                     
+                     <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Nom de la colonne</label>
+                        <input 
+                           type="text" 
+                           className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                           placeholder="Ex: Marge Nette"
+                           value={newField.name}
+                           onChange={e => setNewField({...newField, name: e.target.value})}
+                        />
+                     </div>
+
+                     <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Formule</label>
+                        <div className="relative">
+                           <input 
+                              type="text" 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                              placeholder="Ex: [Prix] * [Quantité] * 1.2"
+                              value={newField.formula}
+                              onChange={e => setNewField({...newField, formula: e.target.value})}
+                           />
+                           <div className="mt-1 text-[10px] text-slate-400">
+                              Utilisez les noms de colonnes entre crochets : <code>[Colonne]</code>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                           <label className="block text-xs font-medium text-slate-600 mb-1">Type de sortie</label>
+                           <select 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                              value={newField.outputType}
+                              onChange={e => setNewField({...newField, outputType: e.target.value as any})}
+                           >
+                              <option value="number">Nombre</option>
+                              <option value="text">Texte</option>
+                              <option value="boolean">Oui/Non</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="block text-xs font-medium text-slate-600 mb-1">Unité (optionnel)</label>
+                           <input 
+                              type="text" 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                              placeholder="Ex: €"
+                              value={newField.unit}
+                              onChange={e => setNewField({...newField, unit: e.target.value})}
+                           />
+                        </div>
+                     </div>
+
+                     <div className="pt-2">
+                        <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                           <Plus className="w-4 h-4 mr-2" /> Ajouter le champ
+                        </Button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* CONDITIONAL FORMATTING MODAL */}
+      {isFormatModalOpen && (
+         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[90%]">
+               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-lg">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                     <Palette className="w-5 h-5 text-pink-600" />
+                     Formatage Conditionnel
+                  </h3>
+                  <button onClick={() => setIsFormatModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                     <X className="w-5 h-5" />
+                  </button>
+               </div>
+
+               <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                  
+                  {/* 1. Select Column */}
+                  <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Colonne à formater</label>
+                      <select 
+                         className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-pink-500 focus:border-pink-500"
+                         value={selectedFormatCol}
+                         onChange={e => setSelectedFormatCol(e.target.value)}
+                      >
+                         {currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                  </div>
+
+                  {/* 2. Existing Rules for Selected Column */}
+                  <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-slate-500 uppercase">Règles actives</h4>
+                      {(() => {
+                          const rules = currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || [];
+                          if (rules.length === 0) return <div className="text-xs text-slate-400 italic">Aucune règle.</div>;
+                          return rules.map(rule => (
+                              <div key={rule.id} className="flex justify-between items-center bg-pink-50 border border-pink-100 rounded p-2 text-sm">
+                                 <div className="flex items-center gap-2">
+                                    <span className="font-bold text-pink-800">
+                                       {rule.operator === 'gt' ? '>' : rule.operator === 'lt' ? '<' : rule.operator === 'eq' ? '=' : 'contient'} 
+                                       &nbsp;{rule.value}
+                                    </span>
+                                    <span className="text-slate-400">→</span>
+                                    <div className={`px-2 rounded text-xs ${rule.style.backgroundColor || ''} ${rule.style.color || ''} ${rule.style.fontWeight || ''}`}>
+                                       Aperçu
+                                    </div>
+                                 </div>
+                                 <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-slate-400 hover:text-red-500">
+                                    <Trash2 className="w-4 h-4" />
+                                 </button>
+                              </div>
+                          ));
+                      })()}
+                  </div>
+
+                  {/* 3. Add New Rule */}
+                  <div className="border-t border-slate-100 pt-4 space-y-4 bg-slate-50 p-4 rounded-lg">
+                     <h4 className="text-sm font-bold text-slate-800">Nouvelle règle</h4>
+                     
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                           <label className="block text-xs font-medium text-slate-600 mb-1">Opérateur</label>
+                           <select 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                              value={newRule.operator}
+                              onChange={e => setNewRule({...newRule, operator: e.target.value as any})}
+                           >
+                              <option value="gt">Supérieur à (&gt;)</option>
+                              <option value="lt">Inférieur à (&lt;)</option>
+                              <option value="eq">Égal à (=)</option>
+                              <option value="contains">Contient</option>
+                              <option value="empty">Est vide</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="block text-xs font-medium text-slate-600 mb-1">Valeur cible</label>
+                           <input 
+                              type="text" 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                              value={newRule.value}
+                              onChange={e => setNewRule({...newRule, value: e.target.value})}
+                              disabled={newRule.operator === 'empty'}
+                           />
+                        </div>
+                     </div>
+
+                     <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Style appliqué</label>
+                        <div className="flex flex-wrap gap-2">
+                           {[
+                              { label: 'Rouge', bg: 'bg-red-100', text: 'text-red-700' },
+                              { label: 'Vert', bg: 'bg-green-100', text: 'text-green-700' },
+                              { label: 'Bleu', bg: 'bg-blue-100', text: 'text-blue-700' },
+                              { label: 'Jaune', bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                              { label: 'Gras', bg: '', text: '', weight: 'font-bold' },
+                           ].map((style, i) => (
+                              <button
+                                 key={i}
+                                 onClick={() => setNewRule({
+                                    ...newRule, 
+                                    style: { 
+                                       backgroundColor: style.bg || newRule.style?.backgroundColor, 
+                                       color: style.text || newRule.style?.color,
+                                       fontWeight: style.weight || newRule.style?.fontWeight 
+                                    }
+                                 })}
+                                 className={`px-3 py-1.5 rounded text-xs border ${style.bg} ${style.text} border-slate-200 hover:opacity-80`}
+                              >
+                                 {style.label}
+                              </button>
+                           ))}
+                           <button 
+                              onClick={() => setNewRule({...newRule, style: {}})}
+                              className="px-3 py-1.5 rounded text-xs border border-slate-200 bg-white text-slate-500"
+                           >
+                              Reset
+                           </button>
+                        </div>
+                        
+                        {/* Preview */}
+                        <div className={`mt-2 p-2 text-center border border-dashed border-slate-300 rounded text-sm transition-all ${newRule.style?.backgroundColor} ${newRule.style?.color} ${newRule.style?.fontWeight}`}>
+                           Aperçu du style
+                        </div>
+                     </div>
+
+                     <Button onClick={handleAddConditionalRule} className="w-full bg-pink-600 hover:bg-pink-700">
+                        <Plus className="w-4 h-4 mr-2" /> Ajouter la règle
+                     </Button>
+                  </div>
+               </div>
             </div>
          </div>
       )}
