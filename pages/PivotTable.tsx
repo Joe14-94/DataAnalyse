@@ -1,11 +1,12 @@
 
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
 import { parseSmartNumber, formatDateFr } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
-  ArrowUp, ArrowDown, GripVertical
+  ArrowUp, ArrowDown, GripVertical, Link as LinkIcon
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -24,7 +25,7 @@ interface PivotRow {
 }
 
 export const PivotTable: React.FC = () => {
-  const { batches, currentDataset } = useData();
+  const { batches, currentDataset, datasets } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
 
   // --- STATE ---
@@ -32,6 +33,11 @@ export const PivotTable: React.FC = () => {
   // Configuration de source
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   
+  // DATA BLENDING STATE
+  const [secondaryDatasetId, setSecondaryDatasetId] = useState<string>('');
+  const [joinKeyPrimary, setJoinKeyPrimary] = useState<string>('');
+  const [joinKeySecondary, setJoinKeySecondary] = useState<string>('');
+
   // Configuration TCD
   const [rowFields, setRowFields] = useState<string[]>([]); // Multi-niveaux
   const [colField, setColField] = useState<string>('');
@@ -74,10 +80,50 @@ export const PivotTable: React.FC = () => {
     batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1], 
   [batches, selectedBatchId]);
 
+  // Calcul des champs fusionnés pour les sélecteurs
+  const combinedFields = useMemo(() => {
+      if (!secondaryDatasetId) return fields;
+      const secDS = datasets.find(d => d.id === secondaryDatasetId);
+      return secDS ? [...fields, ...secDS.fields] : fields;
+  }, [fields, secondaryDatasetId, datasets]);
+
+  // --- BLENDING LOGIC ---
+
+  const blendedRows = useMemo(() => {
+     if (!currentBatch) return [];
+     let rows = currentBatch.rows;
+
+     if (secondaryDatasetId && joinKeyPrimary && joinKeySecondary) {
+         const secBatches = batches
+            .filter(b => b.datasetId === secondaryDatasetId)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+         
+         if (secBatches.length > 0) {
+            const secBatch = secBatches[secBatches.length - 1];
+            const lookup = new Map<string, any>();
+            secBatch.rows.forEach(r => {
+               const k = String(r[joinKeySecondary]).trim();
+               if (k) lookup.set(k, r);
+            });
+
+            rows = rows.map(row => {
+               const k = String(row[joinKeyPrimary]).trim();
+               const match = lookup.get(k);
+               if (match) {
+                  return { ...row, ...match };
+               }
+               return row;
+            });
+         }
+     }
+     return rows;
+  }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, batches]);
+
+
   const getDistinctValuesForField = (field: string) => {
-    if (!currentBatch) return [];
+    if (blendedRows.length === 0) return [];
     const set = new Set<string>();
-    currentBatch.rows.forEach(r => {
+    blendedRows.forEach(r => {
        const val = r[field] !== undefined ? String(r[field]) : '';
        if (val) set.add(val);
     });
@@ -86,16 +132,21 @@ export const PivotTable: React.FC = () => {
 
   const getNumericValue = (row: any, fieldName: string): number => {
      const raw = row[fieldName];
-     const unit = currentDataset?.fieldConfigs?.[fieldName]?.unit;
+     // Try find config in primary or secondary
+     let unit = currentDataset?.fieldConfigs?.[fieldName]?.unit;
+     if (!unit && secondaryDatasetId) {
+        const secDS = datasets.find(d => d.id === secondaryDatasetId);
+        unit = secDS?.fieldConfigs?.[fieldName]?.unit;
+     }
      return parseSmartNumber(raw, unit);
   };
 
   // --- HANDLERS CONFIG ---
 
   const addRowLevel = () => {
-    if (rowFields.length < 3 && fields.length > rowFields.length) {
+    if (rowFields.length < 3 && combinedFields.length > rowFields.length) {
       // Trouver un champ non utilisé
-      const nextField = fields.find(f => !rowFields.includes(f));
+      const nextField = combinedFields.find(f => !rowFields.includes(f));
       if (nextField) setRowFields([...rowFields, nextField]);
     }
   };
@@ -115,8 +166,8 @@ export const PivotTable: React.FC = () => {
   // --- FILTERS HANDLERS (MULTI) ---
 
   const addFilter = () => {
-    if (fields.length > 0) {
-       setFilters([...filters, { field: fields[0], values: [] }]);
+    if (combinedFields.length > 0) {
+       setFilters([...filters, { field: combinedFields[0], values: [] }]);
     }
   };
 
@@ -186,10 +237,10 @@ export const PivotTable: React.FC = () => {
   // --- PIVOT ENGINE (RECURSIVE) ---
 
   const pivotData = useMemo(() => {
-    if (!currentBatch || rowFields.length === 0) return null;
+    if (blendedRows.length === 0 || rowFields.length === 0) return null;
 
     // 1. Filter Data (Multi-values support)
-    const filteredRows = currentBatch.rows.filter(row => {
+    const filteredRows = blendedRows.filter(row => {
       if (filters.length === 0) return true;
       return filters.every(f => {
          if (f.values.length === 0) return true; // No selection = All
@@ -339,7 +390,7 @@ export const PivotTable: React.FC = () => {
       formatOutput
     };
 
-  }, [currentBatch, rowFields, colField, valField, aggType, filters, sortBy, sortOrder, showSubtotals]);
+  }, [blendedRows, rowFields, colField, valField, aggType, filters, sortBy, sortOrder, showSubtotals]);
 
 
   // --- RENDER ---
@@ -396,6 +447,58 @@ export const PivotTable: React.FC = () => {
              
              <div className="p-4 space-y-6">
                 
+                {/* 0. DATA BLENDING */}
+                <div className="bg-indigo-50 border border-indigo-100 p-3 rounded">
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold text-indigo-800 flex items-center gap-1">
+                            <LinkIcon className="w-3 h-3" /> Lier une autre source
+                        </label>
+                        {secondaryDatasetId && (
+                            <button onClick={() => setSecondaryDatasetId('')} className="text-[10px] text-red-600 hover:underline">Retirer</button>
+                        )}
+                    </div>
+                    
+                    <select 
+                        className="w-full p-1.5 bg-white border border-indigo-200 rounded text-xs mb-2"
+                        value={secondaryDatasetId}
+                        onChange={(e) => setSecondaryDatasetId(e.target.value)}
+                    >
+                        <option value="">(Aucune jointure)</option>
+                        {datasets.filter(d => d.id !== currentDataset.id).map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                    </select>
+
+                    {secondaryDatasetId && (
+                        <div className="space-y-2 animate-in fade-in">
+                            <div>
+                                <span className="text-[10px] text-indigo-600 block mb-1">Clé dans {currentDataset.name}</span>
+                                <select 
+                                    className="w-full p-1 bg-white border border-indigo-200 rounded text-xs"
+                                    value={joinKeyPrimary}
+                                    onChange={(e) => setJoinKeyPrimary(e.target.value)}
+                                >
+                                    <option value="">-- Choisir --</option>
+                                    {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <span className="text-[10px] text-indigo-600 block mb-1">Correspond à...</span>
+                                <select 
+                                    className="w-full p-1 bg-white border border-indigo-200 rounded text-xs"
+                                    value={joinKeySecondary}
+                                    onChange={(e) => setJoinKeySecondary(e.target.value)}
+                                >
+                                    <option value="">-- Choisir --</option>
+                                    {datasets.find(d => d.id === secondaryDatasetId)?.fields.map(f => (
+                                        <option key={f} value={f}>{f}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* 1. Lignes (Multi-niveaux) */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-center">
@@ -420,7 +523,7 @@ export const PivotTable: React.FC = () => {
                               value={field}
                               onChange={(e) => updateRowField(idx, e.target.value)}
                            >
-                              {fields.map(f => (
+                              {combinedFields.map(f => (
                                  // Empêcher de sélectionner un champ déjà utilisé ailleurs (sauf par soi-même)
                                  <option key={f} value={f} disabled={rowFields.includes(f) && f !== field}>
                                     {f}
@@ -448,7 +551,7 @@ export const PivotTable: React.FC = () => {
                       onChange={(e) => setColField(e.target.value)}
                    >
                       <option value="">(Aucune colonne)</option>
-                      {fields.filter(f => !rowFields.includes(f)).map(f => <option key={f} value={f}>{f}</option>)}
+                      {combinedFields.filter(f => !rowFields.includes(f)).map(f => <option key={f} value={f}>{f}</option>)}
                    </select>
                 </div>
 
@@ -463,7 +566,7 @@ export const PivotTable: React.FC = () => {
                       value={valField}
                       onChange={(e) => setValField(e.target.value)}
                    >
-                      {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                      {combinedFields.map(f => <option key={f} value={f}>{f}</option>)}
                    </select>
 
                    <div className="grid grid-cols-3 gap-1">
@@ -515,7 +618,7 @@ export const PivotTable: React.FC = () => {
                                value={filter.field}
                                onChange={(e) => updateFilterField(idx, e.target.value)}
                             >
-                               {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                               {combinedFields.map(f => <option key={f} value={f}>{f}</option>)}
                             </select>
                             
                             <MultiSelect 
@@ -742,7 +845,7 @@ export const PivotTable: React.FC = () => {
                 <Checkbox 
                    checked={showTotalCol} 
                    onChange={() => setShowTotalCol(!showTotalCol)} 
-                   label="Afficher total général" 
+                   label="Afficher le total général" 
                 />
              </div>
           </div>

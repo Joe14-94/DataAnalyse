@@ -3,17 +3,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
+import { Checkbox } from '../components/ui/Checkbox';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie
+  Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList
 } from 'recharts';
 import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
-  Maximize2, Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
-  Database, Calendar, MousePointerClick
+  Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon
 } from 'lucide-react';
-import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset } from '../types';
+import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle } from '../types';
 
 // --- UTILS ---
 
@@ -25,7 +27,7 @@ const useWidgetData = (widget: DashboardWidget) => {
    const { batches, datasets } = useData();
 
    return useMemo(() => {
-      const { source, metric, dimension, valueField } = widget.config;
+      const { source, metric, dimension, valueField, target, secondarySource } = widget.config;
       if (!source) return null;
 
       // 1. Find Dataset
@@ -44,692 +46,872 @@ const useWidgetData = (widget: DashboardWidget) => {
 
       if (source.mode === 'specific' && source.batchId) {
          const specific = dsBatches.find(b => b.id === source.batchId);
-         if (specific) {
-            targetBatch = specific;
-            // Prev batch is the one strictly before specific
-            const idx = dsBatches.findIndex(b => b.id === source.batchId);
-            prevBatch = idx > 0 ? dsBatches[idx - 1] : null;
+         if (specific) targetBatch = specific;
+         else return { error: 'Import introuvable' };
+      }
+
+      // --- JOINTURE DE DONNEES (DATA BLENDING) ---
+      let workingRows = targetBatch.rows;
+      let secondaryDataset: Dataset | undefined = undefined;
+      
+      if (secondarySource && secondarySource.datasetId) {
+         secondaryDataset = datasets.find(d => d.id === secondarySource.datasetId);
+         const secBatches = batches
+            .filter(b => b.datasetId === secondarySource.datasetId)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+         if (secBatches.length > 0) {
+            const secBatch = secBatches[secBatches.length - 1]; // On prend le plus récent pour la jointure
+            
+            // Création d'une Map pour la performance : CléJointure -> Row
+            const lookup = new Map<string, any>();
+            secBatch.rows.forEach(r => {
+               const key = String(r[secondarySource.joinFieldSecondary]).trim();
+               if (key) lookup.set(key, r);
+            });
+
+            // Fusion (Left Join)
+            workingRows = workingRows.map(row => {
+               const key = String(row[secondarySource.joinFieldPrimary]).trim();
+               const match = lookup.get(key);
+               if (match) {
+                  return { ...row, ...match }; // Fusion des propriétés (attention aux collisions de noms)
+               }
+               return row;
+            });
          }
       }
 
-      const rows = targetBatch.rows;
-      const prevRows = prevBatch ? prevBatch.rows : [];
+      const parseVal = (row: any, field: string) => {
+         // Vérifier si le champ vient du dataset principal ou secondaire
+         let unit = dataset.fieldConfigs?.[field]?.unit;
+         if (!unit && secondaryDataset) {
+            unit = secondaryDataset.fieldConfigs?.[field]?.unit;
+         }
+         return parseSmartNumber(row[field], unit);
+      };
 
-      // 3. Calculate Logic
+      // 3. Process Data (Group & Aggregate)
       
-      // KPI
-      if (widget.type === 'kpi') {
+      // If LIST widget (Ranking)
+      if (widget.type === 'list') {
+         const counts: Record<string, number> = {};
+         workingRows.forEach(row => {
+            const key = String(row[dimension || ''] || 'Non défini');
+            if (metric === 'count' || metric === 'distinct') { // List usually works on count or sum
+               counts[key] = (counts[key] || 0) + 1;
+            } else if (metric === 'sum' && valueField) {
+               counts[key] = (counts[key] || 0) + parseVal(row, valueField);
+            }
+         });
+         
+         // Convert to array
+         const sorted = Object.entries(counts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10); // Top 10
+         
+         const maxVal = sorted.length > 0 ? sorted[0].value : 0;
+         return { current: sorted, max: maxVal, unit: valueField ? (dataset.fieldConfigs?.[valueField]?.unit || secondaryDataset?.fieldConfigs?.[valueField]?.unit) : '' };
+      }
+      
+      // If CHART or KPI with Dimension
+      if (dimension) {
+         const counts: Record<string, number> = {};
+         workingRows.forEach(row => {
+            const key = String(row[dimension] || 'Non défini');
+            let val = 1;
+            if (metric === 'sum' && valueField) val = parseVal(row, valueField);
+            counts[key] = (counts[key] || 0) + val;
+         });
+         
+         // For Radial Chart, we format specific way
+         if (widget.config.chartType === 'radial') {
+             const data = Object.entries(counts).map(([name, value], idx) => ({
+                name,
+                value,
+                fill: COLORS[idx % COLORS.length]
+             })).sort((a, b) => b.value - a.value).slice(0, 5); // Limit radial to top 5
+             return { data };
+         }
+
+         // Format standard {name, value} (+ size for Treemap)
+         const data = Object.entries(counts).map(([name, value]) => ({ 
+            name, 
+            value,
+            size: value // For Treemap
+         }));
+         
+         // Funnel needs sorting
+         if (widget.config.chartType === 'funnel') {
+            data.sort((a, b) => b.value - a.value);
+         }
+
+         return { data };
+      } 
+      
+      // If KPI (Single Value)
+      else {
          let currentVal = 0;
          let prevVal = 0;
 
-         const calc = (r: any[]) => {
-            if (metric === 'count') return r.length;
-            if (metric === 'sum' && valueField) return r.reduce((sum, item) => sum + parseSmartNumber(item[valueField]), 0);
-            if (metric === 'distinct' && dimension) return new Set(r.map(item => item[dimension])).size;
+         // Note: Le KPI avec jointure ne supporte pas encore l'historique "prev" sur les données jointes
+         // car cela nécessiterait de joindre aussi le batch N-1 avec le batch secondaire N-1...
+         
+         const calc = (rows: any[]) => {
+            if (!rows) return 0;
+            if (metric === 'count') return rows.length;
+            if (metric === 'sum' && valueField) {
+               return rows.reduce((acc: number, r: any) => acc + parseVal(r, valueField), 0);
+            }
+            if (metric === 'avg' && valueField) {
+               const sum = rows.reduce((acc: number, r: any) => acc + parseVal(r, valueField), 0);
+               return sum / (rows.length || 1);
+            }
+            if (metric === 'distinct' && valueField) { // Count distinct
+               const s = new Set(rows.map((r: any) => r[valueField]));
+               return s.size;
+            }
             return 0;
          };
 
-         currentVal = calc(rows);
-         if (widget.config.showTrend && prevRows) {
-            prevVal = calc(prevRows);
-         }
-
-         return { currentVal, prevVal, date: targetBatch.date, datasetName: dataset.name };
-      }
-
-      // CHART
-      if (widget.type === 'chart' && dimension) {
-         const agg: Record<string, number> = {};
-         rows.forEach(row => {
-            const key = String(row[dimension] || 'Non défini');
-            let val = 1;
-            if (metric === 'sum' && valueField) {
-               val = parseSmartNumber(row[valueField]);
-            }
-            agg[key] = (agg[key] || 0) + val;
-         });
-
-         const data = Object.entries(agg)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 10);
-
-         return { data, date: targetBatch.date, datasetName: dataset.name };
-      }
-
-      return null;
-   }, [widget, batches, datasets]);
-};
-
-// --- COMPOSANT WIDGET ---
-
-interface WidgetProps {
-  widget: DashboardWidget;
-  isEditing: boolean;
-  onMoveLeft: () => void;
-  onMoveRight: () => void;
-  onRemove: () => void;
-  onEdit: () => void;
-  onResize: (newSize: WidgetSize) => void;
-}
-
-const WidgetItem: React.FC<WidgetProps> = ({ widget, isEditing, onMoveLeft, onMoveRight, onRemove, onEdit, onResize }) => {
-  const widgetData = useWidgetData(widget);
-  const isLoading = !widgetData;
-  const error = widgetData?.error;
-
-  const getSizeClass = (size: WidgetSize) => {
-    switch(size) {
-      case 'sm': return 'col-span-1';
-      case 'md': return 'col-span-1 md:col-span-2';
-      case 'lg': return 'col-span-1 md:col-span-2 lg:col-span-3';
-      case 'full': return 'col-span-1 md:col-span-2 lg:col-span-4';
-      default: return 'col-span-1';
-    }
-  };
-
-  const tooltipStyle = {
-    backgroundColor: '#ffffff',
-    borderRadius: '6px',
-    border: '1px solid #e2e8f0',
-    color: '#334155',
-    padding: '8px',
-    fontSize: '12px'
-  };
-
-  const nextSize = (): WidgetSize => {
-    if (widget.size === 'sm') return 'md';
-    if (widget.size === 'md') return 'full';
-    return 'sm';
-  };
-
-  return (
-    <div className={`bg-white rounded-lg border shadow-sm overflow-hidden flex flex-col transition-all duration-200 ${getSizeClass(widget.size)} ${isEditing ? 'border-blue-300 ring-2 ring-blue-50 relative group' : 'border-slate-200'}`}>
-      
-      {/* EDIT OVERLAY HEADER */}
-      {isEditing && (
-        <div className="bg-blue-50 p-1.5 flex justify-between items-center border-b border-blue-100">
-          <div className="flex items-center gap-1">
-            <button onClick={onMoveLeft} className="p-1 hover:bg-white rounded text-slate-500 hover:text-blue-600"><ArrowLeft className="w-3 h-3" /></button>
-            <button onClick={onMoveRight} className="p-1 hover:bg-white rounded text-slate-500 hover:text-blue-600"><ArrowRight className="w-3 h-3" /></button>
-          </div>
-          <div className="flex items-center gap-1">
-             <button onClick={() => onResize(nextSize())} className="p-1 hover:bg-white rounded text-slate-500 hover:text-blue-600 flex items-center gap-1 text-[10px] font-bold uppercase">
-                <Maximize2 className="w-3 h-3" /> {widget.size}
-             </button>
-             <div className="h-3 w-px bg-slate-300 mx-1"></div>
-             <button onClick={onEdit} className="p-1 hover:bg-white rounded text-slate-500 hover:text-blue-600"><Settings className="w-3 h-3" /></button>
-             <button onClick={onRemove} className="p-1 hover:bg-red-100 rounded text-slate-500 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
-          </div>
-        </div>
-      )}
-
-      {/* CONTENT */}
-      <div className="p-4 flex-1 flex flex-col min-h-[140px]">
-         <div className="flex justify-between items-start mb-2">
-            <h3 className="text-sm font-bold text-slate-700 truncate pr-2" title={widget.title}>{widget.title}</h3>
-            {widgetData && !error && (
-               <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 whitespace-nowrap max-w-[100px] truncate">
-                  {widgetData.datasetName}
-               </span>
-            )}
-         </div>
+         currentVal = calc(workingRows);
+         // PrevVal uniquement si pas de jointure (trop complexe à gérer simplement ici)
+         if (!secondarySource && prevBatch) prevVal = calc(prevBatch.rows);
          
-         <div className="flex-1 flex items-center justify-center w-full min-h-0 relative">
-            {error && (
-               <div className="text-center text-slate-400 text-xs p-4 flex flex-col items-center">
-                  <Database className="w-6 h-6 mb-2 opacity-50" />
-                  {error}
-               </div>
-            )}
+         // Progress calculation
+         let progress = 0;
+         if (target) {
+             progress = Math.min(100, (currentVal / target) * 100);
+         }
 
-            {!error && widget.type === 'kpi' && widgetData && (
-               <div className="flex items-center justify-between w-full">
-                  <div>
-                     <div className="text-3xl font-bold text-slate-800">{widgetData.currentVal.toLocaleString()}</div>
-                     {widget.config.showTrend && (
-                        <div className={`text-xs font-medium mt-1 ${widgetData.currentVal >= widgetData.prevVal ? 'text-emerald-600' : 'text-rose-600'}`}>
-                           {widgetData.currentVal >= widgetData.prevVal ? '+' : ''}{(widgetData.currentVal - widgetData.prevVal).toLocaleString()} vs préc.
-                        </div>
-                     )}
-                  </div>
-                  <div className={`p-3 rounded-full ${widgetData.currentVal >= widgetData.prevVal ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
-                     <Activity className="w-6 h-6" />
-                  </div>
-               </div>
-            )}
+         return { 
+            current: currentVal, 
+            prev: prevVal,
+            trend: (prevBatch && !secondarySource) ? ((currentVal - prevVal) / (prevVal || 1)) * 100 : 0,
+            unit: (metric === 'sum' || metric === 'avg') && valueField ? (dataset.fieldConfigs?.[valueField]?.unit || secondaryDataset?.fieldConfigs?.[valueField]?.unit) : '',
+            progress,
+            target
+         };
+      }
 
-            {!error && widget.type === 'chart' && widgetData && widgetData.data && (
-               <div className="w-full h-[180px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                     {widget.config.chartType === 'pie' || widget.config.chartType === 'donut' ? (
-                        <PieChart>
-                           <Pie
-                              data={widgetData.data}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={widget.config.chartType === 'donut' ? 50 : 0}
-                              outerRadius={70}
-                              paddingAngle={2}
-                              dataKey="value"
-                              stroke="#fff"
-                              strokeWidth={2}
-                           >
-                              {widgetData.data.map((entry: any, index: number) => (
-                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                           </Pie>
-                           <Tooltip contentStyle={tooltipStyle} />
-                           <Legend verticalAlign="middle" align="right" layout="vertical" wrapperStyle={{fontSize: '10px'}} />
-                        </PieChart>
-                     ) : widget.config.chartType === 'line' ? (
-                        <LineChart data={widgetData.data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                           <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
-                           <YAxis stroke="#94a3b8" fontSize={10} />
-                           <Tooltip contentStyle={tooltipStyle} />
-                           <Line type="monotone" dataKey="value" stroke="#60a5fa" strokeWidth={2} dot={false} />
-                        </LineChart>
-                     ) : (
-                        <BarChart data={widgetData.data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                           <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
-                           <YAxis stroke="#94a3b8" fontSize={10} />
-                           <Tooltip contentStyle={tooltipStyle} cursor={{fill: '#f8fafc'}} />
-                           <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                              {widgetData.data.map((entry: any, index: number) => (
-                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                           </Bar>
-                        </BarChart>
-                     )}
-                  </ResponsiveContainer>
-               </div>
-            )}
-         </div>
-      </div>
-    </div>
-  );
+   }, [batches, datasets, widget.config]);
 };
 
-// --- WIDGET LIBRARY MODAL ---
+// --- SUB COMPONENTS ---
 
-interface WidgetLibraryProps {
-   isOpen: boolean;
-   onClose: () => void;
-   onSelect: (template: Partial<DashboardWidget>) => void;
-}
+const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widget, data }) => {
+   if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-xs">Chargement...</div>;
+   if (data.error) return <div className="flex items-center justify-center h-full text-red-400 text-xs">{data.error}</div>;
 
-const WidgetLibrary: React.FC<WidgetLibraryProps> = ({ isOpen, onClose, onSelect }) => {
-   if (!isOpen) return null;
+   // --- KPI VIEW ---
+   if (widget.type === 'kpi') {
+      const { current, trend, unit, progress, target } = data;
+      const isPositive = trend >= 0;
+      const style = widget.config.kpiStyle || 'simple';
+      // Si jointure active, on désactive la tendance car potentiellement incohérente
+      const showTrend = widget.config.showTrend && !widget.config.secondarySource;
 
-   const templates = [
-      {
-         title: 'Chiffre Clé (KPI)',
-         desc: 'Affiche une valeur unique (somme, compte) avec une tendance optionnelle.',
-         icon: Activity,
-         template: { type: 'kpi', size: 'sm', config: { metric: 'count', showTrend: true } } as Partial<DashboardWidget>
-      },
-      {
-         title: 'Graphique en Barres',
-         desc: 'Idéal pour comparer des catégories ou des volumes.',
-         icon: BarChart3,
-         template: { type: 'chart', size: 'md', config: { metric: 'count', chartType: 'bar' } } as Partial<DashboardWidget>
-      },
-      {
-         title: 'Répartition (Donut)',
-         desc: 'Visualisez la proportion de chaque catégorie dans un ensemble.',
-         icon: PieIcon,
-         template: { type: 'chart', size: 'md', config: { metric: 'count', chartType: 'donut' } } as Partial<DashboardWidget>
-      },
-      {
-         title: 'Évolution (Ligne)',
-         desc: 'Suivez une tendance temporelle ou continue.',
-         icon: TrendingUp,
-         template: { type: 'chart', size: 'full', config: { metric: 'count', chartType: 'line' } } as Partial<DashboardWidget>
-      }
-   ];
-
-   return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-         <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                  <Layout className="w-5 h-5 text-blue-600" /> Bibliothèque de widgets
-               </h3>
-               <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50">
-               {templates.map((t, idx) => (
-                  <button 
-                     key={idx}
-                     onClick={() => onSelect(t.template)}
-                     className="flex items-start gap-4 p-4 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-400 hover:ring-2 hover:ring-blue-50 transition-all text-left group"
-                  >
-                     <div className="p-3 rounded-full bg-slate-50 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                        <t.icon className="w-6 h-6" />
-                     </div>
-                     <div>
-                        <h4 className="font-bold text-slate-800 group-hover:text-blue-700">{t.title}</h4>
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{t.desc}</p>
-                     </div>
-                  </button>
-               ))}
-            </div>
-         </div>
-      </div>
-   );
-};
-
-// --- MODALE CONFIGURATION ---
-
-interface WidgetConfigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (widget: Partial<DashboardWidget>) => void;
-  initialWidget?: DashboardWidget | null;
-}
-
-const WidgetConfigModal: React.FC<WidgetConfigModalProps> = ({ isOpen, onClose, onSave, initialWidget }) => {
-   const { datasets, batches } = useData();
-   
-   const [title, setTitle] = useState('');
-   const [type, setType] = useState<WidgetType>('kpi');
-   const [size, setSize] = useState<WidgetSize>('sm');
-   const [config, setConfig] = useState<WidgetConfig>({ metric: 'count' });
-
-   // Source state
-   const [datasetId, setDatasetId] = useState<string>('');
-   const [batchMode, setBatchMode] = useState<'latest' | 'specific'>('latest');
-   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-
-   // Derived fields based on selected dataset
-   const selectedDataset = useMemo(() => datasets.find(d => d.id === datasetId), [datasets, datasetId]);
-   const availableFields = useMemo(() => selectedDataset ? selectedDataset.fields : [], [selectedDataset]);
-   const availableBatches = useMemo(() => batches.filter(b => b.datasetId === datasetId).sort((a,b) => b.createdAt - a.createdAt), [batches, datasetId]);
-
-   const numericFields = useMemo(() => {
-       if (!availableFields.length) return [];
-       // Simple logic: check config or basic check. Here we rely on fieldConfigs or generic
-       return availableFields.filter(f => {
-           const conf = selectedDataset?.fieldConfigs?.[f];
-           return conf?.type === 'number' || f.toLowerCase().includes('montant') || f.toLowerCase().includes('budget');
-       });
-   }, [availableFields, selectedDataset]);
-
-   useEffect(() => {
-      if (isOpen) {
-         if (initialWidget) {
-            setTitle(initialWidget.title);
-            setType(initialWidget.type);
-            setSize(initialWidget.size);
-            setConfig(initialWidget.config);
-            
-            if (initialWidget.config.source) {
-               setDatasetId(initialWidget.config.source.datasetId);
-               setBatchMode(initialWidget.config.source.mode);
-               if (initialWidget.config.source.batchId) setSelectedBatchId(initialWidget.config.source.batchId);
-            }
-         } else {
-             // Default: Pick first dataset
-             if (datasets.length > 0) setDatasetId(datasets[0].id);
-             setTitle('Nouvel indicateur');
-         }
-      }
-   }, [isOpen, initialWidget, datasets]);
-
-   if (!isOpen) return null;
-
-   const handleSave = () => {
-      if (!datasetId) {
-         alert("Veuillez sélectionner un jeu de données.");
-         return;
-      }
-
-      const newConfig: WidgetConfig = {
-         ...config,
-         source: {
-            datasetId,
-            mode: batchMode,
-            batchId: batchMode === 'specific' ? selectedBatchId : undefined
-         }
-      };
-
-      onSave({ title, type, size, config: newConfig });
-      onClose();
-   };
-
-   return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-               <h3 className="font-bold text-slate-800">{initialWidget ? 'Configurer le widget' : 'Ajouter un widget'}</h3>
-               <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
+      return (
+         <div className="flex flex-col h-full justify-center">
+            <div className="flex items-end gap-2 mb-2">
+               <span className="text-3xl font-bold text-slate-800">
+                  {current.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+               </span>
+               <span className="text-sm text-slate-500 mb-1 font-medium">{unit}</span>
             </div>
             
-            <div className="p-6 overflow-y-auto space-y-6 bg-white custom-scrollbar">
-               
-               {/* 1. SOURCE DE DONNEES */}
-               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-3">
-                  <h4 className="text-xs font-bold text-blue-700 uppercase flex items-center gap-2">
-                     <Database className="w-3 h-3" /> Source de données
-                  </h4>
-                  
-                  <div>
-                     <label className="block text-xs font-semibold text-slate-600 mb-1">Jeu de données (Typologie)</label>
-                     <select 
-                        className="w-full p-2 border border-blue-200 rounded text-sm bg-white focus:ring-blue-500"
-                        value={datasetId}
-                        onChange={(e) => { setDatasetId(e.target.value); setConfig({...config, dimension: '', valueField: ''}); }}
-                     >
-                        {datasets.length === 0 && <option value="">Aucun jeu de données disponible</option>}
-                        {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                     </select>
+            {style === 'progress' && target ? (
+               <div className="w-full space-y-1.5">
+                  <div className="flex justify-between text-xs text-slate-500">
+                     <span>Progression</span>
+                     <span>{Math.round(progress)}% / {target.toLocaleString()}</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                     <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Période</label>
-                        <select 
-                           className="w-full p-2 border border-blue-200 rounded text-sm bg-white"
-                           value={batchMode}
-                           onChange={(e) => setBatchMode(e.target.value as any)}
-                        >
-                           <option value="latest">Dernier import (Dynamique)</option>
-                           <option value="specific">Date figée</option>
-                        </select>
-                     </div>
-                     {batchMode === 'specific' && (
-                        <div className="animate-in fade-in">
-                           <label className="block text-xs font-semibold text-slate-600 mb-1">Date spécifique</label>
-                           <select 
-                              className="w-full p-2 border border-blue-200 rounded text-sm bg-white"
-                              value={selectedBatchId}
-                              onChange={(e) => setSelectedBatchId(e.target.value)}
-                           >
-                              <option value="">Choisir...</option>
-                              {availableBatches.map(b => (
-                                 <option key={b.id} value={b.id}>{formatDateFr(b.date)}</option>
-                              ))}
-                           </select>
-                        </div>
-                     )}
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                     <div 
+                        className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-blue-600'}`} 
+                        style={{ width: `${progress}%` }}
+                     />
                   </div>
                </div>
-
-               {/* 2. INFO GENERALES */}
-               <div className="space-y-3">
-                  <label className="block text-sm font-bold text-slate-700">Titre</label>
-                  <input 
-                     type="text" 
-                     className="w-full p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                     value={title}
-                     onChange={e => setTitle(e.target.value)}
-                     placeholder="Ex: Chiffre d'affaires"
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Taille</label>
-                        <select 
-                           className="w-full p-2 border border-slate-300 rounded-md text-sm"
-                           value={size}
-                           onChange={e => setSize(e.target.value as WidgetSize)}
-                        >
-                           <option value="sm">Petit (1/4)</option>
-                           <option value="md">Moyen (1/2)</option>
-                           <option value="lg">Grand (3/4)</option>
-                           <option value="full">Large (4/4)</option>
-                        </select>
-                     </div>
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Type Visualisation</label>
-                         <div className="flex rounded-md shadow-sm">
-                           <button onClick={() => setType('kpi')} className={`flex-1 px-2 py-2 text-xs font-medium rounded-l-md border ${type === 'kpi' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300'}`}>KPI</button>
-                           <button onClick={() => setType('chart')} className={`flex-1 px-2 py-2 text-xs font-medium rounded-r-md border-t border-b border-r ${type === 'chart' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-300'}`}>Graph</button>
-                        </div>
-                     </div>
-                  </div>
+            ) : (style === 'trend' || showTrend) && (
+               <div className={`flex items-center text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingUp className="w-3 h-3 mr-1 transform rotate-180" />}
+                  {Math.abs(trend).toFixed(1)}% vs préc.
                </div>
-
-               {/* 3. CONFIG DATA */}
-               <div className="space-y-3 pt-2 border-t border-slate-100">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                     <Layout className="w-3 h-3" /> Paramètres du calcul
-                  </h4>
-
-                  <div className="space-y-2">
-                     <label className="block text-xs font-semibold text-slate-600">Métrique</label>
-                     <select 
-                        className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
-                        value={config.metric}
-                        onChange={e => setConfig({...config, metric: e.target.value as any})}
-                     >
-                        <option value="count">Compte (Nombre de lignes)</option>
-                        <option value="sum">Somme (Total d'un champ)</option>
-                        <option value="distinct">Distinct (Valeurs uniques)</option>
-                     </select>
-                  </div>
-
-                  {config.metric === 'sum' && (
-                     <div className="space-y-2 animate-in fade-in">
-                        <label className="block text-xs font-semibold text-slate-600">Champ Valeur (Somme)</label>
-                        <select 
-                           className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
-                           value={config.valueField || ''}
-                           onChange={e => setConfig({...config, valueField: e.target.value})}
-                        >
-                           <option value="">-- Choisir --</option>
-                           {availableFields.map(f => <option key={f} value={f}>{f}</option>)}
-                        </select>
-                     </div>
-                  )}
-
-                  {(type === 'chart' || config.metric === 'distinct') && (
-                     <div className="space-y-2 animate-in fade-in">
-                        <label className="block text-xs font-semibold text-slate-600">Axe / Groupement</label>
-                        <select 
-                           className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
-                           value={config.dimension || ''}
-                           onChange={e => setConfig({...config, dimension: e.target.value})}
-                        >
-                           <option value="">-- Choisir --</option>
-                           {availableFields.map(f => <option key={f} value={f}>{f}</option>)}
-                        </select>
-                     </div>
-                  )}
-
-                  {/* CHART OPTIONS */}
-                  {type === 'chart' && (
-                     <div className="space-y-2 pt-2">
-                        <label className="block text-xs font-semibold text-slate-600">Type de graphique</label>
-                        <div className="flex gap-2 overflow-x-auto pb-2">
-                           {[
-                              { id: 'bar', icon: BarChart3, label: 'Barres' },
-                              { id: 'line', icon: LineChartIcon, label: 'Ligne' },
-                              { id: 'pie', icon: PieIcon, label: 'Donut' },
-                              { id: 'area', icon: TrendingUp, label: 'Aire' },
-                           ].map(c => (
-                              <button 
-                                 key={c.id}
-                                 onClick={() => setConfig({...config, chartType: c.id as ChartType})}
-                                 className={`flex flex-col items-center justify-center p-2 min-w-[60px] rounded border ${config.chartType === c.id ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                              >
-                                 <c.icon className="w-4 h-4 mb-1" />
-                                 <span className="text-[9px]">{c.label}</span>
-                              </button>
-                           ))}
-                        </div>
-                     </div>
-                  )}
-
-                  {type === 'kpi' && (
-                      <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-slate-50">
-                        <input 
-                           type="checkbox" 
-                           checked={config.showTrend || false}
-                           onChange={e => setConfig({...config, showTrend: e.target.checked})}
-                           className="rounded text-blue-600 border-slate-300"
-                        />
-                        <span className="text-xs text-slate-700">Afficher évolution vs import précédent</span>
-                     </label>
-                  )}
+            )}
+            {widget.config.secondarySource && (
+               <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+                  <LinkIcon className="w-3 h-3" /> Données croisées
                </div>
-
-            </div>
-
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-               <Button variant="outline" onClick={onClose}>Annuler</Button>
-               <Button onClick={handleSave}>Enregistrer</Button>
-            </div>
+            )}
          </div>
-      </div>
+      );
+   }
+
+   // --- LIST VIEW ---
+   if (widget.type === 'list') {
+      const { current, max, unit } = data;
+      return (
+         <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
+            {current.map((item: any, idx: number) => (
+               <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-xs">
+                     <span className="font-bold text-slate-700 truncate pr-2">
+                        {idx + 1}. {item.name}
+                     </span>
+                     <span className="text-slate-600 font-mono">
+                        {item.value.toLocaleString()} {unit}
+                     </span>
+                  </div>
+                  {/* Visual Bar */}
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                     <div 
+                        className="h-full bg-blue-500 rounded-full opacity-80" 
+                        style={{ width: `${(item.value / max) * 100}%` }} 
+                     />
+                  </div>
+               </div>
+            ))}
+         </div>
+      );
+   }
+
+   // --- CHART VIEW ---
+   const chartData = data.data || [];
+   const { chartType } = widget.config;
+
+   if (chartType === 'radial') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="100%" barSize={10} data={chartData}>
+               <RadialBar
+                  background
+                  dataKey="value"
+                  cornerRadius={10}
+               />
+               <Legend 
+                  iconSize={10} 
+                  layout="vertical" 
+                  verticalAlign="middle" 
+                  wrapperStyle={{ fontSize: '10px' }} 
+                  align="right"
+               />
+               <Tooltip 
+                  cursor={{fill: '#f8fafc'}}
+                  contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}}
+               />
+            </RadialBarChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'radar') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
+               <PolarGrid stroke="#e2e8f0" />
+               <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} />
+               <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 10 }} />
+               <Radar
+                  name="Valeur"
+                  dataKey="value"
+                  stroke="#3b82f6"
+                  fill="#3b82f6"
+                  fillOpacity={0.4}
+               />
+               <Tooltip contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} />
+            </RadarChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'treemap') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <Treemap
+               data={chartData}
+               dataKey="size"
+               aspectRatio={4 / 3}
+               stroke="#fff"
+               fill="#3b82f6"
+               content={(props: any) => {
+                  const { x, y, width, height, name, index } = props;
+                  return (
+                    <g>
+                      <rect x={x} y={y} width={width} height={height} fill={COLORS[index % COLORS.length]} stroke="#fff" />
+                      {width > 40 && height > 20 && (
+                        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize={10} dy={4} style={{textShadow: '0 1px 2px rgba(0,0,0,0.2)'}}>
+                           {name.substring(0, 10)}
+                        </text>
+                      )}
+                    </g>
+                  );
+              }}
+            >
+               <Tooltip contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} />
+            </Treemap>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'funnel') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <FunnelChart>
+               <Tooltip contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} />
+               <Funnel
+                  dataKey="value"
+                  data={chartData}
+                  isAnimationActive
+               >
+                  <LabelList position="right" fill="#475569" stroke="none" dataKey="name" fontSize={10} />
+                  {chartData.map((entry: any, index: number) => (
+                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+               </Funnel>
+            </FunnelChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'pie' || chartType === 'donut') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+               <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={chartType === 'donut' ? 60 : 0}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+               >
+                  {chartData.map((entry: any, index: number) => (
+                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+               </Pie>
+               <Tooltip />
+               <Legend wrapperStyle={{ fontSize: '10px' }} />
+            </PieChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'line') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+               <YAxis fontSize={10} stroke="#94a3b8" />
+               <Tooltip />
+               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{r: 2}} />
+            </LineChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   return (
+      <ResponsiveContainer width="100%" height="100%">
+         <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+            <YAxis fontSize={10} stroke="#94a3b8" />
+            <Tooltip cursor={{fill: '#f8fafc'}} />
+            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+         </BarChart>
+      </ResponsiveContainer>
    );
 };
 
 // --- MAIN COMPONENT ---
 
 export const Dashboard: React.FC = () => {
-  const { dashboardWidgets, addDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, resetDashboard } = useData();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const { 
+     dashboardWidgets, addDashboardWidget, removeDashboardWidget, 
+     updateDashboardWidget, moveDashboardWidget, datasets 
+  } = useData();
+  
+  const [isEditMode, setIsEditMode] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
-  const [templateToAdd, setTemplateToAdd] = useState<Partial<DashboardWidget> | null>(null);
 
-  const handleAddFromLibrary = (template: Partial<DashboardWidget>) => {
-     setTemplateToAdd(template);
-     setIsLibraryOpen(false);
-     setEditingWidgetId(null); // Mode création
-     setIsConfigOpen(true);
-  };
+  // Modal New/Edit Widget
+  const [showModal, setShowModal] = useState(false);
+  const [tempWidget, setTempWidget] = useState<Partial<DashboardWidget>>({
+     type: 'kpi',
+     size: 'sm',
+     config: { metric: 'count' }
+  });
 
-  const handleSaveWidget = (widgetData: Partial<DashboardWidget>) => {
+  const handleSaveWidget = () => {
+     if (!tempWidget.title || !tempWidget.config?.source?.datasetId) return;
+
      if (editingWidgetId) {
-        updateDashboardWidget(editingWidgetId, widgetData);
+        updateDashboardWidget(editingWidgetId, tempWidget);
      } else {
-        // Merge template config if exists to keep defaults
-        const finalConfig = templateToAdd ? { ...templateToAdd.config, ...widgetData.config } : widgetData.config;
-        const finalWidget = { ...widgetData, config: finalConfig };
-        
-        addDashboardWidget(finalWidget as any);
+        addDashboardWidget(tempWidget as any);
      }
-     setTemplateToAdd(null);
+     setShowModal(false);
      setEditingWidgetId(null);
+     setTempWidget({ type: 'kpi', size: 'sm', config: { metric: 'count' } });
   };
 
-  const openEditModal = (w: DashboardWidget) => {
-     setEditingWidgetId(w.id);
-     setIsConfigOpen(true);
+  const openNewWidget = () => {
+     setEditingWidgetId(null);
+     setTempWidget({
+        title: '',
+        type: 'kpi',
+        size: 'sm',
+        config: {
+           metric: 'count',
+           source: datasets.length > 0 ? { datasetId: datasets[0].id, mode: 'latest' } : undefined
+        }
+     });
+     setShowModal(true);
   };
+
+  const openEditWidget = (w: DashboardWidget) => {
+     setEditingWidgetId(w.id);
+     setTempWidget({ ...w });
+     setShowModal(true);
+  };
+
+  const availableFields = useMemo(() => {
+     if (!tempWidget.config?.source?.datasetId) return [];
+     const ds = datasets.find(d => d.id === tempWidget.config?.source?.datasetId);
+     return ds ? ds.fields : [];
+  }, [tempWidget.config?.source?.datasetId, datasets]);
+
+  // Fields from secondary source
+  const secondaryFields = useMemo(() => {
+     if (!tempWidget.config?.secondarySource?.datasetId) return [];
+     const ds = datasets.find(d => d.id === tempWidget.config?.secondarySource?.datasetId);
+     return ds ? ds.fields : [];
+  }, [tempWidget.config?.secondarySource?.datasetId, datasets]);
+
+  // Combine fields if join is active
+  const allFields = useMemo(() => {
+      if (secondaryFields.length > 0) {
+          return [...availableFields, ...secondaryFields]; // Simplified: duplicates possible
+      }
+      return availableFields;
+  }, [availableFields, secondaryFields]);
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar bg-slate-50/50">
-      
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-         <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-               <Layout className="w-6 h-6 text-blue-600" />
-               Tableau de Bord Global
-            </h2>
-            <p className="text-slate-500 text-sm mt-1">
-               Vue consolidée de vos indicateurs clés multi-sources.
-            </p>
-         </div>
-
-         <div className="flex gap-2">
-            {isEditing ? (
-               <>
-                  <Button onClick={() => setIsEditing(false)} variant="primary" className="bg-slate-800 hover:bg-slate-900">
-                     <Check className="w-4 h-4 mr-2" /> Terminer
+    <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
+      <div className="max-w-7xl mx-auto space-y-6 pb-12">
+         
+         {/* Header */}
+         <div className="flex justify-between items-center">
+            <div>
+               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <Layout className="w-6 h-6 text-slate-500" />
+                  Tableau de bord
+               </h2>
+               <p className="text-sm text-slate-500">Vue d'ensemble de vos données</p>
+            </div>
+            <div className="flex gap-2">
+               {isEditMode ? (
+                  <>
+                     <Button variant="secondary" onClick={openNewWidget}>
+                        <Plus className="w-4 h-4 mr-2" /> Ajouter un widget
+                     </Button>
+                     <Button 
+                        onClick={() => setIsEditMode(false)} 
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Check className="w-4 h-4 mr-2" /> Terminer
+                     </Button>
+                  </>
+               ) : (
+                  <Button variant="outline" onClick={() => setIsEditMode(true)}>
+                     <Edit3 className="w-4 h-4 mr-2" /> Personnaliser
                   </Button>
-               </>
-            ) : (
-               <Button onClick={() => setIsEditing(true)} variant="outline" className="bg-white">
-                  <Edit3 className="w-4 h-4 mr-2" /> Personnaliser
-               </Button>
-            )}
+               )}
+            </div>
          </div>
-      </div>
 
-      {/* WIDGET GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-20">
-         {dashboardWidgets.map((widget) => (
-            <WidgetItem 
-               key={widget.id}
-               widget={widget}
-               isEditing={isEditing}
-               onMoveLeft={() => moveDashboardWidget(widget.id, 'left')}
-               onMoveRight={() => moveDashboardWidget(widget.id, 'right')}
-               onRemove={() => {
-                  if (window.confirm('Supprimer ce widget ?')) removeDashboardWidget(widget.id);
-               }}
-               onEdit={() => openEditModal(widget)}
-               onResize={(newSize) => updateDashboardWidget(widget.id, { size: newSize })}
-            />
-         ))}
-
-         {/* ADD BUTTON (Only in Edit Mode) */}
-         {isEditing && (
-            <button 
-               onClick={() => setIsLibraryOpen(true)}
-               className="col-span-1 min-h-[140px] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
-            >
-               <div className="p-3 rounded-full bg-slate-100 group-hover:bg-white mb-2">
-                  <Plus className="w-6 h-6" />
-               </div>
-               <span className="text-sm font-medium">Ajouter un widget</span>
-            </button>
-         )}
-
-         {/* Empty State */}
-         {!isEditing && dashboardWidgets.length === 0 && (
-            <div className="col-span-full py-16 text-center bg-white rounded-lg border border-dashed border-slate-300">
-               <MousePointerClick className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-               <p className="text-slate-600 font-medium">Votre tableau de bord est vide</p>
-               <p className="text-slate-500 text-sm mb-4 max-w-md mx-auto">
-                  Vous pouvez construire votre vue idéale en mélangeant des données issues de différents tableaux.
-               </p>
-               <Button onClick={() => setIsEditing(true)}>
-                  <Edit3 className="w-4 h-4 mr-2" /> Commencer la configuration
+         {/* Grid */}
+         {dashboardWidgets.length === 0 ? (
+            <div className="text-center py-20 border-2 border-dashed border-slate-300 rounded-xl">
+               <Activity className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+               <p className="text-slate-500 font-medium">Votre tableau de bord est vide.</p>
+               <Button className="mt-4" onClick={() => { setIsEditMode(true); openNewWidget(); }}>
+                  Créer mon premier widget
                </Button>
+            </div>
+         ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+               {dashboardWidgets.map((widget) => {
+                  // Compute col span
+                  const colSpan = widget.size === 'full' ? 'md:col-span-2 lg:col-span-4' 
+                     : widget.size === 'lg' ? 'md:col-span-2 lg:col-span-3'
+                     : widget.size === 'md' ? 'md:col-span-2'
+                     : 'col-span-1';
+                  
+                  // Data hook wrapper component to respect hooks rules
+                  const WidgetWrapper = () => {
+                     const data = useWidgetData(widget);
+                     return (
+                        <div className={`bg-white rounded-lg border ${isEditMode ? 'border-blue-300 ring-2 ring-blue-50' : 'border-slate-200'} shadow-sm p-4 flex flex-col h-64 relative group transition-all`}>
+                           {isEditMode && (
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded shadow-sm z-10">
+                                 <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowLeft className="w-3 h-3" /></button>
+                                 <button onClick={() => moveDashboardWidget(widget.id, 'right')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowRight className="w-3 h-3" /></button>
+                                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-blue-50 rounded text-blue-600"><Settings className="w-3 h-3" /></button>
+                                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600"><Trash2 className="w-3 h-3" /></button>
+                              </div>
+                           )}
+                           <h3 className="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider truncate" title={widget.title}>
+                              {widget.title}
+                           </h3>
+                           <div className="flex-1 min-h-0">
+                              <WidgetDisplay widget={widget} data={data} />
+                           </div>
+                        </div>
+                     );
+                  };
+
+                  return (
+                     <div key={widget.id} className={colSpan}>
+                        <WidgetWrapper />
+                     </div>
+                  );
+               })}
             </div>
          )}
       </div>
 
-      {/* Edit Mode Actions Footer */}
-      {isEditing && (
-         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-4 z-40 animate-in slide-in-from-bottom-4">
-            <span className="text-sm font-bold">Mode Édition</span>
-            <div className="h-4 w-px bg-slate-600"></div>
-            <button onClick={() => setIsLibraryOpen(true)} className="flex items-center gap-2 hover:text-blue-300 text-xs font-medium">
-               <Plus className="w-4 h-4" /> Ajouter
-            </button>
-            <button onClick={() => { if(window.confirm('Tout effacer ?')) resetDashboard() }} className="flex items-center gap-2 hover:text-red-300 text-xs font-medium">
-               <Minimize2 className="w-4 h-4" /> Vider
-            </button>
-            <div className="h-4 w-px bg-slate-600"></div>
-            <button onClick={() => setIsEditing(false)} className="bg-white text-slate-900 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-50">
-               OK
-            </button>
+      {/* MODAL */}
+      {showModal && (
+         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                  <h3 className="text-xl font-bold text-slate-800">
+                     {editingWidgetId ? 'Modifier le widget' : 'Nouveau widget'}
+                  </h3>
+                  <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+                     <X className="w-6 h-6" />
+                  </button>
+               </div>
+               
+               <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+                  
+                  {/* 1. General Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Titre du widget</label>
+                        <input 
+                           type="text" 
+                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                           value={tempWidget.title || ''}
+                           onChange={e => setTempWidget({...tempWidget, title: e.target.value})}
+                           placeholder="Ex: Budget vs Charge"
+                        />
+                     </div>
+                     
+                     <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Taille</label>
+                        <select 
+                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                           value={tempWidget.size}
+                           onChange={e => setTempWidget({...tempWidget, size: e.target.value as WidgetSize})}
+                        >
+                           <option value="sm">Petit (1/4)</option>
+                           <option value="md">Moyen (2/4)</option>
+                           <option value="lg">Grand (3/4)</option>
+                           <option value="full">Large (4/4)</option>
+                        </select>
+                     </div>
+
+                     <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Source de données</label>
+                        <select 
+                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                           value={tempWidget.config?.source?.datasetId || ''}
+                           onChange={e => setTempWidget({
+                              ...tempWidget, 
+                              config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } }
+                           })}
+                        >
+                           {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                     </div>
+                  </div>
+
+                  {/* DATA BLENDING (Optional) */}
+                  <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                              <LinkIcon className="w-4 h-4" /> Données liées (Jointure)
+                          </h4>
+                          {tempWidget.config?.secondarySource && (
+                              <button 
+                                  onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, secondarySource: undefined } })}
+                                  className="text-xs text-red-600 hover:underline"
+                              >
+                                  Retirer
+                              </button>
+                          )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                              <label className="block text-xs font-medium text-indigo-800 mb-1">Tableau à lier</label>
+                              <select 
+                                  className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
+                                  value={tempWidget.config?.secondarySource?.datasetId || ''}
+                                  onChange={e => {
+                                      const val = e.target.value;
+                                      setTempWidget({
+                                          ...tempWidget, 
+                                          config: { 
+                                              ...tempWidget.config!, 
+                                              secondarySource: val ? { 
+                                                  datasetId: val, 
+                                                  joinFieldPrimary: '', 
+                                                  joinFieldSecondary: '' 
+                                              } : undefined
+                                          }
+                                      });
+                                  }}
+                              >
+                                  <option value="">-- Aucun --</option>
+                                  {datasets.filter(d => d.id !== tempWidget.config?.source?.datasetId).map(d => (
+                                      <option key={d.id} value={d.id}>{d.name}</option>
+                                  ))}
+                              </select>
+                          </div>
+                          
+                          {tempWidget.config?.secondarySource && (
+                              <>
+                                  <div>
+                                      <label className="block text-xs font-medium text-indigo-800 mb-1">Clé source princ.</label>
+                                      <select 
+                                          className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
+                                          value={tempWidget.config?.secondarySource?.joinFieldPrimary || ''}
+                                          onChange={e => setTempWidget({
+                                              ...tempWidget, 
+                                              config: { 
+                                                  ...tempWidget.config!, 
+                                                  secondarySource: { ...tempWidget.config!.secondarySource!, joinFieldPrimary: e.target.value } 
+                                              }
+                                          })}
+                                      >
+                                          <option value="">-- Choisir --</option>
+                                          {availableFields.map(f => <option key={f} value={f}>{f}</option>)}
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="block text-xs font-medium text-indigo-800 mb-1">Clé source lièe</label>
+                                      <select 
+                                          className="block w-full rounded-md border-indigo-200 bg-white text-slate-900 text-xs p-2"
+                                          value={tempWidget.config?.secondarySource?.joinFieldSecondary || ''}
+                                          onChange={e => setTempWidget({
+                                              ...tempWidget, 
+                                              config: { 
+                                                  ...tempWidget.config!, 
+                                                  secondarySource: { ...tempWidget.config!.secondarySource!, joinFieldSecondary: e.target.value } 
+                                              }
+                                          })}
+                                      >
+                                          <option value="">-- Choisir --</option>
+                                          {/* Need fields from selected secondary dataset */}
+                                          {(() => {
+                                              const secDs = datasets.find(d => d.id === tempWidget.config?.secondarySource?.datasetId);
+                                              return secDs?.fields.map(f => <option key={f} value={f}>{f}</option>);
+                                          })()}
+                                      </select>
+                                  </div>
+                              </>
+                          )}
+                      </div>
+                  </div>
+
+                  {/* 2. Visual Type Selector */}
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-2">Type de visualisation</label>
+                     <div className="grid grid-cols-3 gap-3">
+                        {[
+                           { id: 'kpi', label: 'Indicateur (KPI)', icon: Activity },
+                           { id: 'chart', label: 'Graphique', icon: BarChart3 },
+                           { id: 'list', label: 'Classement', icon: ListOrdered },
+                        ].map(t => {
+                           const Icon = t.icon;
+                           const isSelected = tempWidget.type === t.id;
+                           return (
+                              <button 
+                                 key={t.id}
+                                 onClick={() => setTempWidget({...tempWidget, type: t.id as WidgetType})}
+                                 className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-all
+                                    ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <Icon className="w-4 h-4" />
+                                 <span className="font-medium text-sm">{t.label}</span>
+                              </button>
+                           )
+                        })}
+                     </div>
+                  </div>
+
+                  {/* 3. Specific Config based on Type */}
+                  <div className="border-t border-slate-100 pt-4 space-y-4">
+                     
+                     {/* Metric Config */}
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Métrique</label>
+                           <select 
+                              className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                              value={tempWidget.config?.metric}
+                              onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, metric: e.target.value as any }})}
+                           >
+                              <option value="count">Compte (Nombre de lignes)</option>
+                              <option value="sum">Somme</option>
+                              <option value="avg">Moyenne</option>
+                              <option value="distinct">Compte distinct</option>
+                           </select>
+                        </div>
+                        {['sum', 'avg', 'distinct'].includes(tempWidget.config?.metric || '') && (
+                           <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Champ valeur</label>
+                              <select 
+                                 className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                 value={tempWidget.config?.valueField || ''}
+                                 onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, valueField: e.target.value }})}
+                              >
+                                 <option value="">-- Choisir --</option>
+                                 {allFields.map(f => <option key={f} value={f}>{f}</option>)}
+                              </select>
+                           </div>
+                        )}
+                     </div>
+
+                     {/* Dimension Config (for Chart & List) */}
+                     {(tempWidget.type === 'chart' || tempWidget.type === 'list') && (
+                        <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Axe de regroupement (Dimension)</label>
+                           <select 
+                              className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                              value={tempWidget.config?.dimension || ''}
+                              onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value }})}
+                           >
+                              <option value="">-- Choisir --</option>
+                              {allFields.map(f => <option key={f} value={f}>{f}</option>)}
+                           </select>
+                        </div>
+                     )}
+
+                     {/* KPI Specifics */}
+                     {tempWidget.type === 'kpi' && (
+                        <div className="space-y-4">
+                           <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Style du KPI</label>
+                              <div className="flex gap-2">
+                                 {['simple', 'trend', 'progress'].map(s => (
+                                    <button
+                                       key={s}
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, kpiStyle: s as KpiStyle } })}
+                                       className={`px-3 py-1.5 rounded text-xs font-medium border ${tempWidget.config?.kpiStyle === s ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-slate-200 text-slate-600'}`}
+                                    >
+                                       {s === 'simple' ? 'Simple' : s === 'trend' ? 'Avec tendance' : 'Progression'}
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+                           
+                           {tempWidget.config?.kpiStyle === 'progress' && (
+                              <div>
+                                 <label className="block text-sm font-medium text-slate-700 mb-1">Objectif cible (Target)</label>
+                                 <input 
+                                    type="number" 
+                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2"
+                                    placeholder="Ex: 10000"
+                                    value={tempWidget.config?.target || ''}
+                                    onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, target: parseFloat(e.target.value) } })}
+                                 />
+                              </div>
+                           )}
+
+                           <Checkbox 
+                              checked={!!tempWidget.config?.showTrend}
+                              onChange={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, showTrend: !tempWidget.config?.showTrend } })}
+                              label="Afficher l'évolution par rapport au précédent import"
+                           />
+                        </div>
+                     )}
+
+                     {/* Chart Specifics */}
+                     {tempWidget.type === 'chart' && (
+                        <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Type de graphique</label>
+                           <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'bar' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'bar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <BarChart3 className="w-4 h-4" /> Barres
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'line' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'line' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <LineChartIcon className="w-4 h-4" /> Courbes
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'pie' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'pie' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <PieIcon className="w-4 h-4" /> Camembert
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'donut' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'donut' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <PieIcon className="w-4 h-4" /> Donut
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radial' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radial' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <Activity className="w-4 h-4" /> Jauge
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radar' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <RadarIcon className="w-4 h-4" /> Radar
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'treemap' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'treemap' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <LayoutGrid className="w-4 h-4" /> Treemap
+                              </button>
+                              <button
+                                 onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'funnel' }})}
+                                 className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'funnel' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                              >
+                                 <Filter className="w-4 h-4" /> Entonnoir
+                              </button>
+                           </div>
+                        </div>
+                     )}
+                  </div>
+
+               </div>
+               
+               <div className="p-6 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setShowModal(false)}>Annuler</Button>
+                  <Button onClick={handleSaveWidget} disabled={!tempWidget.title}>
+                     Enregistrer le widget
+                  </Button>
+               </div>
+            </div>
          </div>
       )}
-
-      {/* Modals */}
-      <WidgetLibrary 
-         isOpen={isLibraryOpen}
-         onClose={() => setIsLibraryOpen(false)}
-         onSelect={handleAddFromLibrary}
-      />
-
-      <WidgetConfigModal 
-         isOpen={isConfigOpen}
-         onClose={() => { setIsConfigOpen(false); setEditingWidgetId(null); setTemplateToAdd(null); }}
-         onSave={handleSaveWidget}
-         initialWidget={editingWidgetId ? dashboardWidgets.find(w => w.id === editingWidgetId) : (templateToAdd ? { ...templateToAdd, title: '', id: '' } as any : null)}
-      />
-
     </div>
   );
 };

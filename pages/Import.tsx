@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit } from '../utils';
@@ -326,7 +327,7 @@ export const Import: React.FC = () => {
                        value="NEW" 
                        checked={targetDatasetId === 'NEW'} 
                        onChange={() => setTargetDatasetId('NEW')}
-                       className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                       className="mt-1 h-4 w-4 text-blue-600 border-gray-300 bg-white focus:ring-blue-500"
                     />
                     <div className="ml-3 w-full">
                        <span className="block text-sm font-medium text-slate-900">Créer une nouvelle typologie</span>
@@ -334,7 +335,7 @@ export const Import: React.FC = () => {
                           <input 
                             type="text" 
                             placeholder="Nom du tableau (ex: Ventes 2025)"
-                            className="mt-2 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                            className="mt-2 block w-full rounded-md border-slate-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
                             value={newDatasetName}
                             onChange={(e) => setNewDatasetName(e.target.value)}
                             autoFocus
@@ -351,12 +352,12 @@ export const Import: React.FC = () => {
                           value="EXISTING_FALLBACK"
                           checked={targetDatasetId !== 'NEW'} 
                           onChange={() => setTargetDatasetId(detectedDatasetId || datasets[0].id)}
-                          className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="mt-1 h-4 w-4 text-blue-600 border-gray-300 bg-white focus:ring-blue-500"
                        />
                        <div className="ml-3 w-full">
                           <span className="block text-sm font-medium text-slate-900">Ajouter à une typologie existante</span>
                           <select 
-                             className="mt-2 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 disabled:opacity-50"
+                             className="mt-2 block w-full rounded-md border-slate-300 shadow-sm bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 disabled:opacity-50"
                              value={targetDatasetId !== 'NEW' ? targetDatasetId : ''}
                              onChange={(e) => setTargetDatasetId(e.target.value)}
                              disabled={targetDatasetId === 'NEW'}
@@ -386,11 +387,11 @@ export const Import: React.FC = () => {
                     <div className="mt-4 pt-4 border-t border-amber-200">
                        <div className="flex flex-col sm:flex-row gap-4">
                           <label className="flex items-center gap-2 cursor-pointer">
-                             <input type="radio" name="updateMode" value="merge" checked={updateMode === 'merge'} onChange={() => setUpdateMode('merge')} className="text-amber-600 focus:ring-amber-500" />
+                             <input type="radio" name="updateMode" value="merge" checked={updateMode === 'merge'} onChange={() => setUpdateMode('merge')} className="text-amber-600 bg-white focus:ring-amber-500" />
                              <span className="text-sm font-bold text-slate-800">Mettre à jour (fusionner)</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
-                             <input type="radio" name="updateMode" value="overwrite" checked={updateMode === 'overwrite'} onChange={() => setUpdateMode('overwrite')} className="text-amber-600 focus:ring-amber-500" />
+                             <input type="radio" name="updateMode" value="overwrite" checked={updateMode === 'overwrite'} onChange={() => setUpdateMode('overwrite')} className="text-amber-600 bg-white focus:ring-amber-500" />
                              <span className="text-sm font-bold text-slate-800">Écraser et remplacer</span>
                           </label>
                        </div>
@@ -434,13 +435,13 @@ export const Import: React.FC = () => {
                           {targetDatasetId === 'NEW' ? (
                             <input 
                                 type="text"
-                                className="block w-full rounded-md border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5"
+                                className="block w-full rounded-md border-slate-300 text-sm bg-white text-slate-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5"
                                 value={mapping[idx] || header}
                                 onChange={(e) => handleMappingChange(idx, e.target.value)}
                             />
                           ) : (
                             <select
-                                className={`block w-full rounded-md border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5 ${isMapped ? 'bg-white font-medium text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500'}`}
+                                className={`block w-full rounded-md border-slate-300 text-sm bg-white focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5 ${isMapped ? 'bg-white font-medium text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500'}`}
                                 value={mapping[idx] || 'ignore'}
                                 onChange={(e) => handleMappingChange(idx, e.target.value)}
                             >
@@ -483,7 +484,7 @@ export const Import: React.FC = () => {
                                     </div>
                                     <input
                                        type="text"
-                                       className="block w-full text-xs border-slate-200 rounded bg-slate-50 p-1 placeholder-slate-300"
+                                       className="block w-full text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300"
                                        placeholder="Aucune"
                                        value={tempFieldConfigs[mappedVal]?.unit || ''}
                                        onChange={(e) => handleConfigChange(mappedVal, 'unit', e.target.value)}

@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
@@ -9,16 +10,99 @@ import {
 } from 'recharts';
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
-  LayoutGrid, TrendingUp, Settings2, Database,
-  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator
+  LayoutGrid, TrendingUp, Settings2, Database, HelpCircle,
+  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown
 } from 'lucide-react';
 import { FieldConfig } from '../types';
-import { MultiSelect } from '../components/ui/MultiSelect';
-import { Checkbox } from '../components/ui/Checkbox';
 
 type ChartType = 'bar' | 'column' | 'pie' | 'area' | 'radar' | 'treemap' | 'kpi' | 'line';
 type AnalysisMode = 'snapshot' | 'trend';
 type MetricType = 'count' | 'distinct' | 'sum';
+
+// --- Multi Select Component ---
+interface MultiSelectProps {
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
+}
+
+const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, placeholder = 'Sélectionner...' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleToggle = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter(s => s !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+  };
+
+  const handleSelectAll = () => {
+     if (selected.length === options.length) {
+        onChange([]);
+     } else {
+        onChange(options);
+     }
+  };
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-blue-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+      >
+        <span className="truncate text-slate-700">
+          {selected.length === 0 
+            ? placeholder 
+            : selected.length === options.length 
+               ? 'Tout sélectionné' 
+               : `${selected.length} sélectionné(s)`
+          }
+        </span>
+        <ChevronDown className="w-3 h-3 text-slate-400 ml-1 shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
+          <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
+             <span className="text-[10px] font-bold text-slate-500 uppercase">Options</span>
+             <button onClick={handleSelectAll} className="text-[10px] text-blue-600 hover:underline">
+                {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
+             </button>
+          </div>
+          {options.length === 0 ? (
+             <div className="p-2 text-xs text-slate-400 italic text-center">Aucune donnée</div>
+          ) : (
+             options.map(option => (
+                <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer">
+                   <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2 bg-white"
+                      checked={selected.includes(option)}
+                      onChange={() => handleToggle(option)}
+                   />
+                   <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
+                </label>
+             ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const CustomAnalytics: React.FC = () => {
   const { batches, currentDataset } = useData();
@@ -557,7 +641,7 @@ export const CustomAnalytics: React.FC = () => {
 
   if (!currentDataset) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-center bg-slate-50 rounded-lg border border-dashed border-slate-300 m-4">
+      <div className="flex flex-col items-center justify-center h-96 text-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
         <Database className="w-12 h-12 text-slate-300 mb-4" />
         <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
         <p className="text-slate-500 text-sm max-w-md mt-2">
@@ -568,7 +652,7 @@ export const CustomAnalytics: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-8 gap-4">
+    <div className="flex flex-col h-[calc(100vh-8rem)] gap-4">
       
       {/* HEADER & MODE SELECTOR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0 gap-4">
@@ -616,14 +700,14 @@ export const CustomAnalytics: React.FC = () => {
                     type="date" 
                     value={startDate} 
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700"
                  />
                  <span className="text-slate-400 text-sm">à</span>
                  <input 
                     type="date" 
                     value={endDate} 
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700"
                  />
               </div>
            )}
@@ -641,7 +725,7 @@ export const CustomAnalytics: React.FC = () => {
                 className="text-xs text-blue-600 hover:underline disabled:text-slate-400"
                 disabled={filters.length === 0}
               >
-                Réinitialiser filtres
+                Réinitialiser les filtres
               </button>
            </div>
            
@@ -804,7 +888,7 @@ export const CustomAnalytics: React.FC = () => {
                     <div className="flex gap-2 mb-2">
                        {mode === 'snapshot' && (
                           <select 
-                             className="flex-1 text-xs border border-slate-200 rounded p-1.5 bg-slate-50"
+                             className="flex-1 text-xs border border-slate-200 rounded p-1.5 bg-white"
                              value={sortOrder}
                              onChange={(e) => setSortOrder(e.target.value as any)}
                           >
@@ -814,7 +898,7 @@ export const CustomAnalytics: React.FC = () => {
                           </select>
                        )}
                        <select 
-                          className="w-24 text-xs border border-slate-200 rounded p-1.5 bg-slate-50"
+                          className="w-24 text-xs border border-slate-200 rounded p-1.5 bg-white"
                           value={limit}
                           onChange={(e) => setLimit(Number(e.target.value))}
                        >
@@ -828,17 +912,22 @@ export const CustomAnalytics: React.FC = () => {
                  {/* Toggles */}
                  <div className="space-y-2">
                     {mode === 'snapshot' && (
-                       <Checkbox 
-                          checked={isCumulative} 
-                          onChange={() => setIsCumulative(!isCumulative)} 
-                          label="Mode cumulatif" 
-                       />
+                       <label className="flex items-center gap-2 cursor-pointer">
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${isCumulative ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 bg-white'}`}>
+                             {isCumulative && <Check className="w-3 h-3" />}
+                          </div>
+                          <input type="checkbox" className="hidden" checked={isCumulative} onChange={() => setIsCumulative(!isCumulative)} />
+                          <span className="text-xs text-slate-700">Mode cumulatif</span>
+                       </label>
                     )}
-                    <Checkbox 
-                       checked={showTable} 
-                       onChange={() => setShowTable(!showTable)} 
-                       label="Afficher tableau" 
-                    />
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${showTable ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 bg-white'}`}>
+                          {showTable && <Check className="w-3 h-3" />}
+                       </div>
+                       <input type="checkbox" className="hidden" checked={showTable} onChange={() => setShowTable(!showTable)} />
+                       <span className="text-xs text-slate-700">Afficher le tableau</span>
+                    </label>
                  </div>
 
                  {/* Segment (Snapshot only) */}
@@ -848,7 +937,7 @@ export const CustomAnalytics: React.FC = () => {
                           Sous-groupe
                        </label>
                        <select 
-                          className="w-full p-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded focus:ring-0"
+                          className="w-full p-1.5 bg-white border border-slate-200 text-slate-700 text-xs rounded focus:ring-0"
                           value={segment}
                           onChange={(e) => setSegment(e.target.value)}
                        >

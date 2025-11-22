@@ -18,9 +18,16 @@ export interface FieldConfig {
 
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
 
-export type WidgetType = 'kpi' | 'chart';
-export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'donut';
+export type WidgetType = 'kpi' | 'chart' | 'list';
+export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full'; // 1 col, 2 cols, 3 cols, 4 cols
+export type KpiStyle = 'simple' | 'trend' | 'progress';
+
+export interface SecondarySourceConfig {
+  datasetId: string;
+  joinFieldPrimary: string; // Champ dans la source principale (ex: "Equipe")
+  joinFieldSecondary: string; // Champ dans la source secondaire (ex: "NomEquipe")
+}
 
 export interface WidgetSource {
   datasetId: string;
@@ -31,6 +38,7 @@ export interface WidgetSource {
 export interface WidgetConfig {
   // Source Config
   source?: WidgetSource; 
+  secondarySource?: SecondarySourceConfig; // NOUVEAU : Pour le croisement de données
   
   // Data Config
   metric: 'count' | 'sum' | 'avg' | 'distinct';
@@ -39,7 +47,8 @@ export interface WidgetConfig {
   
   // Visual Config
   chartType?: ChartType;
-  target?: number; // Objectif (pour les KPI)
+  kpiStyle?: KpiStyle;
+  target?: number; // Objectif (pour les KPI ou Jauges)
   showTrend?: boolean; // Afficher l'évolution vs période précédente
   
   // Filters

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr } from '../utils';
@@ -414,7 +415,7 @@ export const DataExplorer: React.FC = () => {
             
             <div className="flex items-center gap-4">
                <select 
-                  className="text-xs border-slate-300 rounded bg-slate-50 text-slate-600 focus:ring-blue-500 focus:border-blue-500"
+                  className="text-xs border-slate-300 rounded bg-white text-slate-600 focus:ring-blue-500 focus:border-blue-500"
                   value={rowsPerPage}
                   onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                >
@@ -481,7 +482,7 @@ export const DataExplorer: React.FC = () => {
                {/* Configuration Key Selector */}
                <div className="p-3 bg-blue-50 border-b border-blue-100">
                   <label className="block text-xs font-bold text-blue-800 mb-1">
-                     Clé d'identification (Liaison)
+                     Clé d'identification (liaison)
                   </label>
                   <select 
                      className="block w-full text-sm border-blue-200 rounded p-1.5 bg-white text-slate-700 focus:ring-blue-500 focus:border-blue-500"
