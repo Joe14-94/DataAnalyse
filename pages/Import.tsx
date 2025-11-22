@@ -529,7 +529,7 @@ export const Import: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-       <div className="max-w-6xl mx-auto space-y-6 pb-12">
+       <div className="space-y-6 pb-12"> {/* Removed max-w-6xl */}
          <div className="flex items-center justify-between">
            <h2 className="text-2xl font-bold text-slate-800">Importation des données</h2>
            <div className="text-sm text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200">

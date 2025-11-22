@@ -159,7 +159,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-      <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      <div className="space-y-8 pb-12"> {/* Removed max-w-7xl */}
         
         {/* Control Bar */}
         <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap gap-6 items-center justify-between">

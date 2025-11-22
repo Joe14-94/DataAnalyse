@@ -77,7 +77,7 @@ export const History: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-       <div className="max-w-7xl mx-auto space-y-6 pb-12">
+       <div className="space-y-6 pb-12"> {/* Removed max-w-7xl */}
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
            <div>
               <h2 className="text-2xl font-bold text-slate-800">Historique : {currentDataset.name}</h2>

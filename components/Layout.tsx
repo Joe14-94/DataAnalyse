@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -25,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Analyse sur mesure', icon: PieChart, path: '/analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
     { name: 'Paramètres', icon: Settings, path: '/settings' },
+    { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
   ];
 
   // Calculate Storage Usage
@@ -73,7 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="p-1.5 bg-blue-600 rounded-md text-white">
               <Database size={20} />
             </div>
-            <span>SuiviDonnées</span>
+            <span>DataScope</span>
           </div>
 
           {/* DATASET SELECTOR */}
