@@ -1,4 +1,5 @@
 
+
 export interface DataRow {
   id: string;
   [key: string]: any; // Permet des champs dynamiques
@@ -15,11 +16,37 @@ export interface FieldConfig {
   unit?: string; // Ex: "k€", "kg", "%"
 }
 
+// --- NOUVEAUX TYPES POUR LE DASHBOARD ---
+
+export type WidgetType = 'kpi' | 'chart';
+export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'donut';
+export type WidgetSize = 'sm' | 'md' | 'lg' | 'full'; // 1 col, 2 cols, 3 cols, 4 cols
+
+export interface WidgetConfig {
+  metric: 'count' | 'sum' | 'avg' | 'distinct';
+  dimension?: string; // Champ utilisé pour l'axe X ou le groupement
+  valueField?: string; // Champ utilisé pour le calcul (si sum/avg)
+  chartType?: ChartType;
+  target?: number; // Objectif (pour les KPI)
+  showTrend?: boolean; // Afficher l'évolution vs période précédente
+  filterField?: string; // Filtre optionnel spécifique au widget
+  filterValue?: string;
+}
+
+export interface DashboardWidget {
+  id: string;
+  title: string;
+  type: WidgetType;
+  size: WidgetSize;
+  config: WidgetConfig;
+}
+
 export interface Dataset {
   id: string;
   name: string;
   fields: string[]; // Le schéma de ce dataset (liste des noms)
   fieldConfigs?: Record<string, FieldConfig>; // Configuration avancée (optionnelle pour compatibilité)
+  widgets?: DashboardWidget[]; // Configuration du dashboard liée au dataset
   createdAt: number;
 }
 

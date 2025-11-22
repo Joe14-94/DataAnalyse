@@ -1,6 +1,7 @@
 
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig } from '../types';
 import { APP_VERSION, generateSyntheticData } from '../utils';
 
 interface DataContextType {
@@ -10,18 +11,26 @@ interface DataContextType {
   batches: ImportBatch[]; // Batches filtrés pour le dataset courant
   savedMappings: Record<string, string>;
   
-  // Actions
+  // Actions Dataset
   switchDataset: (id: string) => void;
   createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
   
+  // Actions Data
   addBatch: (datasetId: string, date: string, rows: any[]) => void;
   deleteBatch: (id: string) => void;
   
-  // Field management
+  // Actions Fields
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;
   updateDatasetConfigs: (datasetId: string, configs: Record<string, FieldConfig>) => void;
+
+  // Actions Dashboard Widgets
+  addWidget: (widget: Omit<DashboardWidget, 'id'>) => void;
+  updateWidget: (id: string, updates: Partial<DashboardWidget>) => void;
+  removeWidget: (id: string) => void;
+  moveWidget: (id: string, direction: 'left' | 'right') => void;
+  resetDashboard: () => void;
 
   // System
   importBackup: (jsonData: string) => boolean;
@@ -35,6 +44,17 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'app_data_v3_multi';
 
+// Widgets par défaut lors de la création d'un dataset
+const DEFAULT_WIDGETS: DashboardWidget[] = [
+  {
+    id: 'default-1',
+    title: 'Volume total',
+    type: 'kpi',
+    size: 'sm',
+    config: { metric: 'count', showTrend: true }
+  }
+];
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [batches, setAllBatches] = useState<ImportBatch[]>([]); // Tous les batches
@@ -45,7 +65,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- MIGRATION & LOAD ---
   useEffect(() => {
     try {
-      // Tenter de charger la V3
       const storedV3 = localStorage.getItem(STORAGE_KEY);
       
       if (storedV3) {
@@ -54,34 +73,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAllBatches(parsed.batches || []);
         setSavedMappings(parsed.savedMappings || {});
         
-        // Sélectionner le dataset sauvegardé ou le premier par défaut
         if (parsed.currentDatasetId && parsed.datasets?.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
           setCurrentDatasetId(parsed.currentDatasetId);
         } else if (parsed.datasets && parsed.datasets.length > 0) {
           setCurrentDatasetId(parsed.datasets[0].id);
-        }
-      } else {
-        // Migration logique V2 -> V3 (conservée au cas où)
-        const storedV2 = localStorage.getItem('app_data_v2_dynamic');
-        if (storedV2) {
-          console.log("Migration V2 -> V3 en cours...");
-          const parsedV2 = JSON.parse(storedV2);
-          const defaultDatasetId = 'default-migrated';
-          const defaultDataset: Dataset = {
-            id: defaultDatasetId,
-            name: 'Mon Tableau (Migré)',
-            fields: parsedV2.fields || [],
-            createdAt: Date.now()
-          };
-          const migratedBatches = (parsedV2.batches || []).map((b: any) => ({
-            ...b,
-            datasetId: defaultDatasetId
-          }));
-
-          setDatasets([defaultDataset]);
-          setAllBatches(migratedBatches);
-          setSavedMappings(parsedV2.savedMappings || {});
-          setCurrentDatasetId(defaultDatasetId);
         }
       }
     } catch (e) {
@@ -109,7 +104,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     .filter(b => b.datasetId === currentDatasetId)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // --- ACTIONS ---
+  // --- ACTIONS DATASET ---
 
   const switchDataset = useCallback((id: string) => {
     setCurrentDatasetId(id);
@@ -117,15 +112,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createDataset = useCallback((name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => {
     const newId = Math.random().toString(36).substr(2, 9);
+    
+    // Création de widgets par défaut basés sur les champs disponibles
+    const initialWidgets: DashboardWidget[] = [...DEFAULT_WIDGETS];
+    
+    // Si on a des champs, on ajoute un graphe par défaut
+    if (fields.length > 0) {
+      initialWidgets.push({
+        id: `default-chart-${Date.now()}`,
+        title: `Répartition par ${fields[0]}`,
+        type: 'chart',
+        size: 'md',
+        config: { metric: 'count', dimension: fields[0], chartType: 'bar' }
+      });
+    }
+
     const newDataset: Dataset = {
       id: newId,
       name,
       fields,
       fieldConfigs: fieldConfigs || {},
+      widgets: initialWidgets,
       createdAt: Date.now()
     };
     setDatasets(prev => [...prev, newDataset]);
-    setCurrentDatasetId(newId); // Auto select
+    setCurrentDatasetId(newId); 
     return newId;
   }, []);
 
@@ -144,11 +155,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addFieldToDataset = useCallback((datasetId: string, fieldName: string, config?: FieldConfig) => {
     setDatasets(prev => prev.map(d => {
       if (d.id !== datasetId) return d;
-      // Ajout du champ s'il n'existe pas
       const fields = d.fields.includes(fieldName) ? d.fields : [...d.fields, fieldName];
-      // Ajout de la config si fournie
       const configs = config ? { ...d.fieldConfigs, [fieldName]: config } : d.fieldConfigs;
-      
       return { ...d, fields, fieldConfigs: configs };
     }));
   }, []);
@@ -162,6 +170,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }));
   }, []);
+
+  // --- ACTIONS DATA ---
 
   const addBatch = useCallback((datasetId: string, date: string, rows: any[]) => {
     const newBatch: ImportBatch = {
@@ -178,6 +188,63 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAllBatches(prev => prev.filter(b => b.id !== id));
   }, []);
 
+  // --- ACTIONS WIDGETS ---
+
+  const addWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
+    if (!currentDatasetId) return;
+    const newWidget = { ...widget, id: Math.random().toString(36).substr(2, 9) };
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== currentDatasetId) return d;
+      return { ...d, widgets: [...(d.widgets || []), newWidget] };
+    }));
+  }, [currentDatasetId]);
+
+  const updateWidget = useCallback((widgetId: string, updates: Partial<DashboardWidget>) => {
+    if (!currentDatasetId) return;
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== currentDatasetId) return d;
+      return { 
+        ...d, 
+        widgets: (d.widgets || []).map(w => w.id === widgetId ? { ...w, ...updates } : w) 
+      };
+    }));
+  }, [currentDatasetId]);
+
+  const removeWidget = useCallback((widgetId: string) => {
+    if (!currentDatasetId) return;
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== currentDatasetId) return d;
+      return { ...d, widgets: (d.widgets || []).filter(w => w.id !== widgetId) };
+    }));
+  }, [currentDatasetId]);
+
+  const moveWidget = useCallback((widgetId: string, direction: 'left' | 'right') => {
+    if (!currentDatasetId) return;
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== currentDatasetId) return d;
+      const widgets = [...(d.widgets || [])];
+      const idx = widgets.findIndex(w => w.id === widgetId);
+      if (idx === -1) return d;
+      
+      const swapIdx = direction === 'left' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= widgets.length) return d;
+      
+      // Swap
+      [widgets[idx], widgets[swapIdx]] = [widgets[swapIdx], widgets[idx]];
+      return { ...d, widgets };
+    }));
+  }, [currentDatasetId]);
+
+  const resetDashboard = useCallback(() => {
+    if (!currentDatasetId) return;
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== currentDatasetId) return d;
+      return { ...d, widgets: [...DEFAULT_WIDGETS] };
+    }));
+  }, [currentDatasetId]);
+
+  // --- SYSTEM ---
+
   const clearAll = useCallback(() => {
     setDatasets([]);
     setAllBatches([]);
@@ -188,7 +255,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadDemoData = useCallback(() => {
     const id1 = 'demo-rh';
-    const id2 = 'demo-sales';
+    
+    // Widgets démo RH
+    const demoWidgets: DashboardWidget[] = [
+      { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { metric: 'count', showTrend: true } },
+      { id: 'w2', title: 'Budget Total', type: 'kpi', size: 'sm', config: { metric: 'sum', valueField: 'Budget', showTrend: true } },
+      { id: 'w3', title: 'Organisations', type: 'kpi', size: 'sm', config: { metric: 'distinct', dimension: 'Organisation' } },
+      { id: 'w4', title: 'Répartition par Organisation', type: 'chart', size: 'md', config: { metric: 'count', dimension: 'Organisation', chartType: 'pie' } },
+      { id: 'w5', title: 'Budget par Organisation', type: 'chart', size: 'md', config: { metric: 'sum', dimension: 'Organisation', valueField: 'Budget', chartType: 'bar' } },
+      { id: 'w6', title: 'Évolution des Effectifs', type: 'chart', size: 'full', config: { metric: 'count', dimension: 'DateModif', chartType: 'line' } }
+    ];
 
     const ds1: Dataset = { 
       id: id1, 
@@ -198,12 +274,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'Budget': { type: 'number', unit: 'k€' },
         'Quantité': { type: 'number', unit: '' }
       },
+      widgets: demoWidgets,
       createdAt: Date.now() 
     };
     
     const demoBatches = generateSyntheticData(id1);
 
-    setDatasets([ds1]); // On charge juste le RH complexe pour la démo
+    setDatasets([ds1]);
     setAllBatches(demoBatches);
     setCurrentDatasetId(id1);
   }, []);
@@ -231,12 +308,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Format invalide v3");
       }
       
-      // Restauration des données
       setDatasets(parsed.datasets);
       setAllBatches(parsed.batches || []);
       setSavedMappings(parsed.savedMappings || {});
       
-      // Restauration du contexte (tableau actif)
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
       } else if (parsed.datasets.length > 0) {
@@ -266,6 +341,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateDatasetConfigs,
       addBatch, 
       deleteBatch, 
+      addWidget,
+      updateWidget,
+      removeWidget,
+      moveWidget,
+      resetDashboard,
       importBackup, 
       getBackupJson, 
       clearAll, 
