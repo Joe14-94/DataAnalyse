@@ -37,7 +37,7 @@ export const Help: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-50 p-3 rounded border border-slate-100">
                      <div className="flex items-center gap-2 font-bold text-slate-700 mb-1">
-                        <WifiOff className="w-4 h-4" /> 100% Local & Confidentiel
+                        <WifiOff className="w-4 h-4" /> 100 % local et confidentiel
                      </div>
                      <p className="text-xs text-slate-500">
                         Vos données ne quittent jamais votre navigateur. Aucun serveur distant n'y a accès.
@@ -84,7 +84,7 @@ export const Help: React.FC = () => {
                 <div className="flex gap-3">
                    <div className="bg-blue-100 text-blue-700 font-bold w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0">1</div>
                    <div>
-                      <h4 className="font-bold text-slate-700 text-sm">Copier / Coller</h4>
+                      <h4 className="font-bold text-slate-700 text-sm">Copier / coller</h4>
                       <p className="text-xs text-slate-600 mt-1">
                          Ouvrez votre Excel, sélectionnez vos cellules (avec les titres !) et collez-les dans la zone de texte.
                          DataScope détecte automatiquement le format.
@@ -95,7 +95,7 @@ export const Help: React.FC = () => {
                 <div className="flex gap-3">
                    <div className="bg-blue-100 text-blue-700 font-bold w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0">2</div>
                    <div>
-                      <h4 className="font-bold text-slate-700 text-sm">Mapping Intelligent</h4>
+                      <h4 className="font-bold text-slate-700 text-sm">Mapping intelligent</h4>
                       <p className="text-xs text-slate-600 mt-1">
                          Associez vos colonnes importées aux champs existants pour assurer la continuité de l'historique.
                          Vous pouvez ignorer des colonnes inutiles ou en créer de nouvelles.
@@ -123,7 +123,7 @@ export const Help: React.FC = () => {
           </Card>
 
           {/* Guide TCD */}
-          <Card title="Tableau Croisé Dynamique (TCD)">
+          <Card title="Tableau croisé dynamique (TCD)">
              <div className="space-y-4">
                 <p className="text-sm text-slate-600">
                    Le module TCD est un outil puissant pour synthétiser vos données.
@@ -150,7 +150,7 @@ export const Help: React.FC = () => {
                    
                    <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                         <Filter className="w-4 h-4 text-slate-400" /> Tri Interactif
+                         <Filter className="w-4 h-4 text-slate-400" /> Tri interactif
                       </div>
                       <p className="text-xs text-slate-500">
                          Cliquez sur les en-têtes (libellés ou "Total") pour trier les données par ordre alphabétique ou par valeur.
@@ -161,7 +161,7 @@ export const Help: React.FC = () => {
           </Card>
 
           {/* Guide ANALYSE */}
-          <Card title="Studio d'Analyse">
+          <Card title="Studio d'analyse">
              <div className="flex flex-col gap-4 h-full">
                 <div className="flex gap-3 items-start">
                    <div className="p-2 bg-indigo-50 rounded text-indigo-600"><PieChart className="w-5 h-5" /></div>
@@ -189,7 +189,7 @@ export const Help: React.FC = () => {
           </Card>
 
           {/* Guide HISTORIQUE */}
-          <Card title="Données et Historique">
+          <Card title="Données et historique">
              <div className="flex flex-col gap-4 h-full">
                 <div className="flex gap-3 items-start">
                    <div className="p-2 bg-emerald-50 rounded text-emerald-600"><History className="w-5 h-5" /></div>

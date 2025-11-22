@@ -2,7 +2,7 @@
 import { DataRow, RawImportData, ImportBatch } from './types';
 
 // Updated version
-export const APP_VERSION = "202511-071";
+export const APP_VERSION = "202511-075";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);

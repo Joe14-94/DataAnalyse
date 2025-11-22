@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
@@ -9,99 +9,16 @@ import {
 } from 'recharts';
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
-  LayoutGrid, TrendingUp, Settings2, Database, HelpCircle,
-  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown
+  LayoutGrid, TrendingUp, Settings2, Database,
+  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator
 } from 'lucide-react';
 import { FieldConfig } from '../types';
+import { MultiSelect } from '../components/ui/MultiSelect';
+import { Checkbox } from '../components/ui/Checkbox';
 
 type ChartType = 'bar' | 'column' | 'pie' | 'area' | 'radar' | 'treemap' | 'kpi' | 'line';
 type AnalysisMode = 'snapshot' | 'trend';
 type MetricType = 'count' | 'distinct' | 'sum';
-
-// --- Multi Select Component ---
-interface MultiSelectProps {
-  options: string[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
-  placeholder?: string;
-}
-
-const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, placeholder = 'Sélectionner...' }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleToggle = (value: string) => {
-    if (selected.includes(value)) {
-      onChange(selected.filter(s => s !== value));
-    } else {
-      onChange([...selected, value]);
-    }
-  };
-
-  const handleSelectAll = () => {
-     if (selected.length === options.length) {
-        onChange([]);
-     } else {
-        onChange(options);
-     }
-  };
-
-  return (
-    <div className="relative w-full" ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-blue-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-      >
-        <span className="truncate text-slate-700">
-          {selected.length === 0 
-            ? placeholder 
-            : selected.length === options.length 
-               ? 'Tout sélectionné' 
-               : `${selected.length} sélectionné(s)`
-          }
-        </span>
-        <ChevronDown className="w-3 h-3 text-slate-400 ml-1 shrink-0" />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
-          <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
-             <span className="text-[10px] font-bold text-slate-500">Options</span>
-             <button onClick={handleSelectAll} className="text-[10px] text-blue-600 hover:underline">
-                {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
-             </button>
-          </div>
-          {options.length === 0 ? (
-             <div className="p-2 text-xs text-slate-400 italic text-center">Aucune donnée</div>
-          ) : (
-             options.map(option => (
-                <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer">
-                   <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2 bg-white"
-                      checked={selected.includes(option)}
-                      onChange={() => handleToggle(option)}
-                   />
-                   <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
-                </label>
-             ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const CustomAnalytics: React.FC = () => {
   const { batches, currentDataset } = useData();
@@ -432,9 +349,9 @@ export const CustomAnalytics: React.FC = () => {
                 <table className="min-w-full divide-y divide-slate-200">
                    <thead className="bg-slate-50 sticky top-0">
                       <tr>
-                         <th className="px-4 py-2 text-left text-xs font-bold text-slate-500">{dimension}</th>
-                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500">Valeur</th>
-                         {isCumulative && <th className="px-4 py-2 text-right text-xs font-bold text-slate-500">Cumul</th>}
+                         <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">{dimension}</th>
+                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Valeur</th>
+                         {isCumulative && <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Cumul</th>}
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100 bg-white">
@@ -455,10 +372,10 @@ export const CustomAnalytics: React.FC = () => {
                <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50 sticky top-0">
                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-bold text-slate-500">Date</th>
-                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-500">Total</th>
+                        <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
+                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total</th>
                         {trendData.series.map(s => (
-                           <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-500">{s}</th>
+                           <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">{s}</th>
                         ))}
                      </tr>
                   </thead>
@@ -743,7 +660,7 @@ export const CustomAnalytics: React.FC = () => {
                     {fields.map(f => <option key={f} value={f}>{f}</option>)}
                  </select>
                  
-                 <label className="block text-xs font-bold text-slate-500 mb-2 mt-3">Métrique</label>
+                 <label className="block text-xs font-bold text-slate-500 mb-2 mt-3 uppercase">Métrique</label>
                  <div className="grid grid-cols-3 gap-2">
                     <button 
                        onClick={() => setMetric('count')}
@@ -883,7 +800,7 @@ export const CustomAnalytics: React.FC = () => {
                  
                  {/* Sort & Limit */}
                  <div>
-                    <label className="text-xs font-bold text-slate-500 mb-2 block">Options</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Options</label>
                     <div className="flex gap-2 mb-2">
                        {mode === 'snapshot' && (
                           <select 
@@ -911,28 +828,23 @@ export const CustomAnalytics: React.FC = () => {
                  {/* Toggles */}
                  <div className="space-y-2">
                     {mode === 'snapshot' && (
-                       <label className="flex items-center gap-2 cursor-pointer">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${isCumulative ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 bg-white'}`}>
-                             {isCumulative && <Check className="w-3 h-3" />}
-                          </div>
-                          <input type="checkbox" className="hidden" checked={isCumulative} onChange={() => setIsCumulative(!isCumulative)} />
-                          <span className="text-xs text-slate-700">Mode cumulatif</span>
-                       </label>
+                       <Checkbox 
+                          checked={isCumulative} 
+                          onChange={() => setIsCumulative(!isCumulative)} 
+                          label="Mode cumulatif" 
+                       />
                     )}
-
-                    <label className="flex items-center gap-2 cursor-pointer">
-                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${showTable ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 bg-white'}`}>
-                          {showTable && <Check className="w-3 h-3" />}
-                       </div>
-                       <input type="checkbox" className="hidden" checked={showTable} onChange={() => setShowTable(!showTable)} />
-                       <span className="text-xs text-slate-700">Afficher tableau</span>
-                    </label>
+                    <Checkbox 
+                       checked={showTable} 
+                       onChange={() => setShowTable(!showTable)} 
+                       label="Afficher tableau" 
+                    />
                  </div>
 
                  {/* Segment (Snapshot only) */}
                  {mode === 'snapshot' && (
                     <div className="space-y-1">
-                       <label className="text-xs font-bold text-slate-500 flex items-center">
+                       <label className="text-xs font-bold text-slate-500 uppercase flex items-center">
                           Sous-groupe
                        </label>
                        <select 
@@ -958,7 +870,7 @@ export const CustomAnalytics: React.FC = () => {
                  <Activity className="w-4 h-4" />
               </div>
               <div>
-                 <h4 className="text-xs font-bold text-slate-700 tracking-wide">Insight</h4>
+                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Insight</h4>
                  <p className="text-sm text-slate-600 leading-relaxed">
                     {insightText}
                  </p>

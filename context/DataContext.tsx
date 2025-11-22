@@ -52,10 +52,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsed = JSON.parse(storedV3);
         setDatasets(parsed.datasets || []);
         setAllBatches(parsed.batches || []);
-        setSavedMappings(parsed.savedMappings || []);
-        // Sélectionner le premier par défaut si dispo
-        if (parsed.datasets && parsed.datasets.length > 0) {
-          if (!currentDatasetId) setCurrentDatasetId(parsed.datasets[0].id);
+        setSavedMappings(parsed.savedMappings || {});
+        
+        // Sélectionner le dataset sauvegardé ou le premier par défaut
+        if (parsed.currentDatasetId && parsed.datasets?.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
+          setCurrentDatasetId(parsed.currentDatasetId);
+        } else if (parsed.datasets && parsed.datasets.length > 0) {
+          setCurrentDatasetId(parsed.datasets[0].id);
         }
       } else {
         // Migration logique V2 -> V3 (conservée au cas où)
@@ -93,11 +96,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         datasets,
         batches, 
         version: APP_VERSION,
-        savedMappings
+        savedMappings,
+        currentDatasetId
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
-  }, [datasets, batches, savedMappings]);
+  }, [datasets, batches, savedMappings, currentDatasetId]);
 
   // --- COMPUTED ---
   const currentDataset = datasets.find(d => d.id === currentDatasetId) || null;
@@ -209,9 +213,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const getBackupJson = useCallback(() => {
-    const state: AppState = { datasets, batches, version: APP_VERSION, savedMappings };
+    const state: AppState = { 
+      datasets, 
+      batches, 
+      version: APP_VERSION, 
+      savedMappings,
+      currentDatasetId,
+      exportDate: new Date().toISOString()
+    };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings]);
+  }, [datasets, batches, savedMappings, currentDatasetId]);
 
   const importBackup = useCallback((jsonData: string) => {
     try {
@@ -219,10 +230,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!parsed.datasets || !Array.isArray(parsed.datasets)) {
         throw new Error("Format invalide v3");
       }
+      
+      // Restauration des données
       setDatasets(parsed.datasets);
       setAllBatches(parsed.batches || []);
-      if (parsed.savedMappings) setSavedMappings(parsed.savedMappings);
-      if (parsed.datasets.length > 0) setCurrentDatasetId(parsed.datasets[0].id);
+      setSavedMappings(parsed.savedMappings || {});
+      
+      // Restauration du contexte (tableau actif)
+      if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
+        setCurrentDatasetId(parsed.currentDatasetId);
+      } else if (parsed.datasets.length > 0) {
+        setCurrentDatasetId(parsed.datasets[0].id);
+      } else {
+        setCurrentDatasetId(null);
+      }
       return true;
     } catch (e) {
       console.error(e);

@@ -37,6 +37,8 @@ export interface AppState {
   version: string;
   savedMappings?: Record<string, string>; // Dictionnaire Global [Nom Colonne CSV] -> [Nom Champ Système]
   fields?: string[]; // Deprecated
+  currentDatasetId?: string | null; // ID du dataset actif lors de la sauvegarde
+  exportDate?: string; // Date de l'export pour traçabilité
 }
 
 export type ViewMode = 'dashboard' | 'import' | 'history' | 'settings';

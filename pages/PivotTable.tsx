@@ -7,6 +7,8 @@ import {
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, GripVertical
 } from 'lucide-react';
+import { MultiSelect } from '../components/ui/MultiSelect';
+import { Checkbox } from '../components/ui/Checkbox';
 
 type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
 type SortBy = 'label' | 'value';
@@ -36,8 +38,8 @@ export const PivotTable: React.FC = () => {
   const [valField, setValField] = useState<string>('');
   const [aggType, setAggType] = useState<AggregationType>('count');
   
-  // Filtres
-  const [filters, setFilters] = useState<{field: string, value: string}[]>([]);
+  // Filtres (Multi-valeurs)
+  const [filters, setFilters] = useState<{field: string, values: string[]}[]>([]);
   
   // Options d'affichage
   const [showSubtotals, setShowSubtotals] = useState(true);
@@ -110,18 +112,23 @@ export const PivotTable: React.FC = () => {
     setRowFields(newFields);
   };
 
-  // --- FILTERS HANDLERS ---
+  // --- FILTERS HANDLERS (MULTI) ---
 
   const addFilter = () => {
     if (fields.length > 0) {
-       setFilters([...filters, { field: fields[0], value: '' }]);
+       setFilters([...filters, { field: fields[0], values: [] }]);
     }
   };
 
-  const updateFilter = (index: number, key: 'field' | 'value', newVal: string) => {
+  const updateFilterField = (index: number, newField: string) => {
      const newFilters = [...filters];
-     newFilters[index] = { ...newFilters[index], [key]: newVal };
-     if (key === 'field') newFilters[index].value = '';
+     newFilters[index] = { field: newField, values: [] };
+     setFilters(newFilters);
+  };
+
+  const updateFilterValues = (index: number, newValues: string[]) => {
+     const newFilters = [...filters];
+     newFilters[index].values = newValues;
      setFilters(newFilters);
   };
 
@@ -181,10 +188,13 @@ export const PivotTable: React.FC = () => {
   const pivotData = useMemo(() => {
     if (!currentBatch || rowFields.length === 0) return null;
 
-    // 1. Filter Data
+    // 1. Filter Data (Multi-values support)
     const filteredRows = currentBatch.rows.filter(row => {
       if (filters.length === 0) return true;
-      return filters.every(f => !f.value || String(row[f.field]) === f.value);
+      return filters.every(f => {
+         if (f.values.length === 0) return true; // No selection = All
+         return f.values.includes(String(row[f.field]));
+      });
     });
 
     // 2. Extract Distinct Column Headers (if colField set)
@@ -499,23 +509,21 @@ export const PivotTable: React.FC = () => {
                             <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500">
                                <X className="w-3 h-3" />
                             </button>
+                            
                             <select 
-                               className="w-full bg-white border border-slate-200 rounded px-1 py-1"
+                               className="w-full bg-white border border-slate-200 rounded px-1 py-1 mb-1"
                                value={filter.field}
-                               onChange={(e) => updateFilter(idx, 'field', e.target.value)}
+                               onChange={(e) => updateFilterField(idx, e.target.value)}
                             >
                                {fields.map(f => <option key={f} value={f}>{f}</option>)}
                             </select>
-                            <select 
-                               className="w-full bg-white border border-slate-200 rounded px-1 py-1"
-                               value={filter.value}
-                               onChange={(e) => updateFilter(idx, 'value', e.target.value)}
-                            >
-                               <option value="">-- Tous --</option>
-                               {getDistinctValuesForField(filter.field).map(v => (
-                                  <option key={v} value={v}>{v}</option>
-                               ))}
-                            </select>
+                            
+                            <MultiSelect 
+                               options={getDistinctValuesForField(filter.field)}
+                               selected={filter.values}
+                               onChange={(newValues) => updateFilterValues(idx, newValues)}
+                               placeholder="Sélectionner valeurs..."
+                            />
                          </div>
                       ))}
                       {filters.length === 0 && <p className="text-xs text-slate-400 italic">Aucun filtre actif.</p>}
@@ -723,17 +731,19 @@ export const PivotTable: React.FC = () => {
                 </div>
              )}
              
-             <div className="p-2 border-t border-slate-200 bg-slate-50 flex gap-4 text-xs text-slate-600">
+             <div className="p-2 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-4 text-xs text-slate-600">
                 {rowFields.length > 1 && (
-                   <label className="flex items-center gap-1 cursor-pointer">
-                      <input type="checkbox" checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} className="rounded text-blue-600 focus:ring-blue-500" />
-                      Afficher les sous-totaux intermédiaires
-                   </label>
+                   <Checkbox 
+                      checked={showSubtotals} 
+                      onChange={() => setShowSubtotals(!showSubtotals)} 
+                      label="Afficher les sous-totaux intermédiaires" 
+                   />
                 )}
-                <label className="flex items-center gap-1 cursor-pointer">
-                   <input type="checkbox" checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} className="rounded text-blue-600 focus:ring-blue-500" />
-                   Afficher total général
-                </label>
+                <Checkbox 
+                   checked={showTotalCol} 
+                   onChange={() => setShowTotalCol(!showTotalCol)} 
+                   label="Afficher total général" 
+                />
              </div>
           </div>
 
