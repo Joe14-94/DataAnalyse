@@ -1,18 +1,19 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, evaluateFormula, generateId, parseSmartNumber } from '../utils';
+import { formatDateFr, evaluateFormula, generateId, parseSmartNumber, formatNumberValue } from '../utils';
 import { Button } from '../components/ui/Button';
-import { CalculatedField, ConditionalRule } from '../types';
+import { CalculatedField, ConditionalRule, FieldConfig } from '../types';
 import { 
   Search, Download, Database, ChevronLeft, ChevronRight, Table2, 
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
-  History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette
+  History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
+  FilterX, Hash, Percent
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export const DataExplorer: React.FC = () => {
-  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs } = useData();
+  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch } = useData();
   const location = useLocation(); // Hook Router
   
   // --- State ---
@@ -26,6 +27,9 @@ export const DataExplorer: React.FC = () => {
   // Column Filters
   const [showFilters, setShowFilters] = useState(false);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+
+  // Column Selection for Tools
+  const [selectedCol, setSelectedCol] = useState<string | null>(null);
 
   // HISTORY & RECONCILIATION STATE
   const [selectedRow, setSelectedRow] = useState<any | null>(null);
@@ -150,6 +154,16 @@ export const DataExplorer: React.FC = () => {
      });
   };
 
+  // --- NUMBER FORMATTING HANDLERS ---
+  const handleFormatChange = (key: keyof FieldConfig, value: any) => {
+      if (!currentDataset || !selectedCol) return;
+      
+      const currentConfig = currentDataset.fieldConfigs?.[selectedCol] || { type: 'number' };
+      updateDatasetConfigs(currentDataset.id, {
+          [selectedCol]: { ...currentConfig, [key]: value }
+      });
+  };
+
   // --- Data Processing ---
 
   // 1. Flatten Data AND Calculate Fields
@@ -197,10 +211,40 @@ export const DataExplorer: React.FC = () => {
         const lowerFilter = (filterValue as string).toLowerCase();
         data = data.filter(row => {
           const val = row[key];
-          // Gestion spéciale pour la date d'import qui est une métadonnée
-          if (key === '_importDate') {
-             return formatDateFr(val as string).toLowerCase().includes(lowerFilter);
+          
+          // Special handling for BatchId (Exact match required for drilldown reliability)
+          if (key === '_batchId') {
+              return String(val) === String(filterValue);
           }
+
+          // Gestion spéciale pour la date d'import (Support formats multiples)
+          if (key === '_importDate') {
+             const dateStr = val as string; // ISO YYYY-MM-DD "2025-11-23"
+             
+             // 1. Format d'affichage (Français long) : "23 novembre 2025"
+             if (formatDateFr(dateStr).toLowerCase().includes(lowerFilter)) return true;
+
+             // 2. Formats numériques : DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+             try {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                   const [y, m, d] = parts;
+                   // Constructions des formats français
+                   const frNumeric = `${d}/${m}/${y}`; // 23/11/2025
+                   const frNumericShort = `${d}/${m}`; // 23/11
+                   const frNumericDash = `${d}-${m}-${y}`; // 23-11-2025
+                   
+                   if (frNumeric.includes(lowerFilter)) return true;
+                   if (frNumericShort.includes(lowerFilter)) return true;
+                   if (frNumericDash.includes(lowerFilter)) return true;
+                   if (dateStr.includes(lowerFilter)) return true; // ISO match
+                }
+             } catch (e) {
+                return false;
+             }
+             return false;
+          }
+
           return String(val ?? '').toLowerCase().includes(lowerFilter);
         });
       }
@@ -337,6 +381,14 @@ export const DataExplorer: React.FC = () => {
 
   const calculatedFields = currentDataset.calculatedFields || [];
 
+  // Determine if there is a hidden batch filter active (Drill down context)
+  const activeBatchFilter = columnFilters['_batchId'];
+  const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
+
+  // Selected Column Config
+  const selectedConfig = selectedCol ? currentDataset.fieldConfigs?.[selectedCol] : null;
+  const isSelectedNumeric = selectedConfig?.type === 'number';
+
   return (
     <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
       <style>{`
@@ -364,8 +416,13 @@ export const DataExplorer: React.FC = () => {
               <Table2 className="w-6 h-6 text-slate-500" />
               Données : {currentDataset.name}
            </h2>
-           <p className="text-sm text-slate-500 mt-1">
-             {processedRows.length} ligne(s) affichée(s) (Total : {allRows.length})
+           <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+             <span>{processedRows.length} ligne(s) affichée(s) (Total : {allRows.length})</span>
+             {activeBatchDate && (
+                 <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 animate-in fade-in">
+                     <Filter className="w-3 h-3" /> Source restreinte : Import du {formatDateFr(activeBatchDate)}
+                 </span>
+             )}
            </p>
         </div>
 
@@ -386,7 +443,7 @@ export const DataExplorer: React.FC = () => {
            
            <Button variant="secondary" onClick={() => setIsFormatModalOpen(true)} className="whitespace-nowrap">
                <Palette className="w-4 h-4 md:mr-2" />
-               <span className="hidden md:inline">Formatage</span>
+               <span className="hidden md:inline">Conditionnel</span>
            </Button>
 
            <Button variant="secondary" onClick={() => setIsCalcModalOpen(true)} className="whitespace-nowrap">
@@ -402,12 +459,92 @@ export const DataExplorer: React.FC = () => {
               <Filter className="w-4 h-4 md:mr-2" />
               <span className="hidden md:inline">Filtres</span>
            </Button>
+           
+           {(Object.keys(columnFilters).length > 0 || searchTerm) && (
+               <Button variant="danger" onClick={clearFilters} className="whitespace-nowrap px-3" title="Effacer tous les filtres">
+                   <FilterX className="w-4 h-4" />
+               </Button>
+           )}
+
+           {/* DELETE IMPORT BUTTON (Only when drill-down/filtered on specific batch) */}
+           {activeBatchFilter && (
+               <Button 
+                  variant="danger" 
+                  onClick={() => {
+                     if(window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cet import ? Cette action est irréversible.")) {
+                        deleteBatch(activeBatchFilter);
+                        clearFilters();
+                     }
+                  }} 
+                  className="whitespace-nowrap bg-red-100 text-red-700 border-red-200 hover:bg-red-200"
+               >
+                  <Trash2 className="w-4 h-4 md:mr-2" />
+                  <span className="hidden md:inline">Supprimer l'import</span>
+               </Button>
+           )}
 
            <Button variant="outline" onClick={handleExportFullCSV} disabled={processedRows.length === 0}>
               <Download className="w-4 h-4 md:mr-2" />
               <span className="hidden md:inline">Export</span>
            </Button>
         </div>
+      </div>
+
+      {/* Formatting Toolbar (Appears when a numeric column is selected) */}
+      <div className={`transition-all duration-300 overflow-hidden ${selectedCol && isSelectedNumeric ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+         <div className="bg-white border border-teal-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-teal-50 flex flex-wrap items-center gap-4">
+             <div className="flex items-center gap-2 text-teal-800 text-xs font-bold uppercase tracking-wider border-r border-teal-200 pr-4">
+                <Hash className="w-4 h-4" /> 
+                Formatage : {selectedCol}
+             </div>
+             
+             {/* Decimal Places */}
+             <div className="flex items-center gap-2">
+                 <span className="text-xs text-slate-600 font-medium">Décimales :</span>
+                 <div className="flex bg-white rounded border border-slate-200">
+                    <button 
+                        onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))}
+                        className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-r border-slate-100"
+                    >-</button>
+                    <span className="px-2 py-1 text-xs font-mono w-6 text-center">{selectedConfig?.decimalPlaces ?? 2}</span>
+                    <button 
+                        onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))}
+                        className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-l border-slate-100"
+                    >+</button>
+                 </div>
+             </div>
+
+             {/* Scale */}
+             <div className="flex items-center gap-2">
+                 <span className="text-xs text-slate-600 font-medium">Échelle :</span>
+                 <select 
+                    className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-teal-500"
+                    value={selectedConfig?.displayScale || 'none'}
+                    onChange={(e) => handleFormatChange('displayScale', e.target.value)}
+                 >
+                    <option value="none">Aucune</option>
+                    <option value="thousands">Milliers (k)</option>
+                    <option value="millions">Millions (M)</option>
+                    <option value="billions">Milliards (Md)</option>
+                 </select>
+             </div>
+
+             {/* Unit */}
+             <div className="flex items-center gap-2">
+                 <span className="text-xs text-slate-600 font-medium">Unité :</span>
+                 <input 
+                    type="text" 
+                    className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-teal-500"
+                    placeholder="Ex: €"
+                    value={selectedConfig?.unit || ''}
+                    onChange={(e) => handleFormatChange('unit', e.target.value)}
+                 />
+             </div>
+             
+             <div className="ml-auto text-[10px] text-teal-600 italic">
+                S'applique partout (TCD, Graphiques...)
+             </div>
+         </div>
       </div>
 
       {/* Table Container */}
@@ -436,23 +573,35 @@ export const DataExplorer: React.FC = () => {
                      </th>
 
                      {/* Colonnes Standard */}
-                     {currentDataset.fields.map(field => (
-                        <th 
-                           key={field} 
-                           scope="col" 
-                           className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group"
-                           onClick={() => handleSort(field)}
-                        >
-                           <div className="flex items-center gap-2">
-                              <span>{field}</span>
-                              {sortConfig?.key === field ? (
-                                 sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
-                              ) : (
-                                 <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              )}
-                           </div>
-                        </th>
-                     ))}
+                     {currentDataset.fields.map(field => {
+                        const isSelected = selectedCol === field;
+                        const fieldConfig = currentDataset.fieldConfigs?.[field];
+                        const isNumeric = fieldConfig?.type === 'number';
+
+                        return (
+                           <th 
+                              key={field} 
+                              scope="col" 
+                              className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group
+                                 ${isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}
+                              `}
+                              onClick={() => {
+                                 setSelectedCol(isSelected ? null : field);
+                                 handleSort(field);
+                              }}
+                           >
+                              <div className="flex items-center gap-2">
+                                 {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
+                                 <span>{field}</span>
+                                 {sortConfig?.key === field ? (
+                                    sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                                 ) : (
+                                    <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                 )}
+                              </div>
+                           </th>
+                        );
+                     })}
 
                      {/* Colonnes Calculées */}
                      {calculatedFields.map(cf => (
@@ -482,7 +631,7 @@ export const DataExplorer: React.FC = () => {
                            <input 
                               type="text" 
                               className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-normal"
-                              placeholder="Filtre date..."
+                              placeholder="Filtre date (ex: 23/11)..."
                               value={columnFilters['_importDate'] || ''}
                               onChange={(e) => handleColumnFilterChange('_importDate', e.target.value)}
                            />
@@ -532,8 +681,12 @@ export const DataExplorer: React.FC = () => {
                               const val = row[field];
                               let displayVal: React.ReactNode = val;
                               const cellStyle = getCellStyle(field, val);
-                              
-                              if (typeof val === 'boolean') {
+                              const config = currentDataset.fieldConfigs?.[field];
+
+                              if (config?.type === 'number' && val !== undefined && val !== '') {
+                                 // Utiliser le nouveau formateur
+                                 displayVal = formatNumberValue(val, config);
+                              } else if (typeof val === 'boolean') {
                                  displayVal = val ? (
                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span>
                                  ) : (
@@ -544,7 +697,7 @@ export const DataExplorer: React.FC = () => {
                               }
 
                               return (
-                                 <td key={field} className={`px-6 py-3 whitespace-nowrap text-sm text-slate-700 max-w-xs truncate ${cellStyle}`} title={String(val)}>
+                                 <td key={field} className={`px-6 py-3 whitespace-nowrap text-sm text-slate-700 max-w-xs truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''}`} title={String(val)}>
                                     {displayVal}
                                  </td>
                               );
@@ -554,9 +707,9 @@ export const DataExplorer: React.FC = () => {
                            {calculatedFields.map(cf => {
                               const val = row[cf.name];
                               return (
-                                 <td key={cf.id} className="px-6 py-3 whitespace-nowrap text-sm text-indigo-700 font-medium max-w-xs truncate bg-indigo-50/30">
+                                 <td key={cf.id} className="px-6 py-3 whitespace-nowrap text-sm text-indigo-700 font-medium max-w-xs truncate bg-indigo-50/30 text-right font-mono">
                                     {val !== undefined && val !== null ? (
-                                        <span>{val} {cf.unit && <span className="text-xs text-indigo-400 ml-1">{cf.unit}</span>}</span>
+                                        <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span>
                                     ) : <span className="text-indigo-200">-</span>}
                                  </td>
                               );
@@ -722,11 +875,21 @@ export const DataExplorer: React.FC = () => {
 
                                     // Valeur display
                                     let displayVal = val;
-                                    if (typeof val === 'boolean') displayVal = val ? 'Oui' : 'Non';
-                                    if (val === undefined || val === '') displayVal = '-';
+                                    const config = currentDataset.fieldConfigs?.[field];
 
+                                    if (config?.type === 'number' && val !== undefined && val !== '') {
+                                        displayVal = formatNumberValue(val, config);
+                                    } else if (typeof val === 'boolean') {
+                                        displayVal = val ? 'Oui' : 'Non';
+                                    } else if (val === undefined || val === '') {
+                                        displayVal = '-';
+                                    }
+
+                                    // Prev Display Val
                                     let prevDisplayVal = prevVal;
-                                    if (typeof prevVal === 'boolean') prevDisplayVal = prevVal ? 'Oui' : 'Non';
+                                    if (config?.type === 'number' && prevVal !== undefined && prevVal !== '') {
+                                        prevDisplayVal = formatNumberValue(prevVal, config);
+                                    }
 
                                     return (
                                        <div key={field} className={`flex flex-col pb-2 border-b border-dashed border-slate-100 last:border-0 last:pb-0 ${hasChanged ? 'bg-amber-50 -mx-3 px-3 py-2 rounded border-transparent' : ''}`}>

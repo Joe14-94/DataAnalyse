@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, parseSmartNumber } from '../utils';
+import { formatDateFr, parseSmartNumber, formatNumberValue } from '../utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
@@ -107,7 +107,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
 };
 
 export const CustomAnalytics: React.FC = () => {
-  const { batches, currentDataset, savedAnalyses, saveAnalysis } = useData();
+  const { batches, currentDataset, savedAnalyses, saveAnalysis, deleteAnalysis, lastAnalyticsState, saveAnalyticsState } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
 
   // --- State Configuration ---
@@ -143,7 +143,54 @@ export const CustomAnalytics: React.FC = () => {
   // --- Colors ---
   const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6', '#a3e635'];
 
-  // --- Initialization ---
+  // --- Initialization & Persistence ---
+
+  // Load from Persistence if available and matches current dataset
+  useEffect(() => {
+     if (lastAnalyticsState && currentDataset && lastAnalyticsState.datasetId === currentDataset.id) {
+         const c = lastAnalyticsState.config;
+         setMode(c.mode || 'snapshot');
+         setDimension(c.dimension || '');
+         setMetric(c.metric || 'count');
+         setValueField(c.valueField || '');
+         setSegment(c.segment || '');
+         setChartType(c.chartType || 'bar');
+         setLimit(c.limit || 10);
+         setSortOrder(c.sortOrder || 'desc');
+         setIsCumulative(!!c.isCumulative);
+         setShowTable(!!c.showTable);
+         setFilters(c.filters || []);
+     } else {
+        // Defaults
+        if (fields.length > 0 && (!dimension || !fields.includes(dimension))) {
+           setDimension(fields[0]);
+        }
+     }
+  }, [currentDataset?.id]); // Only run when dataset ID changes (or on mount)
+
+  // Save to Persistence on change
+  useEffect(() => {
+     if (currentDataset) {
+        saveAnalyticsState({
+           datasetId: currentDataset.id,
+           config: {
+              mode,
+              dimension,
+              metric,
+              valueField,
+              segment,
+              chartType,
+              limit,
+              sortOrder,
+              isCumulative,
+              showTable,
+              filters
+           }
+        });
+     }
+  }, [mode, dimension, metric, valueField, segment, chartType, limit, sortOrder, isCumulative, showTable, filters, currentDataset]);
+
+
   useEffect(() => {
     if (!selectedBatchId && batches.length > 0) {
       setSelectedBatchId(batches[batches.length - 1].id);
@@ -154,19 +201,7 @@ export const CustomAnalytics: React.FC = () => {
        if (!startDate) setStartDate(sortedDates[0]);
        if (!endDate) setEndDate(sortedDates[sortedDates.length - 1]);
     }
-
-    if (fields.length > 0 && (!dimension || !fields.includes(dimension))) {
-      setDimension(fields[0]);
-    }
-  }, [batches, fields, selectedBatchId, dimension, startDate, endDate]);
-
-  useEffect(() => {
-     if (mode === 'trend') {
-        setChartType('line');
-     } else {
-        setChartType('bar');
-     }
-  }, [mode]);
+  }, [batches, selectedBatchId, startDate, endDate]);
 
   // --- Helpers ---
   const currentBatch = useMemo(() => 
@@ -480,8 +515,18 @@ export const CustomAnalytics: React.FC = () => {
     const data = mode === 'snapshot' ? snapshotData : trendData.data;
     if (!data || data.length === 0) return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée disponible</div>;
     
+    // Config de formatage
+    const getFormattedValue = (val: number) => {
+        if (metric === 'sum' && valueField) {
+            const config = currentDataset?.fieldConfigs?.[valueField];
+            if (config) return formatNumberValue(val, config);
+        }
+        return val.toLocaleString();
+    };
+
+    const tooltipFormatter = (val: any) => [getFormattedValue(val), metric === 'sum' ? 'Somme' : 'Volume'];
+    
     const currentUnit = (metric === 'sum' && valueField) ? currentDataset?.fieldConfigs?.[valueField]?.unit || '' : '';
-    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${currentUnit}`, metric === 'sum' ? 'Somme' : 'Volume'];
 
     // TABLE VIEW
     if (showTable) {
@@ -500,8 +545,8 @@ export const CustomAnalytics: React.FC = () => {
                       {snapshotData.map((row, idx) => (
                          <tr key={idx} className="hover:bg-slate-50">
                             <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.name}</td>
-                            <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.value.toLocaleString()}</td>
-                            {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{row.cumulative.toLocaleString()}</td>}
+                            <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{getFormattedValue(row.value)}</td>
+                            {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{getFormattedValue(row.cumulative)}</td>}
                          </tr>
                       ))}
                    </tbody>
@@ -525,9 +570,9 @@ export const CustomAnalytics: React.FC = () => {
                      {trendData.data.map((row: any, idx: number) => (
                         <tr key={idx} className="hover:bg-slate-50">
                            <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.displayDate}</td>
-                           <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total.toLocaleString()}</td>
+                           <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{getFormattedValue(row.total)}</td>
                            {trendData.series.map(s => (
-                              <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>
+                              <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{getFormattedValue(row[s] || 0)}</td>
                            ))}
                         </tr>
                      ))}
@@ -686,8 +731,8 @@ export const CustomAnalytics: React.FC = () => {
               {snapshotData.map((item, idx) => (
                 <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col items-center justify-center text-center">
                    <div className="text-xs text-slate-500 uppercase font-bold truncate w-full mb-2" title={item.name}>{item.name}</div>
-                   <div className="text-2xl font-bold text-slate-700">{item.value.toLocaleString()} {currentUnit}</div>
-                   {isCumulative && <div className="text-xs text-slate-400 mt-1">Cumul: {item.cumulative.toLocaleString()}</div>}
+                   <div className="text-2xl font-bold text-slate-700">{getFormattedValue(item.value)}</div>
+                   {isCumulative && <div className="text-xs text-slate-400 mt-1">Cumul: {getFormattedValue(item.cumulative)}</div>}
                 </div>
               ))}
            </div>
@@ -717,7 +762,7 @@ export const CustomAnalytics: React.FC = () => {
         <div className="flex items-center gap-2">
            <Settings2 className="w-6 h-6 text-slate-500" />
            <div>
-              <h2 className="text-xl font-bold text-slate-800">Studio d'analyse</h2>
+              <h2 className="text-xl font-bold text-slate-800">Studio d'Analyse</h2>
               <p className="text-xs text-slate-500">Typologie : {currentDataset.name}</p>
            </div>
         </div>
@@ -728,17 +773,17 @@ export const CustomAnalytics: React.FC = () => {
               onClick={() => setMode('snapshot')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'snapshot' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
            >
-              Analyse instantanée
+              Analyse Instantanée
            </button>
            <button
               onClick={() => setMode('trend')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'trend' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
            >
-              Évolution temporelle
+              Évolution Temporelle
            </button>
         </div>
         
-        {/* Right Controls & Saved Analyses */}
+        {/* Right Controls */}
         <div className="w-full xl:w-auto flex flex-wrap items-center gap-2">
            
            {/* Load Saved Analysis */}
@@ -839,7 +884,7 @@ export const CustomAnalytics: React.FC = () => {
               {/* 1. DIMENSIONS */}
               <div>
                  <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
-                    1. {mode === 'snapshot' ? 'Axe analyse (X)' : 'Séries à suivre'}
+                    1. {mode === 'snapshot' ? 'Axe Analyse (X)' : 'Séries à suivre'}
                  </label>
                  <select 
                     className="w-full mb-2 p-2.5 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500"
@@ -993,7 +1038,7 @@ export const CustomAnalytics: React.FC = () => {
                     <div className="flex gap-2 mb-2">
                        {mode === 'snapshot' && (
                           <select 
-                             className="flex-1 text-xs border border-slate-200 rounded p-1.5 bg-white"
+                             className="flex-1 text-xs border border-slate-200 rounded p-1.5 bg-slate-50"
                              value={sortOrder}
                              onChange={(e) => setSortOrder(e.target.value as any)}
                           >
@@ -1003,7 +1048,7 @@ export const CustomAnalytics: React.FC = () => {
                           </select>
                        )}
                        <select 
-                          className="w-24 text-xs border border-slate-200 rounded p-1.5 bg-white"
+                          className="w-24 text-xs border border-slate-200 rounded p-1.5 bg-slate-50"
                           value={limit}
                           onChange={(e) => setLimit(Number(e.target.value))}
                        >
@@ -1022,7 +1067,7 @@ export const CustomAnalytics: React.FC = () => {
                              {isCumulative && <Check className="w-3 h-3" />}
                           </div>
                           <input type="checkbox" className="hidden" checked={isCumulative} onChange={() => setIsCumulative(!isCumulative)} />
-                          <span className="text-xs text-slate-700">Mode cumulatif</span>
+                          <span className="text-xs text-slate-700">Mode Cumulatif</span>
                        </label>
                     )}
 
@@ -1031,7 +1076,7 @@ export const CustomAnalytics: React.FC = () => {
                           {showTable && <Check className="w-3 h-3" />}
                        </div>
                        <input type="checkbox" className="hidden" checked={showTable} onChange={() => setShowTable(!showTable)} />
-                       <span className="text-xs text-slate-700">Afficher tableau</span>
+                       <span className="text-xs text-slate-700">Afficher Tableau</span>
                     </label>
                  </div>
 
@@ -1039,10 +1084,10 @@ export const CustomAnalytics: React.FC = () => {
                  {mode === 'snapshot' && (
                     <div className="space-y-1">
                        <label className="text-xs font-bold text-slate-500 uppercase flex items-center">
-                          Sous-groupe
+                          Sous-Groupe
                        </label>
                        <select 
-                          className="w-full p-1.5 bg-white border border-slate-200 text-slate-700 text-xs rounded focus:ring-0"
+                          className="w-full p-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded focus:ring-0"
                           value={segment}
                           onChange={(e) => setSegment(e.target.value)}
                        >

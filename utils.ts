@@ -1,12 +1,77 @@
 
-import { DataRow, RawImportData, ImportBatch } from './types';
+import { DataRow, RawImportData, ImportBatch, FieldConfig } from './types';
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-114";
+export const APP_VERSION = "202511-144";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
+};
+
+// --- INDEXED DB ENGINE ---
+const DB_NAME = 'DataScopeDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'appState';
+const KEY_NAME = 'global_state';
+
+export const db = {
+  open: (): Promise<IDBDatabase> => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+
+      request.onsuccess = (event) => {
+        resolve((event.target as IDBOpenDBRequest).result);
+      };
+
+      request.onerror = (event) => {
+        reject((event.target as IDBOpenDBRequest).error);
+      };
+    });
+  },
+
+  save: async (data: any): Promise<void> => {
+    const database = await db.open();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(data, KEY_NAME);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  load: async (): Promise<any | null> => {
+    const database = await db.open();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(KEY_NAME);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  clear: async (): Promise<void> => {
+    const database = await db.open();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.clear();
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
 };
 
 /**
@@ -58,13 +123,14 @@ export const parseRawData = (text: string): RawImportData => {
 
   const headers = headerLine.split(separator).map(h => h.trim());
 
+  // On filtre les lignes qui seraient totalement vides après split
   const rows = lines.slice(1).map(line => {
     const cells = line.split(separator).map(c => c.trim());
     while (cells.length < headers.length) {
       cells.push('');
     }
     return cells;
-  });
+  }).filter(row => row.some(cell => cell !== '')); // Garde la ligne si au moins une cellule n'est pas vide
 
   return {
     headers,
@@ -107,7 +173,7 @@ export const readExcelFile = async (file: File): Promise<RawImportData> => {
            const fullRow = [...row];
            while(fullRow.length < headers.length) fullRow.push('');
            return fullRow.map(cell => cell !== undefined && cell !== null ? String(cell) : '');
-        });
+        }).filter(row => row.some(cell => cell.trim() !== '')); // Filtre les lignes vides
 
         resolve({
           headers,
@@ -196,6 +262,7 @@ export const getDaysDifference = (dateStr: string): number => {
  */
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
+  if (typeof val === 'number') return val;
   
   let str = String(val);
   
@@ -220,6 +287,40 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
   return isNaN(num) ? 0 : num;
 };
 
+/**
+ * Formate un nombre selon la configuration du champ
+ */
+export const formatNumberValue = (value: number | string, config?: FieldConfig): string => {
+  let numVal = typeof value === 'number' ? value : parseSmartNumber(value);
+  if (isNaN(numVal)) return String(value);
+
+  // Configuration par défaut
+  const decimals = config?.decimalPlaces !== undefined ? config.decimalPlaces : 2;
+  const scale = config?.displayScale || 'none';
+  const unit = config?.unit || '';
+
+  // Appliquer l'échelle
+  let suffix = '';
+  if (scale === 'thousands') {
+    numVal /= 1000;
+    suffix = ' k';
+  } else if (scale === 'millions') {
+    numVal /= 1000000;
+    suffix = ' M';
+  } else if (scale === 'billions') {
+    numVal /= 1000000000;
+    suffix = ' Md';
+  }
+
+  // Si l'unité existe, on la colle après le suffixe d'échelle
+  const fullSuffix = unit ? `${suffix} ${unit}` : suffix;
+
+  // Formater avec séparateur de milliers et décimales fixes
+  return numVal.toLocaleString('fr-FR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }) + fullSuffix;
+};
 
 /**
  * Détecte l'unité la plus probable dans une liste de valeurs
@@ -351,11 +452,13 @@ export const evaluateFormula = (row: any, formula: string): number | string | nu
   }
 };
 
+// Données partagées pour les jointures
+const ORGS_LIST = ['TechCorp', 'Innovate SA', 'Global Services', 'Alpha Solutions', 'Mairie de Paris', 'Ministère Intérieur'];
+
 /**
- * Génère des données synthétiques avec le nouveau schéma dynamique
+ * Génère des données synthétiques (RH)
  */
 export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[] => {
-  const orgs = ['TechCorp', 'Innovate SA', 'Global Services', 'Alpha Solutions', 'Mairie de Paris', 'Ministère Intérieur'];
   const firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Lucas', 'Emma', 'Thomas', 'Lea', 'Nicolas', 'Julie'];
   const lastNames = ['Dupont', 'Martin', 'Bernard', 'Petit', 'Robert', 'Richard', 'Durand', 'Dubois', 'Moreau', 'Laurent'];
   const domains = ['gmail.com', 'outlook.com', 'techcorp.com', 'innovate.fr', 'gouv.fr'];
@@ -378,7 +481,7 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
       const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
       const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
       
-      let orgIndex = Math.floor(Math.random() * orgs.length);
+      let orgIndex = Math.floor(Math.random() * ORGS_LIST.length);
       if (i < 2 && Math.random() > 0.5) orgIndex = 0; 
 
       let domain = domains[0];
@@ -397,7 +500,7 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
         id: `REF-${(5-i)}-${j.toString().padStart(4, '0')}`,
         'Nom': `${firstName} ${lastName}`,
         'Email': `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
-        'Organisation': orgs[orgIndex],
+        'Organisation': ORGS_LIST[orgIndex],
         'DateModif': lastChangeDate.toISOString().split('T')[0],
         'Commentaire': hasComment,
         'Budget': `${amount} k€`, // Donnée avec unité
@@ -415,4 +518,36 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
   }
   
   return batches;
+};
+
+/**
+ * Génère des données de Référentiel (Table de dimension)
+ */
+export const generateRefData = (datasetId: string): ImportBatch[] => {
+   const sectors = ['IT Services', 'Software', 'Consulting', 'Intégration', 'Public', 'Etat'];
+   const cities = ['Paris', 'Lyon', 'Bordeaux', 'Nantes', 'Lille'];
+   const sizes = ['PME', 'ETI', 'Grand Compte', 'Administration'];
+
+   const rows: DataRow[] = ORGS_LIST.map((org, index) => {
+      return {
+         id: `ORG-${index + 1}`,
+         'Organisation': org, // CLE DE JOINTURE
+         'Secteur': sectors[index % sectors.length],
+         'Ville Siège': cities[index % cities.length],
+         'Taille': sizes[index % sizes.length],
+         'Note Client': Math.floor(Math.random() * 5) + 1 + '/5',
+         'Date Contrat': '2023-01-15'
+      };
+   });
+
+   // On ne génère qu'un seul batch car c'est un référentiel (donnée statique par nature pour cet exemple)
+   const today = new Date().toISOString().split('T')[0];
+   
+   return [{
+      id: generateId(),
+      datasetId: datasetId,
+      date: today,
+      createdAt: Date.now(),
+      rows
+   }];
 };

@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField, SavedAnalysis } from '../types';
-import { APP_VERSION, generateSyntheticData } from '../utils';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
+import { APP_VERSION, generateSyntheticData, generateRefData, db } from '../utils';
 
 interface DataContextType {
   datasets: Dataset[];
@@ -14,6 +14,14 @@ interface DataContextType {
   dashboardFilters: Record<string, any>; // NEW: Filtres globaux dashboard
   savedAnalyses: SavedAnalysis[]; // NEW: Analyses sauvegardées
   
+  isLoading: boolean; // NEW
+
+  // Persistence States
+  lastPivotState: PivotState | null;
+  lastAnalyticsState: AnalyticsState | null;
+  savePivotState: (state: PivotState | null) => void;
+  saveAnalyticsState: (state: AnalyticsState | null) => void;
+
   // Actions Dataset
   switchDataset: (id: string) => void;
   createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
@@ -57,10 +65,8 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'app_data_v4_global';
-
-// Widgets par défaut pour un nouveau dashboard vide
-const DEFAULT_WIDGETS: DashboardWidget[] = [];
+// OLD KEY for migration
+const LEGACY_STORAGE_KEY = 'app_data_v4_global';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -70,48 +76,78 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [currentDatasetId, setCurrentDatasetId] = useState<string | null>(null);
   const [dashboardFilters, setDashboardFilters] = useState<Record<string, any>>({});
-  
-  // NEW: State for saved analyses
   const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
+
+  // Persistence States
+  const [lastPivotState, setLastPivotState] = useState<PivotState | null>(null);
+  const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- MIGRATION & LOAD ---
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setDatasets(parsed.datasets || []);
-        setAllBatches(parsed.batches || []);
-        setSavedMappings(parsed.savedMappings || {});
-        setDashboardWidgets(parsed.dashboardWidgets || []);
-        setSavedAnalyses(parsed.savedAnalyses || []); // Load saved analyses
+    const init = async () => {
+      try {
+        // 1. Check IndexedDB first
+        const dbData = await db.load();
         
-        if (parsed.currentDatasetId) {
-          setCurrentDatasetId(parsed.currentDatasetId);
-        } else if (parsed.datasets && parsed.datasets.length > 0) {
-          setCurrentDatasetId(parsed.datasets[0].id);
+        if (dbData) {
+          // Load from DB
+          setDatasets(dbData.datasets || []);
+          setAllBatches(dbData.batches || []);
+          setSavedMappings(dbData.savedMappings || {});
+          setDashboardWidgets(dbData.dashboardWidgets || []);
+          setSavedAnalyses(dbData.savedAnalyses || []);
+          setLastPivotState(dbData.lastPivotState || null);
+          setLastAnalyticsState(dbData.lastAnalyticsState || null);
+
+          if (dbData.currentDatasetId) {
+            setCurrentDatasetId(dbData.currentDatasetId);
+          } else if (dbData.datasets && dbData.datasets.length > 0) {
+            setCurrentDatasetId(dbData.datasets[0].id);
+          }
+        } else {
+          // 2. Fallback: Migration from LocalStorage
+          const stored = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (stored) {
+            console.log("Migrating from LocalStorage to IndexedDB...");
+            const parsed = JSON.parse(stored);
+            setDatasets(parsed.datasets || []);
+            setAllBatches(parsed.batches || []);
+            setSavedMappings(parsed.savedMappings || {});
+            setDashboardWidgets(parsed.dashboardWidgets || []);
+            setSavedAnalyses(parsed.savedAnalyses || []);
+            setLastPivotState(parsed.lastPivotState || null);
+            setLastAnalyticsState(parsed.lastAnalyticsState || null);
+            setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
+            
+            // Save immediately to DB
+            await db.save(parsed);
+            
+            // Clear LocalStorage to free up space
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
+            localStorage.removeItem('app_data_v3_multi');
+          }
         }
-      } else {
-         // Tentative de migration depuis V3 (si existe)
-         const storedV3 = localStorage.getItem('app_data_v3_multi');
-         if (storedV3) {
-            const parsedV3 = JSON.parse(storedV3);
-            setDatasets(parsedV3.datasets || []);
-            setAllBatches(parsedV3.batches || []);
-            setSavedMappings(parsedV3.savedMappings || {});
-            // On ne migre pas les widgets V3 car la structure a changé (global vs local)
-            setCurrentDatasetId(parsedV3.currentDatasetId || null);
-         }
+      } catch (e) {
+        console.error("Failed to load data", e);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error("Failed to load data", e);
-    }
+    };
+    init();
   }, []);
 
-  // --- PERSISTENCE ---
+  // --- PERSISTENCE (DEBOUNCED) ---
   useEffect(() => {
-    if (datasets.length > 0 || batches.length > 0) {
+    if (isLoading) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
       const state: AppState = {
         datasets,
         batches, 
@@ -119,11 +155,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         savedAnalyses,
         version: APP_VERSION,
         savedMappings,
-        currentDatasetId
+        currentDatasetId,
+        lastPivotState,
+        lastAnalyticsState
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses]);
+      
+      db.save(state).catch(e => console.error("Failed to save to DB", e));
+    }, 1000); // 1s debounce to avoid disk trashing
+
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, isLoading]);
 
   // --- COMPUTED ---
   const currentDataset = datasets.find(d => d.id === currentDatasetId) || null;
@@ -135,12 +178,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchDataset = useCallback((id: string) => {
     setCurrentDatasetId(id);
-    setDashboardFilters({}); // Clear filters on switch
+    setDashboardFilters({}); 
   }, []);
 
   const createDataset = useCallback((name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => {
     const newId = Math.random().toString(36).substr(2, 9);
-    
     const newDataset: Dataset = {
       id: newId,
       name,
@@ -160,15 +202,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteDataset = useCallback((id: string) => {
     setDatasets(prev => prev.filter(d => d.id !== id));
     setAllBatches(prev => prev.filter(b => b.datasetId !== id));
-    // Remove widgets linked to this dataset
     setDashboardWidgets(prev => prev.filter(w => w.config.source?.datasetId !== id));
-    // Remove saved analyses linked to this dataset
     setSavedAnalyses(prev => prev.filter(a => a.datasetId !== id));
+    
+    if (lastPivotState?.datasetId === id) setLastPivotState(null);
+    if (lastAnalyticsState?.datasetId === id) setLastAnalyticsState(null);
 
     if (currentDatasetId === id) {
       setCurrentDatasetId(null);
     }
-  }, [currentDatasetId]);
+  }, [currentDatasetId, lastPivotState, lastAnalyticsState]);
 
   const addFieldToDataset = useCallback((datasetId: string, fieldName: string, config?: FieldConfig) => {
     setDatasets(prev => prev.map(d => {
@@ -262,10 +305,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setDashboardFilter = useCallback((field: string, value: any) => {
-     setDashboardFilters(prev => ({
-        ...prev,
-        [field]: value
-     }));
+     setDashboardFilters(prev => ({ ...prev, [field]: value }));
   }, []);
 
   const clearDashboardFilters = useCallback(() => {
@@ -286,10 +326,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteAnalysis = useCallback((id: string) => {
     setSavedAnalyses(prev => prev.filter(a => a.id !== id));
   }, []);
+  
+  // --- PERSISTENCE ACTIONS ---
+
+  const savePivotState = useCallback((state: PivotState | null) => {
+    setLastPivotState(state);
+  }, []);
+
+  const saveAnalyticsState = useCallback((state: AnalyticsState | null) => {
+    setLastAnalyticsState(state);
+  }, []);
 
   // --- SYSTEM ---
 
-  const clearAll = useCallback(() => {
+  const clearAll = useCallback(async () => {
     setDatasets([]);
     setAllBatches([]);
     setSavedMappings({});
@@ -297,15 +347,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDashboardFilters({});
     setSavedAnalyses([]);
     setCurrentDatasetId(null);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem('app_data_v3_multi'); // Cleanup old ver
+    setLastPivotState(null);
+    setLastAnalyticsState(null);
+    await db.clear(); // Clear DB
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
 
   const loadDemoData = useCallback(() => {
     const id1 = 'demo-rh';
-    const id2 = 'demo-sales';
+    const id2 = 'demo-ref';
     
-    // Create 2 datasets
     const ds1: Dataset = { 
       id: id1, 
       name: 'Effectifs RH', 
@@ -314,29 +365,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now() 
     };
 
-    // Generate Data
+    const ds2: Dataset = { 
+      id: id2, 
+      name: 'Référentiel Entreprises', 
+      fields: ['Organisation', 'Secteur', 'Ville Siège', 'Taille', 'Note Client', 'Date Contrat'], 
+      fieldConfigs: { 'Note Client': { type: 'text' } },
+      createdAt: Date.now() + 100 
+    };
+
     const batches1 = generateSyntheticData(id1);
+    const batches2 = generateRefData(id2);
     
-    setDatasets([ds1]);
-    setAllBatches([...batches1]);
+    setDatasets([ds1, ds2]);
+    setAllBatches([...batches1, ...batches2]);
     setCurrentDatasetId(id1);
-
-    // Default Widgets
+    
+    // Default Widgets (Demo)
     setDashboardWidgets([
-       { 
-          id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', 
-          config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } 
-       },
-       { 
-          id: 'w2', title: 'Budget Global', type: 'kpi', size: 'sm', 
-          config: { source: { datasetId: id1, mode: 'latest' }, metric: 'sum', valueField: 'Budget', showTrend: true } 
-       },
-       { 
-          id: 'w3', title: 'Évolution Effectifs', type: 'chart', size: 'full', 
-          config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', dimension: 'DateModif', chartType: 'line' } 
-       }
+       { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } },
+       { id: 'w2', title: 'Budget Global', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'sum', valueField: 'Budget', showTrend: true } },
+       { id: 'w3', title: 'Évolution Effectifs', type: 'chart', size: 'full', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', dimension: 'DateModif', chartType: 'line' } }
     ]);
-
   }, []);
 
   const updateSavedMappings = useCallback((newMappings: Record<string, string>) => {
@@ -352,12 +401,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       version: APP_VERSION, 
       savedMappings,
       currentDatasetId,
+      lastPivotState,
+      lastAnalyticsState,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState]);
 
-  const importBackup = useCallback((jsonData: string) => {
+  const importBackup = useCallback(async (jsonData: string) => {
     try {
       const parsed = JSON.parse(jsonData);
       if (!parsed.datasets || !Array.isArray(parsed.datasets)) {
@@ -369,6 +420,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSavedMappings(parsed.savedMappings || {});
       setDashboardWidgets(parsed.dashboardWidgets || []);
       setSavedAnalyses(parsed.savedAnalyses || []);
+      setLastPivotState(parsed.lastPivotState || null);
+      setLastAnalyticsState(parsed.lastAnalyticsState || null);
       
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
@@ -377,6 +430,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setCurrentDatasetId(null);
       }
+      
+      await db.save(parsed); // Save to DB immediately
       return true;
     } catch (e) {
       console.error(e);
@@ -384,17 +439,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  if (isLoading) {
+      return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Chargement des données...</div>;
+  }
+
   return (
     <DataContext.Provider value={{ 
       datasets,
       currentDataset,
       currentDatasetId,
-      batches: batches, // WARNING: Exposes all batches
-      filteredBatches, // Batches for current dataset
+      batches: batches,
+      filteredBatches,
       savedMappings,
       dashboardWidgets,
       dashboardFilters,
       savedAnalyses,
+      lastPivotState,
+      lastAnalyticsState,
+      isLoading,
+      savePivotState,
+      saveAnalyticsState,
       switchDataset,
       createDataset,
       updateDatasetName,

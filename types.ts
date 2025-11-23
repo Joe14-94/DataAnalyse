@@ -25,7 +25,10 @@ export interface ConditionalRule {
 export interface FieldConfig {
   type: 'text' | 'number' | 'boolean' | 'date';
   unit?: string; // Ex: "k€", "kg", "%"
-  conditionalFormatting?: ConditionalRule[]; // NOUVEAU
+  // NOUVEAU : Formatage numérique
+  decimalPlaces?: number; // 0, 1, 2...
+  displayScale?: 'none' | 'thousands' | 'millions' | 'billions'; // k, M, Md
+  conditionalFormatting?: ConditionalRule[]; 
 }
 
 // --- CHAMPS CALCULÉS ---
@@ -45,6 +48,17 @@ export interface SavedAnalysis {
   datasetId: string;
   config: any; // Stocke la configuration spécifique (JSON)
   createdAt: number;
+}
+
+// --- ETATS PERSISTANTS (PERSISTENCE) ---
+export interface PivotState {
+  datasetId: string;
+  config: any; // rowFields, colField, etc.
+}
+
+export interface AnalyticsState {
+  datasetId: string;
+  config: any; // dimension, metric, filters, etc.
 }
 
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
@@ -129,6 +143,10 @@ export interface AppState {
   savedMappings?: Record<string, string>; // Dictionnaire Global
   currentDatasetId?: string | null; 
   exportDate?: string; 
+  
+  // Persistence
+  lastPivotState?: PivotState | null;
+  lastAnalyticsState?: AnalyticsState | null;
 }
 
 export type ViewMode = 'dashboard' | 'import' | 'history' | 'settings';

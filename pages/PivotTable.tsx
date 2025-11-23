@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, formatDateFr } from '../utils';
+import { parseSmartNumber, formatDateFr, detectColumnType, formatNumberValue } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
-  ArrowUp, ArrowDown, GripVertical, Link as LinkIcon, Save, Check
+  ArrowUp, ArrowDown, GripVertical, Link as LinkIcon, Save, Check,
+  AlertTriangle
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -25,7 +26,7 @@ interface PivotRow {
 }
 
 export const PivotTable: React.FC = () => {
-  const { batches, currentDataset, datasets, savedAnalyses, saveAnalysis, deleteAnalysis } = useData();
+  const { batches, currentDataset, datasets, savedAnalyses, saveAnalysis, deleteAnalysis, lastPivotState, savePivotState, deleteBatch } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
   const navigate = useNavigate();
 
@@ -65,19 +66,68 @@ export const PivotTable: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
 
-  // --- INITIALISATION ---
+  // --- INITIALISATION & PERSISTENCE ---
+
+  // Load from Persistence
+  useEffect(() => {
+     if (lastPivotState && currentDataset && lastPivotState.datasetId === currentDataset.id) {
+         const c = lastPivotState.config;
+         setRowFields(c.rowFields || []);
+         setColField(c.colField || '');
+         setValField(c.valField || '');
+         setAggType(c.aggType || 'count');
+         setFilters(c.filters || []);
+         setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
+         setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
+         setSortBy(c.sortBy || 'label');
+         setSortOrder(c.sortOrder || 'asc');
+         setSecondaryDatasetId(c.secondaryDatasetId || '');
+         setJoinKeyPrimary(c.joinKeyPrimary || '');
+         setJoinKeySecondary(c.joinKeySecondary || '');
+     } else {
+         // Defaults
+         if (fields.length > 0) {
+           if (rowFields.length === 0) setRowFields([fields[0]]);
+           if (!valField) setValField(fields[0]);
+         }
+     }
+  }, [currentDataset?.id]);
+
+  // Save to Persistence
+  useEffect(() => {
+     if (currentDataset) {
+        savePivotState({
+            datasetId: currentDataset.id,
+            config: {
+                rowFields,
+                colField,
+                valField,
+                aggType,
+                filters,
+                showSubtotals,
+                showTotalCol,
+                sortBy,
+                sortOrder,
+                secondaryDatasetId,
+                joinKeyPrimary,
+                joinKeySecondary
+            }
+        });
+     }
+  }, [rowFields, colField, valField, aggType, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, currentDataset]);
 
   useEffect(() => {
-    // Sélectionner le dernier batch par défaut
-    if (!selectedBatchId && batches.length > 0) {
+    if (batches.length === 0) {
+       if (selectedBatchId) setSelectedBatchId('');
+       return;
+    }
+    // Check if selected batch still exists
+    const exists = batches.find(b => b.id === selectedBatchId);
+    if (!exists) {
+      // Default to latest
       setSelectedBatchId(batches[batches.length - 1].id);
     }
-    // Sélectionner des champs par défaut si disponibles
-    if (fields.length > 0) {
-      if (rowFields.length === 0) setRowFields([fields[0]]);
-      if (!valField) setValField(fields[0]);
-    }
-  }, [batches, fields, selectedBatchId]);
+  }, [batches, selectedBatchId]);
 
   // --- HELPERS ---
 
@@ -124,6 +174,23 @@ export const PivotTable: React.FC = () => {
      return rows;
   }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, batches]);
 
+  // --- SMART FIELD CHANGE HANDLER ---
+  const handleValFieldChange = (newField: string) => {
+     setValField(newField);
+     
+     // Détection intelligente du type pour adapter l'agrégation
+     if (blendedRows.length > 0) {
+        // On échantillonne les données pour voir si c'est du texte ou du nombre
+        const sample = blendedRows.slice(0, 50).map(r => r[newField] !== undefined ? String(r[newField]) : '');
+        const type = detectColumnType(sample);
+        
+        if (type === 'number') {
+           setAggType('sum'); // Par défaut Somme pour les nombres
+        } else {
+           setAggType('count'); // Par défaut Compte pour le reste
+        }
+     }
+  };
 
   const getDistinctValuesForField = (field: string) => {
     if (blendedRows.length === 0) return [];
@@ -145,6 +212,16 @@ export const PivotTable: React.FC = () => {
      }
      return parseSmartNumber(raw, unit);
   };
+
+  // Check if current aggregation is risky (Sum on text)
+  const isAggRisky = useMemo(() => {
+     if (['sum', 'avg'].includes(aggType) && blendedRows.length > 0 && valField) {
+        const sample = blendedRows.slice(0, 20).map(r => r[valField] !== undefined ? String(r[valField]) : '');
+        const type = detectColumnType(sample);
+        return type !== 'number';
+     }
+     return false;
+  }, [aggType, blendedRows, valField]);
 
   // --- HANDLERS CONFIG ---
 
@@ -241,6 +318,14 @@ export const PivotTable: React.FC = () => {
      setJoinKeySecondary(c.joinKeySecondary || '');
   };
 
+  const handleDeleteBatch = () => {
+    if (!currentBatch) return;
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cet import du ${formatDateFr(currentBatch.date)} (${currentBatch.rows.length} lignes) ?`)) {
+       deleteBatch(currentBatch.id);
+       // The effect hook will automatically select another batch or empty
+    }
+  };
+
   const availableAnalyses = savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === currentDataset?.id);
 
   // --- RESIZE HANDLERS ---
@@ -319,6 +404,11 @@ export const PivotTable: React.FC = () => {
              drillFilters[f.field] = f.values[0];
          }
      });
+     
+     // CRITIQUE: Ajouter le contexte du batch sélectionné pour garantir que l'on ne voit que les données du TCD
+     if (selectedBatchId) {
+        drillFilters['_batchId'] = selectedBatchId;
+     }
 
      // 2. Navigation
      navigate('/data', { state: { prefilledFilters: drillFilters } });
@@ -468,6 +558,19 @@ export const PivotTable: React.FC = () => {
     // Helper Format
     const formatOutput = (val: number | string) => {
       if (typeof val === 'string') return val;
+      // Use standard formatter if numeric, looking up config
+      if (aggType !== 'count' && valField) {
+          const config = currentDataset?.fieldConfigs?.[valField];
+          // If secondary, fallback
+          if (!config && secondaryDatasetId) {
+             const secDS = datasets.find(d => d.id === secondaryDatasetId);
+             const secConfig = secDS?.fieldConfigs?.[valField];
+             if (secConfig) return formatNumberValue(val, secConfig);
+          }
+          if (config) return formatNumberValue(val, config);
+      }
+      
+      // Default fallback
       if (val % 1 !== 0) return val.toFixed(2);
       return val.toLocaleString();
     };
@@ -480,7 +583,7 @@ export const PivotTable: React.FC = () => {
       formatOutput
     };
 
-  }, [blendedRows, rowFields, colField, valField, aggType, filters, sortBy, sortOrder, showSubtotals]);
+  }, [blendedRows, rowFields, colField, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, secondaryDatasetId]);
 
 
   // --- RENDER ---
@@ -561,7 +664,7 @@ export const PivotTable: React.FC = () => {
              <div className="flex items-center gap-2 bg-white p-1 rounded border border-slate-200">
                <span className="text-xs font-bold text-slate-500 px-2 hidden sm:inline">Source :</span>
                <select 
-                  className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+                  className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500 max-w-[200px]"
                   value={selectedBatchId}
                   onChange={(e) => setSelectedBatchId(e.target.value)}
                 >
@@ -571,6 +674,15 @@ export const PivotTable: React.FC = () => {
                      </option>
                   ))}
                </select>
+               {selectedBatchId && (
+                   <button 
+                      onClick={handleDeleteBatch}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Supprimer définitivement cet import"
+                   >
+                      <Trash2 className="w-4 h-4" />
+                   </button>
+               )}
             </div>
           </div>
        </div>
@@ -703,7 +815,7 @@ export const PivotTable: React.FC = () => {
                    <select 
                       className="w-full p-2 bg-white border border-blue-200 rounded text-sm text-blue-900 focus:ring-blue-500"
                       value={valField}
-                      onChange={(e) => setValField(e.target.value)}
+                      onChange={(e) => handleValFieldChange(e.target.value)}
                    >
                       {combinedFields.map(f => <option key={f} value={f}>{f}</option>)}
                    </select>
@@ -731,6 +843,12 @@ export const PivotTable: React.FC = () => {
                       <p className="text-[10px] text-blue-600 italic">
                          * "Somme" ignore automatiquement les unités monétaires.
                       </p>
+                   )}
+                   {isAggRisky && (
+                      <div className="flex items-start gap-2 bg-amber-50 text-amber-700 p-2 rounded border border-amber-200 text-xs">
+                         <AlertTriangle className="w-4 h-4 shrink-0" />
+                         <p>Attention: Faire une <strong>Somme</strong> sur une colonne de texte ("{valField}") donnera <strong>0</strong>. Utilisez "Compte".</p>
+                      </div>
                    )}
                 </div>
 

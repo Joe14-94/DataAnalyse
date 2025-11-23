@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -13,8 +13,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
-  const { datasets, currentDatasetId, switchDataset, batches } = useData();
-  const [storageUsed, setStorageUsed] = useState<number>(0);
+  const { datasets, currentDatasetId, switchDataset, batches, getBackupJson } = useData();
+  const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
 
   const navItems = [
@@ -28,36 +28,40 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
   ];
 
-  // Calculate Storage Usage
+  // Calculate Storage Usage using Navigator Storage API (IndexedDB support)
   useEffect(() => {
-    const calculateStorage = () => {
-      try {
-        let total = 0;
-        for(let x in localStorage) {
-          // Only count strings that are own properties
-          if(Object.prototype.hasOwnProperty.call(localStorage, x)) {
-            total += (localStorage[x].length + x.length) * 2; // *2 for approx UTF-16 byte size
-          }
-        }
-        
-        // Convert to KB
-        const kb = total / 1024;
-        // Limit is roughly 5MB (5120 KB) - 10MB depending on browser. Conservatively 5MB.
-        const limit = 5120; 
-        const percent = Math.min(100, (kb / limit) * 100);
-        
-        setStorageUsed(kb);
-        setStoragePercent(percent);
-      } catch (e) {
-        console.warn("Storage calc error", e);
+    const calculateStorage = async () => {
+      if (navigator.storage && navigator.storage.estimate) {
+         try {
+            const { usage, quota } = await navigator.storage.estimate();
+            if (usage !== undefined && quota !== undefined) {
+               const usageMB = (usage / (1024 * 1024)).toFixed(1);
+               const percent = (usage / quota) * 100;
+               setStorageUsed(`${usageMB} MB`);
+               setStoragePercent(percent);
+            }
+         } catch (e) {
+            console.warn("Storage estimate failed", e);
+         }
       }
     };
 
-    // Recalculate when data likely changes
     calculateStorage();
-    const interval = setInterval(calculateStorage, 5000); // Check periodically
+    const interval = setInterval(calculateStorage, 10000); // Check periodically
     return () => clearInterval(interval);
   }, [datasets, batches]);
+
+  const handleQuickSave = () => {
+    const json = getBackupJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const getStorageColor = (p: number) => {
     if (p > 90) return 'bg-red-500';
@@ -127,21 +131,36 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
         
-        {/* Footer Stats */}
-        <div className="p-4 border-t border-slate-100 hidden md:block bg-slate-50/50">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-             <div className="flex items-center gap-1">
-                <HardDrive size={12} />
-                <span>Stockage</span>
+        {/* Footer Stats & Quick Save */}
+        <div className="p-4 border-t border-slate-100 hidden md:block bg-slate-50/50 space-y-3">
+          
+          <button 
+             onClick={handleQuickSave}
+             className="w-full flex items-center justify-center gap-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 text-xs font-bold py-2 px-4 rounded transition-colors"
+             title="Sauvegarder les données maintenant (JSON)"
+          >
+             <Save className="w-3 h-3" />
+             Sauvegarde rapide
+          </button>
+
+          <div>
+             <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                <div className="flex items-center gap-1" title="Stockage IndexedDB (Disque)">
+                   <HardDrive size={12} />
+                   <span>Disque : {storageUsed}</span>
+                </div>
+                {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
              </div>
-             <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>
+             {storagePercent > 0 && (
+                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div 
+                    className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`} 
+                    style={{ width: `${Math.max(2, storagePercent)}%` }}
+                    ></div>
+                </div>
+             )}
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-1.5 mb-3 overflow-hidden">
-             <div 
-               className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`} 
-               style={{ width: `${Math.max(2, storagePercent)}%` }}
-             ></div>
-          </div>
+
           <div className="text-xs text-slate-400 text-center">
             v{APP_VERSION}
           </div>
