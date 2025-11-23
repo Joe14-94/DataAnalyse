@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField, SavedAnalysis } from '../types';
 import { APP_VERSION, generateSyntheticData } from '../utils';
 
 interface DataContextType {
@@ -12,6 +12,7 @@ interface DataContextType {
   savedMappings: Record<string, string>;
   dashboardWidgets: DashboardWidget[];
   dashboardFilters: Record<string, any>; // NEW: Filtres globaux dashboard
+  savedAnalyses: SavedAnalysis[]; // NEW: Analyses sauvegardées
   
   // Actions Dataset
   switchDataset: (id: string) => void;
@@ -42,6 +43,10 @@ interface DataContextType {
   setDashboardFilter: (field: string, value: any) => void;
   clearDashboardFilters: () => void;
 
+  // Saved Analyses Actions
+  saveAnalysis: (analysis: Omit<SavedAnalysis, 'id' | 'createdAt'>) => void;
+  deleteAnalysis: (id: string) => void;
+
   // System
   importBackup: (jsonData: string) => boolean;
   getBackupJson: () => string;
@@ -65,6 +70,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [currentDatasetId, setCurrentDatasetId] = useState<string | null>(null);
   const [dashboardFilters, setDashboardFilters] = useState<Record<string, any>>({});
+  
+  // NEW: State for saved analyses
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
 
   // --- MIGRATION & LOAD ---
   useEffect(() => {
@@ -77,6 +85,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAllBatches(parsed.batches || []);
         setSavedMappings(parsed.savedMappings || {});
         setDashboardWidgets(parsed.dashboardWidgets || []);
+        setSavedAnalyses(parsed.savedAnalyses || []); // Load saved analyses
         
         if (parsed.currentDatasetId) {
           setCurrentDatasetId(parsed.currentDatasetId);
@@ -107,13 +116,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         datasets,
         batches, 
         dashboardWidgets,
+        savedAnalyses,
         version: APP_VERSION,
         savedMappings,
         currentDatasetId
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses]);
 
   // --- COMPUTED ---
   const currentDataset = datasets.find(d => d.id === currentDatasetId) || null;
@@ -152,6 +162,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAllBatches(prev => prev.filter(b => b.datasetId !== id));
     // Remove widgets linked to this dataset
     setDashboardWidgets(prev => prev.filter(w => w.config.source?.datasetId !== id));
+    // Remove saved analyses linked to this dataset
+    setSavedAnalyses(prev => prev.filter(a => a.datasetId !== id));
 
     if (currentDatasetId === id) {
       setCurrentDatasetId(null);
@@ -260,6 +272,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
      setDashboardFilters({});
   }, []);
 
+  // --- SAVED ANALYSES ACTIONS ---
+
+  const saveAnalysis = useCallback((analysis: Omit<SavedAnalysis, 'id' | 'createdAt'>) => {
+    const newAnalysis: SavedAnalysis = {
+      ...analysis,
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: Date.now()
+    };
+    setSavedAnalyses(prev => [...prev, newAnalysis]);
+  }, []);
+
+  const deleteAnalysis = useCallback((id: string) => {
+    setSavedAnalyses(prev => prev.filter(a => a.id !== id));
+  }, []);
+
   // --- SYSTEM ---
 
   const clearAll = useCallback(() => {
@@ -268,6 +295,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSavedMappings({});
     setDashboardWidgets([]);
     setDashboardFilters({});
+    setSavedAnalyses([]);
     setCurrentDatasetId(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem('app_data_v3_multi'); // Cleanup old ver
@@ -320,13 +348,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       datasets, 
       batches, 
       dashboardWidgets,
+      savedAnalyses,
       version: APP_VERSION, 
       savedMappings,
       currentDatasetId,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses]);
 
   const importBackup = useCallback((jsonData: string) => {
     try {
@@ -339,6 +368,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAllBatches(parsed.batches || []);
       setSavedMappings(parsed.savedMappings || {});
       setDashboardWidgets(parsed.dashboardWidgets || []);
+      setSavedAnalyses(parsed.savedAnalyses || []);
       
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
@@ -364,6 +394,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       savedMappings,
       dashboardWidgets,
       dashboardFilters,
+      savedAnalyses,
       switchDataset,
       createDataset,
       updateDatasetName,
@@ -381,6 +412,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       resetDashboard,
       setDashboardFilter,
       clearDashboardFilters,
+      saveAnalysis,
+      deleteAnalysis,
       importBackup, 
       getBackupJson, 
       clearAll, 

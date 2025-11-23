@@ -1,15 +1,15 @@
 
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
 import { parseSmartNumber, formatDateFr } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
-  ArrowUp, ArrowDown, GripVertical, Link as LinkIcon
+  ArrowUp, ArrowDown, GripVertical, Link as LinkIcon, Save, Check
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
+import { useNavigate } from 'react-router-dom';
 
 type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
 type SortBy = 'label' | 'value';
@@ -25,8 +25,9 @@ interface PivotRow {
 }
 
 export const PivotTable: React.FC = () => {
-  const { batches, currentDataset, datasets } = useData();
+  const { batches, currentDataset, datasets, savedAnalyses, saveAnalysis, deleteAnalysis } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
+  const navigate = useNavigate();
 
   // --- STATE ---
   
@@ -59,6 +60,10 @@ export const PivotTable: React.FC = () => {
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   // Ref pour le redimensionnement
   const resizingRef = useRef<{ colId: string, startX: number, startWidth: number } | null>(null);
+
+  // SAVE UI STATE
+  const [isSaving, setIsSaving] = useState(false);
+  const [analysisName, setAnalysisName] = useState('');
 
   // --- INITIALISATION ---
 
@@ -187,6 +192,57 @@ export const PivotTable: React.FC = () => {
      setFilters(filters.filter((_, i) => i !== index));
   };
 
+  // --- SAVE & LOAD HANDLERS ---
+  const handleSaveAnalysis = () => {
+     if (!analysisName.trim() || !currentDataset) return;
+     
+     const config = {
+        rowFields,
+        colField,
+        valField,
+        aggType,
+        filters,
+        showSubtotals,
+        showTotalCol,
+        sortBy,
+        sortOrder,
+        secondaryDatasetId,
+        joinKeyPrimary,
+        joinKeySecondary
+     };
+
+     saveAnalysis({
+        name: analysisName,
+        type: 'pivot',
+        datasetId: currentDataset.id,
+        config
+     });
+
+     setAnalysisName('');
+     setIsSaving(false);
+  };
+
+  const handleLoadAnalysis = (id: string) => {
+     const analysis = savedAnalyses.find(a => a.id === id);
+     if (!analysis || !analysis.config) return;
+
+     const c = analysis.config;
+     setRowFields(c.rowFields || []);
+     setColField(c.colField || '');
+     setValField(c.valField || '');
+     setAggType(c.aggType || 'count');
+     setFilters(c.filters || []);
+     setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
+     setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
+     setSortBy(c.sortBy || 'label');
+     setSortOrder(c.sortOrder || 'asc');
+     setSecondaryDatasetId(c.secondaryDatasetId || '');
+     setJoinKeyPrimary(c.joinKeyPrimary || '');
+     setJoinKeySecondary(c.joinKeySecondary || '');
+  };
+
+  const availableAnalyses = savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === currentDataset?.id);
+
   // --- RESIZE HANDLERS ---
 
   const startResize = (e: React.MouseEvent, colId: string) => {
@@ -232,6 +288,40 @@ export const PivotTable: React.FC = () => {
         setSortBy(type);
         setSortOrder(type === 'value' ? 'desc' : 'asc');
      }
+  };
+
+  // --- DRILLDOWN HANDLER ---
+  const handleCellClick = (rowKeys: string[], colKey?: string) => {
+     // Drilldown ne fonctionne pas pour les totaux généraux de ligne/colonne pour l'instant
+     
+     // 1. Construire les filtres
+     const drillFilters: Record<string, string> = {};
+     
+     // Ajouter les filtres de ligne
+     rowFields.forEach((field, index) => {
+        if (index < rowKeys.length) {
+           let val = rowKeys[index];
+           if (val === '(Vide)') val = ''; // Handle empty label
+           drillFilters[field] = val;
+        }
+     });
+
+     // Ajouter le filtre de colonne si présent
+     if (colField && colKey) {
+        let val = colKey;
+        if (val === '(Vide)') val = '';
+        drillFilters[colField] = val;
+     }
+
+     // Ajouter les filtres globaux existants du TCD
+     filters.forEach(f => {
+         if (f.values.length === 1) {
+             drillFilters[f.field] = f.values[0];
+         }
+     });
+
+     // 2. Navigation
+     navigate('/data', { state: { prefilledFilters: drillFilters } });
   };
 
   // --- PIVOT ENGINE (RECURSIVE) ---
@@ -420,19 +510,68 @@ export const PivotTable: React.FC = () => {
              </div>
           </div>
           
-          <div className="flex items-center gap-2 bg-slate-50 p-1 rounded border border-slate-200">
-             <span className="text-xs font-bold text-slate-500 px-2">Données du :</span>
-             <select 
-                className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
-                value={selectedBatchId}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
-              >
-                {batches.map(b => (
-                   <option key={b.id} value={b.id}>
-                      {formatDateFr(b.date)} ({b.rows.length} lignes)
-                   </option>
-                ))}
-             </select>
+          {/* LOAD / SAVE */}
+          <div className="flex flex-wrap items-center gap-2">
+             <div className="relative">
+                <select
+                    className="bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[150px]"
+                    onChange={(e) => {
+                       if (e.target.value) handleLoadAnalysis(e.target.value);
+                       e.target.value = ""; 
+                    }}
+                    defaultValue=""
+                >
+                    <option value="" disabled>Vues enregistrées...</option>
+                    {availableAnalyses.length === 0 && <option disabled>Aucune vue.</option>}
+                    {availableAnalyses.map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                </select>
+             </div>
+             
+             {!isSaving ? (
+                 <button 
+                    onClick={() => setIsSaving(true)}
+                    className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
+                    title="Enregistrer cette vue"
+                 >
+                    <Save className="w-4 h-4" />
+                 </button>
+             ) : (
+                 <div className="flex items-center gap-1 animate-in fade-in">
+                    <input 
+                       type="text" 
+                       className="p-1.5 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 w-32 bg-white text-slate-900"
+                       placeholder="Nom de la vue..."
+                       value={analysisName}
+                       onChange={e => setAnalysisName(e.target.value)}
+                       autoFocus
+                    />
+                    <button onClick={handleSaveAnalysis} className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700">
+                       <Check className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => setIsSaving(false)} className="p-1.5 bg-slate-200 text-slate-600 rounded hover:bg-slate-300">
+                       <X className="w-3 h-3" />
+                    </button>
+                 </div>
+             )}
+
+             <div className="h-6 w-px bg-slate-300 mx-1 hidden xl:block"></div>
+
+             <div className="flex items-center gap-2 bg-white p-1 rounded border border-slate-200">
+               <span className="text-xs font-bold text-slate-500 px-2 hidden sm:inline">Source :</span>
+               <select 
+                  className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                >
+                  {batches.map(b => (
+                     <option key={b.id} value={b.id}>
+                        {formatDateFr(b.date)} ({b.rows.length} lignes)
+                     </option>
+                  ))}
+               </select>
+            </div>
           </div>
        </div>
 
@@ -761,7 +900,12 @@ export const PivotTable: React.FC = () => {
                                      if (row.type === 'data') {
                                         // Data rows show all keys
                                         return (
-                                           <td key={colIndex} className="border border-slate-300 p-2 text-xs font-medium text-slate-700 truncate">
+                                           <td 
+                                             key={colIndex} 
+                                             className="border border-slate-300 p-2 text-xs font-medium text-slate-700 truncate cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                             onClick={() => handleCellClick(row.keys)}
+                                             title="Drill-down: Filtrer sur cette ligne"
+                                           >
                                               {row.keys[colIndex] || ''}
                                            </td>
                                         );
@@ -770,7 +914,12 @@ export const PivotTable: React.FC = () => {
                                         if (colIndex === row.level) {
                                            // The label cell
                                            return (
-                                              <td key={colIndex} className="border border-slate-300 p-2 font-bold text-slate-800 italic text-right truncate">
+                                              <td 
+                                                key={colIndex} 
+                                                className="border border-slate-300 p-2 font-bold text-slate-800 italic text-right truncate cursor-pointer hover:bg-blue-200 transition-colors"
+                                                onClick={() => handleCellClick(row.keys)}
+                                                title="Drill-down: Filtrer sur ce groupe"
+                                              >
                                                  {row.label}
                                               </td>
                                            );
@@ -791,8 +940,15 @@ export const PivotTable: React.FC = () => {
                                   {/* Values Matrix */}
                                   {colField && pivotData.colHeaders.map(cHead => {
                                      const val = row.metrics[cHead];
+                                     const isCellClickable = aggType !== 'list'; // Allow click on subtotals too
+                                     
                                      return (
-                                        <td key={cHead} className={`border border-slate-300 p-2 text-right tabular-nums truncate ${isSubtotal ? 'font-bold' : ''}`}>
+                                        <td 
+                                          key={cHead} 
+                                          className={`border border-slate-300 p-2 text-right tabular-nums truncate ${isSubtotal ? 'font-bold' : ''} ${isCellClickable ? 'cursor-pointer hover:bg-blue-100 hover:text-blue-700' : ''}`}
+                                          onClick={() => isCellClickable ? handleCellClick(row.keys, cHead) : undefined}
+                                          title={isCellClickable ? "Drill-down: Voir les données" : ""}
+                                        >
                                            {val !== undefined && val !== 0 ? pivotData.formatOutput(val) : <span className="text-slate-300">-</span>}
                                         </td>
                                      );

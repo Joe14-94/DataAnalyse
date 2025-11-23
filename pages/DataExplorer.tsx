@@ -9,9 +9,11 @@ import {
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
   History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 export const DataExplorer: React.FC = () => {
   const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs } = useData();
+  const location = useLocation(); // Hook Router
   
   // --- State ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +45,15 @@ export const DataExplorer: React.FC = () => {
   const [isFormatModalOpen, setIsFormatModalOpen] = useState(false);
   const [selectedFormatCol, setSelectedFormatCol] = useState<string>('');
   const [newRule, setNewRule] = useState<Partial<ConditionalRule>>({ operator: 'lt', value: 0, style: { color: 'text-red-600', fontWeight: 'font-bold' } });
+
+  // --- EFFECT: Handle Drilldown from Navigation ---
+  useEffect(() => {
+     if (location.state && location.state.prefilledFilters) {
+        setColumnFilters(location.state.prefilledFilters);
+        setShowFilters(true);
+        // Clear history state to avoid re-applying on refresh if needed, but keeping it simple for now
+     }
+  }, [location.state]);
 
   // Initialize tracking key (Smart default)
   useEffect(() => {

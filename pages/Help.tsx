@@ -6,7 +6,8 @@ import {
   Settings, ShieldCheck, Database, WifiOff, Layers,
   FileSpreadsheet, Filter, Link as LinkIcon,
   Activity, Radar, LayoutGrid, ListOrdered,
-  UploadCloud, Wand2, MousePointerClick, Calculator, Palette
+  UploadCloud, Wand2, MousePointerClick, Calculator, Palette,
+  Save, Search
 } from 'lucide-react';
 
 export const Help: React.FC = () => {
@@ -166,6 +167,40 @@ export const Help: React.FC = () => {
                          <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200">Si Statut = "Validé"</span>
                       </div>
                    </div>
+                </div>
+             </div>
+          </Card>
+
+          {/* Guide ANALYSES & SAUVEGARDE (NOUVEAU) */}
+          <Card title="Analyses & Sauvegardes">
+             <div className="space-y-5">
+                <div className="flex gap-3">
+                    <div className="p-2 bg-teal-50 rounded text-teal-600 shrink-0 h-fit">
+                       <Save className="w-5 h-5" />
+                    </div>
+                    <div>
+                       <h4 className="font-bold text-slate-700 text-sm">Vues Enregistrées</h4>
+                       <p className="text-xs text-slate-600 mt-1">
+                          Ne perdez plus de temps à reconfigurer vos filtres. Dans le <strong>Studio d'Analyse</strong> et le <strong>TCD</strong>,
+                          cliquez sur l'icône <Save className="w-3 h-3 inline mx-0.5"/> pour sauvegarder votre configuration actuelle.
+                          Retrouvez-la plus tard via le menu déroulant.
+                       </p>
+                    </div>
+                </div>
+                
+                <div className="flex gap-3">
+                    <div className="p-2 bg-purple-50 rounded text-purple-600 shrink-0 h-fit">
+                       <Search className="w-5 h-5" />
+                    </div>
+                    <div>
+                       <h4 className="font-bold text-slate-700 text-sm">Navigation Contextuelle (Drill-down)</h4>
+                       <p className="text-xs text-slate-600 mt-1">
+                          Creusez vos données ! Dans le <strong>Tableau Croisé Dynamique (TCD)</strong>, 
+                          cliquez sur n'importe quel chiffre du tableau (ou une étiquette de ligne). 
+                          Cela vous redirigera automatiquement vers l'onglet <strong>Données</strong>, filtré pour n'afficher 
+                          que les lignes correspondantes à cette sélection.
+                       </p>
+                    </div>
                 </div>
              </div>
           </Card>

@@ -414,7 +414,7 @@ export const Import: React.FC = () => {
            </div>
            <textarea
              id="paste-area"
-             className="flex-1 w-full rounded-md border border-slate-300 bg-slate-50 text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs font-mono p-3 resize-none"
+             className="flex-1 w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs font-mono p-3 resize-none"
              placeholder={`Alternative : Copiez ici les données de votre tableau Excel...\nHeader 1 \t Header 2\nVal 1 \t Val 2`}
              value={text}
              onChange={(e) => setText(e.target.value)}

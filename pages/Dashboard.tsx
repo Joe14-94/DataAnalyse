@@ -339,6 +339,9 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
    const axisFormatter = (val: any) => `${val.toLocaleString()} ${unit || ''}`;
+   
+   // Default explicit white tooltip style to override any potential dark defaults
+   const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
 
    if (chartType === 'radial') {
       return (
@@ -361,7 +364,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                <Tooltip 
                   formatter={tooltipFormatter}
                   cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}}
+                  contentStyle={tooltipStyle}
                />
             </RadialBarChart>
          </ResponsiveContainer>
@@ -386,7 +389,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                />
                <Tooltip 
                  formatter={tooltipFormatter}
-                 contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} 
+                 contentStyle={tooltipStyle} 
                />
             </RadarChart>
          </ResponsiveContainer>
@@ -420,7 +423,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
             >
                <Tooltip 
                  formatter={tooltipFormatter}
-                 contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} 
+                 contentStyle={tooltipStyle} 
                />
             </Treemap>
          </ResponsiveContainer>
@@ -433,7 +436,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
             <FunnelChart>
                <Tooltip 
                  formatter={tooltipFormatter}
-                 contentStyle={{borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}} 
+                 contentStyle={tooltipStyle} 
                />
                <Funnel
                   dataKey="value"
@@ -471,7 +474,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                </Pie>
-               <Tooltip formatter={tooltipFormatter} />
+               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
                <Legend wrapperStyle={{ fontSize: '10px' }} />
             </PieChart>
          </ResponsiveContainer>
@@ -485,7 +488,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
                <YAxis fontSize={10} stroke="#94a3b8" />
-               <Tooltip formatter={tooltipFormatter} />
+               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
                <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{r: 2}} activeDot={{ r: 6, onClick: handleChartClick }} />
             </LineChart>
          </ResponsiveContainer>
@@ -498,7 +501,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
             <YAxis fontSize={10} stroke="#94a3b8" />
-            <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} />
+            <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
             <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} className="cursor-pointer">
                {chartData.map((entry: any, index: number) => (
                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

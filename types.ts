@@ -37,6 +37,16 @@ export interface CalculatedField {
   unit?: string;
 }
 
+// --- ANALYSES SAUVEGARDÉES (NOUVEAU) ---
+export interface SavedAnalysis {
+  id: string;
+  name: string;
+  type: 'analytics' | 'pivot';
+  datasetId: string;
+  config: any; // Stocke la configuration spécifique (JSON)
+  createdAt: number;
+}
+
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
 
 export type WidgetType = 'kpi' | 'chart' | 'list' | 'text'; // Ajout de 'text'
@@ -114,6 +124,7 @@ export interface AppState {
   datasets: Dataset[]; // Liste des jeux de données
   batches: ImportBatch[];
   dashboardWidgets: DashboardWidget[]; // Widgets globaux du tableau de bord
+  savedAnalyses?: SavedAnalysis[]; // NOUVEAU : Analyses sauvegardées
   version: string;
   savedMappings?: Record<string, string>; // Dictionnaire Global
   currentDatasetId?: string | null; 

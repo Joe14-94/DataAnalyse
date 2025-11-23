@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr, parseSmartNumber } from '../utils';
@@ -11,7 +10,7 @@ import {
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
   LayoutGrid, TrendingUp, Settings2, Database, HelpCircle,
-  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown
+  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown, Save
 } from 'lucide-react';
 import { FieldConfig } from '../types';
 
@@ -86,17 +85,20 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
           {options.length === 0 ? (
              <div className="p-2 text-xs text-slate-400 italic text-center">Aucune donnée</div>
           ) : (
-             options.map(option => (
-                <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer">
-                   <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2"
-                      checked={selected.includes(option)}
-                      onChange={() => handleToggle(option)}
-                   />
-                   <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
-                </label>
-             ))
+             options.map(option => {
+                const isSelected = selected.includes(option);
+                return (
+                  <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer" onClick={() => handleToggle(option)}>
+                     <div 
+                        className={`w-4 h-4 rounded border flex items-center justify-center mr-2 transition-colors flex-shrink-0
+                        ${isSelected ? 'bg-white border-blue-600' : 'bg-white border-slate-300'}`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 text-blue-600" strokeWidth={3} />}
+                     </div>
+                     <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
+                  </label>
+                );
+             })
           )}
         </div>
       )}
@@ -105,7 +107,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
 };
 
 export const CustomAnalytics: React.FC = () => {
-  const { batches, currentDataset } = useData();
+  const { batches, currentDataset, savedAnalyses, saveAnalysis } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
 
   // --- State Configuration ---
@@ -133,6 +135,10 @@ export const CustomAnalytics: React.FC = () => {
   
   // Updated Filters Structure: Values is array
   const [filters, setFilters] = useState<{field: string, values: string[]}[]>([]);
+
+  // SAVE UI STATE
+  const [isSaving, setIsSaving] = useState(false);
+  const [analysisName, setAnalysisName] = useState('');
 
   // --- Colors ---
   const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6', '#a3e635'];
@@ -240,6 +246,55 @@ export const CustomAnalytics: React.FC = () => {
   const removeFilter = (index: number) => {
      setFilters(filters.filter((_, i) => i !== index));
   };
+
+  // --- SAVE & LOAD LOGIC ---
+  const handleSaveAnalysis = () => {
+     if (!analysisName.trim() || !currentDataset) return;
+     
+     const config = {
+        mode,
+        dimension,
+        metric,
+        valueField,
+        segment,
+        chartType,
+        limit,
+        sortOrder,
+        isCumulative,
+        showTable,
+        filters
+     };
+
+     saveAnalysis({
+        name: analysisName,
+        type: 'analytics',
+        datasetId: currentDataset.id,
+        config
+     });
+
+     setAnalysisName('');
+     setIsSaving(false);
+  };
+
+  const handleLoadAnalysis = (id: string) => {
+     const analysis = savedAnalyses.find(a => a.id === id);
+     if (!analysis || !analysis.config) return;
+
+     const c = analysis.config;
+     setMode(c.mode || 'snapshot');
+     setDimension(c.dimension || '');
+     setMetric(c.metric || 'count');
+     setValueField(c.valueField || '');
+     setSegment(c.segment || '');
+     setChartType(c.chartType || 'bar');
+     setLimit(c.limit || 10);
+     setSortOrder(c.sortOrder || 'desc');
+     setIsCumulative(!!c.isCumulative);
+     setShowTable(!!c.showTable);
+     setFilters(c.filters || []);
+  };
+
+  const availableAnalyses = savedAnalyses.filter(a => a.type === 'analytics' && a.datasetId === currentDataset?.id);
 
   // --- SNAPSHOT DATA ENGINE ---
   const snapshotData = useMemo(() => {
@@ -415,7 +470,7 @@ export const CustomAnalytics: React.FC = () => {
     borderRadius: '6px',
     border: '1px solid #e2e8f0',
     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
-    color: '#334155',
+    color: '#1e293b',
     fontSize: '12px',
     padding: '8px'
   };
@@ -683,13 +738,61 @@ export const CustomAnalytics: React.FC = () => {
            </button>
         </div>
         
-        {/* Right Controls */}
-        <div className="w-full xl:w-auto">
+        {/* Right Controls & Saved Analyses */}
+        <div className="w-full xl:w-auto flex flex-wrap items-center gap-2">
+           
+           {/* Load Saved Analysis */}
+           <div className="relative">
+              <select
+                  className="bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[150px]"
+                  onChange={(e) => {
+                     if (e.target.value) handleLoadAnalysis(e.target.value);
+                     e.target.value = ""; // Reset after selection
+                  }}
+                  defaultValue=""
+              >
+                  <option value="" disabled>Vues enregistrées...</option>
+                  {availableAnalyses.length === 0 && <option disabled>Aucune vue.</option>}
+                  {availableAnalyses.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+              </select>
+           </div>
+           
+           {/* Save Button */}
+           {!isSaving ? (
+               <button 
+                  onClick={() => setIsSaving(true)}
+                  className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
+                  title="Enregistrer cette analyse"
+               >
+                  <Save className="w-4 h-4" />
+               </button>
+           ) : (
+               <div className="flex items-center gap-1 animate-in fade-in">
+                  <input 
+                     type="text" 
+                     className="p-1.5 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 w-32 bg-white text-slate-900"
+                     placeholder="Nom de la vue..."
+                     value={analysisName}
+                     onChange={e => setAnalysisName(e.target.value)}
+                     autoFocus
+                  />
+                  <button onClick={handleSaveAnalysis} className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700">
+                     <Check className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => setIsSaving(false)} className="p-1.5 bg-slate-200 text-slate-600 rounded hover:bg-slate-300">
+                     <X className="w-3 h-3" />
+                  </button>
+               </div>
+           )}
+
+           <div className="h-6 w-px bg-slate-300 mx-1 hidden xl:block"></div>
+
            {mode === 'snapshot' ? (
-              <div className="flex items-center gap-2 w-full xl:w-auto">
-                 <span className="text-sm text-slate-500 whitespace-nowrap hidden sm:inline">Source :</span>
+              <div className="flex items-center gap-2 flex-1">
                  <select 
-                    className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 min-w-[200px]"
+                    className="flex-1 sm:flex-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 min-w-[160px]"
                     value={selectedBatchId}
                     onChange={(e) => setSelectedBatchId(e.target.value)}
                   >
@@ -697,20 +800,19 @@ export const CustomAnalytics: React.FC = () => {
                  </select>
               </div>
            ) : (
-              <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto p-1">
+              <div className="flex flex-wrap items-center gap-2 flex-1 p-1">
                  <CalendarRange className="w-4 h-4 text-slate-500" />
                  <input 
                     type="date" 
                     value={startDate} 
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700 w-32"
                  />
-                 <span className="text-slate-400 text-sm">à</span>
                  <input 
                     type="date" 
                     value={endDate} 
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700 w-32"
                  />
               </div>
            )}
@@ -728,7 +830,7 @@ export const CustomAnalytics: React.FC = () => {
                 className="text-xs text-blue-600 hover:underline disabled:text-slate-400"
                 disabled={filters.length === 0}
               >
-                Réinitialiser les filtres
+                Réinitialiser filtres
               </button>
            </div>
            
@@ -929,7 +1031,7 @@ export const CustomAnalytics: React.FC = () => {
                           {showTable && <Check className="w-3 h-3" />}
                        </div>
                        <input type="checkbox" className="hidden" checked={showTable} onChange={() => setShowTable(!showTable)} />
-                       <span className="text-xs text-slate-700">Afficher le tableau</span>
+                       <span className="text-xs text-slate-700">Afficher tableau</span>
                     </label>
                  </div>
 
