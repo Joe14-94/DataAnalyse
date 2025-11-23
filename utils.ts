@@ -3,7 +3,7 @@ import { DataRow, RawImportData, ImportBatch, FieldConfig } from './types';
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-144";
+export const APP_VERSION = "202511-145";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);

@@ -6,7 +6,7 @@ import {
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, GripVertical, Link as LinkIcon, Save, Check,
-  AlertTriangle
+  AlertTriangle, CalendarClock
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
 type SortBy = 'label' | 'value';
 type SortOrder = 'asc' | 'desc';
+type DateGrouping = 'none' | 'year' | 'quarter' | 'month';
 
 interface PivotRow {
   type: 'data' | 'subtotal' | 'grandTotal';
@@ -43,6 +44,7 @@ export const PivotTable: React.FC = () => {
   // Configuration TCD
   const [rowFields, setRowFields] = useState<string[]>([]); // Multi-niveaux
   const [colField, setColField] = useState<string>('');
+  const [colGrouping, setColGrouping] = useState<DateGrouping>('none'); // NOUVEAU: Regroupement date
   const [valField, setValField] = useState<string>('');
   const [aggType, setAggType] = useState<AggregationType>('count');
   
@@ -74,6 +76,7 @@ export const PivotTable: React.FC = () => {
          const c = lastPivotState.config;
          setRowFields(c.rowFields || []);
          setColField(c.colField || '');
+         setColGrouping(c.colGrouping || 'none');
          setValField(c.valField || '');
          setAggType(c.aggType || 'count');
          setFilters(c.filters || []);
@@ -101,6 +104,7 @@ export const PivotTable: React.FC = () => {
             config: {
                 rowFields,
                 colField,
+                colGrouping,
                 valField,
                 aggType,
                 filters,
@@ -114,7 +118,7 @@ export const PivotTable: React.FC = () => {
             }
         });
      }
-  }, [rowFields, colField, valField, aggType, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, currentDataset]);
+  }, [rowFields, colField, colGrouping, valField, aggType, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, currentDataset]);
 
   useEffect(() => {
     if (batches.length === 0) {
@@ -191,6 +195,18 @@ export const PivotTable: React.FC = () => {
         }
      }
   };
+
+  // Detect Column Type for ColField (to show grouping options)
+  const isColFieldDate = useMemo(() => {
+      if (!colField || blendedRows.length === 0) return false;
+      const sample = blendedRows.slice(0, 50).map(r => r[colField] !== undefined ? String(r[colField]) : '');
+      return detectColumnType(sample) === 'date';
+  }, [colField, blendedRows]);
+
+  // Reset grouping if field changes and is not date
+  useEffect(() => {
+      if (!isColFieldDate) setColGrouping('none');
+  }, [colField, isColFieldDate]);
 
   const getDistinctValuesForField = (field: string) => {
     if (blendedRows.length === 0) return [];
@@ -276,6 +292,7 @@ export const PivotTable: React.FC = () => {
      const config = {
         rowFields,
         colField,
+        colGrouping,
         valField,
         aggType,
         filters,
@@ -306,6 +323,7 @@ export const PivotTable: React.FC = () => {
      const c = analysis.config;
      setRowFields(c.rowFields || []);
      setColField(c.colField || '');
+     setColGrouping(c.colGrouping || 'none');
      setValField(c.valField || '');
      setAggType(c.aggType || 'count');
      setFilters(c.filters || []);
@@ -392,7 +410,9 @@ export const PivotTable: React.FC = () => {
      });
 
      // Ajouter le filtre de colonne si présent
-     if (colField && colKey) {
+     // NOTE: Le regroupement de dates empêche le drill-down précis sur la colonne date car la valeur affichée est agrégée
+     // On désactive le filtre colonne si un regroupement est actif
+     if (colField && colKey && colGrouping === 'none') {
         let val = colKey;
         if (val === '(Vide)') val = '';
         drillFilters[colField] = val;
@@ -414,6 +434,31 @@ export const PivotTable: React.FC = () => {
      navigate('/data', { state: { prefilledFilters: drillFilters } });
   };
 
+  // --- HELPER: GROUPING ---
+  const getGroupedLabel = (val: string) => {
+      if (!val || val === '(Vide)' || colGrouping === 'none') return val;
+      
+      try {
+         const d = new Date(val);
+         if (isNaN(d.getTime())) return val;
+
+         if (colGrouping === 'year') {
+            return d.getFullYear().toString();
+         }
+         if (colGrouping === 'quarter') {
+            const q = Math.floor(d.getMonth() / 3) + 1;
+            return `${d.getFullYear()}-T${q}`;
+         }
+         if (colGrouping === 'month') {
+            // ISO format pour le tri correct, formaté ensuite si besoin
+            return d.toISOString().slice(0, 7); // YYYY-MM
+         }
+      } catch (e) {
+         return val;
+      }
+      return val;
+  };
+
   // --- PIVOT ENGINE (RECURSIVE) ---
 
   const pivotData = useMemo(() => {
@@ -432,7 +477,9 @@ export const PivotTable: React.FC = () => {
     const colHeaders = new Set<string>();
     if (colField) {
       filteredRows.forEach(row => {
-        const val = row[colField] !== undefined ? String(row[colField]) : '(Vide)';
+        let val = row[colField] !== undefined ? String(row[colField]) : '(Vide)';
+        // APPLY GROUPING
+        val = getGroupedLabel(val);
         colHeaders.add(val);
       });
     }
@@ -477,7 +524,12 @@ export const PivotTable: React.FC = () => {
       const metrics: Record<string, number | string> = {};
       // Per Column
       sortedColHeaders.forEach(cHead => {
-        const colItems = rows.filter(r => String(r[colField] || '(Vide)') === cHead);
+        // MATCH GROUPED VALUE
+        const colItems = rows.filter(r => {
+           let val = r[colField] !== undefined ? String(r[colField]) : '(Vide)';
+           val = getGroupedLabel(val);
+           return val === cHead;
+        });
         metrics[cHead] = aggregate(colItems);
       });
       // Row Total
@@ -583,7 +635,7 @@ export const PivotTable: React.FC = () => {
       formatOutput
     };
 
-  }, [blendedRows, rowFields, colField, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, secondaryDatasetId]);
+  }, [blendedRows, rowFields, colField, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, secondaryDatasetId]);
 
 
   // --- RENDER ---
@@ -804,6 +856,25 @@ export const PivotTable: React.FC = () => {
                       <option value="">(Aucune colonne)</option>
                       {combinedFields.filter(f => !rowFields.includes(f)).map(f => <option key={f} value={f}>{f}</option>)}
                    </select>
+
+                   {/* GROUPEMENT PAR DATE (Si la colonne est une date) */}
+                   {isColFieldDate && (
+                      <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200 animate-in fade-in">
+                          <label className="text-[10px] font-bold text-amber-800 flex items-center gap-1 mb-1">
+                             <CalendarClock className="w-3 h-3" /> Regroupement Date
+                          </label>
+                          <select
+                              className="w-full p-1.5 bg-white border border-amber-300 rounded text-xs text-amber-900"
+                              value={colGrouping}
+                              onChange={(e) => setColGrouping(e.target.value as DateGrouping)}
+                          >
+                              <option value="none">Aucun (Date exacte)</option>
+                              <option value="year">Année (ex: 2025)</option>
+                              <option value="quarter">Trimestre (ex: 2025-T1)</option>
+                              <option value="month">Mois (ex: 2025-01)</option>
+                          </select>
+                      </div>
+                   )}
                 </div>
 
                 {/* 3. Valeurs */}
@@ -962,7 +1033,10 @@ export const PivotTable: React.FC = () => {
                                   style={{ width: `${width}px` }}
                                  >
                                     <div className="p-2 flex flex-col h-full justify-center">
-                                      <span className="text-[10px] text-slate-400 font-normal truncate">{colField}</span>
+                                      <span className="text-[10px] text-slate-400 font-normal truncate">
+                                          {colField}
+                                          {colGrouping !== 'none' && <span className="ml-1 text-[9px] text-amber-500 uppercase">({colGrouping})</span>}
+                                      </span>
                                       <span className="truncate">{cHead}</span>
                                     </div>
                                     {/* Resizer */}
@@ -1058,7 +1132,7 @@ export const PivotTable: React.FC = () => {
                                   {/* Values Matrix */}
                                   {colField && pivotData.colHeaders.map(cHead => {
                                      const val = row.metrics[cHead];
-                                     const isCellClickable = aggType !== 'list'; // Allow click on subtotals too
+                                     const isCellClickable = aggType !== 'list' && colGrouping === 'none'; // Only drilldown if no grouping
                                      
                                      return (
                                         <td 
