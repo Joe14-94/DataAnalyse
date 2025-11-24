@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr, evaluateFormula, generateId, parseSmartNumber, formatNumberValue } from '../utils';
 import { Button } from '../components/ui/Button';
@@ -8,7 +9,7 @@ import {
   Search, Download, Database, ChevronLeft, ChevronRight, Table2, 
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
   History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-  FilterX, Hash, Percent
+  FilterX, Hash, Percent, MousePointerClick
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -36,14 +37,15 @@ export const DataExplorer: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [trackingKey, setTrackingKey] = useState<string>('');
 
-  // CALCULATED FIELDS MODAL
-  const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+  // CALCULATED FIELDS UI STATE (DRAWER)
+  const [isCalcDrawerOpen, setIsCalcDrawerOpen] = useState(false);
   const [newField, setNewField] = useState<Partial<CalculatedField>>({
      name: '',
      formula: '',
      outputType: 'number',
      unit: ''
   });
+  const formulaInputRef = useRef<HTMLInputElement>(null);
 
   // CONDITIONAL FORMATTING MODAL
   const [isFormatModalOpen, setIsFormatModalOpen] = useState(false);
@@ -87,6 +89,36 @@ export const DataExplorer: React.FC = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleHeaderClick = (field: string) => {
+     // Si le mode édition de formule est actif, on insère la colonne
+     if (isCalcDrawerOpen) {
+        insertIntoFormula(`[${field}]`);
+        return;
+     }
+     
+     // Sinon comportement normal (Sélection + Tri)
+     setSelectedCol(selectedCol === field ? null : field);
+     handleSort(field);
+  };
+
+  const insertIntoFormula = (textToInsert: string) => {
+      if (!formulaInputRef.current) return;
+      
+      const input = formulaInputRef.current;
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const text = input.value;
+      
+      const newText = text.substring(0, start) + textToInsert + text.substring(end);
+      setNewField({ ...newField, formula: newText });
+      
+      // Restore focus and cursor
+      setTimeout(() => {
+         input.focus();
+         input.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
+      }, 0);
   };
 
   const handleColumnFilterChange = (key: string, value: string) => {
@@ -459,7 +491,11 @@ export const DataExplorer: React.FC = () => {
                <span className="hidden md:inline">Conditionnel</span>
            </Button>
 
-           <Button variant="secondary" onClick={() => setIsCalcModalOpen(true)} className="whitespace-nowrap">
+           <Button 
+              variant={isCalcDrawerOpen ? "primary" : "secondary"} 
+              onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} 
+              className="whitespace-nowrap"
+           >
                <FunctionSquare className="w-4 h-4 md:mr-2" />
                <span className="hidden md:inline">Calculs</span>
            </Button>
@@ -560,11 +596,11 @@ export const DataExplorer: React.FC = () => {
          </div>
       </div>
 
-      {/* Table Container */}
-      <div className="flex-1 flex flex-col min-h-0 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden relative">
+      {/* Table Container - Relative pour permettre le positionnement du Drawer */}
+      <div className="flex-1 flex min-h-0 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden relative">
          
          {/* Table Wrapper with Overflow */}
-         <div className="flex-1 overflow-auto custom-scrollbar relative w-full">
+         <div className="flex-1 overflow-auto custom-scrollbar relative w-full flex flex-col">
             <table className="min-w-full divide-y divide-slate-200 border-collapse text-left">
                <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
                   {/* Header Row */}
@@ -573,7 +609,7 @@ export const DataExplorer: React.FC = () => {
                      <th 
                         scope="col" 
                         className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group"
-                        onClick={() => handleSort('_importDate')}
+                        onClick={() => handleHeaderClick('_importDate')}
                      >
                         <div className="flex items-center gap-2">
                            <span>Date d'import</span>
@@ -596,21 +632,19 @@ export const DataExplorer: React.FC = () => {
                               key={field} 
                               scope="col" 
                               className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group
-                                 ${isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}
+                                 ${isCalcDrawerOpen ? 'hover:bg-indigo-100 hover:text-indigo-800' : (isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100')}
                               `}
-                              onClick={() => {
-                                 setSelectedCol(isSelected ? null : field);
-                                 handleSort(field);
-                              }}
+                              onClick={() => handleHeaderClick(field)}
                            >
                               <div className="flex items-center gap-2">
+                                 {isCalcDrawerOpen && <MousePointerClick className="w-3 h-3 text-indigo-500" />}
                                  {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
                                  <span>{field}</span>
-                                 {sortConfig?.key === field ? (
+                                 {!isCalcDrawerOpen && (sortConfig?.key === field ? (
                                     sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
                                  ) : (
                                     <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                 )}
+                                 ))}
                               </div>
                            </th>
                         );
@@ -622,16 +656,16 @@ export const DataExplorer: React.FC = () => {
                            key={cf.id} 
                            scope="col" 
                            className="px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group"
-                           onClick={() => handleSort(cf.name)}
+                           onClick={() => handleHeaderClick(cf.name)}
                         >
                            <div className="flex items-center gap-2">
                               <Calculator className="w-3 h-3" />
                               <span>{cf.name}</span>
-                              {sortConfig?.key === cf.name ? (
+                              {!isCalcDrawerOpen && (sortConfig?.key === cf.name ? (
                                  sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />
                               ) : (
                                  <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              )}
+                              ))}
                            </div>
                         </th>
                      ))}
@@ -750,50 +784,162 @@ export const DataExplorer: React.FC = () => {
                   )}
                </tbody>
             </table>
-         </div>
 
-         {/* Footer / Pagination */}
-         <div className="bg-white border-t border-slate-200 px-4 py-2 flex items-center justify-between flex-shrink-0 z-10 h-14">
-            <div className="text-xs text-slate-500">
-               {processedRows.length > 0 
-                 ? `${(currentPage - 1) * rowsPerPage + 1} - ${Math.min(currentPage * rowsPerPage, processedRows.length)} sur ${processedRows.length}`
-                 : '0 résultat'
-               }
-            </div>
-            
-            <div className="flex items-center gap-4">
-               <select 
-                  className="text-xs border-slate-300 rounded bg-white text-slate-600 focus:ring-blue-500 focus:border-blue-500"
-                  value={rowsPerPage}
-                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-               >
-                  <option value={25}>25 lignes</option>
-                  <option value={50}>50 lignes</option>
-                  <option value={100}>100 lignes</option>
-                  <option value={500}>500 lignes</option>
-               </select>
+            {/* Footer / Pagination */}
+            <div className="bg-white border-t border-slate-200 px-4 py-2 flex items-center justify-between flex-shrink-0 z-10 h-14 mt-auto">
+                <div className="text-xs text-slate-500">
+                {processedRows.length > 0 
+                    ? `${(currentPage - 1) * rowsPerPage + 1} - ${Math.min(currentPage * rowsPerPage, processedRows.length)} sur ${processedRows.length}`
+                    : '0 résultat'
+                }
+                </div>
+                
+                <div className="flex items-center gap-4">
+                <select 
+                    className="text-xs border-slate-300 rounded bg-white text-slate-600 focus:ring-blue-500 focus:border-blue-500"
+                    value={rowsPerPage}
+                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                >
+                    <option value={25}>25 lignes</option>
+                    <option value={50}>50 lignes</option>
+                    <option value={100}>100 lignes</option>
+                    <option value={500}>500 lignes</option>
+                </select>
 
-               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  <button
-                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                     disabled={currentPage === 1}
-                     className="relative inline-flex items-center px-2 py-1.5 rounded-l-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                     <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <span className="relative inline-flex items-center px-4 py-1.5 border border-slate-300 bg-white text-xs font-medium text-slate-700">
-                     Page {currentPage} / {Math.max(1, totalPages)}
-                  </span>
-                  <button
-                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                     disabled={currentPage === totalPages || totalPages === 0}
-                     className="relative inline-flex items-center px-2 py-1.5 rounded-r-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                     <ChevronRight className="h-4 w-4" />
-                  </button>
-               </nav>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center px-2 py-1.5 rounded-l-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="relative inline-flex items-center px-4 py-1.5 border border-slate-300 bg-white text-xs font-medium text-slate-700">
+                        Page {currentPage} / {Math.max(1, totalPages)}
+                    </span>
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages || totalPages === 0}
+                        className="relative inline-flex items-center px-2 py-1.5 rounded-r-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </button>
+                </nav>
+                </div>
             </div>
          </div>
+         
+         {/* CALCULATED FIELDS DRAWER */}
+         {isCalcDrawerOpen && (
+             <div className="w-96 bg-white border-l border-slate-200 shadow-xl flex flex-col z-30 animate-in slide-in-from-right duration-300">
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <FunctionSquare className="w-4 h-4 text-indigo-600" />
+                        Champs calculés
+                    </h3>
+                    <button onClick={() => setIsCalcDrawerOpen(false)} className="text-slate-400 hover:text-slate-600">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                    {/* Create new */}
+                    <div className="space-y-4">
+                        <div className="bg-indigo-50 p-3 rounded border border-indigo-100 text-xs text-indigo-800">
+                            <strong>Astuce :</strong> Cliquez sur un entête de colonne dans le tableau à gauche pour l'insérer dans la formule.
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">1. Nom de la colonne</label>
+                            <input 
+                                type="text" 
+                                className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Ex: Total TTC"
+                                value={newField.name}
+                                onChange={e => setNewField({...newField, name: e.target.value})}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">2. Formule</label>
+                            <div className="relative">
+                                <input 
+                                    ref={formulaInputRef}
+                                    type="text" 
+                                    className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                                    placeholder="[Prix] * [Quantité]"
+                                    value={newField.formula}
+                                    onChange={e => setNewField({...newField, formula: e.target.value})}
+                                />
+                            </div>
+                            
+                            {/* Quick Functions Toolbar */}
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                <button onClick={() => insertIntoFormula('SI( , "Vrai", "Faux")')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">SI</button>
+                                <button onClick={() => insertIntoFormula('SOMME( , )')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">SOMME</button>
+                                <button onClick={() => insertIntoFormula('MOYENNE( , )')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">MOYENNE</button>
+                                <button onClick={() => insertIntoFormula('ARRONDI( , 2)')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">ARRONDI</button>
+                                <button onClick={() => insertIntoFormula('MAX( , )')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">MAX</button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 mb-1">Type</label>
+                                <select 
+                                    className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                                    value={newField.outputType}
+                                    onChange={e => setNewField({...newField, outputType: e.target.value as any})}
+                                >
+                                    <option value="number">Nombre</option>
+                                    <option value="text">Texte</option>
+                                    <option value="boolean">Oui/Non</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 mb-1">Unité</label>
+                                <input 
+                                    type="text" 
+                                    className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                                    placeholder="Ex: €"
+                                    value={newField.unit}
+                                    onChange={e => setNewField({...newField, unit: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                            <Plus className="w-4 h-4 mr-2" /> Créer le champ
+                        </Button>
+                    </div>
+
+                    <hr className="border-slate-100" />
+
+                    {/* List existing */}
+                    <div className="space-y-3">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Champs existants ({calculatedFields.length})</h4>
+                        {calculatedFields.length > 0 ? calculatedFields.map(field => (
+                            <div key={field.id} className="bg-white border border-slate-200 rounded p-3 hover:shadow-sm transition-shadow">
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="font-bold text-slate-800 text-sm">{field.name}</div>
+                                    <button 
+                                        onClick={() => removeCalculatedField(currentDataset.id, field.id)} 
+                                        className="text-slate-400 hover:text-red-500"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="text-xs text-slate-500 font-mono bg-slate-50 p-1.5 rounded border border-slate-100 break-all">
+                                    {field.formula}
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="text-center py-4 text-slate-400 italic text-xs">Aucun champ calculé.</div>
+                        )}
+                    </div>
+                </div>
+             </div>
+         )}
       </div>
 
       {/* HISTORY SIDE PANEL (DRAWER) */}
@@ -932,114 +1078,6 @@ export const DataExplorer: React.FC = () => {
                   )}
                </div>
 
-            </div>
-         </div>
-      )}
-
-      {/* CALCULATED FIELDS MODAL */}
-      {isCalcModalOpen && (
-         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[90%]">
-               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-lg">
-                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                     <FunctionSquare className="w-5 h-5 text-indigo-600" />
-                     Champs calculés
-                  </h3>
-                  <button onClick={() => setIsCalcModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                     <X className="w-5 h-5" />
-                  </button>
-               </div>
-
-               <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
-                  
-                  {/* List existing */}
-                  {calculatedFields.length > 0 ? (
-                     <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase">Champs actifs</h4>
-                        {calculatedFields.map(field => (
-                           <div key={field.id} className="flex justify-between items-center bg-indigo-50 border border-indigo-100 rounded p-3">
-                              <div>
-                                 <div className="font-bold text-indigo-900 text-sm">{field.name}</div>
-                                 <div className="text-xs text-indigo-700 font-mono mt-1">{field.formula}</div>
-                              </div>
-                              <button 
-                                 onClick={() => removeCalculatedField(currentDataset.id, field.id)} 
-                                 className="text-slate-400 hover:text-red-500 p-1"
-                              >
-                                 <Trash2 className="w-4 h-4" />
-                              </button>
-                           </div>
-                        ))}
-                     </div>
-                  ) : (
-                     <div className="text-center py-6 text-slate-400 italic border-2 border-dashed border-slate-100 rounded">
-                        Aucun champ calculé défini.
-                     </div>
-                  )}
-
-                  {/* Create new */}
-                  <div className="border-t border-slate-100 pt-6 space-y-4">
-                     <h4 className="text-sm font-bold text-slate-800">Nouveau champ</h4>
-                     
-                     <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">Nom de la colonne</label>
-                        <input 
-                           type="text" 
-                           className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500"
-                           placeholder="Ex: Marge Nette"
-                           value={newField.name}
-                           onChange={e => setNewField({...newField, name: e.target.value})}
-                        />
-                     </div>
-
-                     <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">Formule</label>
-                        <div className="relative">
-                           <input 
-                              type="text" 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-                              placeholder="Ex: [Prix] * [Quantité] * 1.2"
-                              value={newField.formula}
-                              onChange={e => setNewField({...newField, formula: e.target.value})}
-                           />
-                           <div className="mt-1 text-[10px] text-slate-400">
-                              Utilisez les noms de colonnes entre crochets : <code>[Colonne]</code>
-                           </div>
-                        </div>
-                     </div>
-
-                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                           <label className="block text-xs font-medium text-slate-600 mb-1">Type de sortie</label>
-                           <select 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                              value={newField.outputType}
-                              onChange={e => setNewField({...newField, outputType: e.target.value as any})}
-                           >
-                              <option value="number">Nombre</option>
-                              <option value="text">Texte</option>
-                              <option value="boolean">Oui/Non</option>
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-medium text-slate-600 mb-1">Unité (optionnel)</label>
-                           <input 
-                              type="text" 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                              placeholder="Ex: €"
-                              value={newField.unit}
-                              onChange={e => setNewField({...newField, unit: e.target.value})}
-                           />
-                        </div>
-                     </div>
-
-                     <div className="pt-2">
-                        <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula} className="w-full bg-indigo-600 hover:bg-indigo-700">
-                           <Plus className="w-4 h-4 mr-2" /> Ajouter le champ
-                        </Button>
-                     </div>
-                  </div>
-               </div>
             </div>
          </div>
       )}

@@ -4,7 +4,7 @@ import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, Diag
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-173";
+export const APP_VERSION = "202511-174";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -464,9 +464,9 @@ export const extractDomain = (email: string): string => {
 };
 
 /**
- * Évalue une formule mathématique simple
+ * Évalue une formule mathématique simple avec support de fonctions avancées
  * @param row La ligne de données
- * @param formula La formule ex: "[Prix] * [Quantité] * 1.2"
+ * @param formula La formule ex: "[Prix] * [Quantité]" ou "SI([Age]>18, 'Majeur', 'Mineur')"
  */
 export const evaluateFormula = (row: any, formula: string): number | string | null => {
   if (!formula) return null;
@@ -476,20 +476,54 @@ export const evaluateFormula = (row: any, formula: string): number | string | nu
     // Regex : cherche ce qui est entre crochets
     const processedFormula = formula.replace(/\[(.*?)\]/g, (match, fieldName) => {
        const val = row[fieldName];
-       // Si c'est un nombre formatté (ex: "1 000 €"), on le nettoie
+       // Si c'est un nombre, on l'injecte tel quel
+       if (typeof val === 'number') return String(val);
+       // Si c'est une chaine qui ressemble à un nombre, on tente le parse
        const num = parseSmartNumber(val); 
-       return String(num); // On retourne la représentation string du nombre pour le JS
+       if (!isNaN(num) && val !== '' && val !== null && val !== undefined) return String(num);
+       // Sinon on l'injecte comme string (avec quotes pour la sécurité JS)
+       return `"${String(val).replace(/"/g, '\\"')}"`;
     });
 
-    // 2. Évaluation sécurisée
-    // On autorise uniquement chiffres, opérateurs mathématiques et parenthèses pour la sécurité
+    // 2. Contexte de fonctions Excel-like (Français)
+    const context = {
+       SI: (condition: boolean, siVrai: any, siFaux: any) => condition ? siVrai : siFaux,
+       SOMME: (...args: number[]) => args.reduce((a, b) => a + (Number(b) || 0), 0),
+       MOYENNE: (...args: number[]) => {
+          const nums = args.filter(a => typeof a === 'number');
+          if (nums.length === 0) return 0;
+          return nums.reduce((a, b) => a + b, 0) / nums.length;
+       },
+       MIN: Math.min,
+       MAX: Math.max,
+       ARRONDI: (val: number, precision: number = 0) => {
+          const factor = Math.pow(10, precision);
+          return Math.round(val * factor) / factor;
+       },
+       ABS: Math.abs,
+       CONCAT: (...args: any[]) => args.join(''),
+       MAJUSCULE: (txt: string) => String(txt).toUpperCase(),
+       MINUSCULE: (txt: string) => String(txt).toLowerCase(),
+       // Alias anglais
+       IF: (condition: boolean, t: any, f: any) => condition ? t : f,
+       SUM: (...args: number[]) => args.reduce((a, b) => a + (Number(b) || 0), 0),
+       AVG: (...args: number[]) => args.length ? args.reduce((a,b)=>a+Number(b),0)/args.length : 0,
+    };
+
+    // 3. Évaluation sécurisée via Function avec scope limité
+    const keys = Object.keys(context);
+    const values = Object.values(context);
+    
+    // On wrap la formule dans un return pour que Function renvoie le résultat
     // eslint-disable-next-line no-new-func
-    const result = new Function('return ' + processedFormula)();
+    const result = new Function(...keys, `return ${processedFormula}`)(...values);
     
-    if (result === Infinity || isNaN(result)) return null;
-    
-    // Arrondi à 2 décimales pour la propreté par défaut
-    return Math.round(result * 100) / 100;
+    if (typeof result === 'number') {
+       if (result === Infinity || isNaN(result)) return null;
+       return Math.round(result * 1000) / 1000; // Arrondi de propreté à 3 décimales
+    }
+    return result;
+
   } catch (e) {
     // console.warn("Erreur calcul formule:", formula, e);
     return null;
@@ -638,10 +672,17 @@ export const runSelfDiagnostics = (): DiagnosticSuite[] => {
       },
       { 
          id: 'f3', 
-         name: 'Division par zéro (sécurité)', 
+         name: 'Fonction SI', 
          status: 'success', 
-         expected: null, 
-         actual: evaluateFormula({ 'A': 10 }, '[A] / 0') 
+         expected: 'Grand', 
+         actual: evaluateFormula({ 'Age': 20 }, "SI([Age] > 18, 'Grand', 'Petit')") 
+      },
+      { 
+         id: 'f4', 
+         name: 'Fonction SOMME', 
+         status: 'success', 
+         expected: 30, 
+         actual: evaluateFormula({ 'A': 10, 'B': 20 }, "SOMME([A], [B])") 
       }
    ];
    formulaTests.forEach(t => {
