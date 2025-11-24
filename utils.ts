@@ -1,9 +1,10 @@
 
-import { DataRow, RawImportData, ImportBatch, FieldConfig } from './types';
+
+import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from './types';
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-145";
+export const APP_VERSION = "202511-173";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -258,30 +259,31 @@ export const getDaysDifference = (dateStr: string): number => {
 
 /**
  * Extrait un nombre depuis une chaine avec potentiellement une unité
- * Ex: "50 k€" -> 50, "1 200 €" -> 1200
+ * Optimisé pour la performance (Regex pre-compilé pour cas généraux)
  */
+const CLEAN_NUM_REGEX = /[^0-9.-]/g;
+
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number') return val;
   
   let str = String(val);
   
-  // Si une unité est fournie, on tente de la retirer
-  if (unit && unit.trim() !== '') {
-    // On échappe les caractères spéciaux regex
+  // Optimisation: Si unité présente, on l'enlève (Case Insensitive)
+  if (unit && unit.length > 0) {
+    // Escape special chars for regex (ex: $ or .)
     const escapedUnit = unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Regex qui cherche l'unité à la fin ou au début, insensible à la casse
-    const regex = new RegExp(escapedUnit, 'gi');
-    str = str.replace(regex, '');
+    const unitRegex = new RegExp(escapedUnit, 'i');
+    str = str.replace(unitRegex, '');
   }
 
-  // Nettoyage générique :
+  // Nettoyage générique optimisé
   // 1. Remplacer virgule par point
   str = str.replace(',', '.');
-  // 2. Supprimer les espaces insécables et espaces normaux
+  // 2. Supprimer les espaces
   str = str.replace(/\s/g, '').replace(/\u00A0/g, '');
-  // 3. Supprimer tout ce qui n'est pas chiffre, point ou signe moins (au début)
-  str = str.replace(/[^0-9.-]/g, '');
+  // 3. Regex clean (garde chiffres, point, moins)
+  str = str.replace(CLEAN_NUM_REGEX, '');
 
   const num = parseFloat(str);
   return isNaN(num) ? 0 : num;
@@ -322,6 +324,31 @@ export const formatNumberValue = (value: number | string, config?: FieldConfig):
   }) + fullSuffix;
 };
 
+// Logique de regroupement de date pour le TCD et les Diagnostics
+export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarter' | 'month') => {
+    if (!val || val === '(Vide)' || grouping === 'none') return val;
+    
+    try {
+       const d = new Date(val);
+       if (isNaN(d.getTime())) return val;
+
+       if (grouping === 'year') {
+          return d.getFullYear().toString();
+       }
+       if (grouping === 'quarter') {
+          const q = Math.floor(d.getMonth() / 3) + 1;
+          return `${d.getFullYear()}-T${q}`;
+       }
+       if (grouping === 'month') {
+          // ISO format pour le tri correct, formaté ensuite si besoin
+          return d.toISOString().slice(0, 7); // YYYY-MM
+       }
+    } catch (e) {
+       return val;
+    }
+    return val;
+};
+
 /**
  * Détecte l'unité la plus probable dans une liste de valeurs
  * Ex: ["10 kg", "20 kg", "5 kg"] -> "kg"
@@ -334,10 +361,13 @@ export const detectUnit = (values: string[]): string => {
   const sample = values.slice(0, 10).filter(v => v && v.trim());
   if (sample.length === 0) return '';
 
-  // Fonction pour extraire le suffixe non numérique
+  // Fonction pour extraire le suffixe non numérique (ex: " k€" ou "kg")
   const getSuffix = (s: string) => {
-    const match = s.match(/[a-zA-Z€$£%°]+$/);
-    return match ? match[0] : '';
+    // Capture tout ce qui n'est pas chiffre/point/virgule/tiret à la fin
+    // On ignore les espaces avant le suffixe pour le comptage, mais on les inclura si besoin dans le résultat final si nécessaire
+    // Ici on extrait purement l'unité textuelle
+    const match = s.match(/[a-zA-Z€$£%°]+$/); 
+    return match ? match[0].trim() : '';
   };
 
   const candidates = sample.map(getSuffix).filter(s => s !== '');
@@ -356,8 +386,8 @@ export const detectUnit = (values: string[]): string => {
     }
   });
 
-  // Si le candidat apparait dans plus de 50% des cas non vides
-  if (maxCount > sample.length / 2) {
+  // Si le candidat apparait dans plus de 40% des cas non vides (tolérance pour cellules vides ou mal formatées)
+  if (maxCount >= sample.length * 0.4) {
     return bestCandidate;
   }
 
@@ -376,11 +406,11 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
   let dateCount = 0;
   
   // Regex dates communes : YYYY-MM-DD ou DD/MM/YYYY ou DD-MM-YYYY
-  // On exclut les nombres purs (ex: 2025) qui matcheraient YYYY
   const dateRegex = /^(\d{4}-\d{2}-\d{2})|(\d{2}\/\d{2}\/\d{4})|(\d{2}-\d{2}-\d{4})$/;
 
   sample.forEach(val => {
-     const lower = val.toLowerCase().trim();
+     const cleanVal = val.trim();
+     const lower = cleanVal.toLowerCase();
      
      // Check Boolean
      if (['oui', 'non', 'yes', 'no', 'true', 'false', 'vrai', 'faux', '0', '1'].includes(lower)) {
@@ -389,14 +419,28 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
      
      // Check Date
      // On vérifie d'abord le regex, puis si c'est une date valide JS
-     if (dateRegex.test(val) && !isNaN(Date.parse(val.split('/').reverse().join('-')))) {
+     if (dateRegex.test(cleanVal) && !isNaN(Date.parse(cleanVal.split('/').reverse().join('-')))) {
         dateCount++;
      }
 
-     // Check Number (supporte 1,000.00 ou 1.000,00)
-     const cleanNum = val.replace(/[^0-9.,-]/g, ''); // On garde juste chiffres et separateurs
-     if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) {
-        numberCount++;
+     // Check Number (supporte 1,000.00 ou 1.000,00 ET les unités suffixées comme 10 k€)
+     // Stratégie : On retire l'unité probable (lettres/symboles à la fin), puis on check si c'est un nombre
+     // IMPORTANT: Une chaine qui commence par des lettres (ex: "Ref 123") n'est PAS un nombre.
+     // Seuls les nombres commençant par un chiffre, un signe ou un symbole monétaire sont acceptés.
+     
+     // 1. Check start
+     const startsWithValidNumChar = /^[-+0-9.,]/.test(cleanVal);
+     const startsWithCurrency = /^[$€£]/.test(cleanVal);
+     
+     if (startsWithValidNumChar || startsWithCurrency) {
+        // 2. Remove potential unit at the end
+        const withoutUnit = cleanVal.replace(/[\s]?[a-zA-Z%€$£%°]+$/, '');
+        // 3. Clean grouping separators
+        const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, ''); 
+        
+        if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) {
+           numberCount++;
+        }
      }
   });
 
@@ -453,26 +497,28 @@ export const evaluateFormula = (row: any, formula: string): number | string | nu
 };
 
 // Données partagées pour les jointures
-const ORGS_LIST = ['TechCorp', 'Innovate SA', 'Global Services', 'Alpha Solutions', 'Mairie de Paris', 'Ministère Intérieur'];
+const ORGS_LIST = ['TechCorp', 'Innovate SA', 'Global Services', 'Alpha Solutions', 'Mairie de Paris', 'Ministère Intérieur', 'CyberDefense Ltd', 'Green Energy', 'Transport Express', 'Banque Populaire'];
 
 /**
  * Génère des données synthétiques (RH)
  */
 export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[] => {
-  const firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Lucas', 'Emma', 'Thomas', 'Lea', 'Nicolas', 'Julie'];
-  const lastNames = ['Dupont', 'Martin', 'Bernard', 'Petit', 'Robert', 'Richard', 'Durand', 'Dubois', 'Moreau', 'Laurent'];
-  const domains = ['gmail.com', 'outlook.com', 'techcorp.com', 'innovate.fr', 'gouv.fr'];
+  const firstNames = ['Pierre', 'Paul', 'Jacques', 'Marie', 'Sophie', 'Isabelle', 'Thomas', 'Lucas', 'Nicolas', 'Julien', 'Camille', 'Antoine', 'Sarah', 'Alexandre', 'Manon', 'Emma', 'Chloé', 'Inès'];
+  const lastNames = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand'];
+  const domains = ['gmail.com', 'outlook.com', 'techcorp.com', 'innovate.fr', 'gouv.fr', 'cyber-defense.eu', 'energy.com'];
   
   const batches: ImportBatch[] = [];
-  const today = new Date();
   
+  // On génère 6 lots dynamiques sur les 6 derniers mois
   for (let i = 5; i >= 0; i--) {
-    const date = new Date(today);
-    date.setMonth(today.getMonth() - i);
-    date.setDate(15); 
+    const date = new Date(); // Date du jour
+    date.setMonth(date.getMonth() - i);
+    date.setDate(15); // On fixe au 15 du mois pour la cohérence
+
     const dateStr = date.toISOString().split('T')[0];
     
-    const baseCount = 50 + (i * 15) + (Math.random() * 10); 
+    // Variation du nombre de lignes pour simuler une croissance
+    const baseCount = 65 + (5-i) * 6 + (Math.random() * 15); 
     const rowCount = Math.floor(baseCount);
     
     const rows: DataRow[] = [];
@@ -481,8 +527,8 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
       const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
       const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
       
-      let orgIndex = Math.floor(Math.random() * ORGS_LIST.length);
-      if (i < 2 && Math.random() > 0.5) orgIndex = 0; 
+      let orgIndex = Math.floor(Math.random() * 6); // Core orgs
+      if (i === 0) orgIndex = Math.floor(Math.random() * ORGS_LIST.length); // Plus de diversité sur le dernier import
 
       let domain = domains[0];
       if (orgIndex === 0) domain = 'techcorp.com';
@@ -494,17 +540,17 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
       const lastChangeDate = new Date(date);
       lastChangeDate.setDate(lastChangeDate.getDate() - Math.floor(Math.random() * 60));
       
-      const amount = Math.floor(Math.random() * 1000) + 100;
+      const amount = Math.floor(Math.random() * 1400) + 150;
       
       rows.push({
-        id: `REF-${(5-i)}-${j.toString().padStart(4, '0')}`,
+        id: `REF-${(10-i)}-${j.toString().padStart(4, '0')}`, // IDs évolutifs
         'Nom': `${firstName} ${lastName}`,
         'Email': `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
         'Organisation': ORGS_LIST[orgIndex],
         'DateModif': lastChangeDate.toISOString().split('T')[0],
         'Commentaire': hasComment,
-        'Budget': `${amount} k€`, // Donnée avec unité
-        'Quantité': Math.floor(Math.random() * 20) + 1
+        'Budget': `${amount} k€`, // Donnée avec unité pour tester la détection
+        'Quantité': Math.floor(Math.random() * 25) + 1
       });
     }
     
@@ -524,9 +570,9 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
  * Génère des données de Référentiel (Table de dimension)
  */
 export const generateRefData = (datasetId: string): ImportBatch[] => {
-   const sectors = ['IT Services', 'Software', 'Consulting', 'Intégration', 'Public', 'Etat'];
-   const cities = ['Paris', 'Lyon', 'Bordeaux', 'Nantes', 'Lille'];
-   const sizes = ['PME', 'ETI', 'Grand Compte', 'Administration'];
+   const sectors = ['IT Services', 'Software', 'Consulting', 'Intégration', 'Public', 'Etat', 'Défense', 'Energie', 'Logistique', 'Finance'];
+   const cities = ['Paris', 'Lyon', 'Bordeaux', 'Nantes', 'Lille', 'Marseille', 'Strasbourg', 'Toulouse'];
+   const sizes = ['PME', 'ETI', 'Grand Compte', 'Administration', 'Startup'];
 
    const rows: DataRow[] = ORGS_LIST.map((org, index) => {
       return {
@@ -550,4 +596,76 @@ export const generateRefData = (datasetId: string): ImportBatch[] => {
       createdAt: Date.now(),
       rows
    }];
+};
+
+// --- AUDIT SYSTEM ---
+export const runSelfDiagnostics = (): DiagnosticSuite[] => {
+   const suites: DiagnosticSuite[] = [];
+
+   // SUITE 1: Parsing Numérique
+   const parsingTests: DiagnosticResult[] = [
+      { id: '1', name: 'Nombre simple (123)', status: 'success', expected: 123, actual: parseSmartNumber('123') },
+      { id: '2', name: 'Nombre décimal (12.5)', status: 'success', expected: 12.5, actual: parseSmartNumber('12.5') },
+      { id: '3', name: 'Nombre avec unité (10 k€)', status: 'success', expected: 10, actual: parseSmartNumber('10 k€', 'k€') },
+      { id: '4', name: 'Espace insécable (1 000)', status: 'success', expected: 1000, actual: parseSmartNumber('1 000') },
+      { id: '5', name: 'Format FR (1.000,50)', status: 'success', expected: 1000.5, actual: parseSmartNumber('1.000,50') },
+   ];
+   
+   // Validation réelle
+   parsingTests.forEach(t => {
+      if (t.actual !== t.expected) {
+         t.status = 'failure';
+         t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`;
+      }
+   });
+   suites.push({ category: 'Moteur de Parsing Numérique', tests: parsingTests });
+
+   // SUITE 2: Moteur de Formule
+   const formulaTests: DiagnosticResult[] = [
+      { 
+         id: 'f1', 
+         name: 'Multiplication simple', 
+         status: 'success', 
+         expected: 100, 
+         actual: evaluateFormula({ 'A': 10, 'B': 10 }, '[A] * [B]') 
+      },
+      { 
+         id: 'f2', 
+         name: 'Calcul avec unité', 
+         status: 'success', 
+         expected: 120, 
+         actual: evaluateFormula({ 'Prix': '10 €', 'Qte': 12 }, '[Prix] * [Qte]') 
+      },
+      { 
+         id: 'f3', 
+         name: 'Division par zéro (sécurité)', 
+         status: 'success', 
+         expected: null, 
+         actual: evaluateFormula({ 'A': 10 }, '[A] / 0') 
+      }
+   ];
+   formulaTests.forEach(t => {
+      if (t.actual !== t.expected) {
+         t.status = 'failure';
+         t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`;
+      }
+   });
+   suites.push({ category: 'Calculateur de Champs', tests: formulaTests });
+
+   // SUITE 3: Regroupement TCD (Dates)
+   const groupingTests: DiagnosticResult[] = [
+      { id: 'd1', name: 'Année (2025-01-15)', expected: '2025', actual: getGroupedLabel('2025-01-15', 'year'), status: 'success' },
+      { id: 'd2', name: 'Mois (2025-01-15)', expected: '2025-01', actual: getGroupedLabel('2025-01-15', 'month'), status: 'success' },
+      { id: 'd3', name: 'Trimestre (2025-01-15)', expected: '2025-T1', actual: getGroupedLabel('2025-01-15', 'quarter'), status: 'success' },
+      { id: 'd4', name: 'Trimestre (2025-05-20)', expected: '2025-T2', actual: getGroupedLabel('2025-05-20', 'quarter'), status: 'success' },
+   ];
+   groupingTests.forEach(t => {
+      if (t.actual !== t.expected) {
+         t.status = 'failure';
+         t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`;
+      }
+   });
+   suites.push({ category: 'Moteur de Regroupement Temporel', tests: groupingTests });
+
+   return suites;
 };

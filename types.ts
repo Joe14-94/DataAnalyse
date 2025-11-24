@@ -1,4 +1,5 @@
 
+
 export interface DataRow {
   id: string;
   [key: string]: any; // Permet des champs dynamiques
@@ -48,6 +49,35 @@ export interface SavedAnalysis {
   datasetId: string;
   config: any; // Stocke la configuration spécifique (JSON)
   createdAt: number;
+}
+
+// --- DIAGNOSTICS & TESTS ---
+export interface DiagnosticResult {
+  id: string;
+  name: string;
+  status: 'success' | 'failure';
+  message?: string;
+  expected?: any;
+  actual?: any;
+}
+
+export interface DiagnosticSuite {
+  category: string;
+  tests: DiagnosticResult[];
+}
+
+// --- STYLES TCD (NOUVEAU) ---
+export interface PivotStyleRule {
+  id: string;
+  targetType: 'row' | 'col' | 'cell' | 'total'; // row=label ligne, col=header, cell=valeur, total=grand total
+  targetKey?: string; // La clé spécifique (ex: "2025" ou "France") ou "*" pour tout
+  style: {
+    textColor?: string;
+    backgroundColor?: string;
+    fontWeight?: 'normal' | 'bold';
+    fontStyle?: 'normal' | 'italic';
+    textDecoration?: 'none' | 'underline';
+  };
 }
 
 // --- ETATS PERSISTANTS (PERSISTENCE) ---

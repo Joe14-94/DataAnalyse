@@ -54,8 +54,12 @@ export const DataExplorer: React.FC = () => {
   useEffect(() => {
      if (location.state && location.state.prefilledFilters) {
         setColumnFilters(location.state.prefilledFilters);
+        // We want to focus on drill-down data, so we clear global search and sorting to avoid confusion
+        setSearchTerm('');
+        setSortConfig(null);
         setShowFilters(true);
-        // Clear history state to avoid re-applying on refresh if needed, but keeping it simple for now
+        // On navigation, we typically want to see the filtered result from page 1
+        setCurrentPage(1);
      }
   }, [location.state]);
 
@@ -207,46 +211,55 @@ export const DataExplorer: React.FC = () => {
 
     // B. Column Filters
     Object.entries(columnFilters).forEach(([key, filterValue]) => {
-      if (filterValue) {
-        const lowerFilter = (filterValue as string).toLowerCase();
-        data = data.filter(row => {
-          const val = row[key];
-          
-          // Special handling for BatchId (Exact match required for drilldown reliability)
-          if (key === '_batchId') {
-              return String(val) === String(filterValue);
-          }
+      if (filterValue !== undefined && filterValue !== null) { 
+        
+        // Special token for Empty Values (from TCD Drilldown)
+        if (filterValue === '__EMPTY__') {
+           data = data.filter(row => {
+               const val = row[key];
+               return val === undefined || val === null || val === '';
+           });
+        } else {
+            const lowerFilter = (filterValue as string).toLowerCase();
+            data = data.filter(row => {
+            const val = row[key];
+            
+            // Special handling for BatchId (Exact match required for drilldown reliability)
+            if (key === '_batchId') {
+                return String(val) === String(filterValue);
+            }
 
-          // Gestion spéciale pour la date d'import (Support formats multiples)
-          if (key === '_importDate') {
-             const dateStr = val as string; // ISO YYYY-MM-DD "2025-11-23"
-             
-             // 1. Format d'affichage (Français long) : "23 novembre 2025"
-             if (formatDateFr(dateStr).toLowerCase().includes(lowerFilter)) return true;
+            // Gestion spéciale pour la date d'import (Support formats multiples)
+            if (key === '_importDate') {
+                const dateStr = val as string; // ISO YYYY-MM-DD "2025-11-23"
+                
+                // 1. Format d'affichage (Français long) : "23 novembre 2025"
+                if (formatDateFr(dateStr).toLowerCase().includes(lowerFilter)) return true;
 
-             // 2. Formats numériques : DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
-             try {
-                const parts = dateStr.split('-');
-                if (parts.length === 3) {
-                   const [y, m, d] = parts;
-                   // Constructions des formats français
-                   const frNumeric = `${d}/${m}/${y}`; // 23/11/2025
-                   const frNumericShort = `${d}/${m}`; // 23/11
-                   const frNumericDash = `${d}-${m}-${y}`; // 23-11-2025
-                   
-                   if (frNumeric.includes(lowerFilter)) return true;
-                   if (frNumericShort.includes(lowerFilter)) return true;
-                   if (frNumericDash.includes(lowerFilter)) return true;
-                   if (dateStr.includes(lowerFilter)) return true; // ISO match
+                // 2. Formats numériques : DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+                try {
+                    const parts = dateStr.split('-');
+                    if (parts.length === 3) {
+                    const [y, m, d] = parts;
+                    // Constructions des formats français
+                    const frNumeric = `${d}/${m}/${y}`; // 23/11/2025
+                    const frNumericShort = `${d}/${m}`; // 23/11
+                    const frNumericDash = `${d}-${m}-${y}`; // 23-11-2025
+                    
+                    if (frNumeric.includes(lowerFilter)) return true;
+                    if (frNumericShort.includes(lowerFilter)) return true;
+                    if (frNumericDash.includes(lowerFilter)) return true;
+                    if (dateStr.includes(lowerFilter)) return true; // ISO match
+                    }
+                } catch (e) {
+                    return false;
                 }
-             } catch (e) {
                 return false;
-             }
-             return false;
-          }
+            }
 
-          return String(val ?? '').toLowerCase().includes(lowerFilter);
-        });
+            return String(val ?? '').toLowerCase().includes(lowerFilter);
+            });
+        }
       }
     });
 
@@ -641,8 +654,8 @@ export const DataExplorer: React.FC = () => {
                               <input 
                                  type="text" 
                                  className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-normal"
-                                 placeholder={`Filtre ${field}...`}
-                                 value={columnFilters[field] || ''}
+                                 placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`}
+                                 value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')}
                                  onChange={(e) => handleColumnFilterChange(field, e.target.value)}
                               />
                            </th>

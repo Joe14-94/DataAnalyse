@@ -1,11 +1,12 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType, readExcelFile } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataRow, RawImportData, FieldConfig } from '../types';
-import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX } from 'lucide-react';
+import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 
 export const Import: React.FC = () => {
   const { 
@@ -22,6 +23,10 @@ export const Import: React.FC = () => {
   const [mapping, setMapping] = useState<Record<number, string | 'ignore'>>({});
   const [autoMappedIndices, setAutoMappedIndices] = useState<number[]>([]);
   const [selectedColIndex, setSelectedColIndex] = useState<number | null>(null); // For Cleaning
+
+  // Pagination for Preview
+  const [previewPage, setPreviewPage] = useState(1);
+  const PREVIEW_PAGE_SIZE = 100;
 
   // Drag & Drop State
   const [isDragging, setIsDragging] = useState(false);
@@ -54,6 +59,7 @@ export const Import: React.FC = () => {
 
   const processImportData = (result: RawImportData) => {
     setRawData(result);
+    setPreviewPage(1); // Reset preview
     
     // 1. Détection de structure
     let matchedId: string | null = null;
@@ -334,6 +340,17 @@ export const Import: React.FC = () => {
     if (step === 'mapping') setStep('input');
   };
 
+  // --- Render Helpers ---
+
+  // Pagination Logic
+  const paginatedPreviewRows = useMemo(() => {
+     if (!rawData) return [];
+     const start = (previewPage - 1) * PREVIEW_PAGE_SIZE;
+     return rawData.rows.slice(start, start + PREVIEW_PAGE_SIZE);
+  }, [rawData, previewPage]);
+
+  const previewTotalPages = rawData ? Math.ceil(rawData.totalRows / PREVIEW_PAGE_SIZE) : 0;
+
   // --- Renders ---
 
   const renderInputStep = () => (
@@ -574,8 +591,40 @@ export const Import: React.FC = () => {
 
         {/* Tableau de Mapping */}
         <Card className="overflow-hidden border-slate-200 shadow-md">
+          {/* Header Controls */}
+          <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                 <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                     <FileSpreadsheet className="w-4 h-4" /> Prévisualisation
+                 </h4>
+                 <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {rawData.totalRows.toLocaleString()} lignes détectées
+                 </span>
+              </div>
+              
+              <div className="flex items-center gap-2 text-xs">
+                 <button 
+                    onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
+                    disabled={previewPage === 1}
+                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 transition-colors"
+                 >
+                    <ChevronLeft className="w-4 h-4" />
+                 </button>
+                 <span className="font-mono text-slate-600 min-w-[100px] text-center">
+                    {((previewPage - 1) * PREVIEW_PAGE_SIZE) + 1} - {Math.min(previewPage * PREVIEW_PAGE_SIZE, rawData.totalRows)} / {rawData.totalRows}
+                 </span>
+                 <button 
+                    onClick={() => setPreviewPage(p => Math.min(previewTotalPages, p + 1))}
+                    disabled={previewPage === previewTotalPages}
+                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 transition-colors"
+                 >
+                    <ChevronRight className="w-4 h-4" />
+                 </button>
+              </div>
+          </div>
+          
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className="min-w-full divide-y divide-slate-200" style={{ contentVisibility: 'auto' }}>
               <thead className="bg-slate-100">
                 <tr>
                   {rawData.headers.map((header, idx) => {
@@ -654,16 +703,40 @@ export const Import: React.FC = () => {
                                  </select>
                               </div>
                               
-                              {/* Input Unité si Nombre */}
+                              {/* Input Unité si Nombre + Echelle */}
                               {tempFieldConfigs[mappedVal]?.type === 'number' && (
-                                 <div className="animate-in fade-in duration-200">
-                                    <input
-                                       type="text"
-                                       className="block w-full text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-blue-500"
-                                       placeholder="Unité (ex: €)"
-                                       value={tempFieldConfigs[mappedVal]?.unit || ''}
-                                       onChange={(e) => handleConfigChange(mappedVal, 'unit', e.target.value)}
-                                    />
+                                 <div className="space-y-1 animate-in fade-in duration-200">
+                                    <div className="flex gap-1">
+                                       <input
+                                          type="text"
+                                          className="block w-1/2 text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-blue-500"
+                                          placeholder="Unité (€)"
+                                          value={tempFieldConfigs[mappedVal]?.unit || ''}
+                                          onChange={(e) => handleConfigChange(mappedVal, 'unit', e.target.value)}
+                                       />
+                                       <input
+                                          type="number"
+                                          min="0"
+                                          max="5"
+                                          className="block w-1/2 text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-blue-500"
+                                          placeholder="Décim."
+                                          value={tempFieldConfigs[mappedVal]?.decimalPlaces !== undefined ? tempFieldConfigs[mappedVal]?.decimalPlaces : ''}
+                                          onChange={(e) => handleConfigChange(mappedVal, 'decimalPlaces', e.target.value)}
+                                          title="Nombre de décimales"
+                                       />
+                                    </div>
+                                    
+                                    <select
+                                        className="block w-full text-[10px] border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-blue-500 text-slate-600"
+                                        value={tempFieldConfigs[mappedVal]?.displayScale || 'none'}
+                                        onChange={(e) => handleConfigChange(mappedVal, 'displayScale', e.target.value)}
+                                        title="Échelle d'affichage"
+                                    >
+                                        <option value="none">Normal (1:1)</option>
+                                        <option value="thousands">Milliers (k)</option>
+                                        <option value="millions">Millions (M)</option>
+                                        <option value="billions">Milliards (Md)</option>
+                                    </select>
                                  </div>
                               )}
                            </div>
@@ -674,7 +747,7 @@ export const Import: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {rawData.rows.slice(0, 5).map((row, rowIdx) => (
+                {paginatedPreviewRows.map((row, rowIdx) => (
                   <tr key={rowIdx}>
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx} className={`px-4 py-2 text-sm ${mapping[cellIdx] !== 'ignore' ? 'text-slate-900 bg-slate-50/50' : 'text-slate-400'}`}>

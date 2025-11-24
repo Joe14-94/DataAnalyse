@@ -1,16 +1,21 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, HardDrive, WifiOff, Database, PlayCircle, Table2, Calendar } from 'lucide-react';
-import { APP_VERSION, formatDateFr } from '../utils';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { APP_VERSION, runSelfDiagnostics } from '../utils';
 import { useNavigate } from 'react-router-dom';
+import { DiagnosticSuite } from '../types';
 
 export const Settings: React.FC = () => {
   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  // Diagnostics State
+  const [diagResults, setDiagResults] = useState<DiagnosticSuite[] | null>(null);
+  const [isRunningDiag, setIsRunningDiag] = useState(false);
 
   const handleDownloadBackup = () => {
     const json = getBackupJson();
@@ -71,15 +76,84 @@ export const Settings: React.FC = () => {
      }
   };
 
+  const handleRunDiagnostics = () => {
+     setIsRunningDiag(true);
+     setDiagResults(null);
+     
+     // Simulation d'un petit délai pour l'UX
+     setTimeout(() => {
+        const results = runSelfDiagnostics();
+        setDiagResults(results);
+        setIsRunningDiag(false);
+     }, 800);
+  };
+
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-       <div className="pb-10 space-y-6"> {/* Removed max-w-2xl for full width */}
+       <div className="pb-10 space-y-6"> 
          <h2 className="text-2xl font-bold text-slate-800">Paramètres et maintenance</h2>
          
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column (Main Content) */}
             <div className="lg:col-span-2 space-y-6">
                
+               {/* DIAGNOSTICS & COMPLIANCE (NOUVEAU) */}
+               <Card title="Centre de Conformité & Diagnostic">
+                  <div className="space-y-4">
+                     <p className="text-sm text-slate-600">
+                        Vérifiez l'intégrité des moteurs de calcul (parsing, formules, dates) pour garantir la fiabilité des analyses.
+                        Utile avant de présenter des chiffres critiques.
+                     </p>
+
+                     <div className="flex items-center gap-4">
+                        <Button onClick={handleRunDiagnostics} disabled={isRunningDiag} className="bg-emerald-600 hover:bg-emerald-700">
+                           {isRunningDiag ? (
+                              <>Exécution en cours...</>
+                           ) : (
+                              <><Stethoscope className="w-4 h-4 mr-2" /> Lancer l'audit de conformité</>
+                           )}
+                        </Button>
+                     </div>
+
+                     {diagResults && (
+                        <div className="mt-4 border rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+                           {diagResults.map((suite, idx) => {
+                              const failures = suite.tests.filter(t => t.status === 'failure');
+                              const isSuccess = failures.length === 0;
+
+                              return (
+                                 <div key={idx} className="border-b last:border-0 border-slate-100">
+                                    <div className={`p-3 flex justify-between items-center ${isSuccess ? 'bg-slate-50' : 'bg-red-50'}`}>
+                                       <h4 className="font-bold text-sm text-slate-800">{suite.category}</h4>
+                                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${isSuccess ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                          {isSuccess ? 'Conforme' : `${failures.length} Erreur(s)`}
+                                       </span>
+                                    </div>
+                                    <div className="p-3 bg-white space-y-2">
+                                       {suite.tests.map(test => (
+                                          <div key={test.id} className="flex items-center justify-between text-xs border-b border-dashed border-slate-100 last:border-0 pb-1 last:pb-0">
+                                             <div className="flex items-center gap-2">
+                                                {test.status === 'success' ? (
+                                                   <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                ) : (
+                                                   <XCircle className="w-4 h-4 text-red-500" />
+                                                )}
+                                                <span className="text-slate-700">{test.name}</span>
+                                             </div>
+                                             {test.message && (
+                                                <span className="text-red-600 font-mono bg-red-50 px-1 rounded">{test.message}</span>
+                                             )}
+                                          </div>
+                                       ))}
+                                    </div>
+                                 </div>
+                              );
+                           })}
+                        </div>
+                     )}
+                  </div>
+               </Card>
+
                {/* GESTION DES DATASETS */}
                <Card title="Gestion des typologies">
                   <div className="space-y-4">
