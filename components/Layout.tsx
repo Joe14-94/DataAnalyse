@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -16,6 +16,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { datasets, currentDatasetId, switchDataset, batches, getBackupJson } = useData();
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
+  
+  // Sidebar State
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/' },
@@ -55,12 +58,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const json = getBackupJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
+    
+    // Safer download method
     const link = document.createElement('a');
     link.href = url;
     link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.style.display = 'none';
+    link.target = '_blank'; // Fixes some sandbox navigation issues
+    
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const getStorageColor = (p: number) => {
@@ -72,17 +85,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="h-screen w-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden text-slate-800">
       {/* Sidebar / Mobile Header */}
-      <aside className="bg-white border-b md:border-b-0 md:border-r border-slate-200 w-full md:w-64 flex-shrink-0 h-auto md:h-full flex flex-col overflow-y-auto z-20">
-        <div className="p-4 md:p-6">
-          <div className="flex items-center gap-2 font-bold text-xl text-blue-700 mb-6">
-            <div className="p-1.5 bg-blue-600 rounded-md text-white">
+      <aside 
+        className={`bg-white border-b md:border-b-0 md:border-r border-slate-200 flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
+          ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-full
+        `}
+      >
+        <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
+          <div className="flex items-center gap-2 font-bold text-xl text-blue-700 mb-6 overflow-hidden">
+            <div className="p-1.5 bg-blue-600 rounded-md text-white shrink-0">
               <Database size={20} />
             </div>
-            <span>DataScope</span>
+            {!isCollapsed && <span className="whitespace-nowrap">DataScope</span>}
           </div>
 
+          {/* Collapse Toggle Button */}
+          <button 
+             onClick={() => setIsCollapsed(!isCollapsed)}
+             className="hidden md:flex absolute top-4 -right-3 bg-white border border-slate-200 rounded-full p-1 shadow-sm text-slate-500 hover:text-blue-600 z-30"
+          >
+             {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+
           {/* DATASET SELECTOR */}
-          <div className="mb-6">
+          <div className={`mb-6 ${isCollapsed ? 'hidden' : 'block'}`}>
             <label className="block text-xs font-semibold text-slate-500 mb-2">Typologie de tableau</label>
             <div className="relative">
               <select
@@ -108,9 +133,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             </div>
           </div>
+          
+          {/* Collapsed Dataset Indicator */}
+          {isCollapsed && (
+             <div className="mb-6 flex justify-center" title="Changer de typologie">
+                <button 
+                  onClick={() => setIsCollapsed(false)}
+                  className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                   <Table2 size={20} />
+                </button>
+             </div>
+          )}
         </div>
 
-        <nav className="flex md:flex-col p-2 md:p-4 gap-1 overflow-x-auto md:overflow-visible flex-1">
+        <nav className="flex md:flex-col p-2 md:p-3 gap-1 overflow-x-auto md:overflow-visible flex-1 custom-scrollbar">
           {navItems.map((item) => {
             const isActive = path === item.path;
             const Icon = item.icon;
@@ -118,51 +155,58 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap
+                title={isCollapsed ? item.name : ''}
+                className={`flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap
                   ${isActive 
                     ? 'bg-blue-50 text-blue-700' 
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
+                  }
+                  ${isCollapsed ? 'justify-center' : ''}
+                `}
               >
-                <Icon size={18} />
-                {item.name}
+                <Icon size={isCollapsed ? 20 : 18} className="shrink-0" />
+                {!isCollapsed && <span>{item.name}</span>}
               </Link>
             );
           })}
         </nav>
         
         {/* Footer Stats & Quick Save */}
-        <div className="p-4 border-t border-slate-100 hidden md:block bg-slate-50/50 space-y-3">
+        <div className={`p-4 border-t border-slate-100 hidden md:flex flex-col bg-slate-50/50 space-y-3 ${isCollapsed ? 'items-center' : ''}`}>
           
           <button 
              onClick={handleQuickSave}
-             className="w-full flex items-center justify-center gap-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 text-xs font-bold py-2 px-4 rounded transition-colors"
+             className={`flex items-center justify-center gap-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 text-xs font-bold py-2 rounded transition-colors
+                ${isCollapsed ? 'w-10 h-10 p-0' : 'w-full px-4'}
+             `}
              title="Sauvegarder les données maintenant (JSON)"
           >
-             <Save className="w-3 h-3" />
-             Sauvegarde rapide
+             <Save className={`${isCollapsed ? 'w-4 h-4' : 'w-3 h-3'}`} />
+             {!isCollapsed && "Sauvegarde rapide"}
           </button>
 
-          <div>
-             <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                <div className="flex items-center gap-1" title="Stockage IndexedDB (Disque)">
-                   <HardDrive size={12} />
-                   <span>Disque : {storageUsed}</span>
+          {!isCollapsed && (
+             <div>
+                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                   <div className="flex items-center gap-1" title="Stockage IndexedDB (Disque)">
+                      <HardDrive size={12} />
+                      <span>Disque : {storageUsed}</span>
+                   </div>
+                   {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
                 </div>
-                {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
+                {storagePercent > 0 && (
+                   <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                       <div 
+                       className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`} 
+                       style={{ width: `${Math.max(2, storagePercent)}%` }}
+                       ></div>
+                   </div>
+                )}
              </div>
-             {storagePercent > 0 && (
-                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                    <div 
-                    className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`} 
-                    style={{ width: `${Math.max(2, storagePercent)}%` }}
-                    ></div>
-                </div>
-             )}
-          </div>
+          )}
 
           <div className="text-xs text-slate-400 text-center">
-            v{APP_VERSION}
+            {isCollapsed ? 'v25' : `v${APP_VERSION}`}
           </div>
         </div>
       </aside>

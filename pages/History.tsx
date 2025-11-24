@@ -55,12 +55,20 @@ export const History: React.FC = () => {
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
+    
+    // Safer download
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `export_${currentDataset?.name}_${currentBatch.date}.csv`);
+    link.href = url;
+    link.download = `export_${currentDataset?.name}_${currentBatch.date}.csv`;
+    link.style.display = 'none';
+    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 100);
   };
 
   if (!currentDataset) {

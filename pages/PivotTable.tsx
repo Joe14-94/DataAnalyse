@@ -6,7 +6,8 @@ import {
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
-  AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline
+  AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
+  PieChart
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -278,6 +279,28 @@ export const PivotTable: React.FC = () => {
     }
   };
 
+  // --- REDIRECT TO CHART (NOUVEAU) ---
+  const handleToChart = () => {
+      if (!currentDataset) return;
+      
+      // Check validation
+      if (rowFields.length === 0) {
+          alert("Veuillez configurer au moins une ligne (dimension) pour générer un graphique.");
+          return;
+      }
+
+      // Map Pivot Config to Analytics Config
+      const pivotConfig = {
+          rowFields,
+          valField,
+          aggType,
+          filters,
+          selectedBatchId
+      };
+
+      navigate('/analytics', { state: { fromPivot: pivotConfig } });
+  };
+
   const availableAnalyses = savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === currentDataset?.id);
 
   // Resize Handlers
@@ -334,9 +357,7 @@ export const PivotTable: React.FC = () => {
      filters.forEach(f => { if (f.values.length === 1) drillFilters[f.field] = f.values[0]; });
      
      // REPARED DRILL DOWN BATCH SELECTION
-     // We must use currentBatch.id because selectedBatchId might be empty if using default latest batch
      const targetBatchId = currentBatch?.id;
-
      if (targetBatchId) {
         drillFilters['_batchId'] = targetBatchId;
      }
@@ -401,6 +422,16 @@ export const PivotTable: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
+             
+             {/* New Feature : To Chart */}
+             <button
+                onClick={handleToChart}
+                className="flex items-center gap-2 px-3 py-2 rounded text-xs font-bold bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
+             >
+                <PieChart className="w-4 h-4" />
+                Créer graphique
+             </button>
+
              <button 
                 onClick={() => { setIsStyleMode(!isStyleMode); setActiveStyleTarget(null); }}
                 className={`flex items-center gap-2 px-3 py-2 rounded text-xs font-bold transition-all border ${isStyleMode ? 'bg-pink-100 text-pink-700 border-pink-300' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}

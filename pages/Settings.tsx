@@ -21,12 +21,21 @@ export const Settings: React.FC = () => {
     const json = getBackupJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
+    
+    // Safer download implementation
     const link = document.createElement('a');
     link.href = url;
     link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.style.display = 'none';
+    link.target = '_blank'; // Fixes some restrictive sandbox issues
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    // Cleanup with delay
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const handleImportClick = () => {
