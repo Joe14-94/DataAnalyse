@@ -1,3 +1,5 @@
+
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
 import { APP_VERSION, generateSyntheticData, db } from '../utils';
@@ -26,7 +28,8 @@ interface DataContextType {
   createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
-  deleteDatasetField: (datasetId: string, fieldName: string) => void; // NEW: Supprimer colonne
+  deleteDatasetField: (datasetId: string, fieldName: string) => void; 
+  renameDatasetField: (datasetId: string, oldName: string, newName: string) => void; // NEW
   
   // Actions Calculated Fields
   addCalculatedField: (datasetId: string, field: CalculatedField) => void;
@@ -35,7 +38,7 @@ interface DataContextType {
   // Actions Data
   addBatch: (datasetId: string, date: string, rows: any[]) => void;
   deleteBatch: (id: string) => void;
-  deleteBatchRow: (batchId: string, rowId: string) => void; // NEW: Supprimer ligne
+  deleteBatchRow: (batchId: string, rowId: string) => void; 
   
   // Actions Fields
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;
@@ -249,6 +252,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const renameDatasetField = useCallback((datasetId: string, oldName: string, newName: string) => {
+    if (oldName === newName || !newName.trim()) return;
+
+    // 1. Mettre à jour la définition du dataset (fields et configs)
+    setDatasets(prev => prev.map(d => {
+        if (d.id !== datasetId) return d;
+        
+        // Update fields list
+        const newFields = d.fields.map(f => f === oldName ? newName : f);
+        
+        // Update configs key
+        const newConfigs = { ...d.fieldConfigs };
+        if (newConfigs[oldName]) {
+            newConfigs[newName] = newConfigs[oldName];
+            delete newConfigs[oldName];
+        }
+
+        return { ...d, fields: newFields, fieldConfigs: newConfigs };
+    }));
+
+    // 2. Mettre à jour toutes les données dans les lots
+    setAllBatches(prev => prev.map(b => {
+        if (b.datasetId !== datasetId) return b;
+        
+        const newRows = b.rows.map(r => {
+            const val = r[oldName];
+            const newRow = { ...r, [newName]: val };
+            delete newRow[oldName];
+            return newRow as DataRow;
+        });
+
+        return { ...b, rows: newRows };
+    }));
+  }, []);
+
   const updateDatasetConfigs = useCallback((datasetId: string, configs: Record<string, FieldConfig>) => {
     setDatasets(prev => prev.map(d => {
       if (d.id !== datasetId) return d;
@@ -303,7 +341,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (b.id !== batchId) return b;
         return {
            ...b,
-           rows: b.rows.filter(r => r.id !== rowId)
+           // String comparison just in case
+           rows: b.rows.filter(r => String(r.id) !== String(rowId))
         };
      }));
   }, []);
@@ -492,6 +531,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateDatasetName,
       deleteDataset,
       deleteDatasetField,
+      renameDatasetField,
       addFieldToDataset,
       updateDatasetConfigs,
       addCalculatedField,

@@ -6,7 +6,7 @@ import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectCol
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataRow, RawImportData, FieldConfig } from '../types';
-import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
+import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX, ChevronLeft, ChevronRight, Hash, Trash2 } from 'lucide-react';
 
 export const Import: React.FC = () => {
   const { 
@@ -26,7 +26,7 @@ export const Import: React.FC = () => {
 
   // Pagination for Preview
   const [previewPage, setPreviewPage] = useState(1);
-  const PREVIEW_PAGE_SIZE = 100;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Drag & Drop State
   const [isDragging, setIsDragging] = useState(false);
@@ -178,6 +178,19 @@ export const Import: React.FC = () => {
      } else {
         alert("Aucun doublon trouvé sur cette colonne.");
      }
+  };
+
+  const handleRemoveRow = (indexInView: number) => {
+      if (!rawData) return;
+      // Calculate true index based on page
+      const trueIndex = (previewPage - 1) * rowsPerPage + indexInView;
+      const newRows = [...rawData.rows];
+      newRows.splice(trueIndex, 1);
+      setRawData({
+          ...rawData,
+          rows: newRows,
+          totalRows: newRows.length
+      });
   };
 
 
@@ -345,11 +358,11 @@ export const Import: React.FC = () => {
   // Pagination Logic
   const paginatedPreviewRows = useMemo(() => {
      if (!rawData) return [];
-     const start = (previewPage - 1) * PREVIEW_PAGE_SIZE;
-     return rawData.rows.slice(start, start + PREVIEW_PAGE_SIZE);
-  }, [rawData, previewPage]);
+     const start = (previewPage - 1) * rowsPerPage;
+     return rawData.rows.slice(start, start + rowsPerPage);
+  }, [rawData, previewPage, rowsPerPage]);
 
-  const previewTotalPages = rawData ? Math.ceil(rawData.totalRows / PREVIEW_PAGE_SIZE) : 0;
+  const previewTotalPages = rawData ? Math.ceil(rawData.totalRows / rowsPerPage) : 0;
 
   // --- Renders ---
 
@@ -463,10 +476,25 @@ export const Import: React.FC = () => {
         
         {/* Choix du Dataset Cible */}
         <Card className="p-6 border-blue-200 bg-blue-50">
-           <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
-             <Database className="w-5 h-5" />
-             Destination de l'import
-           </h3>
+           <div className="flex justify-between items-start">
+              <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Destination de l'import
+              </h3>
+              
+              {/* Date Editing in Step 2 */}
+              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-md shadow-sm border border-blue-100">
+                 <label htmlFor="step2-date" className="text-xs font-bold text-blue-800">Date d'extraction :</label>
+                 <input
+                   type="date"
+                   id="step2-date"
+                   value={date}
+                   onChange={(e) => setDate(e.target.value)}
+                   className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 font-medium p-0 w-32"
+                 />
+                 <Edit2 className="w-3 h-3 text-blue-400" />
+              </div>
+           </div>
            
            <div className="space-y-4">
               {detectedDatasetId && (
@@ -592,17 +620,31 @@ export const Import: React.FC = () => {
         {/* Tableau de Mapping */}
         <Card className="overflow-hidden border-slate-200 shadow-md">
           {/* Header Controls */}
-          <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                      <FileSpreadsheet className="w-4 h-4" /> Prévisualisation
                  </h4>
                  <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                    {rawData.totalRows.toLocaleString()} lignes détectées
+                    {rawData.totalRows.toLocaleString()} lignes
                  </span>
               </div>
               
               <div className="flex items-center gap-2 text-xs">
+                 <span className="text-slate-500">Lignes par page :</span>
+                 <select 
+                    className="bg-white border border-slate-300 rounded px-2 py-1 text-slate-700 text-xs focus:ring-blue-500 focus:border-blue-500"
+                    value={rowsPerPage}
+                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPreviewPage(1); }}
+                 >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                 </select>
+
+                 <div className="w-px h-4 bg-slate-300 mx-2"></div>
+
                  <button 
                     onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
                     disabled={previewPage === 1}
@@ -611,7 +653,7 @@ export const Import: React.FC = () => {
                     <ChevronLeft className="w-4 h-4" />
                  </button>
                  <span className="font-mono text-slate-600 min-w-[100px] text-center">
-                    {((previewPage - 1) * PREVIEW_PAGE_SIZE) + 1} - {Math.min(previewPage * PREVIEW_PAGE_SIZE, rawData.totalRows)} / {rawData.totalRows}
+                    {((previewPage - 1) * rowsPerPage) + 1} - {Math.min(previewPage * rowsPerPage, rawData.totalRows)} / {rawData.totalRows}
                  </span>
                  <button 
                     onClick={() => setPreviewPage(p => Math.min(previewTotalPages, p + 1))}
@@ -627,6 +669,7 @@ export const Import: React.FC = () => {
             <table className="min-w-full divide-y divide-slate-200" style={{ contentVisibility: 'auto' }}>
               <thead className="bg-slate-100">
                 <tr>
+                  <th className="px-2 py-3 w-10 border-b-2 border-slate-200"></th> {/* Delete Action Column */}
                   {rawData.headers.map((header, idx) => {
                     const mappedVal = mapping[idx];
                     const isMapped = mappedVal && mappedVal !== 'ignore';
@@ -748,7 +791,16 @@ export const Import: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
                 {paginatedPreviewRows.map((row, rowIdx) => (
-                  <tr key={rowIdx}>
+                  <tr key={rowIdx} className="group hover:bg-red-50/50">
+                    <td className="px-2 py-2 text-center border-r border-slate-100">
+                        <button 
+                            onClick={() => handleRemoveRow(rowIdx)}
+                            className="text-slate-300 hover:text-red-600 transition-colors p-1"
+                            title="Supprimer cette ligne de l'import"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </td>
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx} className={`px-4 py-2 text-sm ${mapping[cellIdx] !== 'ignore' ? 'text-slate-900 bg-slate-50/50' : 'text-slate-400'}`}>
                         {cell}

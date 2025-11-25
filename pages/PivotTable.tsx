@@ -13,7 +13,7 @@ import {
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule } from '../types';
+import { PivotStyleRule, FilterRule } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping } from '../logic/pivotEngine';
 
 export const PivotTable: React.FC = () => {
@@ -44,8 +44,8 @@ export const PivotTable: React.FC = () => {
   const [valField, setValField] = useState<string>('');
   const [aggType, setAggType] = useState<AggregationType>('count');
   
-  // Filtres (Multi-valeurs)
-  const [filters, setFilters] = useState<{field: string, values: string[]}[]>([]);
+  // Filtres (Structure avancée)
+  const [filters, setFilters] = useState<FilterRule[]>([]);
   
   // Options d'affichage
   const [showSubtotals, setShowSubtotals] = useState(true);
@@ -89,7 +89,18 @@ export const PivotTable: React.FC = () => {
          setColGrouping(c.colGrouping || 'none');
          setValField(c.valField || '');
          setAggType(c.aggType || 'count');
-         setFilters(c.filters || []);
+         
+         // Backward compat for filters
+         if (c.filters) {
+             const loadedFilters = c.filters.map((f: any) => {
+                 if (f.values) return { field: f.field, operator: 'in', value: f.values };
+                 return f;
+             });
+             setFilters(loadedFilters);
+         } else {
+             setFilters([]);
+         }
+
          setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
          setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
          setSortBy(c.sortBy || 'label');
@@ -101,7 +112,6 @@ export const PivotTable: React.FC = () => {
          if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
      } else {
          // Default config si pas d'état sauvegardé
-         // RESET STRICT POUR EVITER LES RESIDUS D'ANCIEN DATASET
          setRowFields(fields.length > 0 ? [fields[0]] : []);
          setColField('');
          setColGrouping('none');
@@ -115,14 +125,11 @@ export const PivotTable: React.FC = () => {
          setSortBy('label');
          setSortOrder('asc');
      }
-     // Marquer comme initialisé pour autoriser la sauvegarde
      setIsInitialized(true);
-  }, [currentDataset?.id]); // On recharge seulement si l'ID du dataset change (montage initial ou switch)
+  }, [currentDataset?.id]);
 
   // Sauvegarde de l'état (SAVE)
   useEffect(() => {
-     // IMPORTANT : Ne pas sauvegarder si l'initialisation n'est pas terminée
-     // Cela empêche d'écraser l'état sauvegardé avec des valeurs par défaut vides au montage
      if (!isInitialized) return;
 
      if (currentDataset) {
@@ -136,9 +143,9 @@ export const PivotTable: React.FC = () => {
      }
   }, [rowFields, colField, colGrouping, valField, aggType, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId, currentDataset, isInitialized]);
 
-  // Validation sélection Batch (Corrige le conflit d'écrasement au chargement)
+  // Validation sélection Batch
   useEffect(() => {
-    if (isLoading || !isInitialized) return; // Attendre la fin du chargement et de l'initialisation
+    if (isLoading || !isInitialized) return; 
     
     if (datasetBatches.length === 0) {
        if (selectedBatchId) setSelectedBatchId('');
@@ -251,9 +258,15 @@ export const PivotTable: React.FC = () => {
     setRowFields(newFields);
   };
 
-  const addFilter = () => combinedFields.length > 0 && setFilters([...filters, { field: combinedFields[0], values: [] }]);
-  const updateFilterField = (index: number, newField: string) => { const n = [...filters]; n[index] = { field: newField, values: [] }; setFilters(n); };
-  const updateFilterValues = (index: number, newValues: string[]) => { const n = [...filters]; n[index].values = newValues; setFilters(n); };
+  // Filter Management
+  const addFilter = () => combinedFields.length > 0 && setFilters([...filters, { field: combinedFields[0], operator: 'in', value: [] }]);
+  const updateFilter = (index: number, updates: Partial<FilterRule>) => { 
+      const n = [...filters]; 
+      n[index] = { ...n[index], ...updates };
+      if (updates.operator && updates.operator !== 'in' && Array.isArray(n[index].value)) { n[index].value = ''; }
+      if (updates.operator === 'in' && !Array.isArray(n[index].value)) { n[index].value = []; }
+      setFilters(n);
+  };
   const removeFilter = (index: number) => setFilters(filters.filter((_, i) => i !== index));
 
   const handleSaveAnalysis = () => {
@@ -280,7 +293,15 @@ export const PivotTable: React.FC = () => {
      setColGrouping(c.colGrouping || 'none');
      setValField(c.valField || '');
      setAggType(c.aggType || 'count');
-     setFilters(c.filters || []);
+     
+     if (c.filters) {
+         const loadedFilters = c.filters.map((f: any) => {
+             if (f.values) return { field: f.field, operator: 'in', value: f.values }; // Old
+             return f; // New
+         });
+         setFilters(loadedFilters);
+     } else setFilters([]);
+
      setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
      setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
      setSortBy(c.sortBy || 'label');
@@ -299,25 +320,13 @@ export const PivotTable: React.FC = () => {
     }
   };
 
-  // --- REDIRECT TO CHART ---
   const handleToChart = () => {
       if (!currentDataset) return;
-      
-      // Check validation
       if (rowFields.length === 0) {
-          alert("Veuillez configurer au moins une ligne (dimension) pour générer un graphique.");
+          alert("Veuillez configurer au moins une ligne pour générer un graphique.");
           return;
       }
-
-      // Map Pivot Config to Analytics Config
-      const pivotConfig = {
-          rowFields,
-          valField,
-          aggType,
-          filters,
-          selectedBatchId
-      };
-
+      const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
       navigate('/analytics', { state: { fromPivot: pivotConfig } });
   };
 
@@ -343,13 +352,12 @@ export const PivotTable: React.FC = () => {
     document.body.style.cursor = '';
   }, [handleResizeMove]);
 
-  // SORT HANDLER (UPDATED to support string keys)
+  // SORT HANDLER
   const handleHeaderSort = (key: string) => {
      if (sortBy === key) {
         setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
      } else { 
         setSortBy(key); 
-        // Default desc for numbers (values), asc for text (labels)
         setSortOrder(key === 'label' ? 'asc' : 'desc'); 
      }
   };
@@ -372,23 +380,25 @@ export const PivotTable: React.FC = () => {
         if (index < rowKeys.length) {
            let val = rowKeys[index];
            if (val === '(Vide)') val = '__EMPTY__';
-           else val = `=${val}`; // Préfixe '=' pour forcer le Match Exact dans DataExplorer
+           else val = `=${val}`; 
            drillFilters[field] = val;
         }
      });
      if (colField && colKey) {
         let val = colKey;
         if (val === '(Vide)') val = '__EMPTY__';
-        else val = `=${val}`; // Préfixe '=' pour forcer le Match Exact
+        else val = `=${val}`;
         drillFilters[colField] = val;
      }
      filters.forEach(f => { 
-        if (f.values.length === 1) {
-           drillFilters[f.field] = `=${f.values[0]}`; // Appliquer aussi le match exact pour les filtres TCD
+        if (f.operator === 'in' && Array.isArray(f.value) && f.value.length === 1) {
+           drillFilters[f.field] = `=${f.value[0]}`; 
+        }
+        if (f.operator === 'eq' && f.value) {
+            drillFilters[f.field] = `=${f.value}`;
         }
      });
      
-     // REPARED DRILL DOWN BATCH SELECTION
      const targetBatchId = currentBatch?.id;
      if (targetBatchId) {
         drillFilters['_batchId'] = targetBatchId;
@@ -454,32 +464,18 @@ export const PivotTable: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
-             
-             {/* New Feature : To Chart */}
-             <button
-                onClick={handleToChart}
-                className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors"
-             >
-                <PieChart className="w-4 h-4" />
-                Créer graphique
+             <button onClick={handleToChart} className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors">
+                <PieChart className="w-4 h-4" /> Créer graphique
              </button>
 
-             <button 
-                onClick={() => { setIsStyleMode(!isStyleMode); setActiveStyleTarget(null); }}
-                className={`flex items-center gap-2 px-3 py-2 rounded text-xs font-bold transition-all border ${isStyleMode ? 'bg-pink-100 text-pink-700 border-pink-300' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
-             >
-                <Palette className="w-4 h-4" />
-                {isStyleMode ? 'Mode Design' : 'Personnaliser'}
+             <button onClick={() => { setIsStyleMode(!isStyleMode); setActiveStyleTarget(null); }} className={`flex items-center gap-2 px-3 py-2 rounded text-xs font-bold transition-all border ${isStyleMode ? 'bg-pink-100 text-pink-700 border-pink-300' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                <Palette className="w-4 h-4" /> {isStyleMode ? 'Mode Design' : 'Personnaliser'}
              </button>
 
              <div className="h-6 w-px bg-slate-300 mx-1 hidden xl:block"></div>
 
              <div className="relative">
-                <select
-                    className="bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[150px]"
-                    onChange={(e) => { if (e.target.value) handleLoadAnalysis(e.target.value); e.target.value = ""; }}
-                    defaultValue=""
-                >
+                <select className="bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[150px]" onChange={(e) => { if (e.target.value) handleLoadAnalysis(e.target.value); e.target.value = ""; }} defaultValue="">
                     <option value="" disabled>Vues enregistrées...</option>
                     {availableAnalyses.length === 0 && <option disabled>Aucune vue.</option>}
                     {availableAnalyses.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -487,9 +483,7 @@ export const PivotTable: React.FC = () => {
              </div>
              
              {!isSaving ? (
-                 <button onClick={() => setIsSaving(true)} className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50" title="Enregistrer cette vue">
-                    <Save className="w-4 h-4" />
-                 </button>
+                 <button onClick={() => setIsSaving(true)} className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50" title="Enregistrer cette vue"><Save className="w-4 h-4" /></button>
              ) : (
                  <div className="flex items-center gap-1 animate-in fade-in">
                     <input type="text" className="p-1.5 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 w-32 bg-white text-slate-900" placeholder="Nom de la vue..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
@@ -656,21 +650,42 @@ export const PivotTable: React.FC = () => {
                    )}
                 </div>
 
-                {/* 4. Filtres */}
+                {/* 4. Filtres Avancés */}
                 <div>
                    <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-2"><Filter className="w-3 h-3" /> Filtres ({filters.length})</label>
-                   <div className="space-y-2">
+                   <div className="space-y-3 mb-3">
                       {filters.map((f, idx) => (
-                         <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 relative group">
+                         <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 relative group space-y-2">
                             <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500"><X className="w-3 h-3" /></button>
-                            <select className="w-full p-1 bg-white border border-slate-200 rounded text-xs mb-1" value={f.field} onChange={(e) => updateFilterField(idx, e.target.value)}>
+                            
+                            <select className="w-full p-1 bg-white border border-slate-200 rounded text-xs mb-1" value={f.field} onChange={(e) => updateFilter(idx, { field: e.target.value })}>
                                {combinedFields.map(field => <option key={field} value={field}>{field}</option>)}
                             </select>
-                            <MultiSelect 
-                               options={getDistinctValuesForField(f.field)} 
-                               selected={f.values} 
-                               onChange={(v) => updateFilterValues(idx, v)} 
-                            />
+
+                            <select className="w-full p-1 bg-white border border-slate-200 rounded text-xs font-bold text-indigo-600" value={f.operator || 'in'} onChange={(e) => updateFilter(idx, { operator: e.target.value as any })}>
+                                <option value="in">Est égal à / Dans</option>
+                                <option value="starts_with">Commence par</option>
+                                <option value="contains">Contient</option>
+                                <option value="gt">Supérieur à (&gt;)</option>
+                                <option value="lt">Inférieur à (&lt;)</option>
+                                <option value="eq">Égal à (=)</option>
+                            </select>
+
+                            {(!f.operator || f.operator === 'in') ? (
+                                <MultiSelect 
+                                    options={getDistinctValuesForField(f.field)} 
+                                    selected={Array.isArray(f.value) ? f.value : []} 
+                                    onChange={(v) => updateFilter(idx, { value: v })} 
+                                />
+                            ) : (
+                                <input 
+                                    type={['gt', 'lt'].includes(f.operator) ? "number" : "text"}
+                                    className="w-full p-1 bg-white border border-slate-200 rounded text-xs"
+                                    value={f.value}
+                                    onChange={(e) => updateFilter(idx, { value: e.target.value })}
+                                    placeholder="Valeur..."
+                                />
+                            )}
                          </div>
                       ))}
                       <button onClick={addFilter} className="w-full py-1.5 border border-dashed border-slate-300 text-slate-500 text-xs rounded hover:bg-slate-50 hover:text-blue-600">+ Ajouter un filtre</button>
@@ -777,8 +792,7 @@ export const PivotTable: React.FC = () => {
                                   {/* Cellules Valeurs */}
                                   {pivotData.colHeaders.map(col => {
                                       const val = row.metrics[col];
-                                      const cellStyle = getStyleForTarget('cell'); // Global cell style
-                                      // Specific column style overrides could be implemented here
+                                      const cellStyle = getStyleForTarget('cell'); 
                                       return (
                                           <td 
                                              key={col} 

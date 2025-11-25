@@ -14,7 +14,7 @@ import {
 import { useLocation } from 'react-router-dom';
 
 export const DataExplorer: React.FC = () => {
-  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow } = useData();
+  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, renameDatasetField } = useData();
   const location = useLocation(); // Hook Router
   
   // --- State ---
@@ -31,6 +31,7 @@ export const DataExplorer: React.FC = () => {
 
   // Column Selection for Tools
   const [selectedCol, setSelectedCol] = useState<string | null>(null);
+  const [renamingValue, setRenamingValue] = useState<string>('');
 
   // HISTORY & RECONCILIATION STATE
   const [selectedRow, setSelectedRow] = useState<any | null>(null);
@@ -53,6 +54,9 @@ export const DataExplorer: React.FC = () => {
   const [isFormatModalOpen, setIsFormatModalOpen] = useState(false);
   const [selectedFormatCol, setSelectedFormatCol] = useState<string>('');
   const [newRule, setNewRule] = useState<Partial<ConditionalRule>>({ operator: 'lt', value: 0, style: { color: 'text-red-600', fontWeight: 'font-bold' } });
+
+  // DELETE CONFIRMATION STATE
+  const [deleteConfirmRow, setDeleteConfirmRow] = useState<any | null>(null);
 
   // --- EFFECT: Handle Drilldown from Navigation ---
   useEffect(() => {
@@ -82,6 +86,12 @@ export const DataExplorer: React.FC = () => {
         setSelectedFormatCol(currentDataset.fields[0]);
      }
   }, [currentDataset]);
+
+  useEffect(() => {
+     if (selectedCol) {
+        setRenamingValue(selectedCol);
+     }
+  }, [selectedCol]);
 
   // --- Handlers ---
   
@@ -203,7 +213,13 @@ export const DataExplorer: React.FC = () => {
       });
   };
 
-  // --- DELETION HANDLERS ---
+  // --- COLUMN & ROW ACTIONS ---
+
+  const handleRenameColumn = () => {
+     if (!currentDataset || !selectedCol || !renamingValue.trim() || selectedCol === renamingValue) return;
+     renameDatasetField(currentDataset.id, selectedCol, renamingValue);
+     setSelectedCol(renamingValue); // Update selection to new name
+  };
 
   const handleDeleteColumn = () => {
      if (!currentDataset || !selectedCol) return;
@@ -225,10 +241,16 @@ export const DataExplorer: React.FC = () => {
   };
 
   const handleDeleteRow = (row: any, e: React.MouseEvent) => {
-     e.stopPropagation(); // Prevent drawer opening
-     if (window.confirm("Supprimer cette ligne définitivement ?")) {
-        deleteBatchRow(row._batchId, row.id);
-     }
+     e.preventDefault();
+     e.stopPropagation();
+     setDeleteConfirmRow(row);
+  };
+
+  const confirmDeleteRow = () => {
+      if (deleteConfirmRow && deleteConfirmRow._batchId && deleteConfirmRow.id) {
+          deleteBatchRow(deleteConfirmRow._batchId, deleteConfirmRow.id);
+          setDeleteConfirmRow(null);
+      }
   };
 
   // --- Data Processing ---
@@ -618,9 +640,27 @@ export const DataExplorer: React.FC = () => {
       {/* Formatting & Actions Toolbar (Appears when any column is selected) */}
       <div className={`transition-all duration-300 overflow-hidden ${selectedCol ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
          <div className="bg-white border border-teal-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-teal-50 flex flex-wrap items-center gap-4">
-             <div className="flex items-center gap-2 text-teal-800 text-xs font-bold uppercase tracking-wider border-r border-teal-200 pr-4">
-                <Columns className="w-4 h-4" /> 
-                Colonne : {selectedCol}
+             
+             {/* RENOMMAGE */}
+             <div className="flex items-center gap-2 border-r border-teal-200 pr-4 mr-2">
+                <Columns className="w-4 h-4 text-teal-700" /> 
+                <div className="relative group">
+                   <input 
+                      type="text" 
+                      className="text-xs font-bold text-teal-800 bg-transparent border-b border-teal-300 focus:outline-none focus:border-teal-600 w-32"
+                      value={renamingValue}
+                      onChange={e => setRenamingValue(e.target.value)}
+                      placeholder={selectedCol || ''}
+                   />
+                   {renamingValue !== selectedCol && (
+                      <button 
+                         onClick={handleRenameColumn}
+                         className="absolute -right-16 top-0 text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded hover:bg-teal-700 shadow-sm"
+                      >
+                         Renommer
+                      </button>
+                   )}
+                </div>
              </div>
              
              {isSelectedNumeric ? (
@@ -672,14 +712,21 @@ export const DataExplorer: React.FC = () => {
                 <span className="text-xs text-slate-400 italic">Options de formatage non disponibles pour ce type.</span>
              )}
              
-             <div className="ml-auto flex items-center gap-2">
+             <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
                 <Button 
                    onClick={handleDeleteColumn} 
                    size="sm" 
                    className="bg-white hover:bg-red-50 text-red-600 border border-red-200 shadow-none text-xs"
                 >
                    <Trash2 className="w-3 h-3 mr-1" />
-                   Supprimer la colonne
+                   Supprimer
+                </Button>
+                <Button 
+                   onClick={() => setSelectedCol(null)} 
+                   size="sm" 
+                   className="bg-teal-600 text-white hover:bg-teal-700 shadow-sm text-xs"
+                >
+                   Terminer
                 </Button>
              </div>
          </div>
@@ -858,6 +905,7 @@ export const DataExplorer: React.FC = () => {
                            {/* Actions Column */}
                            <td className="px-3 py-3 text-right">
                               <button 
+                                 type="button"
                                  onClick={(e) => handleDeleteRow(row, e)}
                                  className="text-slate-300 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
                                  title="Supprimer cette ligne"
@@ -971,428 +1019,4 @@ export const DataExplorer: React.FC = () => {
                         </label>
                         <textarea 
                            ref={formulaInputRef}
-                           className="block w-full h-32 rounded-t-md border-slate-300 text-sm p-3 bg-slate-50 focus:ring-indigo-500 focus:border-indigo-500 font-mono resize-none leading-relaxed text-slate-800"
-                           placeholder="[Prix] * [Quantité]"
-                           value={newField.formula}
-                           onChange={e => setNewField({...newField, formula: e.target.value})}
-                        />
-                        
-                        {/* 3. Helper Tabs */}
-                        <div className="flex border-b border-slate-200 bg-slate-100">
-                           <button 
-                              className={`flex-1 py-2 text-xs font-bold ${calcTab === 'fields' ? 'bg-white text-indigo-600 border-t-2 border-t-indigo-500' : 'text-slate-500 hover:bg-slate-200'}`}
-                              onClick={() => setCalcTab('fields')}
-                           >
-                              <Variable className="w-3 h-3 inline mr-1" /> Variables
-                           </button>
-                           <button 
-                              className={`flex-1 py-2 text-xs font-bold ${calcTab === 'functions' ? 'bg-white text-indigo-600 border-t-2 border-t-indigo-500' : 'text-slate-500 hover:bg-slate-200'}`}
-                              onClick={() => setCalcTab('functions')}
-                           >
-                              <Sigma className="w-3 h-3 inline mr-1" /> Fonctions
-                           </button>
-                        </div>
-                        
-                        <div className="border border-t-0 border-slate-200 bg-white p-3 h-48 overflow-y-auto custom-scrollbar rounded-b-md">
-                           {calcTab === 'fields' ? (
-                              <div className="space-y-3">
-                                 {/* Quick Operators */}
-                                 <div className="flex gap-2 justify-center pb-2 border-b border-slate-100">
-                                    {['+', '-', '*', '/', '(', ')'].map(op => (
-                                       <button key={op} onClick={() => insertIntoFormula(` ${op} `)} className="w-8 h-8 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 font-mono font-bold border border-slate-200">
-                                          {op}
-                                       </button>
-                                    ))}
-                                 </div>
-
-                                 <div className="flex flex-wrap gap-2 content-start">
-                                    {currentDataset.fields.map(f => {
-                                       const isNumeric = currentDataset.fieldConfigs?.[f]?.type === 'number';
-                                       return (
-                                          <button 
-                                             key={f} 
-                                             onClick={() => insertIntoFormula(`[${f}]`)}
-                                             className={`px-2 py-1 rounded text-xs border flex items-center gap-1 transition-all
-                                                ${isNumeric ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}
-                                             `}
-                                          >
-                                             {isNumeric ? <Hash className="w-3 h-3 opacity-50" /> : <Variable className="w-3 h-3 opacity-50" />}
-                                             {f}
-                                          </button>
-                                       )
-                                    })}
-                                 </div>
-                              </div>
-                           ) : (
-                              <div className="space-y-1">
-                                 {[
-                                    { name: 'SI', syntax: 'SI(condition, vrai, faux)', desc: 'Conditionnelle simple' },
-                                    { name: 'SOMME', syntax: 'SOMME(val1, val2)', desc: 'Additionne des valeurs' },
-                                    { name: 'MOYENNE', syntax: 'MOYENNE(val1, val2)', desc: 'Moyenne arithmétique' },
-                                    { name: 'MAX', syntax: 'MAX(val1, val2)', desc: 'Valeur maximale' },
-                                    { name: 'MIN', syntax: 'MIN(val1, val2)', desc: 'Valeur minimale' },
-                                    { name: 'ARRONDI', syntax: 'ARRONDI(val, décimales)', desc: 'Arrondit un nombre' },
-                                    { name: 'CONCAT', syntax: 'CONCAT(txt1, txt2)', desc: 'Joint du texte' },
-                                    { name: 'ABS', syntax: 'ABS(val)', desc: 'Valeur absolue' },
-                                 ].map(fn => (
-                                    <button 
-                                       key={fn.name} 
-                                       onClick={() => insertIntoFormula(`${fn.name}(`)}
-                                       className="w-full text-left px-2 py-2 hover:bg-indigo-50 rounded flex justify-between items-center group"
-                                    >
-                                       <div>
-                                          <span className="font-bold text-indigo-700 text-xs">{fn.name}</span>
-                                          <span className="text-[10px] text-slate-500 ml-2">{fn.desc}</span>
-                                       </div>
-                                       <span className="text-[10px] text-slate-400 font-mono hidden group-hover:inline">{fn.syntax}</span>
-                                    </button>
-                                 ))}
-                              </div>
-                           )}
-                        </div>
-                    </div>
-                    
-                    {/* Live Preview */}
-                    <div className={`p-3 rounded border text-sm ${previewResult?.error ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase mb-1 opacity-70">
-                           {previewResult?.error ? <AlertCircle className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                           Résultat (1ère ligne) :
-                        </div>
-                        <div className="font-mono font-bold truncate">
-                           {previewResult 
-                              ? (previewResult.error ? previewResult.error : (previewResult.value !== null ? String(previewResult.value) : '...')) 
-                              : <span className="text-slate-400 italic font-normal">Saisissez une formule...</span>
-                           }
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                           <label className="block text-xs font-bold text-slate-600 mb-1">Type de sortie</label>
-                           <select 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                              value={newField.outputType}
-                              onChange={e => setNewField({...newField, outputType: e.target.value as any})}
-                           >
-                              <option value="number">Nombre</option>
-                              <option value="text">Texte</option>
-                              <option value="boolean">Oui/Non</option>
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-slate-600 mb-1">Unité (Optionnel)</label>
-                           <input 
-                              type="text" 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                              placeholder="Ex: €"
-                              value={newField.unit}
-                              onChange={e => setNewField({...newField, unit: e.target.value})}
-                           />
-                        </div>
-                    </div>
-
-                    <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula} className="w-full bg-indigo-600 hover:bg-indigo-700">
-                        <CheckCircle2 className="w-4 h-4 mr-2" /> Valider et Créer
-                    </Button>
-                    
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Champs existants</h4>
-                        {calculatedFields.length > 0 ? (
-                           <div className="space-y-2">
-                              {calculatedFields.map(field => (
-                                 <div key={field.id} className="flex justify-between items-center bg-white border border-slate-200 rounded p-2 text-xs">
-                                    <div className="flex items-center gap-2">
-                                       <span className="font-bold text-indigo-700">{field.name}</span>
-                                       <code className="bg-slate-100 px-1 rounded text-slate-500 max-w-[150px] truncate" title={field.formula}>{field.formula}</code>
-                                    </div>
-                                    <button onClick={() => removeCalculatedField(currentDataset.id, field.id)} className="text-slate-400 hover:text-red-500">
-                                       <Trash2 className="w-3 h-3" />
-                                    </button>
-                                 </div>
-                              ))}
-                           </div>
-                        ) : (
-                           <div className="text-center text-slate-400 italic text-xs">Aucun champ calculé.</div>
-                        )}
-                    </div>
-                </div>
-             </div>
-         )}
-      </div>
-
-      {/* HISTORY SIDE PANEL (DRAWER) */}
-      {isDrawerOpen && selectedRow && (
-         <div className="absolute inset-0 z-50 flex justify-end">
-            {/* Backdrop */}
-            <div 
-               className="absolute inset-0 bg-slate-900/20 backdrop-blur-[1px]"
-               onClick={() => setIsDrawerOpen(false)}
-            />
-            
-            {/* Drawer */}
-            <div className="relative w-full max-w-xl bg-white shadow-2xl h-full flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
-               
-               {/* Drawer Header */}
-               <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-start justify-between">
-                  <div>
-                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <History className="w-5 h-5 text-blue-600" />
-                        Historique d'évolution
-                     </h3>
-                     <p className="text-xs text-slate-500 mt-1">
-                        Suivi des modifications de l'entité à travers les imports.
-                     </p>
-                  </div>
-                  <button 
-                     onClick={() => setIsDrawerOpen(false)}
-                     className="p-1.5 hover:bg-white rounded-full text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                     <X className="w-5 h-5" />
-                  </button>
-               </div>
-
-               {/* Configuration Key Selector */}
-               <div className="p-3 bg-blue-50 border-b border-blue-100">
-                  <label className="block text-xs font-bold text-blue-800 mb-1">
-                     Clé d'identification (liaison)
-                  </label>
-                  <select 
-                     className="block w-full text-sm border-blue-200 rounded p-1.5 bg-white text-slate-700 focus:ring-blue-500 focus:border-blue-500"
-                     value={trackingKey}
-                     onChange={(e) => setTrackingKey(e.target.value)}
-                  >
-                     {currentDataset.fields.map(f => (
-                        <option key={f} value={f}>{f}</option>
-                     ))}
-                  </select>
-                  <div className="mt-2 text-xs text-blue-600 flex items-center">
-                     <span className="font-bold mr-1">Valeur actuelle :</span> 
-                     <span className="truncate max-w-[200px] inline-block align-bottom bg-white px-1 rounded border border-blue-100">
-                        {selectedRow[trackingKey]}
-                     </span>
-                  </div>
-               </div>
-
-               {/* Timeline Content */}
-               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-                  {historyData.length === 0 ? (
-                     <div className="text-center py-10 text-slate-400">
-                        <GitCommit className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p>Aucun historique trouvé pour cette clé.</p>
-                     </div>
-                  ) : (
-                     historyData.map((version, index) => {
-                        const previousVersion = historyData[index + 1];
-                        const isLatest = index === 0;
-
-                        return (
-                           <div key={version._batchId} className="relative pl-6 border-l-2 border-slate-200 last:border-0">
-                              {/* Dot */}
-                              <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 bg-white ${isLatest ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-300'}`} />
-                              
-                              {/* Date Badge */}
-                              <div className="mb-2 flex items-center gap-2">
-                                 <span className="text-sm font-bold text-slate-700">
-                                    {formatDateFr(version._importDate)}
-                                 </span>
-                                 {isLatest && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 rounded font-bold">ACTUEL</span>}
-                              </div>
-
-                              {/* Content Card */}
-                              <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 text-sm space-y-2">
-                                 {currentDataset.fields.map(field => {
-                                    // Si ce n'est pas la clé de tracking (qui par définition ne change pas ici)
-                                    if (field === trackingKey) return null;
-
-                                    const val = version[field];
-                                    const prevVal = previousVersion ? previousVersion[field] : undefined;
-                                    
-                                    // Détection changement
-                                    const hasChanged = previousVersion && String(val) !== String(prevVal);
-
-                                    // Valeur display
-                                    let displayVal = val;
-                                    const config = currentDataset.fieldConfigs?.[field];
-
-                                    if (config?.type === 'number' && val !== undefined && val !== '') {
-                                        displayVal = formatNumberValue(val, config);
-                                    } else if (typeof val === 'boolean') {
-                                        displayVal = val ? 'Oui' : 'Non';
-                                    } else if (val === undefined || val === '') {
-                                        displayVal = '-';
-                                    }
-
-                                    // Prev Display Val
-                                    let prevDisplayVal = prevVal;
-                                    if (config?.type === 'number' && prevVal !== undefined && prevVal !== '') {
-                                        prevDisplayVal = formatNumberValue(prevVal, config);
-                                    }
-
-                                    return (
-                                       <div key={field} className={`flex flex-col pb-2 border-b border-dashed border-slate-100 last:border-0 last:pb-0 ${hasChanged ? 'bg-amber-50 -mx-3 px-3 py-2 rounded border-transparent' : ''}`}>
-                                          <div className="flex justify-between items-start">
-                                             <span className="text-xs font-bold text-slate-500 w-1/3 truncate" title={field}>
-                                                {field}
-                                             </span>
-                                             <span className={`w-2/3 text-right font-medium ${hasChanged ? 'text-amber-900' : 'text-slate-700'}`}>
-                                                {displayVal}
-                                             </span>
-                                          </div>
-                                          
-                                          {hasChanged && (
-                                             <div className="mt-1 text-xs flex justify-end items-center gap-1 text-amber-600/80">
-                                                <span className="line-through decoration-amber-400 decoration-2 opacity-70">{prevDisplayVal}</span>
-                                                <ArrowRight className="w-3 h-3" />
-                                                <span>{displayVal}</span>
-                                             </div>
-                                          )}
-                                       </div>
-                                    );
-                                 })}
-                              </div>
-                           </div>
-                        );
-                     })
-                  )}
-               </div>
-
-            </div>
-         </div>
-      )}
-
-      {/* CONDITIONAL FORMATTING MODAL */}
-      {isFormatModalOpen && (
-         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[90%]">
-               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-lg">
-                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                     <Palette className="w-5 h-5 text-pink-600" />
-                     Formatage Conditionnel
-                  </h3>
-                  <button onClick={() => setIsFormatModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                     <X className="w-5 h-5" />
-                  </button>
-               </div>
-
-               <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
-                  
-                  {/* 1. Select Column */}
-                  <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Colonne à formater</label>
-                      <select 
-                         className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-pink-500 focus:border-pink-500"
-                         value={selectedFormatCol}
-                         onChange={e => setSelectedFormatCol(e.target.value)}
-                      >
-                         {currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                  </div>
-
-                  {/* 2. Existing Rules for Selected Column */}
-                  <div className="space-y-2">
-                      <h4 className="text-xs font-bold text-slate-500 uppercase">Règles actives</h4>
-                      {(() => {
-                          const rules = currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || [];
-                          if (rules.length === 0) return <div className="text-xs text-slate-400 italic">Aucune règle.</div>;
-                          return rules.map(rule => (
-                              <div key={rule.id} className="flex justify-between items-center bg-pink-50 border border-pink-100 rounded p-2 text-sm">
-                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-pink-800">
-                                       {rule.operator === 'gt' ? '>' : rule.operator === 'lt' ? '<' : rule.operator === 'eq' ? '=' : 'contient'} 
-                                       &nbsp;{rule.value}
-                                    </span>
-                                    <span className="text-slate-400">→</span>
-                                    <div className={`px-2 rounded text-xs ${rule.style.backgroundColor || ''} ${rule.style.color || ''} ${rule.style.fontWeight || ''}`}>
-                                       Aperçu
-                                    </div>
-                                 </div>
-                                 <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-slate-400 hover:text-red-500">
-                                    <Trash2 className="w-4 h-4" />
-                                 </button>
-                              </div>
-                          ));
-                      })()}
-                  </div>
-
-                  {/* 3. Add New Rule */}
-                  <div className="border-t border-slate-100 pt-4 space-y-4 bg-slate-50 p-4 rounded-lg">
-                     <h4 className="text-sm font-bold text-slate-800">Nouvelle règle</h4>
-                     
-                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                           <label className="block text-xs font-medium text-slate-600 mb-1">Opérateur</label>
-                           <select 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                              value={newRule.operator}
-                              onChange={e => setNewRule({...newRule, operator: e.target.value as any})}
-                           >
-                              <option value="gt">Supérieur à (&gt;)</option>
-                              <option value="lt">Inférieur à (&lt;)</option>
-                              <option value="eq">Égal à (=)</option>
-                              <option value="contains">Contient</option>
-                              <option value="empty">Est vide</option>
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-medium text-slate-600 mb-1">Valeur cible</label>
-                           <input 
-                              type="text" 
-                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                              value={newRule.value}
-                              onChange={e => setNewRule({...newRule, value: e.target.value})}
-                              disabled={newRule.operator === 'empty'}
-                           />
-                        </div>
-                     </div>
-
-                     <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">Style appliqué</label>
-                        <div className="flex flex-wrap gap-2">
-                           {[
-                              { label: 'Rouge', bg: 'bg-red-100', text: 'text-red-700' },
-                              { label: 'Vert', bg: 'bg-green-100', text: 'text-green-700' },
-                              { label: 'Bleu', bg: 'bg-blue-100', text: 'text-blue-700' },
-                              { label: 'Jaune', bg: 'bg-yellow-100', text: 'text-yellow-800' },
-                              { label: 'Gras', bg: '', text: '', weight: 'font-bold' },
-                           ].map((style, i) => (
-                              <button
-                                 key={i}
-                                 onClick={() => setNewRule({
-                                    ...newRule, 
-                                    style: { 
-                                       backgroundColor: style.bg || newRule.style?.backgroundColor, 
-                                       color: style.text || newRule.style?.color,
-                                       fontWeight: style.weight || newRule.style?.fontWeight 
-                                    }
-                                 })}
-                                 className={`px-3 py-1.5 rounded text-xs border ${style.bg} ${style.text} border-slate-200 hover:opacity-80`}
-                              >
-                                 {style.label}
-                              </button>
-                           ))}
-                           <button 
-                              onClick={() => setNewRule({...newRule, style: {}})}
-                              className="px-3 py-1.5 rounded text-xs border border-slate-200 bg-white text-slate-500"
-                           >
-                              Reset
-                           </button>
-                        </div>
-                        
-                        {/* Preview */}
-                        <div className={`mt-2 p-2 text-center border border-dashed border-slate-300 rounded text-sm transition-all ${newRule.style?.backgroundColor} ${newRule.style?.color} ${newRule.style?.fontWeight}`}>
-                           Aperçu du style
-                        </div>
-                     </div>
-
-                     <Button onClick={handleAddConditionalRule} className="w-full bg-pink-600 hover:bg-pink-700">
-                        <Plus className="w-4 h-4 mr-2" /> Ajouter la règle
-                     </Button>
-                  </div>
-               </div>
-            </div>
-         </div>
-      )}
-
-    </div>
-  );
-};
+                           className="block w-full h-32 rounded-t-md border-slate-300 text-sm

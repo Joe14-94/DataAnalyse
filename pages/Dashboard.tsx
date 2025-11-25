@@ -14,7 +14,7 @@ import {
   Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
   ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type
 } from 'lucide-react';
-import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle } from '../types';
+import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle, WidgetHeight } from '../types';
 
 // --- UTILS ---
 
@@ -31,7 +31,7 @@ const useWidgetData = (widget: DashboardWidget) => {
          return { text: widget.config.textContent, style: widget.config.textStyle };
       }
 
-      const { source, metric, dimension, valueField, target, secondarySource } = widget.config;
+      const { source, metric, dimension, valueField, target, secondarySource, limit } = widget.config;
       if (!source) return null;
 
       // 1. Find Dataset
@@ -129,10 +129,13 @@ const useWidgetData = (widget: DashboardWidget) => {
          });
          
          // Convert to array
-         const sorted = Object.entries(counts)
+         let sorted = Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 10); // Top 10
+            .sort((a, b) => b.value - a.value);
+         
+         // Apply Limit
+         const effectiveLimit = limit || 10; // Default top 10 for list
+         sorted = sorted.slice(0, effectiveLimit);
          
          const maxVal = sorted.length > 0 ? sorted[0].value : 0;
          return { current: sorted, max: maxVal, unit: currentUnit };
@@ -161,7 +164,7 @@ const useWidgetData = (widget: DashboardWidget) => {
          }
 
          // Format standard {name, value} (+ size for Treemap)
-         const data = Object.entries(counts).map(([name, value]) => ({ 
+         let data = Object.entries(counts).map(([name, value]) => ({ 
             name, 
             value,
             size: value // For Treemap
@@ -170,6 +173,14 @@ const useWidgetData = (widget: DashboardWidget) => {
          // Funnel needs sorting
          if (widget.config.chartType === 'funnel') {
             data.sort((a, b) => b.value - a.value);
+         } else {
+            // Default sort for charts is often by value descending for better read
+            data.sort((a, b) => b.value - a.value);
+         }
+
+         // Apply Limit if configured
+         if (limit) {
+             data = data.slice(0, limit);
          }
 
          return { data, unit: currentUnit };
@@ -495,6 +506,39 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
       );
    }
 
+   if (chartType === 'area') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} onClick={handleChartClick}>
+               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+               <YAxis fontSize={10} stroke="#94a3b8" />
+               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+               <Area type="monotone" dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.2} activeDot={{ r: 6, onClick: handleChartClick }} />
+            </AreaChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'bar') { // Bar = Horizontal in this app context (CustomAnalytics legacy)
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} layout="vertical" onClick={handleChartClick} margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+               <XAxis type="number" fontSize={10} stroke="#94a3b8" />
+               <YAxis dataKey="name" type="category" fontSize={10} stroke="#94a3b8" width={80} />
+               <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
+               <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} className="cursor-pointer">
+                  {chartData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+               </Bar>
+            </BarChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   // Default to Column (Vertical Bars)
    return (
       <ResponsiveContainer width="100%" height="100%">
          <BarChart data={chartData} onClick={handleChartClick}>
@@ -529,6 +573,7 @@ export const Dashboard: React.FC = () => {
   const [tempWidget, setTempWidget] = useState<Partial<DashboardWidget>>({
      type: 'kpi',
      size: 'sm',
+     height: 'md',
      config: { metric: 'count' }
   });
 
@@ -545,7 +590,7 @@ export const Dashboard: React.FC = () => {
      }
      setShowModal(false);
      setEditingWidgetId(null);
-     setTempWidget({ type: 'kpi', size: 'sm', config: { metric: 'count' } });
+     setTempWidget({ type: 'kpi', size: 'sm', height: 'md', config: { metric: 'count' } });
   };
 
   const openNewWidget = () => {
@@ -554,6 +599,7 @@ export const Dashboard: React.FC = () => {
         title: '',
         type: 'kpi',
         size: 'sm',
+        height: 'md',
         config: {
            metric: 'count',
            source: datasets.length > 0 ? { datasetId: datasets[0].id, mode: 'latest' } : undefined
@@ -588,6 +634,17 @@ export const Dashboard: React.FC = () => {
       }
       return availableFields;
   }, [availableFields, secondaryFields]);
+
+  // Helper to get Height Class
+  const getHeightClass = (h?: WidgetHeight) => {
+      switch (h) {
+          case 'sm': return 'h-32';
+          case 'md': return 'h-64';
+          case 'lg': return 'h-96';
+          case 'xl': return 'h-[500px]';
+          default: return 'h-64';
+      }
+  };
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
@@ -682,9 +739,10 @@ export const Dashboard: React.FC = () => {
                      const data = useWidgetData(widget);
                      const isText = widget.type === 'text';
                      const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200';
+                     const heightClass = getHeightClass(widget.height);
 
                      return (
-                        <div className={`${bgColor} rounded-lg border ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col h-64 relative group transition-all`}>
+                        <div className={`${bgColor} rounded-lg border ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
                            {isEditMode && (
                               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded shadow-sm z-10">
                                  <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowLeft className="w-3 h-3" /></button>
@@ -773,18 +831,33 @@ export const Dashboard: React.FC = () => {
                         />
                      </div>
                      
-                     <div className={tempWidget.type === 'text' ? 'hidden' : ''}>
-                         <label className="block text-sm font-medium text-slate-700 mb-1">Taille</label>
-                        <select 
-                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                           value={tempWidget.size}
-                           onChange={e => setTempWidget({...tempWidget, size: e.target.value as WidgetSize})}
-                        >
-                           <option value="sm">Petit (1/4)</option>
-                           <option value="md">Moyen (2/4)</option>
-                           <option value="lg">Grand (3/4)</option>
-                           <option value="full">Large (4/4)</option>
-                        </select>
+                     <div className={tempWidget.type === 'text' ? 'hidden' : 'grid grid-cols-2 gap-2'}>
+                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Largeur</label>
+                            <select 
+                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                               value={tempWidget.size || 'sm'}
+                               onChange={e => setTempWidget({...tempWidget, size: e.target.value as WidgetSize})}
+                            >
+                               <option value="sm">Petit (1/4)</option>
+                               <option value="md">Moyen (2/4)</option>
+                               <option value="lg">Grand (3/4)</option>
+                               <option value="full">Large (4/4)</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Hauteur</label>
+                            <select 
+                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                               value={tempWidget.height || 'md'}
+                               onChange={e => setTempWidget({...tempWidget, height: e.target.value as WidgetHeight})}
+                            >
+                               <option value="sm">Petite (128px)</option>
+                               <option value="md">Moyenne (256px)</option>
+                               <option value="lg">Grande (384px)</option>
+                               <option value="xl">Très grande (500px)</option>
+                            </select>
+                         </div>
                      </div>
 
                      {/* Hide Source selector for Text Widgets */}
@@ -984,16 +1057,31 @@ export const Dashboard: React.FC = () => {
 
                            {/* Dimension Config (for Chart & List) */}
                            {(tempWidget.type === 'chart' || tempWidget.type === 'list') && (
-                              <div>
-                                 <label className="block text-sm font-medium text-slate-700 mb-1">Axe de regroupement (Dimension)</label>
-                                 <select 
-                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                                    value={tempWidget.config?.dimension || ''}
-                                    onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value }})}
-                                 >
-                                    <option value="">-- Choisir --</option>
-                                    {allFields.map(f => <option key={f} value={f}>{f}</option>)}
-                                 </select>
+                              <div className="grid grid-cols-2 gap-4">
+                                 <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Axe de regroupement (Dimension)</label>
+                                    <select 
+                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                       value={tempWidget.config?.dimension || ''}
+                                       onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value }})}
+                                    >
+                                       <option value="">-- Choisir --</option>
+                                       {allFields.map(f => <option key={f} value={f}>{f}</option>)}
+                                    </select>
+                                 </div>
+                                 <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Limite (Top N)</label>
+                                    <select 
+                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                       value={tempWidget.config?.limit || 10}
+                                       onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, limit: parseInt(e.target.value) }})}
+                                    >
+                                       <option value={5}>Top 5</option>
+                                       <option value={10}>Top 10</option>
+                                       <option value={20}>Top 20</option>
+                                       <option value={50}>Top 50</option>
+                                    </select>
+                                 </div>
                               </div>
                            )}
 
@@ -1045,13 +1133,25 @@ export const Dashboard: React.FC = () => {
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'bar' }})}
                                        className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'bar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
                                     >
-                                       <BarChart3 className="w-4 h-4" /> Barres
+                                       <BarChart3 className="w-4 h-4 transform rotate-90" /> Barres (Horizontal)
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'column' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'column' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <BarChart3 className="w-4 h-4" /> Colonnes (Vertical)
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'line' }})}
                                        className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'line' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
                                     >
                                        <LineChartIcon className="w-4 h-4" /> Courbes
+                                    </button>
+                                    <button
+                                       onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'area' }})}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'area' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                       <TrendingUp className="w-4 h-4" /> Aires
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'pie' }})}

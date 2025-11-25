@@ -1,8 +1,7 @@
 
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, parseSmartNumber, formatNumberValue } from '../utils';
+import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
@@ -11,10 +10,10 @@ import {
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
   LayoutGrid, TrendingUp, Settings2, Database, HelpCircle,
-  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown, Save, LayoutDashboard
+  Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown,
+  LayoutDashboard, Save
 } from 'lucide-react';
-import { FieldConfig, WidgetConfig, ChartType as WidgetChartType } from '../types';
-import { useLocation } from 'react-router-dom';
+import { FieldConfig, ChartType as WidgetChartType, FilterRule } from '../types';
 
 type ChartType = 'bar' | 'column' | 'pie' | 'area' | 'radar' | 'treemap' | 'kpi' | 'line';
 type AnalysisMode = 'snapshot' | 'trend';
@@ -87,20 +86,17 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
           {options.length === 0 ? (
              <div className="p-2 text-xs text-slate-400 italic text-center">Aucune donnée</div>
           ) : (
-             options.map(option => {
-                const isSelected = selected.includes(option);
-                return (
-                  <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer" onClick={() => handleToggle(option)}>
-                     <div 
-                        className={`w-4 h-4 rounded border flex items-center justify-center mr-2 transition-colors flex-shrink-0
-                        ${isSelected ? 'bg-white border-blue-600' : 'bg-white border-slate-300'}`}
-                      >
-                        {isSelected && <Check className="w-3 h-3 text-blue-600" strokeWidth={3} />}
-                     </div>
-                     <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
-                  </label>
-                );
-             })
+             options.map(option => (
+                <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer">
+                   <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2"
+                      checked={selected.includes(option)}
+                      onChange={() => handleToggle(option)}
+                   />
+                   <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
+                </label>
+             ))
           )}
         </div>
       )}
@@ -109,454 +105,427 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
 };
 
 export const CustomAnalytics: React.FC = () => {
-  const { batches, currentDataset, savedAnalyses, saveAnalysis, deleteAnalysis, lastAnalyticsState, saveAnalyticsState, addDashboardWidget } = useData();
+  const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
-  const location = useLocation();
-
-  // --- Helper: Init State from Location (Pivot Redirect) ---
-  // Permet d'initialiser les états AVANT le premier rendu pour éviter les race conditions avec les useEffects
-  const getInitState = (key: string, defaultVal: any) => {
-      if (location.state?.fromPivot) {
-          const p = location.state.fromPivot;
-          if (key === 'dimension' && p.rowFields?.length > 0) return p.rowFields[0];
-          if (key === 'valueField' && p.valField) return p.valField;
-          if (key === 'metric') {
-              if (['count', 'sum', 'distinct'].includes(p.aggType)) return p.aggType;
-              if (p.aggType === 'avg') return 'sum'; // Fallback
-              return 'count';
-          }
-          if (key === 'filters' && p.filters) return p.filters;
-          if (key === 'selectedBatchId' && p.selectedBatchId) return p.selectedBatchId;
-      }
-      return defaultVal;
-  };
 
   // --- State Configuration ---
   const [mode, setMode] = useState<AnalysisMode>('snapshot');
   
   // Snapshot Mode State
-  // IMPORTANT: Initialisation Lazy pour prendre en compte location.state immédiatement
-  const [selectedBatchId, setSelectedBatchId] = useState<string>(() => getInitState('selectedBatchId', ''));
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   
   // Trend Mode State
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
   // Common Config
-  const [dimension, setDimension] = useState<string>(() => getInitState('dimension', '')); 
-  const [metric, setMetric] = useState<MetricType>(() => getInitState('metric', 'count'));
-  const [valueField, setValueField] = useState<string>(() => getInitState('valueField', '')); 
+  const [dimension, setDimension] = useState<string>(''); 
+  const [metric, setMetric] = useState<MetricType>('count');
+  const [valueField, setValueField] = useState<string>(''); 
   const [segment, setSegment] = useState<string>(''); 
   const [chartType, setChartType] = useState<ChartType>('bar');
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(10); // Custom Limit
   
   // Advanced State
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'alpha'>('desc');
   const [isCumulative, setIsCumulative] = useState<boolean>(false);
   const [showTable, setShowTable] = useState<boolean>(false);
   
-  // Updated Filters Structure: Values is array
-  const [filters, setFilters] = useState<{field: string, values: string[]}[]>(() => getInitState('filters', []));
+  // Updated Filters Structure
+  const [filters, setFilters] = useState<FilterRule[]>([]);
 
-  // SAVE UI STATE
+  // Save UI State
   const [isSaving, setIsSaving] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // --- Colors ---
   const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6', '#a3e635'];
 
-  // --- Initialization & Persistence ---
-
-  // Load from Persistence OR from Pivot Redirect
+  // --- Initialization ---
   useEffect(() => {
-     // 1. Check if coming from Pivot Table
-     // Note: Most state is initialized in useState, but we handle updates here if navigation occurs without unmount
-     if (location.state && location.state.fromPivot) {
-        const p = location.state.fromPivot;
-        // We force update here just in case component was already mounted
-        if (p.rowFields && p.rowFields.length > 0) setDimension(p.rowFields[0]);
-        if (p.valField) setValueField(p.valField);
-        
-        // Map AggType to Metric
-        if (['count', 'sum', 'distinct'].includes(p.aggType)) {
-            setMetric(p.aggType as MetricType);
-        } else if (p.aggType === 'avg') {
-            setMetric('sum'); 
-        } else {
-            setMetric('count');
-        }
+    if (!selectedBatchId && batches.length > 0) {
+      setSelectedBatchId(batches[batches.length - 1].id);
+    }
+    
+    if (batches.length > 0) {
+       const sortedDates = batches.map(b => b.date).sort();
+       if (!startDate) setStartDate(sortedDates[0]);
+       if (!endDate) setEndDate(sortedDates[sortedDates.length - 1]);
+    }
 
-        if (p.filters) setFilters(p.filters);
-        if (p.selectedBatchId) setSelectedBatchId(p.selectedBatchId);
-        setMode('snapshot');
-        // setChartType('bar'); // Default visual is fine
-        return; 
-     }
+    if (fields.length > 0 && (!dimension || !fields.includes(dimension))) {
+      setDimension(fields[0]);
+    }
+  }, [batches, fields, selectedBatchId, dimension, startDate, endDate]);
 
-     // 2. Load Persistence if available and matches current dataset
-     if (lastAnalyticsState && currentDataset && lastAnalyticsState.datasetId === currentDataset.id) {
-         const c = lastAnalyticsState.config;
-         setMode(c.mode || 'snapshot');
-         setDimension(c.dimension || '');
-         setMetric(c.metric || 'count');
-         setValueField(c.valueField || '');
-         setSegment(c.segment || '');
-         setChartType(c.chartType || 'bar');
-         setLimit(c.limit || 10);
-         setSortOrder(c.sortOrder || 'desc');
-         setIsCumulative(!!c.isCumulative);
-         setShowTable(!!c.showTable);
-         setFilters(c.filters || []);
+  useEffect(() => {
+     if (mode === 'trend') {
+        setChartType('line');
      } else {
-         // Defaults
-         // Only set default dimension if not already set (e.g. by Pivot Init)
-         if (fields.length > 0 && (!dimension || !fields.includes(dimension))) {
-            setDimension(fields[0]);
-         }
-      }
-   }, [currentDataset?.id, location.state]);
- 
-   // Save to Persistence on change
-   useEffect(() => {
-      if (currentDataset) {
-         saveAnalyticsState({
-            datasetId: currentDataset.id,
-            config: {
-               mode,
-               dimension,
-               metric,
-               valueField,
-               segment,
-               chartType,
-               limit,
-               sortOrder,
-               isCumulative,
-               showTable,
-               filters
-            }
-         });
-      }
-   }, [mode, dimension, metric, valueField, segment, chartType, limit, sortOrder, isCumulative, showTable, filters, currentDataset]);
- 
- 
-   useEffect(() => {
-     // Si selectedBatchId est déjà défini (ex: via Pivot Init), ce bloc est sauté. C'est ce qu'on veut.
-     if (!selectedBatchId && batches.length > 0) {
-       setSelectedBatchId(batches[batches.length - 1].id);
+        setChartType('bar');
      }
+  }, [mode]);
+
+  useEffect(() => {
+      if(successMessage) {
+          const timer = setTimeout(() => setSuccessMessage(null), 3000);
+          return () => clearTimeout(timer);
+      }
+  }, [successMessage]);
+
+  // --- Helpers ---
+  const currentBatch = useMemo(() => 
+    batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1], 
+  [batches, selectedBatchId]);
+
+  const getDistinctValuesForField = (field: string) => {
+    const targetBatch = mode === 'snapshot' ? currentBatch : batches[batches.length - 1];
+    if (!targetBatch) return [];
+    const set = new Set<string>();
+    targetBatch.rows.forEach(r => {
+       const val = r[field] !== undefined ? String(r[field]) : '';
+       if (val) set.add(val);
+    });
+    return Array.from(set).sort();
+  };
+
+  // Identifie les champs numériques via la configuration du dataset ou par détection basique
+  const numericFields = useMemo(() => {
+     if (!currentDataset) return [];
      
-     if (batches.length > 0) {
-        const sortedDates = batches.map(b => b.date).sort();
-        if (!startDate) setStartDate(sortedDates[0]);
-        if (!endDate) setEndDate(sortedDates[sortedDates.length - 1]);
+     // 1. Vérifier la configuration explicite
+     const configuredNumeric = Object.entries(currentDataset.fieldConfigs || ({} as Record<string, FieldConfig>))
+        .filter(([_, config]) => (config as FieldConfig).type === 'number')
+        .map(([name, _]) => name);
+     
+     if (configuredNumeric.length > 0) {
+        // Filtrer pour ne garder que ceux qui existent encore dans fields
+        return configuredNumeric.filter(f => fields.includes(f));
      }
-   }, [batches, selectedBatchId, startDate, endDate]);
- 
-   // --- Helpers ---
-   const currentBatch = useMemo(() => 
-     batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1], 
-   [batches, selectedBatchId]);
- 
-   const getDistinctValuesForField = (field: string) => {
-     const targetBatch = mode === 'snapshot' ? currentBatch : batches[batches.length - 1];
-     if (!targetBatch) return [];
-     const set = new Set<string>();
-     targetBatch.rows.forEach(r => {
-        const val = r[field] !== undefined ? String(r[field]) : '';
-        if (val) set.add(val);
+
+     // 2. Fallback : Détection automatique sur les données
+     if (!currentBatch || currentBatch.rows.length === 0) return [];
+     const sample = currentBatch.rows.slice(0, 20);
+     return fields.filter(f => {
+        return sample.some(r => {
+           const val = r[f];
+           if (val === undefined || val === '' || val === null) return false;
+           // On teste le parsing "intelligent" (qui vire les unités courantes)
+           return parseSmartNumber(val) !== 0 || val === '0' || val === 0;
+        });
      });
-     return Array.from(set).sort();
-   };
- 
-   // Identifie les champs numériques via la configuration du dataset ou par détection basique
-   const numericFields = useMemo(() => {
-      if (!currentDataset) return [];
-      
-      // 1. Vérifier la configuration explicite
-      const configuredNumeric = Object.entries(currentDataset.fieldConfigs || ({} as Record<string, FieldConfig>))
-         .filter(([_, config]) => (config as FieldConfig).type === 'number')
-         .map(([name, _]) => name);
-      
-      if (configuredNumeric.length > 0) {
-         // Filtrer pour ne garder que ceux qui existent encore dans fields
-         return configuredNumeric.filter(f => fields.includes(f));
-      }
- 
-      // 2. Fallback : Détection automatique sur les données
-      if (!currentBatch || currentBatch.rows.length === 0) return [];
-      const sample = currentBatch.rows.slice(0, 20);
-      return fields.filter(f => {
-         return sample.some(r => {
-            const val = r[f];
-            if (val === undefined || val === '' || val === null) return false;
-            // On teste le parsing "intelligent" (qui vire les unités courantes)
-            return parseSmartNumber(val) !== 0 || val === '0' || val === 0;
-         });
-      });
-   }, [currentBatch, fields, currentDataset]);
- 
-   // Auto-select value field
-   useEffect(() => {
-      if (metric === 'sum' && !valueField && numericFields.length > 0) {
-         setValueField(numericFields[0]);
-      }
-   }, [metric, numericFields, valueField]);
- 
-   // Wrapper pour le parsing qui utilise la config
-   const getValue = (row: any, fieldName: string): number => {
-      const raw = row[fieldName];
-      const unit = currentDataset?.fieldConfigs?.[fieldName]?.unit;
-      return parseSmartNumber(raw, unit);
-   };
- 
-   const addFilter = () => {
-     if (fields.length > 0) {
-        setFilters([...filters, { field: fields[0], values: [] }]);
+  }, [currentBatch, fields, currentDataset]);
+
+  // Auto-select value field
+  useEffect(() => {
+     if (metric === 'sum' && !valueField && numericFields.length > 0) {
+        setValueField(numericFields[0]);
      }
-   };
- 
-   const updateFilterField = (index: number, newField: string) => {
-      const newFilters = [...filters];
-      newFilters[index] = { field: newField, values: [] };
-      setFilters(newFilters);
-   };
- 
-   const updateFilterValues = (index: number, newValues: string[]) => {
-      const newFilters = [...filters];
-      newFilters[index].values = newValues;
-      setFilters(newFilters);
-   };
- 
-   const removeFilter = (index: number) => {
-      setFilters(filters.filter((_, i) => i !== index));
-   };
- 
-   // --- EXPORT TO DASHBOARD ---
-   const handleExportToDashboard = () => {
+  }, [metric, numericFields, valueField]);
+
+  // Wrapper pour le parsing qui utilise la config
+  const getValue = (row: any, fieldName: string): number => {
+     const raw = row[fieldName];
+     const unit = currentDataset?.fieldConfigs?.[fieldName]?.unit;
+     return parseSmartNumber(raw, unit);
+  };
+
+  // --- FILTER LOGIC ---
+  const addFilter = () => {
+    if (fields.length > 0) {
+       setFilters([...filters, { field: fields[0], operator: 'in', value: [] }]);
+    }
+  };
+
+  const updateFilter = (index: number, updates: Partial<FilterRule>) => {
+     const newFilters = [...filters];
+     newFilters[index] = { ...newFilters[index], ...updates };
+     // Reset value if operator changes to something incompatible with array
+     if (updates.operator && updates.operator !== 'in' && Array.isArray(newFilters[index].value)) {
+         newFilters[index].value = '';
+     }
+     if (updates.operator === 'in' && !Array.isArray(newFilters[index].value)) {
+         newFilters[index].value = [];
+     }
+     setFilters(newFilters);
+  };
+
+  const removeFilter = (index: number) => {
+     setFilters(filters.filter((_, i) => i !== index));
+  };
+
+  // --- EXPORT FUNCTION ---
+  const handleExportToDashboard = () => {
       if (!currentDataset) return;
 
-      // Mappage du type de graphique Analytics vers Widget Config
-      let widgetChartType: WidgetChartType = 'bar';
       let widgetType: 'chart' | 'kpi' = 'chart';
+      let widgetChartType: WidgetChartType | undefined = undefined;
 
       if (chartType === 'kpi') {
          widgetType = 'kpi';
-      } else if (chartType === 'column') {
-         widgetChartType = 'bar'; // Vertical bars default
-      } else if (['pie', 'donut', 'radial', 'radar', 'treemap', 'bar', 'line', 'area'].includes(chartType)) {
-         widgetChartType = chartType as WidgetChartType;
+      } else {
+         if (['bar', 'column', 'line', 'area', 'pie', 'donut', 'radial', 'radar', 'treemap', 'funnel'].includes(chartType)) {
+             widgetChartType = chartType as WidgetChartType;
+         } else {
+             widgetChartType = 'bar'; // Default
+         }
       }
 
-      const title = analysisName || `${metric === 'sum' ? 'Somme' : 'Compte'} par ${dimension}`;
+      const title = `${metric === 'sum' ? 'Somme' : (metric === 'distinct' ? 'Distinct' : 'Compte')} par ${dimension}`;
 
       addDashboardWidget({
          title: title,
          type: widgetType,
          size: 'md',
+         height: 'md', // Hauteur standard par défaut
          config: {
             source: { 
                datasetId: currentDataset.id, 
-               mode: 'latest' // Force latest for dashboard vitality
+               mode: 'latest' 
             },
             metric: metric === 'distinct' ? 'distinct' : (metric === 'sum' ? 'sum' : 'count'),
             dimension: dimension,
             valueField: metric === 'sum' ? valueField : undefined,
-            chartType: widgetType === 'chart' ? widgetChartType : undefined,
-            showTrend: mode === 'snapshot' // Show trend by default for snapshots converted to widgets
+            chartType: widgetChartType,
+            showTrend: mode === 'snapshot',
+            limit: limit // Export de la limite actuelle
          }
       });
-
-      alert("Graphique exporté vers le tableau de bord avec succès !");
+      
+      setSuccessMessage("Le graphique a été ajouté au tableau de bord.");
    };
 
-   // --- SAVE & LOAD LOGIC ---
    const handleSaveAnalysis = () => {
       if (!analysisName.trim() || !currentDataset) return;
       
-      const config = {
-         mode,
-         dimension,
-         metric,
-         valueField,
-         segment,
-         chartType,
-         limit,
-         sortOrder,
-         isCumulative,
-         showTable,
-         filters
-      };
- 
       saveAnalysis({
          name: analysisName,
          type: 'analytics',
          datasetId: currentDataset.id,
-         config
+         config: {
+            mode, selectedBatchId, startDate, endDate,
+            dimension, metric, valueField, segment, chartType, limit,
+            sortOrder, isCumulative, filters
+         }
       });
- 
+      
       setAnalysisName('');
       setIsSaving(false);
+      setSuccessMessage("Vue d'analyse sauvegardée avec succès.");
    };
- 
+
    const handleLoadAnalysis = (id: string) => {
       const analysis = savedAnalyses.find(a => a.id === id);
       if (!analysis || !analysis.config) return;
- 
       const c = analysis.config;
-      setMode(c.mode || 'snapshot');
-      setDimension(c.dimension || '');
-      setMetric(c.metric || 'count');
-      setValueField(c.valueField || '');
-      setSegment(c.segment || '');
-      setChartType(c.chartType || 'bar');
-      setLimit(c.limit || 10);
-      setSortOrder(c.sortOrder || 'desc');
-      setIsCumulative(!!c.isCumulative);
-      setShowTable(!!c.showTable);
-      setFilters(c.filters || []);
+      
+      if (c.mode) setMode(c.mode);
+      if (c.dimension) setDimension(c.dimension);
+      if (c.metric) setMetric(c.metric);
+      if (c.valueField) setValueField(c.valueField);
+      if (c.segment) setSegment(c.segment);
+      if (c.chartType) setChartType(c.chartType);
+      if (c.limit) setLimit(c.limit);
+      if (c.sortOrder) setSortOrder(c.sortOrder);
+      if (c.isCumulative !== undefined) setIsCumulative(c.isCumulative);
+      // Retro-compatibility for old filter format
+      if (c.filters) {
+          const loadedFilters = c.filters.map((f: any) => {
+              if (f.values) return { field: f.field, operator: 'in', value: f.values }; // Old format
+              return f; // New format
+          });
+          setFilters(loadedFilters);
+      }
+      if (c.startDate) setStartDate(c.startDate);
+      if (c.endDate) setEndDate(c.endDate);
    };
- 
+
    const availableAnalyses = savedAnalyses.filter(a => a.type === 'analytics' && a.datasetId === currentDataset?.id);
- 
-   // --- SNAPSHOT DATA ENGINE ---
-   const snapshotData = useMemo(() => {
-     if (mode !== 'snapshot' || !currentBatch || !dimension) return [];
- 
-     // 1. Filter Rows
-     const filteredRows = currentBatch.rows.filter(row => {
-        if (filters.length === 0) return true;
-        return filters.every(f => {
-           if (f.values.length === 0) return true; // No values selected = All
-           return f.values.includes(String(row[f.field]));
-        });
-     });
- 
-     // 2. Aggregation
-     const agg: Record<string, any> = {};
-     filteredRows.forEach(row => {
-       const dimVal = String(row[dimension] || 'Non défini');
-       if (!agg[dimVal]) agg[dimVal] = { name: dimVal, count: 0, distinctSet: new Set(), sum: 0 };
- 
-       agg[dimVal].count++;
-       
-       if (metric === 'distinct') {
-          agg[dimVal].distinctSet.add(row.id);
-       }
-       
-       if (metric === 'sum' && valueField) {
-          agg[dimVal].sum += getValue(row, valueField);
-       }
- 
-       // Segment aggregation
-       if (segment) {
-         const segVal = String(row[segment] !== undefined ? row[segment] : 'N/A');
-         if (!agg[dimVal][segVal]) agg[dimVal][segVal] = 0;
-         
-         if (metric === 'sum' && valueField) {
-            agg[dimVal][segVal] += getValue(row, valueField);
-         } else {
-            agg[dimVal][segVal]++;
-         }
-       }
-     });
- 
-     // 3. Transform
-     let result = Object.values(agg).map((item: any) => {
-       const { distinctSet, ...rest } = item;
-       let finalVal = 0;
-       
-       if (metric === 'distinct') finalVal = distinctSet.size;
-       else if (metric === 'sum') finalVal = parseFloat(item.sum.toFixed(2));
-       else finalVal = item.count;
- 
-       return { ...rest, value: finalVal, size: finalVal };
-     });
- 
-     // 4. Sort
-     if (sortOrder === 'alpha') result.sort((a, b) => a.name.localeCompare(b.name));
-     else if (sortOrder === 'asc') result.sort((a, b) => a.value - b.value);
-     else result.sort((a, b) => b.value - a.value);
- 
-     // 5. Limit
-     if (limit > 0) result = result.slice(0, limit);
- 
-     // 6. Cumulative
-     if (isCumulative) {
-        let runningTotal = 0;
-        result = result.map(item => {
-           runningTotal += item.value;
-           return { ...item, cumulative: parseFloat(runningTotal.toFixed(2)) };
-        });
-     }
- 
-     return result;
-   }, [mode, currentBatch, dimension, metric, valueField, segment, limit, filters, sortOrder, isCumulative, currentDataset]);
- 
-   // --- TREND DATA ENGINE ---
-   const trendData = useMemo(() => {
-     if (mode !== 'trend' || !dimension) return { data: [], series: [] };
- 
-     const targetBatches = batches
-        .filter(b => b.datasetId === currentDataset?.id)
-        .filter(b => b.date >= startDate && b.date <= endDate)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
- 
-     if (targetBatches.length === 0) return { data: [], series: [] };
- 
-     const globalCounts: Record<string, number> = {};
-     
-     targetBatches.forEach(batch => {
-        const batchRows = batch.rows.filter(row => {
-           if (filters.length === 0) return true;
-           return filters.every(f => f.values.length === 0 || f.values.includes(String(row[f.field])));
-        });
- 
-        batchRows.forEach(row => {
-           const val = String(row[dimension] || 'Non défini');
-           let increment = 1;
-           
-           if (metric === 'sum' && valueField) {
-              increment = getValue(row, valueField);
-           }
-           
-           globalCounts[val] = (globalCounts[val] || 0) + increment;
-        });
-     });
- 
-     const topSeries = Object.entries(globalCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, limit)
-        .map(e => e[0]);
- 
-     const timeData = targetBatches.map(batch => {
-        const batchRows = batch.rows.filter(row => {
-           if (filters.length === 0) return true;
-           return filters.every(f => f.values.length === 0 || f.values.includes(String(row[f.field])));
-        });
- 
-        const point: any = {
-           date: batch.date,
-           displayDate: formatDateFr(batch.date),
-           total: 0
-        };
- 
-        topSeries.forEach(s => point[s] = 0);
- 
-        batchRows.forEach(row => {
-           const val = String(row[dimension] || 'Non défini');
-           if (topSeries.includes(val)) {
-              let qty = 1;
-              if (metric === 'sum' && valueField) {
-                 qty = getValue(row, valueField);
-              }
-              point[val] = parseFloat(((point[val] || 0) + qty).toFixed(2));
-           }
-           
-           if (metric === 'sum' && valueField) {
-              point.total += getValue(row, valueField);
-           } else {
-              point.total++;
-           }
+
+  // --- SNAPSHOT DATA ENGINE ---
+  const snapshotData = useMemo(() => {
+    if (mode !== 'snapshot' || !currentBatch || !dimension) return [];
+
+    // 1. Filter Rows
+    const filteredRows = currentBatch.rows.filter(row => {
+       if (filters.length === 0) return true;
+       return filters.every(f => {
+          const rowVal = row[f.field];
+          const strRowVal = String(rowVal || '').toLowerCase();
+          const strFilterVal = String(f.value || '').toLowerCase();
+
+          if (f.operator === 'in') {
+              // Multi-select check
+              if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
+              return true;
+          }
+          if (f.operator === 'starts_with') return strRowVal.startsWith(strFilterVal);
+          if (f.operator === 'contains') return strRowVal.includes(strFilterVal);
+          if (f.operator === 'eq') return strRowVal === strFilterVal;
+          if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
+          if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
+          
+          return true;
+       });
+    });
+
+    // 2. Aggregation
+    const agg: Record<string, any> = {};
+    filteredRows.forEach(row => {
+      const dimVal = String(row[dimension] || 'Non défini');
+      if (!agg[dimVal]) agg[dimVal] = { name: dimVal, count: 0, distinctSet: new Set(), sum: 0 };
+
+      agg[dimVal].count++;
+      
+      if (metric === 'distinct') {
+         agg[dimVal].distinctSet.add(row.id);
+      }
+      
+      if (metric === 'sum' && valueField) {
+         agg[dimVal].sum += getValue(row, valueField);
+      }
+
+      // Segment aggregation
+      if (segment) {
+        const segVal = String(row[segment] !== undefined ? row[segment] : 'N/A');
+        if (!agg[dimVal][segVal]) agg[dimVal][segVal] = 0;
+        
+        if (metric === 'sum' && valueField) {
+           agg[dimVal][segVal] += getValue(row, valueField);
+        } else {
+           agg[dimVal][segVal]++;
+        }
+      }
+    });
+
+    // 3. Transform
+    let result = Object.values(agg).map((item: any) => {
+      const { distinctSet, ...rest } = item;
+      let finalVal = 0;
+      
+      if (metric === 'distinct') finalVal = distinctSet.size;
+      else if (metric === 'sum') finalVal = parseFloat(item.sum.toFixed(2));
+      else finalVal = item.count;
+
+      return { ...rest, value: finalVal, size: finalVal };
+    });
+
+    // 4. Sort
+    if (sortOrder === 'alpha') result.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortOrder === 'asc') result.sort((a, b) => a.value - b.value);
+    else result.sort((a, b) => b.value - a.value);
+
+    // 5. Limit
+    if (limit > 0) result = result.slice(0, limit);
+
+    // 6. Cumulative
+    if (isCumulative) {
+       let runningTotal = 0;
+       result = result.map(item => {
+          runningTotal += item.value;
+          return { ...item, cumulative: parseFloat(runningTotal.toFixed(2)) };
+       });
+    }
+
+    return result;
+  }, [mode, currentBatch, dimension, metric, valueField, segment, limit, filters, sortOrder, isCumulative, currentDataset]);
+
+  // --- TREND DATA ENGINE ---
+  const trendData = useMemo(() => {
+    if (mode !== 'trend' || !dimension) return { data: [], series: [] };
+
+    const targetBatches = batches
+       .filter(b => b.datasetId === currentDataset?.id)
+       .filter(b => b.date >= startDate && b.date <= endDate)
+       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (targetBatches.length === 0) return { data: [], series: [] };
+
+    const globalCounts: Record<string, number> = {};
+    
+    targetBatches.forEach(batch => {
+       const batchRows = batch.rows.filter(row => {
+          if (filters.length === 0) return true;
+          return filters.every(f => {
+             const rowVal = row[f.field];
+             const strRowVal = String(rowVal || '').toLowerCase();
+             const strFilterVal = String(f.value || '').toLowerCase();
+
+             if (f.operator === 'in') {
+                 if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
+                 return true;
+             }
+             if (f.operator === 'starts_with') return strRowVal.startsWith(strFilterVal);
+             if (f.operator === 'contains') return strRowVal.includes(strFilterVal);
+             if (f.operator === 'eq') return strRowVal === strFilterVal;
+             if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
+             if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
+             return true;
+          });
+       });
+
+       batchRows.forEach(row => {
+          const val = String(row[dimension] || 'Non défini');
+          let increment = 1;
+          
+          if (metric === 'sum' && valueField) {
+             increment = getValue(row, valueField);
+          }
+          
+          globalCounts[val] = (globalCounts[val] || 0) + increment;
+       });
+    });
+
+    const topSeries = Object.entries(globalCounts)
+       .sort((a, b) => b[1] - a[1])
+       .slice(0, limit)
+       .map(e => e[0]);
+
+    const timeData = targetBatches.map(batch => {
+       const batchRows = batch.rows.filter(row => {
+          if (filters.length === 0) return true;
+          return filters.every(f => {
+             const rowVal = row[f.field];
+             const strRowVal = String(rowVal || '').toLowerCase();
+             const strFilterVal = String(f.value || '').toLowerCase();
+
+             if (f.operator === 'in') {
+                 if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
+                 return true;
+             }
+             if (f.operator === 'starts_with') return strRowVal.startsWith(strFilterVal);
+             if (f.operator === 'contains') return strRowVal.includes(strFilterVal);
+             if (f.operator === 'eq') return strRowVal === strFilterVal;
+             if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
+             if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
+             return true;
+          });
+       });
+
+       const point: any = {
+          date: batch.date,
+          displayDate: formatDateFr(batch.date),
+          total: 0
+       };
+
+       topSeries.forEach(s => point[s] = 0);
+
+       batchRows.forEach(row => {
+          const val = String(row[dimension] || 'Non défini');
+          if (topSeries.includes(val)) {
+             let qty = 1;
+             if (metric === 'sum' && valueField) {
+                qty = getValue(row, valueField);
+             }
+             point[val] = parseFloat(((point[val] || 0) + qty).toFixed(2));
+          }
+          
+          if (metric === 'sum' && valueField) {
+             point.total += getValue(row, valueField);
+          } else {
+             point.total++;
+          }
        });
        
        point.total = parseFloat(point.total.toFixed(2));
@@ -601,19 +570,6 @@ export const CustomAnalytics: React.FC = () => {
   const renderVisuals = () => {
     const data = mode === 'snapshot' ? snapshotData : trendData.data;
     if (!data || data.length === 0) return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée disponible</div>;
-    
-    // Config de formatage
-    const getFormattedValue = (val: number) => {
-        if (metric === 'sum' && valueField) {
-            const config = currentDataset?.fieldConfigs?.[valueField];
-            if (config) return formatNumberValue(val, config);
-        }
-        return val.toLocaleString();
-    };
-
-    const tooltipFormatter = (val: any) => [getFormattedValue(val), metric === 'sum' ? 'Somme' : 'Volume'];
-    
-    const currentUnit = (metric === 'sum' && valueField) ? currentDataset?.fieldConfigs?.[valueField]?.unit || '' : '';
 
     // TABLE VIEW
     if (showTable) {
@@ -624,7 +580,7 @@ export const CustomAnalytics: React.FC = () => {
                    <thead className="bg-slate-50 sticky top-0">
                       <tr>
                          <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">{dimension}</th>
-                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Valeur {currentUnit ? `(${currentUnit})` : ''}</th>
+                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Valeur</th>
                          {isCumulative && <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Cumul</th>}
                       </tr>
                    </thead>
@@ -632,8 +588,8 @@ export const CustomAnalytics: React.FC = () => {
                       {snapshotData.map((row, idx) => (
                          <tr key={idx} className="hover:bg-slate-50">
                             <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.name}</td>
-                            <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{getFormattedValue(row.value)}</td>
-                            {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{getFormattedValue(row.cumulative)}</td>}
+                            <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.value.toLocaleString()}</td>
+                            {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{row.cumulative.toLocaleString()}</td>}
                          </tr>
                       ))}
                    </tbody>
@@ -647,7 +603,7 @@ export const CustomAnalytics: React.FC = () => {
                   <thead className="bg-slate-50 sticky top-0">
                      <tr>
                         <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
-                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total {currentUnit ? `(${currentUnit})` : ''}</th>
+                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total</th>
                         {trendData.series.map(s => (
                            <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">{s}</th>
                         ))}
@@ -657,9 +613,9 @@ export const CustomAnalytics: React.FC = () => {
                      {trendData.data.map((row: any, idx: number) => (
                         <tr key={idx} className="hover:bg-slate-50">
                            <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.displayDate}</td>
-                           <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{getFormattedValue(row.total)}</td>
+                           <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total.toLocaleString()}</td>
                            {trendData.series.map(s => (
-                              <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{getFormattedValue(row[s] || 0)}</td>
+                              <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>
                            ))}
                         </tr>
                      ))}
@@ -679,7 +635,7 @@ export const CustomAnalytics: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                   <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} />
                   <Legend verticalAlign="top" iconType="circle" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
                   {trendData.series.map((s, idx) => (
                      <Area key={s} type="monotone" dataKey={s} stackId="1" stroke={COLORS[idx % COLORS.length]} fill={COLORS[idx % COLORS.length]} />
@@ -694,7 +650,7 @@ export const CustomAnalytics: React.FC = () => {
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                <YAxis stroke="#94a3b8" fontSize={12} />
-               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+               <Tooltip contentStyle={tooltipStyle} />
                <Legend verticalAlign="top" iconType="circle" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
                {trendData.series.map((s, idx) => (
                   <Line key={s} type="monotone" dataKey={s} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={true} />
@@ -712,7 +668,7 @@ export const CustomAnalytics: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} fontSize={11} height={60} stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" fontSize={12} />
-              <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
+              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
               <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[4, 4, 0, 0]}>
                 {snapshotData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -728,7 +684,7 @@ export const CustomAnalytics: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
               <XAxis type="number" stroke="#94a3b8" fontSize={12} />
               <YAxis dataKey="name" type="category" width={140} tick={{fontSize: 11}} stroke="#94a3b8" />
-              <Tooltip formatter={tooltipFormatter} cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
+              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
               <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[0, 4, 4, 0]}>
                 {snapshotData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -737,20 +693,6 @@ export const CustomAnalytics: React.FC = () => {
             </BarChart>
           </ResponsiveContainer>
         );
-      case 'line':
-         return (
-            <ResponsiveContainer width="100%" height="100%">
-               <LineChart data={snapshotData} margin={{ top: 20, right: 30, left: 10, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} fontSize={11} stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
-                  <Legend verticalAlign="top" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
-                  <Line type="monotone" dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} stroke={COLORS[0]} strokeWidth={2} activeDot={{ r: 6 }} />
-                  {isCumulative && <Line type="monotone" dataKey="cumulative" name="Cumul" stroke="#82ca9d" strokeDasharray="5 5" />}
-               </LineChart>
-            </ResponsiveContainer>
-         );
       case 'pie':
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -770,7 +712,7 @@ export const CustomAnalytics: React.FC = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
             </PieChart>
           </ResponsiveContainer>
@@ -782,7 +724,7 @@ export const CustomAnalytics: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{fontSize: 11}} stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" fontSize={12} />
-              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Area type="monotone" dataKey={isCumulative ? "cumulative" : "value"} stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.2} />
             </AreaChart>
           </ResponsiveContainer>
@@ -795,7 +737,7 @@ export const CustomAnalytics: React.FC = () => {
               <PolarAngleAxis dataKey="name" tick={{fontSize: 11, fill: '#64748b'}} />
               <PolarRadiusAxis stroke="#cbd5e1" />
               <Radar name={metric === 'sum' ? 'Somme' : 'Volume'} dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.3} />
-              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} />
             </RadarChart>
           </ResponsiveContainer>
         );
@@ -822,7 +764,7 @@ export const CustomAnalytics: React.FC = () => {
                   );
               }}
             >
-              <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} />
             </Treemap>
           </ResponsiveContainer>
         );
@@ -832,8 +774,8 @@ export const CustomAnalytics: React.FC = () => {
               {snapshotData.map((item, idx) => (
                 <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col items-center justify-center text-center">
                    <div className="text-xs text-slate-500 uppercase font-bold truncate w-full mb-2" title={item.name}>{item.name}</div>
-                   <div className="text-2xl font-bold text-slate-700">{getFormattedValue(item.value)}</div>
-                   {isCumulative && <div className="text-xs text-slate-400 mt-1">Cumul: {getFormattedValue(item.cumulative)}</div>}
+                   <div className="text-2xl font-bold text-slate-700">{item.value.toLocaleString()}</div>
+                   {isCumulative && <div className="text-xs text-slate-400 mt-1">Cumul: {item.cumulative.toLocaleString()}</div>}
                 </div>
               ))}
            </div>
@@ -856,14 +798,22 @@ export const CustomAnalytics: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] gap-4">
+    <div className="flex flex-col h-[calc(100vh-8rem)] gap-4 relative">
       
+      {/* Success Notification */}
+      {successMessage && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2 fade-in">
+              <Check className="w-4 h-4" />
+              <span className="text-sm font-medium">{successMessage}</span>
+          </div>
+      )}
+
       {/* HEADER & MODE SELECTOR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0 gap-4">
         <div className="flex items-center gap-2">
            <Settings2 className="w-6 h-6 text-slate-500" />
            <div>
-              <h2 className="text-xl font-bold text-slate-800">Création de graphiques</h2>
+              <h2 className="text-xl font-bold text-slate-800">Studio d'Analyse</h2>
               <p className="text-xs text-slate-500">Typologie : {currentDataset.name}</p>
            </div>
         </div>
@@ -885,69 +835,48 @@ export const CustomAnalytics: React.FC = () => {
         </div>
         
         {/* Right Controls */}
-        <div className="w-full xl:w-auto flex flex-wrap items-center gap-2">
-           
-           {/* Load Saved Analysis */}
-           <div className="relative">
-              <select
-                  className="bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[150px]"
-                  onChange={(e) => {
-                     if (e.target.value) handleLoadAnalysis(e.target.value);
-                     e.target.value = ""; // Reset after selection
-                  }}
-                  defaultValue=""
-              >
-                  <option value="" disabled>Vues enregistrées...</option>
-                  {availableAnalyses.length === 0 && <option disabled>Aucune vue.</option>}
-                  {availableAnalyses.map(a => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-              </select>
-           </div>
-           
-           {/* Export to Dashboard Button (NEW) */}
-           <button 
-              onClick={handleExportToDashboard}
-              className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
-              title="Exporter vers le tableau de bord"
-           >
-              <LayoutDashboard className="w-4 h-4" />
-           </button>
+        <div className="flex items-center gap-2 w-full xl:w-auto">
+             
+             {/* Load Saved Views */}
+             <div className="relative">
+                <select
+                    className="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[130px]"
+                    onChange={(e) => { if (e.target.value) handleLoadAnalysis(e.target.value); e.target.value = ""; }}
+                    defaultValue=""
+                >
+                    <option value="" disabled>Vues sauvegardées...</option>
+                    {availableAnalyses.length === 0 && <option disabled>Aucune vue.</option>}
+                    {availableAnalyses.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+             </div>
 
-           {/* Save Button */}
-           {!isSaving ? (
-               <button 
-                  onClick={() => setIsSaving(true)}
-                  className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
-                  title="Enregistrer cette analyse"
-               >
-                  <Save className="w-4 h-4" />
-               </button>
-           ) : (
-               <div className="flex items-center gap-1 animate-in fade-in">
-                  <input 
-                     type="text" 
-                     className="p-1.5 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 w-32 bg-white text-slate-900"
-                     placeholder="Nom de la vue..."
-                     value={analysisName}
-                     onChange={e => setAnalysisName(e.target.value)}
-                     autoFocus
-                  />
-                  <button onClick={handleSaveAnalysis} className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700">
-                     <Check className="w-3 h-3" />
-                  </button>
-                  <button onClick={() => setIsSaving(false)} className="p-1.5 bg-slate-200 text-slate-600 rounded hover:bg-slate-300">
-                     <X className="w-3 h-3" />
-                  </button>
-               </div>
-           )}
+             {/* Save View Button */}
+             {!isSaving ? (
+                 <button onClick={() => setIsSaving(true)} className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50" title="Enregistrer cette vue">
+                    <Save className="w-5 h-5" />
+                 </button>
+             ) : (
+                 <div className="flex items-center gap-1 animate-in fade-in bg-white border border-blue-300 rounded-md p-0.5">
+                    <input type="text" className="p-1.5 text-xs border-none focus:ring-0 w-32 bg-transparent text-slate-900" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
+                    <button onClick={handleSaveAnalysis} className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700"><Check className="w-3 h-3" /></button>
+                    <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300"><X className="w-3 h-3" /></button>
+                 </div>
+             )}
 
-           <div className="h-6 w-px bg-slate-300 mx-1 hidden xl:block"></div>
+             <div className="h-6 w-px bg-slate-300 mx-1"></div>
+
+             <button
+                onClick={handleExportToDashboard}
+                className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
+                title="Ajouter au tableau de bord"
+            >
+                <LayoutDashboard className="w-5 h-5" />
+            </button>
 
            {mode === 'snapshot' ? (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 w-full xl:w-auto ml-2">
                  <select 
-                    className="flex-1 sm:flex-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 min-w-[160px]"
+                    className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 min-w-[200px]"
                     value={selectedBatchId}
                     onChange={(e) => setSelectedBatchId(e.target.value)}
                   >
@@ -955,19 +884,20 @@ export const CustomAnalytics: React.FC = () => {
                  </select>
               </div>
            ) : (
-              <div className="flex flex-wrap items-center gap-2 flex-1 p-1">
+              <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto p-1 ml-2">
                  <CalendarRange className="w-4 h-4 text-slate-500" />
                  <input 
                     type="date" 
                     value={startDate} 
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700 w-32"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
                  />
+                 <span className="text-slate-400 text-sm">à</span>
                  <input 
                     type="date" 
                     value={endDate} 
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="text-sm border border-slate-300 rounded p-1.5 bg-white text-slate-700 w-32"
+                    className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
                  />
               </div>
            )}
@@ -985,7 +915,7 @@ export const CustomAnalytics: React.FC = () => {
                 className="text-xs text-blue-600 hover:underline disabled:text-slate-400"
                 disabled={filters.length === 0}
               >
-                Réinitialiser filtres
+                Reset Filtres
               </button>
            </div>
            
@@ -1057,33 +987,57 @@ export const CustomAnalytics: React.FC = () => {
                     2. Filtres ({filters.length})
                  </label>
                  
-                 <div className="space-y-2 mb-2">
+                 <div className="space-y-3 mb-3">
                     {filters.map((filter, idx) => (
-                       <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 text-xs space-y-1 relative group">
+                       <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 text-xs space-y-2 relative group">
                           <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500">
                              <X className="w-3 h-3" />
                           </button>
                           
                           {/* Field Selector */}
                           <select 
-                             className="w-full bg-white border border-slate-200 rounded px-1 py-1 mb-1"
+                             className="w-full bg-white border border-slate-200 rounded px-1 py-1"
                              value={filter.field}
-                             onChange={(e) => updateFilterField(idx, e.target.value)}
+                             onChange={(e) => updateFilter(idx, { field: e.target.value })}
                           >
                              {fields.map(f => <option key={f} value={f}>{f}</option>)}
                           </select>
+
+                          {/* Operator Selector */}
+                          <select 
+                             className="w-full bg-white border border-slate-200 rounded px-1 py-1 font-medium text-indigo-700"
+                             value={filter.operator || 'in'}
+                             onChange={(e) => updateFilter(idx, { operator: e.target.value as any })}
+                          >
+                             <option value="in">Est égal à / Dans</option>
+                             <option value="starts_with">Commence par</option>
+                             <option value="contains">Contient</option>
+                             <option value="gt">Supérieur à (&gt;)</option>
+                             <option value="lt">Inférieur à (&lt;)</option>
+                             <option value="eq">Égal à (= strict)</option>
+                          </select>
                           
-                          {/* Multi Select Values */}
-                          <MultiSelect 
-                             options={getDistinctValuesForField(filter.field)}
-                             selected={filter.values}
-                             onChange={(newValues) => updateFilterValues(idx, newValues)}
-                             placeholder="Sélectionner valeurs..."
-                          />
+                          {/* Value Input (Dynamic based on operator) */}
+                          {(!filter.operator || filter.operator === 'in') ? (
+                              <MultiSelect 
+                                 options={getDistinctValuesForField(filter.field)}
+                                 selected={Array.isArray(filter.value) ? filter.value : []}
+                                 onChange={(newValues) => updateFilter(idx, { value: newValues })}
+                                 placeholder="Sélectionner valeurs..."
+                              />
+                          ) : (
+                              <input 
+                                type={['gt', 'lt'].includes(filter.operator) ? "number" : "text"}
+                                className="w-full bg-white border border-slate-200 rounded px-2 py-1"
+                                placeholder="Valeur..."
+                                value={filter.value}
+                                onChange={(e) => updateFilter(idx, { value: e.target.value })}
+                              />
+                          )}
                        </div>
                     ))}
                  </div>
-                 <button onClick={addFilter} className="text-xs text-blue-600 flex items-center hover:text-blue-800 font-medium">
+                 <button onClick={addFilter} className="text-xs text-blue-600 flex items-center hover:text-blue-800 font-medium border border-dashed border-blue-300 rounded w-full justify-center py-1.5 hover:bg-blue-50">
                     <Filter className="w-3 h-3 mr-1" /> Ajouter un filtre
                  </button>
               </div>
@@ -1100,7 +1054,7 @@ export const CustomAnalytics: React.FC = () => {
                              { id: 'bar', icon: BarChart3, label: 'Barres', rotate: 90 },
                              { id: 'column', icon: BarChart3, label: 'Histo' },
                              { id: 'pie', icon: PieIcon, label: 'Donut' },
-                             { id: 'area', icon: Activity, label: 'Courbe' },
+                             { id: 'area', icon: TrendingUp, label: 'Aire' },
                              { id: 'radar', icon: RadarIcon, label: 'Radar' },
                              { id: 'treemap', icon: LayoutGrid, label: 'Carte' },
                              { id: 'kpi', icon: Activity, label: 'KPI' },
@@ -1157,15 +1111,16 @@ export const CustomAnalytics: React.FC = () => {
                              <option value="alpha">Alphabétique</option>
                           </select>
                        )}
-                       <select 
-                          className="w-24 text-xs border border-slate-200 rounded p-1.5 bg-slate-50"
-                          value={limit}
-                          onChange={(e) => setLimit(Number(e.target.value))}
-                       >
-                          <option value="5">Top 5</option>
-                          <option value="10">Top 10</option>
-                          <option value="20">Top 20</option>
-                       </select>
+                       <div className="flex items-center border border-slate-200 rounded bg-white px-2 w-28">
+                           <span className="text-xs text-slate-400 mr-1">Top:</span>
+                           <input 
+                              type="number"
+                              className="w-full text-xs border-none p-1.5 focus:ring-0"
+                              value={limit}
+                              onChange={(e) => setLimit(Number(e.target.value))}
+                              placeholder="N"
+                           />
+                       </div>
                     </div>
                  </div>
 

@@ -1,6 +1,7 @@
 
+
 import { parseSmartNumber, getGroupedLabel, detectColumnType, formatNumberValue } from '../utils';
-import { FieldConfig, Dataset } from '../types';
+import { FieldConfig, Dataset, FilterRule } from '../types';
 
 // Types spécifiques au moteur
 export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
@@ -25,7 +26,7 @@ export interface PivotConfig {
   colGrouping: DateGrouping;
   valField: string;
   aggType: AggregationType;
-  filters: { field: string, values: string[] }[];
+  filters: FilterRule[]; // NEW: Uses FilterRule instead of simplified structure
   sortBy: SortBy;
   sortOrder: SortOrder;
   showSubtotals: boolean;
@@ -54,12 +55,38 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   if (rows.length === 0 || rowFields.length === 0) return null;
 
-  // 1. Filtrage (Support multi-valeurs)
+  // 1. Filtrage (Support opérateurs avancés)
   const filteredRows = rows.filter(row => {
-    if (filters.length === 0) return true;
+    if (!filters || filters.length === 0) return true;
+    
     return filters.every(f => {
-       if (f.values.length === 0) return true;
-       return f.values.includes(String(row[f.field]));
+       const rowVal = row[f.field];
+       const strRowVal = String(rowVal || '').toLowerCase();
+       const strFilterVal = String(f.value || '').toLowerCase();
+
+       // Backward compatibility for array values (IN operator implicit)
+       if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
+           if (f.value.length === 0) return true;
+           return f.value.includes(String(rowVal));
+       }
+
+       switch (f.operator) {
+           case 'in':
+               if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
+               return true;
+           case 'starts_with':
+               return strRowVal.startsWith(strFilterVal);
+           case 'contains':
+               return strRowVal.includes(strFilterVal);
+           case 'eq':
+               return strRowVal === strFilterVal;
+           case 'gt':
+               return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
+           case 'lt':
+               return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
+           default:
+               return true;
+       }
     });
   });
 

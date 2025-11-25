@@ -80,6 +80,13 @@ export interface PivotStyleRule {
   };
 }
 
+// --- FILTRES AVANCÉS (NOUVEAU) ---
+export interface FilterRule {
+  field: string;
+  operator: 'in' | 'starts_with' | 'contains' | 'gt' | 'lt' | 'eq';
+  value: any; // Array for 'in', string/number for others
+}
+
 // --- ETATS PERSISTANTS (PERSISTENCE) ---
 export interface PivotState {
   datasetId: string;
@@ -94,8 +101,9 @@ export interface AnalyticsState {
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
 
 export type WidgetType = 'kpi' | 'chart' | 'list' | 'text'; // Ajout de 'text'
-export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel';
+export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full'; // 1 col, 2 cols, 3 cols, 4 cols
+export type WidgetHeight = 'sm' | 'md' | 'lg' | 'xl'; // Hauteur : sm=h-32, md=h-64, lg=h-96, xl=h-[500px]
 export type KpiStyle = 'simple' | 'trend' | 'progress';
 
 export interface SecondarySourceConfig {
@@ -119,6 +127,7 @@ export interface WidgetConfig {
   metric: 'count' | 'sum' | 'avg' | 'distinct';
   dimension?: string; // Champ utilisé pour l'axe X ou le groupement
   valueField?: string; // Champ utilisé pour le calcul (si sum/avg)
+  limit?: number; // Top N (5, 10, 20...)
   
   // Visual Config
   chartType?: ChartType;
@@ -144,6 +153,7 @@ export interface DashboardWidget {
   title: string;
   type: WidgetType;
   size: WidgetSize;
+  height?: WidgetHeight; // Nouvelle propriété de hauteur
   config: WidgetConfig;
 }
 
