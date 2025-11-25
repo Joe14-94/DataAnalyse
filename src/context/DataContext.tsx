@@ -2,18 +2,14 @@ import React, { useState, useEffect, useCallback, useRef, useContext } from 'rea
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
 import { APP_VERSION, generateSyntheticData, db, generateId } from '../utils';
 
-import { DatasetContext } from './DatasetContext';
-import { BatchContext } from './BatchContext';
-import { WidgetContext } from './WidgetContext';
-import { AnalyticsContext } from './AnalyticsContext';
-import { PersistenceContext } from './PersistenceContext';
+import { DatasetContext, useDatasets } from './DatasetContext';
+import { BatchContext, useBatches } from './BatchContext';
+import { WidgetContext, useWidgets } from './WidgetContext';
+import { AnalyticsContext, useAnalytics } from './AnalyticsContext';
+import { PersistenceContext, usePersistence } from './PersistenceContext';
 
-// Re-export hooks for consumers
-export { useDatasets } from './DatasetContext';
-export { useBatches } from './BatchContext';
-export { useWidgets } from './WidgetContext';
-export { useAnalytics } from './AnalyticsContext';
-export { usePersistence } from './PersistenceContext';
+// Explicitly export hooks to avoid re-export issues
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';

@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
 import { APP_VERSION, generateSyntheticData, db } from '../utils';
@@ -565,4 +563,49 @@ export const useData = () => {
     throw new Error("useData must be used within a DataProvider");
   }
   return context;
+};
+
+export const useDatasets = () => {
+  const context = useData();
+  return {
+    datasets: context.datasets,
+    currentDataset: context.currentDataset,
+    currentDatasetId: context.currentDatasetId,
+    switchDataset: context.switchDataset,
+    createDataset: context.createDataset,
+    updateDatasetName: context.updateDatasetName,
+    deleteDataset: context.deleteDataset,
+    deleteDatasetField: context.deleteDatasetField,
+    renameDatasetField: context.renameDatasetField,
+    addFieldToDataset: context.addFieldToDataset,
+    updateDatasetConfigs: context.updateDatasetConfigs,
+    addCalculatedField: context.addCalculatedField,
+    removeCalculatedField: context.removeCalculatedField
+  };
+};
+
+export const useBatches = () => {
+  const context = useData();
+  return {
+    batches: context.batches,
+    filteredBatches: context.filteredBatches,
+    addBatch: context.addBatch,
+    deleteBatch: context.deleteBatch,
+    deleteBatchRow: context.deleteBatchRow
+  };
+};
+
+export const useWidgets = () => {
+  const context = useData();
+  return {
+    dashboardWidgets: context.dashboardWidgets,
+    dashboardFilters: context.dashboardFilters,
+    addDashboardWidget: context.addDashboardWidget,
+    updateDashboardWidget: context.updateDashboardWidget,
+    removeDashboardWidget: context.removeDashboardWidget,
+    moveDashboardWidget: context.moveDashboardWidget,
+    resetDashboard: context.resetDashboard,
+    setDashboardFilter: context.setDashboardFilter,
+    clearDashboardFilters: context.clearDashboardFilters
+  };
 };

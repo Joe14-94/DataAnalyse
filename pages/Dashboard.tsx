@@ -1,6 +1,7 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { useData } from '../context/DataContext';
+import { useWidgets, useBatches, useDatasets } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
 import { 
@@ -12,7 +13,7 @@ import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
   Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
-  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, Eye, PaintBucket
 } from 'lucide-react';
 import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle, WidgetHeight } from '../types';
 
@@ -20,10 +21,28 @@ import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Datas
 
 const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6'];
 
+const BORDER_COLORS = [
+  { label: 'Gris (Défaut)', class: 'border-slate-200', bg: 'bg-slate-200' },
+  { label: 'Bleu', class: 'border-blue-200', bg: 'bg-blue-200' },
+  { label: 'Rouge', class: 'border-red-200', bg: 'bg-red-200' },
+  { label: 'Vert', class: 'border-green-200', bg: 'bg-green-200' },
+  { label: 'Orange', class: 'border-amber-200', bg: 'bg-amber-200' },
+  { label: 'Violet', class: 'border-indigo-200', bg: 'bg-indigo-200' },
+];
+
+const BORDER_WIDTHS = [
+  { label: 'Aucune', value: '0' },
+  { label: 'Fine', value: '1' },
+  { label: 'Moyenne', value: '2' },
+  { label: 'Épaisse', value: '4' },
+];
+
 // --- DATA PROCESSING ENGINE ---
 
 const useWidgetData = (widget: DashboardWidget) => {
-   const { batches, datasets, dashboardFilters } = useData();
+   const { batches } = useBatches();
+   const { datasets } = useDatasets();
+   const { dashboardFilters } = useWidgets();
 
    return useMemo(() => {
       // TEXT WIDGET BYPASS
@@ -234,7 +253,7 @@ const useWidgetData = (widget: DashboardWidget) => {
 // --- SUB COMPONENTS ---
 
 const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widget, data }) => {
-   const { setDashboardFilter } = useData();
+   const { setDashboardFilter } = useWidgets();
    
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-xs">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-400 text-xs">{data.error}</div>;
@@ -349,7 +368,6 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    const { chartType } = widget.config;
    
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
-   const axisFormatter = (val: any) => `${val.toLocaleString()} ${unit || ''}`;
    
    // Default explicit white tooltip style to override any potential dark defaults
    const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
@@ -556,24 +574,48 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    );
 };
 
+// --- LIVE PREVIEW COMPONENT ---
+const LivePreview: React.FC<{ widget: DashboardWidget }> = ({ widget }) => {
+   const data = useWidgetData(widget);
+   const isText = widget.type === 'text';
+   const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white';
+   
+   // Style dynamique du conteneur
+   const borderClass = widget.style?.borderColor || 'border-slate-200';
+   const widthClass = widget.style?.borderWidth ? `border-${widget.style.borderWidth}` : 'border';
+   
+   return (
+      <div className={`w-full h-full rounded-lg ${borderClass} ${widthClass} shadow-sm p-4 flex flex-col ${bgColor} relative`}>
+         {/* Fake Title */}
+         <h3 className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider truncate">
+            {widget.title || 'Titre du widget'}
+         </h3>
+         <div className="flex-1 min-h-0 relative">
+            <WidgetDisplay widget={widget} data={data} />
+         </div>
+      </div>
+   );
+};
+
 // --- MAIN COMPONENT ---
 
 export const Dashboard: React.FC = () => {
   const { 
      dashboardWidgets, addDashboardWidget, removeDashboardWidget, 
-     updateDashboardWidget, moveDashboardWidget, datasets,
-     dashboardFilters, clearDashboardFilters, setDashboardFilter
-  } = useData();
+     updateDashboardWidget, moveDashboardWidget, dashboardFilters, clearDashboardFilters, setDashboardFilter
+  } = useWidgets();
+  const { datasets } = useDatasets();
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
 
-  // Modal New/Edit Widget
-  const [showModal, setShowModal] = useState(false);
+  // Drawer (ex-Modal) State
+  const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
   const [tempWidget, setTempWidget] = useState<Partial<DashboardWidget>>({
      type: 'kpi',
      size: 'sm',
      height: 'md',
+     style: { borderColor: 'border-slate-200', borderWidth: '1' },
      config: { metric: 'count' }
   });
 
@@ -588,9 +630,9 @@ export const Dashboard: React.FC = () => {
      } else {
         addDashboardWidget(tempWidget as any);
      }
-     setShowModal(false);
+     setShowWidgetDrawer(false);
      setEditingWidgetId(null);
-     setTempWidget({ type: 'kpi', size: 'sm', height: 'md', config: { metric: 'count' } });
+     setTempWidget({ type: 'kpi', size: 'sm', height: 'md', style: { borderColor: 'border-slate-200', borderWidth: '1' }, config: { metric: 'count' } });
   };
 
   const openNewWidget = () => {
@@ -600,18 +642,19 @@ export const Dashboard: React.FC = () => {
         type: 'kpi',
         size: 'sm',
         height: 'md',
+        style: { borderColor: 'border-slate-200', borderWidth: '1' },
         config: {
            metric: 'count',
            source: datasets.length > 0 ? { datasetId: datasets[0].id, mode: 'latest' } : undefined
         }
      });
-     setShowModal(true);
+     setShowWidgetDrawer(true);
   };
 
   const openEditWidget = (w: DashboardWidget) => {
      setEditingWidgetId(w.id);
-     setTempWidget({ ...w });
-     setShowModal(true);
+     setTempWidget({ ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } });
+     setShowWidgetDrawer(true);
   };
 
   const availableFields = useMemo(() => {
@@ -646,8 +689,30 @@ export const Dashboard: React.FC = () => {
       }
   };
 
+  // Preview container dynamic width class
+  const getPreviewContainerWidth = (size?: WidgetSize) => {
+      switch(size) {
+          case 'sm': return 'max-w-[300px]';
+          case 'md': return 'max-w-[600px]';
+          case 'lg': return 'max-w-[900px]';
+          case 'full': return 'max-w-full';
+          default: return 'max-w-[400px]';
+      }
+  };
+
+  // Preview container dynamic height style
+  const getPreviewContainerHeight = (h?: WidgetHeight) => {
+      switch (h) {
+          case 'sm': return '128px';
+          case 'md': return '256px';
+          case 'lg': return '384px';
+          case 'xl': return '500px';
+          default: return '256px';
+      }
+  };
+
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
+    <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar relative">
       <div className="max-w-7xl mx-auto space-y-6 pb-12">
          
          {/* Header */}
@@ -692,15 +757,7 @@ export const Dashboard: React.FC = () => {
                      <span className="text-xs font-bold text-slate-800">{String(value)}</span>
                      <button 
                         onClick={() => {
-                           const newF = {...dashboardFilters};
-                           delete newF[field];
-                           if(Object.keys(newF).length === 0) clearDashboardFilters();
-                           else {
-                               // Since setDashboardFilter only sets, clear all is safest for now
-                               // to respect current context limitations. 
-                               // Or implement granular remove in context (future task).
-                               clearDashboardFilters(); 
-                           }
+                           clearDashboardFilters(); 
                         }}
                         className="ml-2 text-slate-400 hover:text-red-500"
                      >
@@ -738,11 +795,15 @@ export const Dashboard: React.FC = () => {
                   const WidgetWrapper = () => {
                      const data = useWidgetData(widget);
                      const isText = widget.type === 'text';
-                     const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200';
+                     const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white';
                      const heightClass = getHeightClass(widget.height);
+                     
+                     // Dynamic Styles
+                     const borderClass = widget.style?.borderColor || 'border-slate-200';
+                     const widthClass = widget.style?.borderWidth ? `border-${widget.style.borderWidth}` : 'border';
 
                      return (
-                        <div className={`${bgColor} rounded-lg border ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
+                        <div className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
                            {isEditMode && (
                               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded shadow-sm z-10">
                                  <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowLeft className="w-3 h-3" /></button>
@@ -774,24 +835,46 @@ export const Dashboard: React.FC = () => {
          )}
       </div>
 
-      {/* MODAL */}
-      {showModal && (
-         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-slate-800">
-                     {editingWidgetId ? 'Modifier le widget' : 'Nouveau widget'}
-                  </h3>
-                  <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+      {/* FULL SCREEN EDITOR (SPLIT VIEW) */}
+      {showWidgetDrawer && (
+         <div className="fixed inset-0 z-50 flex bg-slate-50">
+            
+            {/* LEFT SIDE: LIVE PREVIEW */}
+            <div className="flex-1 bg-slate-100 flex flex-col overflow-hidden relative border-r border-slate-200">
+               <div className="absolute top-4 left-4 bg-white/80 backdrop-blur rounded-full px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm border border-slate-200 flex items-center gap-2 z-10">
+                  <Eye className="w-3 h-3 text-blue-600" /> Aperçu temps réel
+               </div>
+               
+               <div className="flex-1 overflow-auto flex items-center justify-center p-8">
+                  <div 
+                     className={`w-full transition-all duration-300 ${getPreviewContainerWidth(tempWidget.size)}`}
+                     style={{ height: getPreviewContainerHeight(tempWidget.height) }}
+                  >
+                     {/* Use LivePreview component to properly use hooks */}
+                     <LivePreview widget={tempWidget as DashboardWidget} />
+                  </div>
+               </div>
+            </div>
+
+            {/* RIGHT SIDE: CONFIGURATION DRAWER */}
+            <div className="w-[500px] bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                     <h3 className="text-xl font-bold text-slate-800">
+                        {editingWidgetId ? 'Modifier le widget' : 'Nouveau widget'}
+                     </h3>
+                     <p className="text-sm text-slate-500">Configuration de l'affichage</p>
+                  </div>
+                  <button onClick={() => setShowWidgetDrawer(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-white rounded-full transition-colors">
                      <X className="w-6 h-6" />
                   </button>
                </div>
                
-               <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+               <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-8">
                   
                   {/* 0. Type Selector (Top Level) */}
                   <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-2">Type de visualisation</label>
+                     <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">Type de visualisation</label>
                      <div className="grid grid-cols-4 gap-3">
                         {[
                            { id: 'kpi', label: 'Indicateur', icon: Activity },
@@ -805,67 +888,71 @@ export const Dashboard: React.FC = () => {
                               <button 
                                  key={t.id}
                                  onClick={() => setTempWidget({...tempWidget, type: t.id as WidgetType})}
-                                 className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all
-                                    ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                                 className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all
+                                    ${isSelected ? 'bg-blue-50 text-blue-700 border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:bg-slate-50'}`}
                               >
-                                 <Icon className="w-5 h-5" />
-                                 <span className="font-medium text-xs">{t.label}</span>
+                                 <Icon className="w-6 h-6" />
+                                 <span className="font-bold text-xs">{t.label}</span>
                               </button>
                            )
                         })}
                      </div>
                   </div>
 
-                  <div className="border-t border-slate-100 pt-4"></div>
+                  <div className="border-t border-slate-100"></div>
 
                   {/* 1. General Info & Source (Common) */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className={tempWidget.type === 'text' ? 'col-span-2' : ''}>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Titre du widget</label>
-                        <input 
-                           type="text" 
-                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                           value={tempWidget.title || ''}
-                           onChange={e => setTempWidget({...tempWidget, title: e.target.value})}
-                           placeholder="Ex: Budget vs Charge"
-                        />
-                     </div>
-                     
-                     <div className={tempWidget.type === 'text' ? 'hidden' : 'grid grid-cols-2 gap-2'}>
-                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Largeur</label>
-                            <select 
-                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                               value={tempWidget.size || 'sm'}
-                               onChange={e => setTempWidget({...tempWidget, size: e.target.value as WidgetSize})}
-                            >
-                               <option value="sm">Petit (1/4)</option>
-                               <option value="md">Moyen (2/4)</option>
-                               <option value="lg">Grand (3/4)</option>
-                               <option value="full">Large (4/4)</option>
-                            </select>
-                         </div>
-                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Hauteur</label>
-                            <select 
-                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-                               value={tempWidget.height || 'md'}
-                               onChange={e => setTempWidget({...tempWidget, height: e.target.value as WidgetHeight})}
-                            >
-                               <option value="sm">Petite (128px)</option>
-                               <option value="md">Moyenne (256px)</option>
-                               <option value="lg">Grande (384px)</option>
-                               <option value="xl">Très grande (500px)</option>
-                            </select>
-                         </div>
+                  <div className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className={tempWidget.type === 'text' ? 'col-span-2' : ''}>
+                           <label className="block text-sm font-bold text-slate-700 mb-1">Titre</label>
+                           <input 
+                              type="text" 
+                              className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
+                              value={tempWidget.title || ''}
+                              onChange={e => setTempWidget({...tempWidget, title: e.target.value})}
+                              placeholder="Ex: Budget vs Charge"
+                           />
+                        </div>
+                        
+                        {tempWidget.type !== 'text' && (
+                           <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                 <label className="block text-sm font-bold text-slate-700 mb-1">Largeur</label>
+                                 <select 
+                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
+                                    value={tempWidget.size || 'sm'}
+                                    onChange={e => setTempWidget({...tempWidget, size: e.target.value as WidgetSize})}
+                                 >
+                                    <option value="sm">Petit (1/4)</option>
+                                    <option value="md">Moyen (2/4)</option>
+                                    <option value="lg">Grand (3/4)</option>
+                                    <option value="full">Large (4/4)</option>
+                                 </select>
+                              </div>
+                              <div>
+                                 <label className="block text-sm font-bold text-slate-700 mb-1">Hauteur</label>
+                                 <select 
+                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
+                                    value={tempWidget.height || 'md'}
+                                    onChange={e => setTempWidget({...tempWidget, height: e.target.value as WidgetHeight})}
+                                 >
+                                    <option value="sm">Petite (128px)</option>
+                                    <option value="md">Moyenne (256px)</option>
+                                    <option value="lg">Grande (384px)</option>
+                                    <option value="xl">Très grande (500px)</option>
+                                 </select>
+                              </div>
+                           </div>
+                        )}
                      </div>
 
                      {/* Hide Source selector for Text Widgets */}
                      {tempWidget.type !== 'text' && (
-                         <div className="col-span-2 md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Source de données</label>
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Source de données</label>
                             <select 
-                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
                                value={tempWidget.config?.source?.datasetId || ''}
                                onChange={e => setTempWidget({
                                   ...tempWidget, 
@@ -878,11 +965,56 @@ export const Dashboard: React.FC = () => {
                      )}
                   </div>
 
+                  {/* --- APPEARANCE SECTION (BORDER) --- */}
+                  <div className="bg-white p-4 rounded-lg border border-slate-200 space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                          <PaintBucket className="w-4 h-4 text-purple-600" />
+                          Apparence du conteneur
+                      </div>
+                      <div className="space-y-3">
+                          {/* Colors */}
+                          <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-2">Couleur de bordure</label>
+                              <div className="flex flex-wrap gap-2">
+                                  {BORDER_COLORS.map(c => {
+                                      const isActive = (tempWidget.style?.borderColor || 'border-slate-200') === c.class;
+                                      return (
+                                          <button 
+                                              key={c.class} 
+                                              onClick={() => setTempWidget({ ...tempWidget, style: { ...tempWidget.style, borderColor: c.class } })}
+                                              className={`w-8 h-8 rounded-full border-2 ${c.bg} transition-transform hover:scale-110 ${isActive ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'border-transparent'}`}
+                                              title={c.label}
+                                          />
+                                      )
+                                  })}
+                              </div>
+                          </div>
+                          {/* Width */}
+                          <div>
+                              <label className="block text-xs font-medium text-slate-500 mb-2">Épaisseur de bordure</label>
+                              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                                  {BORDER_WIDTHS.map(w => {
+                                      const isActive = (tempWidget.style?.borderWidth || '1') === w.value;
+                                      return (
+                                          <button
+                                              key={w.value}
+                                              onClick={() => setTempWidget({ ...tempWidget, style: { ...tempWidget.style, borderWidth: w.value as any } })}
+                                              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${isActive ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                          >
+                                              {w.label}
+                                          </button>
+                                      )
+                                  })}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
                   {/* --- CONDITIONAL CONFIG: TEXT WIDGET --- */}
                   {tempWidget.type === 'text' && (
-                     <div className="space-y-4 animate-in fade-in">
+                     <div className="space-y-4 animate-in fade-in bg-slate-50 p-4 rounded-lg border border-slate-200">
                         <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-1">Contenu du texte</label>
+                           <label className="block text-sm font-bold text-slate-700 mb-1">Contenu du texte</label>
                            <textarea 
                               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 min-h-[150px]"
                               placeholder="Saisissez votre texte ici..."
@@ -892,7 +1024,7 @@ export const Dashboard: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">Alignement</label>
+                              <label className="block text-xs font-bold text-slate-700 mb-1">Alignement</label>
                               <select 
                                  className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2 text-sm"
                                  value={tempWidget.config?.textStyle?.align || 'left'}
@@ -904,7 +1036,7 @@ export const Dashboard: React.FC = () => {
                               </select>
                            </div>
                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">Taille</label>
+                              <label className="block text-xs font-bold text-slate-700 mb-1">Taille</label>
                               <select 
                                  className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2 text-sm"
                                  value={tempWidget.config?.textStyle?.size || 'normal'}
@@ -916,7 +1048,7 @@ export const Dashboard: React.FC = () => {
                               </select>
                            </div>
                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">Couleur</label>
+                              <label className="block text-xs font-bold text-slate-700 mb-1">Couleur</label>
                               <select 
                                  className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2 text-sm"
                                  value={tempWidget.config?.textStyle?.color || 'default'}
@@ -1023,14 +1155,14 @@ export const Dashboard: React.FC = () => {
                         </div>
 
                         {/* 3. Specific Config based on Type */}
-                        <div className="border-t border-slate-100 pt-4 space-y-4">
+                        <div className="space-y-6">
                            
                            {/* Metric Config */}
                            <div className="grid grid-cols-2 gap-4">
                               <div>
-                                 <label className="block text-sm font-medium text-slate-700 mb-1">Métrique</label>
+                                 <label className="block text-sm font-bold text-slate-700 mb-1">Métrique</label>
                                  <select 
-                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                    className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
                                     value={tempWidget.config?.metric}
                                     onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, metric: e.target.value as any }})}
                                  >
@@ -1042,9 +1174,9 @@ export const Dashboard: React.FC = () => {
                               </div>
                               {['sum', 'avg', 'distinct'].includes(tempWidget.config?.metric || '') && (
                                  <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Champ valeur</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Champ valeur</label>
                                     <select 
-                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
                                        value={tempWidget.config?.valueField || ''}
                                        onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, valueField: e.target.value }})}
                                     >
@@ -1059,9 +1191,9 @@ export const Dashboard: React.FC = () => {
                            {(tempWidget.type === 'chart' || tempWidget.type === 'list') && (
                               <div className="grid grid-cols-2 gap-4">
                                  <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Axe de regroupement (Dimension)</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Axe de regroupement</label>
                                     <select 
-                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
                                        value={tempWidget.config?.dimension || ''}
                                        onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value }})}
                                     >
@@ -1070,10 +1202,10 @@ export const Dashboard: React.FC = () => {
                                     </select>
                                  </div>
                                  <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Limite (Top N)</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Limite (Top N)</label>
                                     <input 
                                        type="number"
-                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                                       className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 text-sm"
                                        value={tempWidget.config?.limit || 10}
                                        onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, limit: parseInt(e.target.value) }})}
                                        placeholder="10"
@@ -1084,15 +1216,15 @@ export const Dashboard: React.FC = () => {
 
                            {/* KPI Specifics */}
                            {tempWidget.type === 'kpi' && (
-                              <div className="space-y-4">
+                              <div className="space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
                                  <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Style du KPI</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Style du KPI</label>
                                     <div className="flex gap-2">
                                        {['simple', 'trend', 'progress'].map(s => (
                                           <button
                                              key={s}
                                              onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, kpiStyle: s as KpiStyle } })}
-                                             className={`px-3 py-1.5 rounded text-xs font-medium border ${tempWidget.config?.kpiStyle === s ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-slate-200 text-slate-600'}`}
+                                             className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${tempWidget.config?.kpiStyle === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'}`}
                                           >
                                              {s === 'simple' ? 'Simple' : s === 'trend' ? 'Avec tendance' : 'Progression'}
                                           </button>
@@ -1102,7 +1234,7 @@ export const Dashboard: React.FC = () => {
                                  
                                  {tempWidget.config?.kpiStyle === 'progress' && (
                                     <div>
-                                       <label className="block text-sm font-medium text-slate-700 mb-1">Objectif cible (Target)</label>
+                                       <label className="block text-sm font-bold text-slate-700 mb-1">Objectif cible (Target)</label>
                                        <input 
                                           type="number" 
                                           className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm p-2"
@@ -1124,65 +1256,65 @@ export const Dashboard: React.FC = () => {
                            {/* Chart Specifics */}
                            {tempWidget.type === 'chart' && (
                               <div>
-                                 <label className="block text-sm font-medium text-slate-700 mb-1">Type de graphique</label>
-                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                                 <label className="block text-sm font-bold text-slate-700 mb-2">Type de graphique</label>
+                                 <div className="grid grid-cols-2 gap-2 p-1">
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'bar' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'bar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'bar' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
-                                       <BarChart3 className="w-4 h-4 transform rotate-90" /> Barres (Horizontal)
+                                       <BarChart3 className="w-4 h-4 transform rotate-90" /> Barres
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'column' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'column' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'column' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
-                                       <BarChart3 className="w-4 h-4" /> Colonnes (Vertical)
+                                       <BarChart3 className="w-4 h-4" /> Colonnes
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'line' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'line' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'line' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <LineChartIcon className="w-4 h-4" /> Courbes
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'area' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'area' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'area' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <TrendingUp className="w-4 h-4" /> Aires
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'pie' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'pie' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'pie' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <PieIcon className="w-4 h-4" /> Camembert
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'donut' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'donut' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'donut' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <PieIcon className="w-4 h-4" /> Donut
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radial' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radial' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'radial' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <Activity className="w-4 h-4" /> Jauge
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'radar' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'radar' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'radar' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <RadarIcon className="w-4 h-4" /> Radar
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'treemap' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'treemap' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'treemap' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <LayoutGrid className="w-4 h-4" /> Treemap
                                     </button>
                                     <button
                                        onClick={() => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, chartType: 'funnel' }})}
-                                       className={`flex items-center gap-2 p-2 text-sm border rounded text-left ${tempWidget.config?.chartType === 'funnel' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:bg-slate-50'}`}
+                                       className={`flex items-center gap-2 p-2 text-sm border rounded-lg text-left transition-all ${tempWidget.config?.chartType === 'funnel' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                                     >
                                        <Filter className="w-4 h-4" /> Entonnoir
                                     </button>
@@ -1195,8 +1327,8 @@ export const Dashboard: React.FC = () => {
 
                </div>
                
-               <div className="p-6 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setShowModal(false)}>Annuler</Button>
+               <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setShowWidgetDrawer(false)}>Annuler</Button>
                   <Button onClick={handleSaveWidget} disabled={!tempWidget.title}>
                      Enregistrer le widget
                   </Button>

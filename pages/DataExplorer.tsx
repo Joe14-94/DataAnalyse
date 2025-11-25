@@ -49,8 +49,8 @@ export const DataExplorer: React.FC = () => {
   });
   const formulaInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // CONDITIONAL FORMATTING MODAL
-  const [isFormatModalOpen, setIsFormatModalOpen] = useState(false);
+  // CONDITIONAL FORMATTING DRAWER (ex-MODAL)
+  const [isFormatDrawerOpen, setIsFormatDrawerOpen] = useState(false);
   const [selectedFormatCol, setSelectedFormatCol] = useState<string>('');
   const [newRule, setNewRule] = useState<Partial<ConditionalRule>>({ operator: 'lt', value: 0, style: { color: 'text-red-600', fontWeight: 'font-bold' } });
 
@@ -609,7 +609,11 @@ export const DataExplorer: React.FC = () => {
               />
            </div>
            
-           <Button variant="secondary" onClick={() => setIsFormatModalOpen(true)} className="whitespace-nowrap">
+           <Button 
+              variant={isFormatDrawerOpen ? "primary" : "secondary"} 
+              onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} 
+              className="whitespace-nowrap"
+           >
                <Palette className="w-4 h-4 md:mr-2" />
                <span className="hidden md:inline">Conditionnel</span>
            </Button>
@@ -1006,7 +1010,7 @@ export const DataExplorer: React.FC = () => {
             </div>
          </div>
          
-         {/* CALCULATED FIELDS DRAWER (REDESIGNED) */}
+         {/* CALCULATED FIELDS DRAWER */}
          {isCalcDrawerOpen && (
              <div className="w-[500px] bg-white border-l border-slate-200 shadow-xl flex flex-col z-30 animate-in slide-in-from-right duration-300">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -1159,24 +1163,36 @@ export const DataExplorer: React.FC = () => {
              </div>
          )}
 
-         {/* CONDITIONAL FORMATTING MODAL */}
-         {isFormatModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-               <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-                  <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <Palette className="w-5 h-5 text-purple-600" />
-                        Formatage Conditionnel
-                     </h3>
-                     <button onClick={() => setIsFormatModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+         {/* CONDITIONAL FORMATTING DRAWER (REPLACES MODAL) */}
+         {isFormatDrawerOpen && (
+            <>
+                {/* Backdrop */}
+                <div 
+                    className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" 
+                    onClick={() => setIsFormatDrawerOpen(false)}
+                />
+                
+                {/* Right Drawer */}
+                <div className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-slate-200">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-purple-50/50">
+                     <div>
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <Palette className="w-5 h-5 text-purple-600" />
+                            Formatage Conditionnel
+                        </h3>
+                        <p className="text-sm text-slate-500">Appliquez des styles selon des règles</p>
+                     </div>
+                     <button onClick={() => setIsFormatDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-white rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                     </button>
                   </div>
                   
-                  <div className="p-5 space-y-6">
+                  <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-8">
                      {/* SELECT COLUMN */}
                      <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Appliquer sur la colonne</label>
                         <select 
-                           className="w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500"
+                           className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500 text-sm"
                            value={selectedFormatCol}
                            onChange={e => setSelectedFormatCol(e.target.value)}
                         >
@@ -1187,13 +1203,13 @@ export const DataExplorer: React.FC = () => {
                      {/* EXISTING RULES */}
                      <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Règles existantes</label>
-                        <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-slate-50 p-2 rounded border border-slate-200">
+                        <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 p-2 rounded border border-slate-200 min-h-[60px]">
                            {(currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).length === 0 ? (
-                              <div className="text-xs text-slate-400 italic text-center py-2">Aucune règle définie pour cette colonne.</div>
+                              <div className="text-xs text-slate-400 italic text-center py-4">Aucune règle définie pour cette colonne.</div>
                            ) : (
                               (currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).map(rule => (
                                  <div key={rule.id} className="flex items-center justify-between bg-white p-2 rounded border border-slate-200 shadow-sm text-xs">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                        <span className="font-mono bg-slate-100 px-1 rounded text-slate-600">
                                           {rule.operator === 'gt' ? '>' : rule.operator === 'lt' ? '<' : rule.operator === 'contains' ? 'contient' : '='} {rule.value}
                                        </span>
@@ -1202,7 +1218,7 @@ export const DataExplorer: React.FC = () => {
                                           Exemple
                                        </span>
                                     </div>
-                                    <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-slate-400 hover:text-red-500">
+                                    <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-slate-400 hover:text-red-500 p-1">
                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                  </div>
@@ -1212,11 +1228,14 @@ export const DataExplorer: React.FC = () => {
                      </div>
 
                      {/* NEW RULE CREATOR */}
-                     <div className="bg-purple-50 p-3 rounded border border-purple-100 space-y-3">
-                        <div className="text-xs font-bold text-purple-800">Nouvelle règle</div>
+                     <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 space-y-4">
+                        <div className="text-sm font-bold text-purple-800 flex items-center gap-2">
+                            <Plus className="w-4 h-4" /> Nouvelle règle
+                        </div>
+                        
                         <div className="flex gap-2">
                            <select 
-                              className="w-1/3 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
+                              className="w-1/3 p-2 text-xs border-purple-200 rounded focus:ring-purple-500"
                               value={newRule.operator}
                               onChange={e => setNewRule({...newRule, operator: e.target.value as any})}
                            >
@@ -1229,7 +1248,7 @@ export const DataExplorer: React.FC = () => {
                            {newRule.operator !== 'empty' && (
                               <input 
                                  type={newRule.operator === 'contains' ? 'text' : 'number'}
-                                 className="flex-1 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
+                                 className="flex-1 p-2 text-xs border-purple-200 rounded focus:ring-purple-500"
                                  placeholder="Valeur..."
                                  value={newRule.value}
                                  onChange={e => setNewRule({...newRule, value: e.target.value})}
@@ -1237,45 +1256,47 @@ export const DataExplorer: React.FC = () => {
                            )}
                         </div>
                         
-                        <div className="flex gap-2 items-center">
-                           <span className="text-xs text-purple-800">Alors :</span>
-                           <select 
-                              className="flex-1 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
-                              value={newRule.style?.color}
-                              onChange={e => setNewRule({...newRule, style: { ...newRule.style, color: e.target.value }})}
-                           >
-                              <option value="text-slate-900">Texte Noir</option>
-                              <option value="text-red-600">Texte Rouge</option>
-                              <option value="text-green-600">Texte Vert</option>
-                              <option value="text-blue-600">Texte Bleu</option>
-                              <option value="text-orange-600">Texte Orange</option>
-                           </select>
-                           <select 
-                              className="flex-1 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
-                              value={newRule.style?.backgroundColor}
-                              onChange={e => setNewRule({...newRule, style: { ...newRule.style, backgroundColor: e.target.value }})}
-                           >
-                              <option value="">Fond (Aucun)</option>
-                              <option value="bg-red-100">Fond Rouge</option>
-                              <option value="bg-green-100">Fond Vert</option>
-                              <option value="bg-blue-100">Fond Bleu</option>
-                              <option value="bg-yellow-100">Fond Jaune</option>
-                           </select>
-                           <button 
-                              onClick={() => setNewRule({...newRule, style: { ...newRule.style, fontWeight: newRule.style?.fontWeight === 'font-bold' ? 'font-normal' : 'font-bold' }})}
-                              className={`px-2 py-1.5 border rounded text-xs font-bold ${newRule.style?.fontWeight === 'font-bold' ? 'bg-purple-200 border-purple-300 text-purple-800' : 'bg-white border-purple-200 text-slate-500'}`}
-                           >
-                              B
-                           </button>
+                        <div className="space-y-2">
+                            <span className="text-xs text-purple-800 font-bold">Style à appliquer :</span>
+                            <div className="grid grid-cols-2 gap-2">
+                                <select 
+                                    className="p-2 text-xs border-purple-200 rounded focus:ring-purple-500"
+                                    value={newRule.style?.color}
+                                    onChange={e => setNewRule({...newRule, style: { ...newRule.style, color: e.target.value }})}
+                                >
+                                    <option value="text-slate-900">Texte Noir</option>
+                                    <option value="text-red-600">Texte Rouge</option>
+                                    <option value="text-green-600">Texte Vert</option>
+                                    <option value="text-blue-600">Texte Bleu</option>
+                                    <option value="text-orange-600">Texte Orange</option>
+                                </select>
+                                <select 
+                                    className="p-2 text-xs border-purple-200 rounded focus:ring-purple-500"
+                                    value={newRule.style?.backgroundColor}
+                                    onChange={e => setNewRule({...newRule, style: { ...newRule.style, backgroundColor: e.target.value }})}
+                                >
+                                    <option value="">Fond (Aucun)</option>
+                                    <option value="bg-red-100">Fond Rouge</option>
+                                    <option value="bg-green-100">Fond Vert</option>
+                                    <option value="bg-blue-100">Fond Bleu</option>
+                                    <option value="bg-yellow-100">Fond Jaune</option>
+                                </select>
+                            </div>
+                            <button 
+                                onClick={() => setNewRule({...newRule, style: { ...newRule.style, fontWeight: newRule.style?.fontWeight === 'font-bold' ? 'font-normal' : 'font-bold' }})}
+                                className={`w-full py-2 border rounded text-xs font-bold transition-colors ${newRule.style?.fontWeight === 'font-bold' ? 'bg-purple-200 border-purple-300 text-purple-800' : 'bg-white border-purple-200 text-slate-500'}`}
+                            >
+                                {newRule.style?.fontWeight === 'font-bold' ? 'Gras (Activé)' : 'Gras (Désactivé)'}
+                            </button>
                         </div>
 
-                        <button onClick={handleAddConditionalRule} className="w-full py-1.5 bg-purple-600 text-white text-xs font-bold rounded shadow-sm hover:bg-purple-700">
+                        <button onClick={handleAddConditionalRule} className="w-full py-2 bg-purple-600 text-white text-sm font-bold rounded shadow-sm hover:bg-purple-700 transition-colors">
                            Ajouter cette règle
                         </button>
                      </div>
                   </div>
                </div>
-            </div>
+            </>
          )}
 
       </div>

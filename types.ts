@@ -148,12 +148,18 @@ export interface WidgetConfig {
   filterValue?: string;
 }
 
+export interface WidgetStyle {
+  borderColor?: string; // Tailwind class: 'border-slate-200', 'border-blue-500', etc.
+  borderWidth?: '0' | '1' | '2' | '4'; // '0', '1' (default), '2', '4'
+}
+
 export interface DashboardWidget {
   id: string;
   title: string;
   type: WidgetType;
   size: WidgetSize;
-  height?: WidgetHeight; // Nouvelle propriété de hauteur
+  height?: WidgetHeight;
+  style?: WidgetStyle; // NOUVEAU : Style du conteneur
   config: WidgetConfig;
 }
 
