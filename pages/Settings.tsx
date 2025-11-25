@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
@@ -47,10 +46,10 @@ export const Settings: React.FC = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
       if (content) {
-        const success = importBackup(content);
+        const success = await importBackup(content);
         if (success) {
           alert('Restauration effectuée avec succès !');
         } else {

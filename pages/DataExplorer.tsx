@@ -9,12 +9,12 @@ import {
   Search, Download, Database, ChevronLeft, ChevronRight, Table2, 
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
   History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-  FilterX, Hash, Percent, MousePointerClick
+  FilterX, Hash, Percent, MousePointerClick, Variable, Sigma, Play, AlertCircle, CheckCircle2, Columns
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export const DataExplorer: React.FC = () => {
-  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch } = useData();
+  const { currentDataset, batches, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow } = useData();
   const location = useLocation(); // Hook Router
   
   // --- State ---
@@ -39,13 +39,15 @@ export const DataExplorer: React.FC = () => {
 
   // CALCULATED FIELDS UI STATE (DRAWER)
   const [isCalcDrawerOpen, setIsCalcDrawerOpen] = useState(false);
+  const [calcTab, setCalcTab] = useState<'fields' | 'functions'>('fields');
+  const [previewResult, setPreviewResult] = useState<{ value: any, error?: string } | null>(null);
   const [newField, setNewField] = useState<Partial<CalculatedField>>({
      name: '',
      formula: '',
      outputType: 'number',
      unit: ''
   });
-  const formulaInputRef = useRef<HTMLInputElement>(null);
+  const formulaInputRef = useRef<HTMLTextAreaElement>(null);
 
   // CONDITIONAL FORMATTING MODAL
   const [isFormatModalOpen, setIsFormatModalOpen] = useState(false);
@@ -154,6 +156,7 @@ export const DataExplorer: React.FC = () => {
     
     addCalculatedField(currentDataset.id, field);
     setNewField({ name: '', formula: '', outputType: 'number', unit: '' });
+    setPreviewResult(null);
   };
 
   const handleAddConditionalRule = () => {
@@ -198,6 +201,34 @@ export const DataExplorer: React.FC = () => {
       updateDatasetConfigs(currentDataset.id, {
           [selectedCol]: { ...currentConfig, [key]: value }
       });
+  };
+
+  // --- DELETION HANDLERS ---
+
+  const handleDeleteColumn = () => {
+     if (!currentDataset || !selectedCol) return;
+     
+     // Check if it's a calculated field
+     const isCalculated = currentDataset.calculatedFields?.find(f => f.name === selectedCol);
+     
+     if (isCalculated) {
+        if (window.confirm(`Supprimer le champ calculé "${selectedCol}" ?`)) {
+           removeCalculatedField(currentDataset.id, isCalculated.id);
+           setSelectedCol(null);
+        }
+     } else {
+        if (window.confirm(`ATTENTION : Supprimer la colonne "${selectedCol}" effacera définitivement cette donnée de tous les imports liés à cette typologie. Continuer ?`)) {
+           deleteDatasetField(currentDataset.id, selectedCol);
+           setSelectedCol(null);
+        }
+     }
+  };
+
+  const handleDeleteRow = (row: any, e: React.MouseEvent) => {
+     e.stopPropagation(); // Prevent drawer opening
+     if (window.confirm("Supprimer cette ligne définitivement ?")) {
+        deleteBatchRow(row._batchId, row.id);
+     }
   };
 
   // --- Data Processing ---
@@ -252,44 +283,61 @@ export const DataExplorer: React.FC = () => {
                return val === undefined || val === null || val === '';
            });
         } else {
-            const lowerFilter = (filterValue as string).toLowerCase();
-            data = data.filter(row => {
-            const val = row[key];
+            let targetVal = filterValue as string;
+            let isExact = false;
+
+            // Support Exact Match Syntax (starts with =)
+            if (targetVal.startsWith('=')) {
+               isExact = true;
+               targetVal = targetVal.substring(1);
+            }
+
+            const lowerFilter = targetVal.toLowerCase();
             
-            // Special handling for BatchId (Exact match required for drilldown reliability)
-            if (key === '_batchId') {
-                return String(val) === String(filterValue);
-            }
+            data = data.filter(row => {
+               const val = row[key];
+               
+               // Special handling for BatchId (Exact match required for drilldown reliability)
+               if (key === '_batchId') {
+                  // Clean potentially passed '=' from batch id filter if manually entered, though unlikely
+                  return String(val) === String(targetVal);
+               }
 
-            // Gestion spéciale pour la date d'import (Support formats multiples)
-            if (key === '_importDate') {
-                const dateStr = val as string; // ISO YYYY-MM-DD "2025-11-23"
-                
-                // 1. Format d'affichage (Français long) : "23 novembre 2025"
-                if (formatDateFr(dateStr).toLowerCase().includes(lowerFilter)) return true;
+               // Gestion spéciale pour la date d'import (Support formats multiples)
+               if (key === '_importDate') {
+                  const dateStr = val as string; // ISO YYYY-MM-DD "2025-11-23"
+                  
+                  // Si le mode exact est demandé, on compare strictement
+                  if (isExact) {
+                     return dateStr === targetVal || formatDateFr(dateStr) === targetVal;
+                  }
 
-                // 2. Formats numériques : DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
-                try {
-                    const parts = dateStr.split('-');
-                    if (parts.length === 3) {
-                    const [y, m, d] = parts;
-                    // Constructions des formats français
-                    const frNumeric = `${d}/${m}/${y}`; // 23/11/2025
-                    const frNumericShort = `${d}/${m}`; // 23/11
-                    const frNumericDash = `${d}-${m}-${y}`; // 23-11-2025
-                    
-                    if (frNumeric.includes(lowerFilter)) return true;
-                    if (frNumericShort.includes(lowerFilter)) return true;
-                    if (frNumericDash.includes(lowerFilter)) return true;
-                    if (dateStr.includes(lowerFilter)) return true; // ISO match
-                    }
-                } catch (e) {
-                    return false;
-                }
-                return false;
-            }
+                  // 1. Format d'affichage (Français long) : "23 novembre 2025"
+                  if (formatDateFr(dateStr).toLowerCase().includes(lowerFilter)) return true;
 
-            return String(val ?? '').toLowerCase().includes(lowerFilter);
+                  // 2. Formats numériques : DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+                  try {
+                     const parts = dateStr.split('-');
+                     if (parts.length === 3) {
+                     const [y, m, d] = parts;
+                     // Constructions des formats français
+                     const frNumeric = `${d}/${m}/${y}`; // 23/11/2025
+                     const frNumericShort = `${d}/${m}`; // 23/11
+                     const frNumericDash = `${d}-${m}-${y}`; // 23-11-2025
+                     
+                     if (frNumeric.includes(lowerFilter)) return true;
+                     if (frNumericShort.includes(lowerFilter)) return true;
+                     if (frNumericDash.includes(lowerFilter)) return true;
+                     if (dateStr.includes(lowerFilter)) return true; // ISO match
+                     }
+                  } catch (e) {
+                     return false;
+                  }
+                  return false;
+               }
+
+               const valStr = String(val ?? '').toLowerCase();
+               return isExact ? valStr === lowerFilter : valStr.includes(lowerFilter);
             });
         }
       }
@@ -312,6 +360,33 @@ export const DataExplorer: React.FC = () => {
 
     return data;
   }, [allRows, searchTerm, columnFilters, sortConfig]);
+
+  // LIVE PREVIEW EFFECT
+  useEffect(() => {
+     if (!isCalcDrawerOpen || !newField.formula) {
+        setPreviewResult(null);
+        return;
+     }
+
+     const timer = setTimeout(() => {
+         // Prendre la première ligne visible ou la première ligne brute
+         const sampleRow = processedRows.length > 0 ? processedRows[0] : (allRows.length > 0 ? allRows[0] : null);
+         
+         if (sampleRow) {
+             const res = evaluateFormula(sampleRow, newField.formula!);
+             if (res === null && newField.formula!.trim() !== '') {
+                 setPreviewResult({ value: null, error: "Erreur de syntaxe ou champ introuvable" });
+             } else {
+                 setPreviewResult({ value: res });
+             }
+         } else {
+             setPreviewResult({ value: null, error: "Aucune donnée pour tester" });
+         }
+     }, 500); // Debounce
+
+     return () => clearTimeout(timer);
+  }, [newField.formula, processedRows, allRows, isCalcDrawerOpen]);
+
 
   // 3. Pagination
   const totalPages = Math.ceil(processedRows.length / rowsPerPage);
@@ -416,7 +491,7 @@ export const DataExplorer: React.FC = () => {
      return (
       <div className="h-full flex flex-col items-center justify-center text-center bg-slate-50 rounded-lg border border-dashed border-slate-300 m-4">
         <Database className="w-12 h-12 text-slate-300 mb-4" />
-        <p className="text-slate-600 font-medium">Aucune typologie sélectionnée</p>
+        <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
         <p className="text-slate-500 text-sm max-w-md mt-2">
           Veuillez sélectionner une typologie de tableau dans le menu latéral pour visualiser les données.
         </p>
@@ -427,7 +502,8 @@ export const DataExplorer: React.FC = () => {
   const calculatedFields = currentDataset.calculatedFields || [];
 
   // Determine if there is a hidden batch filter active (Drill down context)
-  const activeBatchFilter = columnFilters['_batchId'];
+  // We remove the potential '=' prefix for the logic, but keep it in UI
+  const activeBatchFilter = columnFilters['_batchId'] ? columnFilters['_batchId'].replace(/^=/, '') : null;
   const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
 
   // Selected Column Config
@@ -539,59 +615,72 @@ export const DataExplorer: React.FC = () => {
         </div>
       </div>
 
-      {/* Formatting Toolbar (Appears when a numeric column is selected) */}
-      <div className={`transition-all duration-300 overflow-hidden ${selectedCol && isSelectedNumeric ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+      {/* Formatting & Actions Toolbar (Appears when any column is selected) */}
+      <div className={`transition-all duration-300 overflow-hidden ${selectedCol ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
          <div className="bg-white border border-teal-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-teal-50 flex flex-wrap items-center gap-4">
              <div className="flex items-center gap-2 text-teal-800 text-xs font-bold uppercase tracking-wider border-r border-teal-200 pr-4">
-                <Hash className="w-4 h-4" /> 
-                Formatage : {selectedCol}
+                <Columns className="w-4 h-4" /> 
+                Colonne : {selectedCol}
              </div>
              
-             {/* Decimal Places */}
-             <div className="flex items-center gap-2">
-                 <span className="text-xs text-slate-600 font-medium">Décimales :</span>
-                 <div className="flex bg-white rounded border border-slate-200">
-                    <button 
-                        onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))}
-                        className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-r border-slate-100"
-                    >-</button>
-                    <span className="px-2 py-1 text-xs font-mono w-6 text-center">{selectedConfig?.decimalPlaces ?? 2}</span>
-                    <button 
-                        onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))}
-                        className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-l border-slate-100"
-                    >+</button>
-                 </div>
-             </div>
+             {isSelectedNumeric ? (
+               <>
+                  {/* Decimal Places */}
+                  <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-600 font-medium">Décimales :</span>
+                      <div className="flex bg-white rounded border border-slate-200">
+                         <button 
+                             onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))}
+                             className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-r border-slate-100"
+                         >-</button>
+                         <span className="px-2 py-1 text-xs font-mono w-6 text-center">{selectedConfig?.decimalPlaces ?? 2}</span>
+                         <button 
+                             onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))}
+                             className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-l border-slate-100"
+                         >+</button>
+                      </div>
+                  </div>
 
-             {/* Scale */}
-             <div className="flex items-center gap-2">
-                 <span className="text-xs text-slate-600 font-medium">Échelle :</span>
-                 <select 
-                    className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-teal-500"
-                    value={selectedConfig?.displayScale || 'none'}
-                    onChange={(e) => handleFormatChange('displayScale', e.target.value)}
-                 >
-                    <option value="none">Aucune</option>
-                    <option value="thousands">Milliers (k)</option>
-                    <option value="millions">Millions (M)</option>
-                    <option value="billions">Milliards (Md)</option>
-                 </select>
-             </div>
+                  {/* Scale */}
+                  <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-600 font-medium">Échelle :</span>
+                      <select 
+                         className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-teal-500"
+                         value={selectedConfig?.displayScale || 'none'}
+                         onChange={(e) => handleFormatChange('displayScale', e.target.value)}
+                      >
+                         <option value="none">Aucune</option>
+                         <option value="thousands">Milliers (k)</option>
+                         <option value="millions">Millions (M)</option>
+                         <option value="billions">Milliards (Md)</option>
+                      </select>
+                  </div>
 
-             {/* Unit */}
-             <div className="flex items-center gap-2">
-                 <span className="text-xs text-slate-600 font-medium">Unité :</span>
-                 <input 
-                    type="text" 
-                    className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-teal-500"
-                    placeholder="Ex: €"
-                    value={selectedConfig?.unit || ''}
-                    onChange={(e) => handleFormatChange('unit', e.target.value)}
-                 />
-             </div>
+                  {/* Unit */}
+                  <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-600 font-medium">Unité :</span>
+                      <input 
+                         type="text" 
+                         className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-teal-500"
+                         placeholder="Ex: €"
+                         value={selectedConfig?.unit || ''}
+                         onChange={(e) => handleFormatChange('unit', e.target.value)}
+                      />
+                  </div>
+               </>
+             ) : (
+                <span className="text-xs text-slate-400 italic">Options de formatage non disponibles pour ce type.</span>
+             )}
              
-             <div className="ml-auto text-[10px] text-teal-600 italic">
-                S'applique partout (TCD, Graphiques...)
+             <div className="ml-auto flex items-center gap-2">
+                <Button 
+                   onClick={handleDeleteColumn} 
+                   size="sm" 
+                   className="bg-white hover:bg-red-50 text-red-600 border border-red-200 shadow-none text-xs"
+                >
+                   <Trash2 className="w-3 h-3 mr-1" />
+                   Supprimer la colonne
+                </Button>
              </div>
          </div>
       </div>
@@ -669,6 +758,9 @@ export const DataExplorer: React.FC = () => {
                            </div>
                         </th>
                      ))}
+                     
+                     {/* Colonne Actions */}
+                     <th scope="col" className="px-3 py-3 w-10 border-b border-slate-200 bg-slate-50"></th>
                   </tr>
 
                   {/* Filter Row (Conditional) */}
@@ -706,6 +798,7 @@ export const DataExplorer: React.FC = () => {
                               />
                            </th>
                         ))}
+                        <th className="border-b border-slate-200 bg-slate-50"></th>
                      </tr>
                   )}
                </thead>
@@ -761,11 +854,22 @@ export const DataExplorer: React.FC = () => {
                                  </td>
                               );
                            })}
+
+                           {/* Actions Column */}
+                           <td className="px-3 py-3 text-right">
+                              <button 
+                                 onClick={(e) => handleDeleteRow(row, e)}
+                                 className="text-slate-300 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                                 title="Supprimer cette ligne"
+                              >
+                                 <Trash2 className="w-4 h-4" />
+                              </button>
+                           </td>
                         </tr>
                      ))
                   ) : (
                      <tr>
-                        <td colSpan={currentDataset.fields.length + 1 + calculatedFields.length} className="px-6 py-16 text-center">
+                        <td colSpan={currentDataset.fields.length + 2 + calculatedFields.length} className="px-6 py-16 text-center">
                            <div className="flex flex-col items-center justify-center text-slate-400">
                               {Object.keys(columnFilters).length > 0 || searchTerm ? (
                                  <>
@@ -829,112 +933,186 @@ export const DataExplorer: React.FC = () => {
             </div>
          </div>
          
-         {/* CALCULATED FIELDS DRAWER */}
+         {/* CALCULATED FIELDS DRAWER (REDESIGNED) */}
          {isCalcDrawerOpen && (
-             <div className="w-96 bg-white border-l border-slate-200 shadow-xl flex flex-col z-30 animate-in slide-in-from-right duration-300">
+             <div className="w-[500px] bg-white border-l border-slate-200 shadow-xl flex flex-col z-30 animate-in slide-in-from-right duration-300">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <FunctionSquare className="w-4 h-4 text-indigo-600" />
-                        Champs calculés
-                    </h3>
+                    <div>
+                       <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                           <FunctionSquare className="w-4 h-4 text-indigo-600" />
+                           Éditeur de Formule
+                       </h3>
+                       <p className="text-[10px] text-slate-500 mt-1">Créez une nouvelle colonne calculée</p>
+                    </div>
                     <button onClick={() => setIsCalcDrawerOpen(false)} className="text-slate-400 hover:text-slate-600">
-                        <X className="w-4 h-4" />
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-6">
-                    {/* Create new */}
-                    <div className="space-y-4">
-                        <div className="bg-indigo-50 p-3 rounded border border-indigo-100 text-xs text-indigo-800">
-                            <strong>Astuce :</strong> Cliquez sur un entête de colonne dans le tableau à gauche pour l'insérer dans la formule.
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-600 mb-1">1. Nom de la colonne</label>
-                            <input 
-                                type="text" 
-                                className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500"
-                                placeholder="Ex: Total TTC"
-                                value={newField.name}
-                                onChange={e => setNewField({...newField, name: e.target.value})}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-600 mb-1">2. Formule</label>
-                            <div className="relative">
-                                <input 
-                                    ref={formulaInputRef}
-                                    type="text" 
-                                    className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-                                    placeholder="[Prix] * [Quantité]"
-                                    value={newField.formula}
-                                    onChange={e => setNewField({...newField, formula: e.target.value})}
-                                />
-                            </div>
-                            
-                            {/* Quick Functions Toolbar */}
-                            <div className="flex flex-wrap gap-1 mt-2">
-                                <button onClick={() => insertIntoFormula('SI( , "Vrai", "Faux")')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">SI</button>
-                                <button onClick={() => insertIntoFormula('SOMME( , )')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">SOMME</button>
-                                <button onClick={() => insertIntoFormula('MOYENNE( , )')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">MOYENNE</button>
-                                <button onClick={() => insertIntoFormula('ARRONDI( , 2)')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">ARRONDI</button>
-                                <button onClick={() => insertIntoFormula('MAX( , )')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-mono text-slate-700 border border-slate-200">MAX</button>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 mb-1">Type</label>
-                                <select 
-                                    className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                                    value={newField.outputType}
-                                    onChange={e => setNewField({...newField, outputType: e.target.value as any})}
-                                >
-                                    <option value="number">Nombre</option>
-                                    <option value="text">Texte</option>
-                                    <option value="boolean">Oui/Non</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 mb-1">Unité</label>
-                                <input 
-                                    type="text" 
-                                    className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
-                                    placeholder="Ex: €"
-                                    value={newField.unit}
-                                    onChange={e => setNewField({...newField, unit: e.target.value})}
-                                />
-                            </div>
-                        </div>
-
-                        <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula} className="w-full bg-indigo-600 hover:bg-indigo-700">
-                            <Plus className="w-4 h-4 mr-2" /> Créer le champ
-                        </Button>
+                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+                    
+                    {/* 1. Name Input */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Nom de la colonne</label>
+                        <input 
+                            type="text" 
+                            className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Ex: Total TTC"
+                            value={newField.name}
+                            onChange={e => setNewField({...newField, name: e.target.value})}
+                        />
                     </div>
 
-                    <hr className="border-slate-100" />
+                    {/* 2. Formula Editor */}
+                    <div className="flex-1 flex flex-col min-h-[300px]">
+                        <label className="block text-xs font-bold text-slate-600 mb-1 flex justify-between">
+                           <span>Formule</span>
+                           <span className="text-[10px] text-slate-400">Syntaxe Excel simplifiée</span>
+                        </label>
+                        <textarea 
+                           ref={formulaInputRef}
+                           className="block w-full h-32 rounded-t-md border-slate-300 text-sm p-3 bg-slate-50 focus:ring-indigo-500 focus:border-indigo-500 font-mono resize-none leading-relaxed text-slate-800"
+                           placeholder="[Prix] * [Quantité]"
+                           value={newField.formula}
+                           onChange={e => setNewField({...newField, formula: e.target.value})}
+                        />
+                        
+                        {/* 3. Helper Tabs */}
+                        <div className="flex border-b border-slate-200 bg-slate-100">
+                           <button 
+                              className={`flex-1 py-2 text-xs font-bold ${calcTab === 'fields' ? 'bg-white text-indigo-600 border-t-2 border-t-indigo-500' : 'text-slate-500 hover:bg-slate-200'}`}
+                              onClick={() => setCalcTab('fields')}
+                           >
+                              <Variable className="w-3 h-3 inline mr-1" /> Variables
+                           </button>
+                           <button 
+                              className={`flex-1 py-2 text-xs font-bold ${calcTab === 'functions' ? 'bg-white text-indigo-600 border-t-2 border-t-indigo-500' : 'text-slate-500 hover:bg-slate-200'}`}
+                              onClick={() => setCalcTab('functions')}
+                           >
+                              <Sigma className="w-3 h-3 inline mr-1" /> Fonctions
+                           </button>
+                        </div>
+                        
+                        <div className="border border-t-0 border-slate-200 bg-white p-3 h-48 overflow-y-auto custom-scrollbar rounded-b-md">
+                           {calcTab === 'fields' ? (
+                              <div className="space-y-3">
+                                 {/* Quick Operators */}
+                                 <div className="flex gap-2 justify-center pb-2 border-b border-slate-100">
+                                    {['+', '-', '*', '/', '(', ')'].map(op => (
+                                       <button key={op} onClick={() => insertIntoFormula(` ${op} `)} className="w-8 h-8 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 font-mono font-bold border border-slate-200">
+                                          {op}
+                                       </button>
+                                    ))}
+                                 </div>
 
-                    {/* List existing */}
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Champs existants ({calculatedFields.length})</h4>
-                        {calculatedFields.length > 0 ? calculatedFields.map(field => (
-                            <div key={field.id} className="bg-white border border-slate-200 rounded p-3 hover:shadow-sm transition-shadow">
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="font-bold text-slate-800 text-sm">{field.name}</div>
+                                 <div className="flex flex-wrap gap-2 content-start">
+                                    {currentDataset.fields.map(f => {
+                                       const isNumeric = currentDataset.fieldConfigs?.[f]?.type === 'number';
+                                       return (
+                                          <button 
+                                             key={f} 
+                                             onClick={() => insertIntoFormula(`[${f}]`)}
+                                             className={`px-2 py-1 rounded text-xs border flex items-center gap-1 transition-all
+                                                ${isNumeric ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}
+                                             `}
+                                          >
+                                             {isNumeric ? <Hash className="w-3 h-3 opacity-50" /> : <Variable className="w-3 h-3 opacity-50" />}
+                                             {f}
+                                          </button>
+                                       )
+                                    })}
+                                 </div>
+                              </div>
+                           ) : (
+                              <div className="space-y-1">
+                                 {[
+                                    { name: 'SI', syntax: 'SI(condition, vrai, faux)', desc: 'Conditionnelle simple' },
+                                    { name: 'SOMME', syntax: 'SOMME(val1, val2)', desc: 'Additionne des valeurs' },
+                                    { name: 'MOYENNE', syntax: 'MOYENNE(val1, val2)', desc: 'Moyenne arithmétique' },
+                                    { name: 'MAX', syntax: 'MAX(val1, val2)', desc: 'Valeur maximale' },
+                                    { name: 'MIN', syntax: 'MIN(val1, val2)', desc: 'Valeur minimale' },
+                                    { name: 'ARRONDI', syntax: 'ARRONDI(val, décimales)', desc: 'Arrondit un nombre' },
+                                    { name: 'CONCAT', syntax: 'CONCAT(txt1, txt2)', desc: 'Joint du texte' },
+                                    { name: 'ABS', syntax: 'ABS(val)', desc: 'Valeur absolue' },
+                                 ].map(fn => (
                                     <button 
-                                        onClick={() => removeCalculatedField(currentDataset.id, field.id)} 
-                                        className="text-slate-400 hover:text-red-500"
+                                       key={fn.name} 
+                                       onClick={() => insertIntoFormula(`${fn.name}(`)}
+                                       className="w-full text-left px-2 py-2 hover:bg-indigo-50 rounded flex justify-between items-center group"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                       <div>
+                                          <span className="font-bold text-indigo-700 text-xs">{fn.name}</span>
+                                          <span className="text-[10px] text-slate-500 ml-2">{fn.desc}</span>
+                                       </div>
+                                       <span className="text-[10px] text-slate-400 font-mono hidden group-hover:inline">{fn.syntax}</span>
                                     </button>
-                                </div>
-                                <div className="text-xs text-slate-500 font-mono bg-slate-50 p-1.5 rounded border border-slate-100 break-all">
-                                    {field.formula}
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="text-center py-4 text-slate-400 italic text-xs">Aucun champ calculé.</div>
+                                 ))}
+                              </div>
+                           )}
+                        </div>
+                    </div>
+                    
+                    {/* Live Preview */}
+                    <div className={`p-3 rounded border text-sm ${previewResult?.error ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase mb-1 opacity-70">
+                           {previewResult?.error ? <AlertCircle className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                           Résultat (1ère ligne) :
+                        </div>
+                        <div className="font-mono font-bold truncate">
+                           {previewResult 
+                              ? (previewResult.error ? previewResult.error : (previewResult.value !== null ? String(previewResult.value) : '...')) 
+                              : <span className="text-slate-400 italic font-normal">Saisissez une formule...</span>
+                           }
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                           <label className="block text-xs font-bold text-slate-600 mb-1">Type de sortie</label>
+                           <select 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                              value={newField.outputType}
+                              onChange={e => setNewField({...newField, outputType: e.target.value as any})}
+                           >
+                              <option value="number">Nombre</option>
+                              <option value="text">Texte</option>
+                              <option value="boolean">Oui/Non</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="block text-xs font-bold text-slate-600 mb-1">Unité (Optionnel)</label>
+                           <input 
+                              type="text" 
+                              className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white"
+                              placeholder="Ex: €"
+                              value={newField.unit}
+                              onChange={e => setNewField({...newField, unit: e.target.value})}
+                           />
+                        </div>
+                    </div>
+
+                    <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                        <CheckCircle2 className="w-4 h-4 mr-2" /> Valider et Créer
+                    </Button>
+                    
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Champs existants</h4>
+                        {calculatedFields.length > 0 ? (
+                           <div className="space-y-2">
+                              {calculatedFields.map(field => (
+                                 <div key={field.id} className="flex justify-between items-center bg-white border border-slate-200 rounded p-2 text-xs">
+                                    <div className="flex items-center gap-2">
+                                       <span className="font-bold text-indigo-700">{field.name}</span>
+                                       <code className="bg-slate-100 px-1 rounded text-slate-500 max-w-[150px] truncate" title={field.formula}>{field.formula}</code>
+                                    </div>
+                                    <button onClick={() => removeCalculatedField(currentDataset.id, field.id)} className="text-slate-400 hover:text-red-500">
+                                       <Trash2 className="w-3 h-3" />
+                                    </button>
+                                 </div>
+                              ))}
+                           </div>
+                        ) : (
+                           <div className="text-center text-slate-400 italic text-xs">Aucun champ calculé.</div>
                         )}
                     </div>
                 </div>

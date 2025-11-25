@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -25,7 +26,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Données', icon: Table2, path: '/data' },
     { name: 'Importation', icon: Upload, path: '/import' },
     { name: 'Historique imports', icon: History, path: '/history' },
-    { name: 'Analyse sur mesure', icon: PieChart, path: '/analytics' },
+    { name: 'Création de graphiques', icon: PieChart, path: '/analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
     { name: 'Paramètres', icon: Settings, path: '/settings' },
     { name: 'Aide et informations', icon: HelpCircle, path: '/help' },

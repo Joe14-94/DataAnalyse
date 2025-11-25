@@ -4,7 +4,7 @@ import { FieldConfig, Dataset } from '../types';
 
 // Types spécifiques au moteur
 export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
-export type SortBy = 'label' | 'value';
+export type SortBy = 'label' | 'value' | string; // 'value' = Grand Total, string = Specific Column Key
 export type SortOrder = 'asc' | 'desc';
 export type DateGrouping = 'none' | 'year' | 'quarter' | 'month';
 
@@ -204,13 +204,30 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       if (sortBy === 'label') {
         return sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
       } else {
-        // Tri par valeur (nécessite un pré-calcul léger)
-        const valA = computeStats(groups[a]).rowTotal;
-        const valB = computeStats(groups[b]).rowTotal;
+        // Tri par valeur
+        const statsA = computeStats(groups[a]);
+        const statsB = computeStats(groups[b]);
+        
+        let valA: any = 0;
+        let valB: any = 0;
+
+        if (sortBy === 'value') {
+          // Tri par Total Ligne (Grand Total)
+          valA = statsA.rowTotal;
+          valB = statsB.rowTotal;
+        } else {
+          // Tri par colonne spécifique (si sortBy est une clé de colonne)
+          valA = statsA.metrics[sortBy] ?? 0;
+          valB = statsB.metrics[sortBy] ?? 0;
+        }
+
         if (typeof valA === 'number' && typeof valB === 'number') {
           return sortOrder === 'asc' ? valA - valB : valB - valA;
         }
-        return 0;
+        // Fallback pour string (list)
+        return sortOrder === 'asc' 
+           ? String(valA).localeCompare(String(valB)) 
+           : String(valB).localeCompare(String(valA));
       }
     });
 

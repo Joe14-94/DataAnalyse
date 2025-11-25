@@ -4,7 +4,7 @@ import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, Diag
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-174";
+export const APP_VERSION = "202511-180";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -598,38 +598,6 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
   }
   
   return batches;
-};
-
-/**
- * Génère des données de Référentiel (Table de dimension)
- */
-export const generateRefData = (datasetId: string): ImportBatch[] => {
-   const sectors = ['IT Services', 'Software', 'Consulting', 'Intégration', 'Public', 'Etat', 'Défense', 'Energie', 'Logistique', 'Finance'];
-   const cities = ['Paris', 'Lyon', 'Bordeaux', 'Nantes', 'Lille', 'Marseille', 'Strasbourg', 'Toulouse'];
-   const sizes = ['PME', 'ETI', 'Grand Compte', 'Administration', 'Startup'];
-
-   const rows: DataRow[] = ORGS_LIST.map((org, index) => {
-      return {
-         id: `ORG-${index + 1}`,
-         'Organisation': org, // CLE DE JOINTURE
-         'Secteur': sectors[index % sectors.length],
-         'Ville Siège': cities[index % cities.length],
-         'Taille': sizes[index % sizes.length],
-         'Note Client': Math.floor(Math.random() * 5) + 1 + '/5',
-         'Date Contrat': '2023-01-15'
-      };
-   });
-
-   // On ne génère qu'un seul batch car c'est un référentiel (donnée statique par nature pour cet exemple)
-   const today = new Date().toISOString().split('T')[0];
-   
-   return [{
-      id: generateId(),
-      datasetId: datasetId,
-      date: today,
-      createdAt: Date.now(),
-      rows
-   }];
 };
 
 // --- AUDIT SYSTEM ---

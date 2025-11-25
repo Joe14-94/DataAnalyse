@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, WidgetConfig, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
-import { APP_VERSION, generateSyntheticData, generateRefData, db } from '../utils';
+import { APP_VERSION, generateSyntheticData, db } from '../utils';
 
 interface DataContextType {
   datasets: Dataset[];
@@ -27,6 +26,7 @@ interface DataContextType {
   createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
+  deleteDatasetField: (datasetId: string, fieldName: string) => void; // NEW: Supprimer colonne
   
   // Actions Calculated Fields
   addCalculatedField: (datasetId: string, field: CalculatedField) => void;
@@ -35,6 +35,7 @@ interface DataContextType {
   // Actions Data
   addBatch: (datasetId: string, date: string, rows: any[]) => void;
   deleteBatch: (id: string) => void;
+  deleteBatchRow: (batchId: string, rowId: string) => void; // NEW: Supprimer ligne
   
   // Actions Fields
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;
@@ -56,7 +57,7 @@ interface DataContextType {
   deleteAnalysis: (id: string) => void;
 
   // System
-  importBackup: (jsonData: string) => boolean;
+  importBackup: (jsonData: string) => Promise<boolean>;
   getBackupJson: () => string;
   clearAll: () => void;
   loadDemoData: () => void;
@@ -222,6 +223,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const deleteDatasetField = useCallback((datasetId: string, fieldName: string) => {
+    // 1. Mise à jour de la définition du dataset
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== datasetId) return d;
+      const newConfigs = { ...d.fieldConfigs };
+      delete newConfigs[fieldName];
+      return {
+        ...d,
+        fields: d.fields.filter(f => f !== fieldName),
+        fieldConfigs: newConfigs
+      };
+    }));
+
+    // 2. Nettoyage des données dans les lots
+    setAllBatches(prev => prev.map(b => {
+       if (b.datasetId !== datasetId) return b;
+       return {
+          ...b,
+          rows: b.rows.map(r => {
+             const { [fieldName]: deleted, ...rest } = r;
+             return rest as DataRow;
+          })
+       };
+    }));
+  }, []);
+
   const updateDatasetConfigs = useCallback((datasetId: string, configs: Record<string, FieldConfig>) => {
     setDatasets(prev => prev.map(d => {
       if (d.id !== datasetId) return d;
@@ -269,6 +296,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteBatch = useCallback((id: string) => {
     setAllBatches(prev => prev.filter(b => b.id !== id));
+  }, []);
+
+  const deleteBatchRow = useCallback((batchId: string, rowId: string) => {
+     setAllBatches(prev => prev.map(b => {
+        if (b.id !== batchId) return b;
+        return {
+           ...b,
+           rows: b.rows.filter(r => r.id !== rowId)
+        };
+     }));
   }, []);
 
   // --- ACTIONS DASHBOARD WIDGETS (GLOBAL) ---
@@ -355,7 +392,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadDemoData = useCallback(() => {
     const id1 = 'demo-rh';
-    const id2 = 'demo-ref';
+    // Suppression du second dataset "Référentiel Entreprises" jugé inutile
     
     const ds1: Dataset = { 
       id: id1, 
@@ -365,19 +402,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now() 
     };
 
-    const ds2: Dataset = { 
-      id: id2, 
-      name: 'Référentiel Entreprises', 
-      fields: ['Organisation', 'Secteur', 'Ville Siège', 'Taille', 'Note Client', 'Date Contrat'], 
-      fieldConfigs: { 'Note Client': { type: 'text' } },
-      createdAt: Date.now() + 100 
-    };
-
     const batches1 = generateSyntheticData(id1);
-    const batches2 = generateRefData(id2);
     
-    setDatasets([ds1, ds2]);
-    setAllBatches([...batches1, ...batches2]);
+    setDatasets([ds1]);
+    setAllBatches([...batches1]);
     setCurrentDatasetId(id1);
     
     // Default Widgets (Demo)
@@ -463,12 +491,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createDataset,
       updateDatasetName,
       deleteDataset,
+      deleteDatasetField,
       addFieldToDataset,
       updateDatasetConfigs,
       addCalculatedField,
       removeCalculatedField,
       addBatch, 
       deleteBatch, 
+      deleteBatchRow,
       addDashboardWidget,
       updateDashboardWidget,
       removeDashboardWidget,

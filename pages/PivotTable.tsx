@@ -1,7 +1,8 @@
 
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, detectColumnType, formatDateFr } from '../utils';
+import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
@@ -67,6 +68,16 @@ export const PivotTable: React.FC = () => {
   const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
   const [activeStyleTarget, setActiveStyleTarget] = useState<{type: 'row'|'col'|'cell'|'total', key?: string} | null>(null);
 
+  // --- DERIVED STATE ---
+  
+  // Filter batches to only show those belonging to the current dataset
+  const datasetBatches = useMemo(() => {
+    if (!currentDataset) return [];
+    return batches
+      .filter(b => b.datasetId === currentDataset.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [batches, currentDataset]);
+
   // --- INITIALISATION & PERSISTENCE ---
 
   // Chargement de l'état (LOAD)
@@ -90,10 +101,19 @@ export const PivotTable: React.FC = () => {
          if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
      } else {
          // Default config si pas d'état sauvegardé
-         if (fields.length > 0) {
-           if (rowFields.length === 0) setRowFields([fields[0]]);
-           if (!valField) setValField(fields[0]);
-         }
+         // RESET STRICT POUR EVITER LES RESIDUS D'ANCIEN DATASET
+         setRowFields(fields.length > 0 ? [fields[0]] : []);
+         setColField('');
+         setColGrouping('none');
+         setValField(fields.length > 0 ? fields[0] : '');
+         setAggType('count');
+         setFilters([]);
+         setSecondaryDatasetId('');
+         setJoinKeyPrimary('');
+         setJoinKeySecondary('');
+         setStyleRules([]);
+         setSortBy('label');
+         setSortOrder('asc');
      }
      // Marquer comme initialisé pour autoriser la sauvegarde
      setIsInitialized(true);
@@ -120,19 +140,19 @@ export const PivotTable: React.FC = () => {
   useEffect(() => {
     if (isLoading || !isInitialized) return; // Attendre la fin du chargement et de l'initialisation
     
-    if (batches.length === 0) {
+    if (datasetBatches.length === 0) {
        if (selectedBatchId) setSelectedBatchId('');
        return;
     }
-    const exists = batches.find(b => b.id === selectedBatchId);
-    if (!exists) setSelectedBatchId(batches[batches.length - 1].id);
-  }, [batches, selectedBatchId, isLoading, isInitialized]);
+    const exists = datasetBatches.find(b => b.id === selectedBatchId);
+    if (!exists) setSelectedBatchId(datasetBatches[0].id);
+  }, [datasetBatches, selectedBatchId, isLoading, isInitialized]);
 
   // --- HELPERS ---
 
   const currentBatch = useMemo(() => 
-    batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1], 
-  [batches, selectedBatchId]);
+    datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0], 
+  [datasetBatches, selectedBatchId]);
 
   const combinedFields = useMemo(() => {
       if (!secondaryDatasetId) return fields;
@@ -279,7 +299,7 @@ export const PivotTable: React.FC = () => {
     }
   };
 
-  // --- REDIRECT TO CHART (NOUVEAU) ---
+  // --- REDIRECT TO CHART ---
   const handleToChart = () => {
       if (!currentDataset) return;
       
@@ -323,9 +343,15 @@ export const PivotTable: React.FC = () => {
     document.body.style.cursor = '';
   }, [handleResizeMove]);
 
-  const handleHeaderSort = (type: SortBy) => {
-     if (sortBy === type) setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-     else { setSortBy(type); setSortOrder(type === 'value' ? 'desc' : 'asc'); }
+  // SORT HANDLER (UPDATED to support string keys)
+  const handleHeaderSort = (key: string) => {
+     if (sortBy === key) {
+        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+     } else { 
+        setSortBy(key); 
+        // Default desc for numbers (values), asc for text (labels)
+        setSortOrder(key === 'label' ? 'asc' : 'desc'); 
+     }
   };
 
   const handleCellClick = (rowKeys: string[], colKey?: string) => {
@@ -346,15 +372,21 @@ export const PivotTable: React.FC = () => {
         if (index < rowKeys.length) {
            let val = rowKeys[index];
            if (val === '(Vide)') val = '__EMPTY__';
+           else val = `=${val}`; // Préfixe '=' pour forcer le Match Exact dans DataExplorer
            drillFilters[field] = val;
         }
      });
      if (colField && colKey) {
         let val = colKey;
         if (val === '(Vide)') val = '__EMPTY__';
+        else val = `=${val}`; // Préfixe '=' pour forcer le Match Exact
         drillFilters[colField] = val;
      }
-     filters.forEach(f => { if (f.values.length === 1) drillFilters[f.field] = f.values[0]; });
+     filters.forEach(f => { 
+        if (f.values.length === 1) {
+           drillFilters[f.field] = `=${f.values[0]}`; // Appliquer aussi le match exact pour les filtres TCD
+        }
+     });
      
      // REPARED DRILL DOWN BATCH SELECTION
      const targetBatchId = currentBatch?.id;
@@ -426,7 +458,7 @@ export const PivotTable: React.FC = () => {
              {/* New Feature : To Chart */}
              <button
                 onClick={handleToChart}
-                className="flex items-center gap-2 px-3 py-2 rounded text-xs font-bold bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors"
              >
                 <PieChart className="w-4 h-4" />
                 Créer graphique
@@ -471,7 +503,7 @@ export const PivotTable: React.FC = () => {
              <div className="flex items-center gap-2 bg-white p-1 rounded border border-slate-200">
                <span className="text-xs font-bold text-slate-500 px-2 hidden sm:inline">Source :</span>
                <select className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500 max-w-[200px]" value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)}>
-                  {batches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
+                  {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
                </select>
                {selectedBatchId && <button onClick={handleDeleteBatch} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>}
             </div>
@@ -585,7 +617,7 @@ export const PivotTable: React.FC = () => {
 
                    {isColFieldDate && (
                       <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200 animate-in fade-in">
-                          <label className="text-[10px] font-bold text-amber-800 flex items-center gap-1 mb-1"><CalendarClock className="w-3 h-3" /> Regroupement Date</label>
+                          <label className="text-[10px] font-bold text-amber-800 flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Regroupement Date</label>
                           <select className="w-full p-1.5 bg-white border border-amber-300 rounded text-xs text-amber-900" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as DateGrouping)}>
                               <option value="none">Aucun (Date exacte)</option>
                               <option value="year">Année</option>
@@ -598,162 +630,216 @@ export const PivotTable: React.FC = () => {
 
                 {/* 3. Valeurs */}
                 <div className="p-3 bg-blue-50 rounded border border-blue-100 space-y-3">
-                   <label className="text-xs font-bold text-blue-700 flex items-center gap-1"><Calculator className="w-3 h-3" /> Valeurs (calculer)</label>
-                   <select className="w-full p-2 bg-white border border-blue-200 rounded text-sm text-blue-900 focus:ring-blue-500" value={valField} onChange={(e) => handleValFieldChange(e.target.value)}>
+                   <label className="text-xs font-bold text-blue-700 flex items-center gap-1"><Calculator className="w-3 h-3" /> Valeurs</label>
+                   
+                   <select className="w-full p-2 bg-white border border-blue-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500" value={valField} onChange={(e) => handleValFieldChange(e.target.value)}>
                       {combinedFields.map(f => <option key={f} value={f}>{f}</option>)}
                    </select>
-                   <div className="grid grid-cols-3 gap-1">
-                      {[{ id: 'count', label: 'Compte' }, { id: 'sum', label: 'Somme' }, { id: 'avg', label: 'Moy.' }, { id: 'min', label: 'Min' }, { id: 'max', label: 'Max' }, { id: 'list', label: 'Liste' }].map(type => (
-                         <button key={type.id} onClick={() => setAggType(type.id as AggregationType)} className={`text-[10px] py-1 px-1 rounded border font-medium transition-all ${aggType === type.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-blue-50'}`}>{type.label}</button>
-                      ))}
+
+                   <div className="grid grid-cols-3 gap-2">
+                       {['count', 'sum', 'avg', 'min', 'max', 'list'].map(t => (
+                          <button 
+                             key={t}
+                             onClick={() => setAggType(t as AggregationType)}
+                             className={`px-1 py-1.5 text-[10px] font-bold uppercase rounded border transition-all ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                          >
+                             {t}
+                          </button>
+                       ))}
                    </div>
-                   {aggType === 'sum' && <p className="text-[10px] text-blue-600 italic">* "Somme" ignore les unités monétaires.</p>}
-                   {isAggRisky && <div className="flex items-start gap-2 bg-amber-50 text-amber-700 p-2 rounded border border-amber-200 text-xs"><AlertTriangle className="w-4 h-4 shrink-0" /><p>Attention: Faire une <strong>Somme</strong> sur une colonne de texte donnera 0.</p></div>}
+                   
+                   {isAggRisky && (
+                      <div className="flex items-start gap-2 text-[10px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-100">
+                         <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                         <span>Attention : Vous tentez une opération mathématique sur un champ qui semble contenir du texte.</span>
+                      </div>
+                   )}
                 </div>
 
                 {/* 4. Filtres */}
-                <div className="pt-4 border-t border-slate-100">
-                   <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-500 flex items-center gap-1"><Filter className="w-3 h-3" /> Filtres</label>
-                      <button onClick={addFilter} className="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded font-medium text-slate-700">+ Ajouter</button>
-                   </div>
+                <div>
+                   <label className="text-xs font-bold text-slate-500 flex items-center gap-1 mb-2"><Filter className="w-3 h-3" /> Filtres ({filters.length})</label>
                    <div className="space-y-2">
-                      {filters.map((filter, idx) => (
-                         <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 text-xs space-y-1 relative">
+                      {filters.map((f, idx) => (
+                         <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 relative group">
                             <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500"><X className="w-3 h-3" /></button>
-                            <select className="w-full bg-white border border-slate-200 rounded px-1 py-1 mb-1" value={filter.field} onChange={(e) => updateFilterField(idx, e.target.value)}>
-                               {combinedFields.map(f => <option key={f} value={f}>{f}</option>)}
+                            <select className="w-full p-1 bg-white border border-slate-200 rounded text-xs mb-1" value={f.field} onChange={(e) => updateFilterField(idx, e.target.value)}>
+                               {combinedFields.map(field => <option key={field} value={field}>{field}</option>)}
                             </select>
-                            <MultiSelect options={getDistinctValuesForField(filter.field)} selected={filter.values} onChange={(newValues) => updateFilterValues(idx, newValues)} placeholder="Sélectionner valeurs..." />
+                            <MultiSelect 
+                               options={getDistinctValuesForField(f.field)} 
+                               selected={f.values} 
+                               onChange={(v) => updateFilterValues(idx, v)} 
+                            />
                          </div>
                       ))}
-                      {filters.length === 0 && <p className="text-xs text-slate-400 italic">Aucun filtre actif.</p>}
+                      <button onClick={addFilter} className="w-full py-1.5 border border-dashed border-slate-300 text-slate-500 text-xs rounded hover:bg-slate-50 hover:text-blue-600">+ Ajouter un filtre</button>
                    </div>
                 </div>
 
-                {/* 5. Options */}
-                <div className="pt-4 border-t border-slate-100 space-y-3">
-                   <label className="text-xs font-bold text-slate-500 flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> Options</label>
-                   <div className="space-y-1">
-                      <span className="text-[10px] font-medium text-slate-400">Tri actif :</span>
-                      <div className="flex gap-1 items-center text-xs text-slate-700 bg-slate-100 px-2 py-1 rounded">
-                        {sortBy === 'label' ? 'Étiquette' : 'Valeur (total)'} {sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />}
-                      </div>
-                   </div>
+                {/* Options d'affichage */}
+                <div className="pt-4 border-t border-slate-100 space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Affichage</label>
+                    <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Afficher sous-totaux" />
+                    <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Afficher total général" />
                 </div>
-
              </div>
           </div>
 
-          {/* MAIN TABLE */}
-          <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden relative">
-             {pivotData ? (
-                <div className="flex-1 overflow-auto custom-scrollbar p-1 relative">
-                   <table className="min-w-full border-collapse text-sm text-slate-700" style={{ tableLayout: 'fixed', contentVisibility: 'auto' }}>
-                      <thead className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+          {/* MAIN TABLE AREA */}
+          <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
+             <div className="flex-1 overflow-auto custom-scrollbar">
+                {pivotData ? (
+                   <table className="min-w-full divide-y divide-slate-200 border-collapse">
+                      <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                          <tr>
-                            {rowFields.map((field, i) => {
-                              const colId = `row-${i}`;
-                              const width = colWidths[colId] || 140;
-                              return (
-                                <th key={i} className="border border-slate-300 bg-slate-200 text-left relative group select-none" style={{ width: `${width}px` }}>
-                                  <div className="flex items-center justify-between p-2 cursor-pointer hover:bg-slate-300/50 h-full" onClick={() => handleHeaderSort('label')} title="Trier par étiquette">
-                                    <span className="font-bold text-slate-800 text-xs truncate">{field}</span>
-                                    {sortBy === 'label' && (sortOrder === 'asc' ? <ArrowDown className="w-3 h-3 text-blue-600 shrink-0" /> : <ArrowUp className="w-3 h-3 text-blue-600 shrink-0" />)}
+                            {/* Headers Lignes */}
+                            {rowFields.map((field, idx) => (
+                               <th 
+                                  key={field} 
+                                  className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20 cursor-pointer hover:bg-slate-100 group"
+                                  style={{ minWidth: '150px' }}
+                                  onClick={() => handleHeaderSort('label')}
+                               >
+                                  <div className="flex items-center gap-1">
+                                     {field}
+                                     {sortBy === 'label' ? (
+                                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                                     ) : <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-50" />}
                                   </div>
-                                  <div className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-blue-400 z-20" onMouseDown={(e) => startResize(e, colId)} />
-                                </th>
-                              );
-                            })}
+                               </th>
+                            ))}
                             
-                            {colField && pivotData.colHeaders.map((cHead, i) => {
-                               const colId = `col-${i}`;
-                               const width = colWidths[colId] || 100;
-                               return (
-                                 <th key={cHead} className="border border-slate-300 font-semibold text-center bg-slate-50 relative select-none cursor-pointer hover:bg-blue-50" style={{ width: `${width}px` }} onClick={() => { if (isStyleMode) handleCellClick([], cHead); }}>
-                                    <div className="p-2 flex flex-col h-full justify-center">
-                                      <span className="text-[10px] text-slate-400 font-normal truncate">{colField}{colGrouping !== 'none' && <span className="ml-1 text-[9px] text-amber-500 uppercase">({colGrouping})</span>}</span>
-                                      <span className="truncate">{cHead}</span>
-                                    </div>
-                                    <div className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-blue-400 z-20" onMouseDown={(e) => startResize(e, colId)} />
-                                 </th>
-                               );
-                            })}
+                            {/* Headers Colonnes Dynamiques */}
+                            {pivotData.colHeaders.map(col => (
+                               <th 
+                                  key={col} 
+                                  className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-r border-slate-200 whitespace-nowrap relative group hover:bg-blue-50 cursor-pointer"
+                                  style={{ minWidth: colWidths[col] || 120 }}
+                                  onClick={() => handleCellClick([], col)}
+                               >
+                                  <div className="flex items-center justify-end gap-1" onClick={(e) => { e.stopPropagation(); handleHeaderSort(col); }}>
+                                     {col}
+                                     {sortBy === col && (
+                                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                                     )}
+                                  </div>
+                                  {/* Resizer */}
+                                  <div 
+                                     className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 z-30"
+                                     onMouseDown={(e) => startResize(e, col)}
+                                  />
+                               </th>
+                            ))}
 
-                            <th className="border border-slate-300 font-bold text-center bg-slate-200 text-slate-800 relative group select-none cursor-pointer hover:bg-slate-300" style={{ width: `${colWidths['total'] || 100}px` }} onClick={() => { if (isStyleMode) handleCellClick([], ''); }}>
-                               <div className="flex items-center justify-center gap-2 p-2 h-full" title="Trier par valeur totale">
-                                  <span onClick={(e) => { e.stopPropagation(); handleHeaderSort('value'); }} className="cursor-pointer hover:underline">Total</span>
-                                  {sortBy === 'value' && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-blue-600 shrink-0" />)}
-                               </div>
-                               <div className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-blue-400 z-20" onMouseDown={(e) => startResize(e, 'total')} />
-                            </th>
+                            {/* Header Total Général */}
+                            {showTotalCol && (
+                               <th 
+                                  className="px-4 py-3 text-right text-xs font-black text-slate-700 uppercase tracking-wider border-b bg-slate-100 whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                                  onClick={() => handleHeaderSort('value')}
+                               >
+                                  <div className="flex items-center justify-end gap-1">
+                                     Total
+                                     {sortBy === 'value' ? (
+                                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                                     ) : null}
+                                  </div>
+                               </th>
+                            )}
                          </tr>
                       </thead>
-                      <tbody>
-                         {pivotData.displayRows.map((row, rowIndex) => {
+                      
+                      <tbody className="bg-white divide-y divide-slate-200">
+                         {pivotData.displayRows.map((row, rIdx) => {
                             const isSubtotal = row.type === 'subtotal';
-                            let bgClass = "bg-white";
-                            if (isSubtotal) bgClass = row.level === 0 ? "bg-slate-200" : "bg-slate-100";
-                            const rowLabel = row.keys[row.keys.length - 1];
-                            const rowStyle = getStyleForTarget('row', rowLabel);
-                            const rowCss = getCSSFromStyle(rowStyle);
-                            const canClick = isDrillDownEnabled || isStyleMode;
+                            const labelStyle = getStyleForTarget('row', row.keys[row.keys.length - 1]);
 
                             return (
-                               <tr key={rowIndex} className={`${bgClass} hover:bg-blue-50 transition-colors`}>
-                                  {rowFields.map((_, colIndex) => {
-                                     if (row.type === 'data') {
+                               <tr key={rIdx} className={`${isSubtotal ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'} transition-colors`}>
+                                  {/* Cellules Clés Lignes */}
+                                  {rowFields.map((field, cIdx) => {
+                                     if (cIdx < row.level) return <td key={cIdx} className="border-r border-slate-100 bg-slate-50/50"></td>;
+                                     if (cIdx === row.level) {
                                         return (
-                                           <td key={colIndex} className="border border-slate-300 p-2 text-xs font-medium text-slate-700 truncate cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors" style={rowCss} onClick={() => handleCellClick(row.keys)} title="Drill-down">
-                                              {row.keys[colIndex] || ''}
+                                           <td 
+                                              key={cIdx} 
+                                              colSpan={isSubtotal ? rowFields.length - cIdx : 1}
+                                              className={`px-4 py-2 text-sm text-slate-700 border-r border-slate-200 font-medium whitespace-nowrap ${isSubtotal ? 'text-right italic text-slate-500' : ''}`}
+                                              style={!isSubtotal ? getCSSFromStyle(labelStyle) : {}}
+                                           >
+                                              {isSubtotal ? row.label : row.keys[cIdx]}
                                            </td>
                                         );
-                                     } else {
-                                        if (colIndex === row.level) return <td key={colIndex} className="border border-slate-300 p-2 font-bold text-slate-800 italic text-right truncate cursor-pointer hover:bg-blue-200 transition-colors" onClick={() => handleCellClick(row.keys)}>{row.label}</td>;
-                                        else if (colIndex < row.level) return <td key={colIndex} className="border border-slate-300 p-2 text-xs text-slate-400 truncate">{row.keys[colIndex]}</td>;
-                                        else return <td key={colIndex} className="border border-slate-300 bg-slate-50/50"></td>;
                                      }
+                                     return null;
                                   })}
-                                  {colField && pivotData.colHeaders.map(cHead => {
-                                     const val = row.metrics[cHead];
-                                     return (
-                                        <td key={cHead} className={`border border-slate-300 p-2 text-right tabular-nums truncate ${isSubtotal ? 'font-bold' : ''} ${canClick ? 'cursor-pointer hover:bg-blue-100 hover:text-blue-700' : ''}`} style={rowCss} onClick={() => canClick ? handleCellClick(row.keys, cHead) : undefined}>
-                                           {val !== undefined && val !== 0 ? formatOutput(val) : <span className="text-slate-300">-</span>}
-                                        </td>
-                                     );
+
+                                  {/* Cellules Valeurs */}
+                                  {pivotData.colHeaders.map(col => {
+                                      const val = row.metrics[col];
+                                      const cellStyle = getStyleForTarget('cell'); // Global cell style
+                                      // Specific column style overrides could be implemented here
+                                      return (
+                                          <td 
+                                             key={col} 
+                                             className={`px-4 py-2 text-sm text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100/50 ${isDrillDownEnabled ? 'text-blue-900' : 'text-slate-600'}`}
+                                             onClick={() => handleCellClick(row.keys, col)}
+                                             style={getCSSFromStyle(cellStyle)}
+                                          >
+                                             {val !== undefined ? formatOutput(val) : '-'}
+                                          </td>
+                                      )
                                   })}
-                                  <td 
-                                    className={`border border-slate-300 p-2 text-right tabular-nums font-bold truncate ${isSubtotal ? 'text-slate-900' : 'text-slate-700'} ${canClick ? 'cursor-pointer hover:bg-blue-100 hover:text-blue-700' : ''}`}
-                                    onClick={() => canClick ? handleCellClick(row.keys) : undefined}
-                                  >
-                                     {formatOutput(row.rowTotal)}
-                                  </td>
+
+                                  {/* Cellule Total Ligne */}
+                                  {showTotalCol && (
+                                     <td 
+                                        className={`px-4 py-2 text-sm text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200 cursor-pointer hover:bg-slate-200`}
+                                        onClick={() => handleCellClick(row.keys)} // Drill down sur toute la ligne
+                                     >
+                                        {formatOutput(row.rowTotal)}
+                                     </td>
+                                  )}
                                </tr>
                             );
                          })}
 
-                         {showTotalCol && (
-                            <tr className="bg-slate-800 text-white font-bold border-t-2 border-slate-900">
-                               <td colSpan={rowFields.length} className="border border-slate-700 p-2 text-right tracking-wider text-xs truncate">Total général</td>
-                               {colField && pivotData.colHeaders.map(cHead => (
-                                  <td key={`total-${cHead}`} className="border border-slate-700 p-2 text-right tabular-nums truncate">{formatOutput(pivotData.colTotals[cHead])}</td>
-                               ))}
-                               <td className="border border-slate-700 p-2 text-right tabular-nums bg-slate-900 text-yellow-400 truncate cursor-pointer hover:bg-slate-700" onClick={() => { if (isStyleMode) handleCellClick([], ''); }}>
+                         {/* Ligne Total Général */}
+                         <tr className="bg-slate-100 border-t-2 border-slate-300 font-bold shadow-inner">
+                            <td colSpan={rowFields.length} className="px-4 py-3 text-right text-sm uppercase text-slate-600">Total Général</td>
+                            {pivotData.colHeaders.map(col => {
+                               const style = getStyleForTarget('col', col);
+                               return (
+                                 <td 
+                                    key={col} 
+                                    className="px-4 py-3 text-right text-sm text-slate-900 border-r border-slate-200 cursor-pointer hover:bg-slate-300"
+                                    onClick={() => handleCellClick([], col)}
+                                    style={getCSSFromStyle(style)}
+                                 >
+                                    {formatOutput(pivotData.colTotals[col])}
+                                 </td>
+                               )
+                            })}
+                            {showTotalCol && (
+                               <td 
+                                 className="px-4 py-3 text-right text-sm text-black bg-slate-200 border-l border-slate-300 cursor-pointer hover:bg-slate-300"
+                                 onClick={() => handleCellClick([])}
+                               >
                                   {formatOutput(pivotData.grandTotal)}
                                </td>
-                            </tr>
-                         )}
+                            )}
+                         </tr>
                       </tbody>
                    </table>
-                </div>
-             ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400"><Table2 className="w-10 h-10 mb-2 opacity-20" /><p>Configurez au moins une ligne.</p></div>
-             )}
-             <div className="p-2 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-4 text-xs text-slate-600">
-                {rowFields.length > 1 && <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />}
-                <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
+                ) : (
+                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                      <Layout className="w-12 h-12 mb-3 opacity-20" />
+                      <p>Commencez par ajouter une dimension en ligne.</p>
+                   </div>
+                )}
              </div>
           </div>
+
        </div>
     </div>
   );
