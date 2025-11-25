@@ -582,7 +582,9 @@ const LivePreview: React.FC<{ widget: DashboardWidget }> = ({ widget }) => {
    
    // Style dynamique du conteneur
    const borderClass = widget.style?.borderColor || 'border-slate-200';
-   const widthClass = widget.style?.borderWidth ? `border-${widget.style.borderWidth}` : 'border';
+   // Tailwind 'border' class is 1px. If width is '1', we use 'border'.
+   const widthVal = widget.style?.borderWidth || '1';
+   const widthClass = widthVal === '0' ? 'border-0' : widthVal === '2' ? 'border-2' : widthVal === '4' ? 'border-4' : 'border';
    
    return (
       <div className={`w-full h-full rounded-lg ${borderClass} ${widthClass} shadow-sm p-4 flex flex-col ${bgColor} relative`}>
@@ -800,7 +802,9 @@ export const Dashboard: React.FC = () => {
                      
                      // Dynamic Styles
                      const borderClass = widget.style?.borderColor || 'border-slate-200';
-                     const widthClass = widget.style?.borderWidth ? `border-${widget.style.borderWidth}` : 'border';
+                     // Fix: width '1' means 'border' class
+                     const widthVal = widget.style?.borderWidth || '1';
+                     const widthClass = widthVal === '0' ? 'border-0' : widthVal === '2' ? 'border-2' : widthVal === '4' ? 'border-4' : 'border';
 
                      return (
                         <div className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>

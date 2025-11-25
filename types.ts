@@ -148,9 +148,10 @@ export interface WidgetConfig {
   filterValue?: string;
 }
 
+// NOUVEAU : Style personnalisé du widget
 export interface WidgetStyle {
   borderColor?: string; // Tailwind class: 'border-slate-200', 'border-blue-500', etc.
-  borderWidth?: '0' | '1' | '2' | '4'; // '0', '1' (default), '2', '4'
+  borderWidth?: '0' | '1' | '2' | '4'; // '0', '1' (default), '2', '4'. Note: '1' maps to 'border' class.
 }
 
 export interface DashboardWidget {
