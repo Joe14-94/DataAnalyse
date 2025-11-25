@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr, evaluateFormula, generateId, parseSmartNumber, formatNumberValue } from '../utils';
@@ -9,7 +8,7 @@ import {
   Search, Download, Database, ChevronLeft, ChevronRight, Table2, 
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
   History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-  FilterX, Hash, Percent, MousePointerClick, Variable, Sigma, Play, AlertCircle, CheckCircle2, Columns
+  FilterX, Hash, Percent, MousePointerClick, Variable, Sigma, Play, AlertCircle, CheckCircle2, Columns, AlertTriangle
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -552,6 +551,32 @@ export const DataExplorer: React.FC = () => {
         }
       `}</style>
 
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmRow && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                      <div className="p-3 bg-red-100 rounded-full text-red-600">
+                          <AlertTriangle className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">Confirmer la suppression</h3>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                      Vous êtes sur le point de supprimer cette ligne définitivement de l'import du 
+                      <strong> {formatDateFr(deleteConfirmRow._importDate)}</strong>.
+                      <br/><br/>
+                      Cette action est irréversible.
+                  </p>
+                  <div className="flex justify-end gap-3">
+                      <Button variant="outline" onClick={() => setDeleteConfirmRow(null)}>Annuler</Button>
+                      <Button variant="danger" onClick={confirmDeleteRow}>
+                          Supprimer la ligne
+                      </Button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div>
@@ -1019,4 +1044,366 @@ export const DataExplorer: React.FC = () => {
                         </label>
                         <textarea 
                            ref={formulaInputRef}
-                           className="block w-full h-32 rounded-t-md border-slate-300 text-sm
+                           className="block w-full h-32 rounded-t-md border-slate-300 text-sm p-3 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500"
+                           placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2"
+                           value={newField.formula}
+                           onChange={e => setNewField({...newField, formula: e.target.value})}
+                        />
+                        
+                        {/* Helper Tabs */}
+                        <div className="border border-t-0 border-slate-300 rounded-b-md bg-white flex flex-col h-64">
+                           <div className="flex border-b border-slate-200">
+                              <button 
+                                 onClick={() => setCalcTab('fields')}
+                                 className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'fields' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}
+                              >
+                                 Champs ({currentDataset.fields.length})
+                              </button>
+                              <button 
+                                 onClick={() => setCalcTab('functions')}
+                                 className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'functions' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}
+                              >
+                                 Fonctions
+                              </button>
+                           </div>
+                           
+                           <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-slate-50/50">
+                              {calcTab === 'fields' ? (
+                                 <div className="grid grid-cols-2 gap-2">
+                                    {currentDataset.fields.map(f => (
+                                       <button 
+                                          key={f} 
+                                          onClick={() => insertIntoFormula(`[${f}]`)}
+                                          className="text-left px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-700 hover:border-indigo-300 hover:text-indigo-700 truncate transition-colors"
+                                          title={`Insérer [${f}]`}
+                                       >
+                                          {f}
+                                       </button>
+                                    ))}
+                                 </div>
+                              ) : (
+                                 <div className="space-y-1">
+                                    {[
+                                       { name: 'SI', syntax: 'SI(condition, vrai, faux)', desc: 'Condition logique' },
+                                       { name: 'SOMME', syntax: 'SOMME(v1, v2...)', desc: 'Additionne les valeurs' },
+                                       { name: 'MOYENNE', syntax: 'MOYENNE(v1, v2...)', desc: 'Moyenne des valeurs' },
+                                       { name: 'ARRONDI', syntax: 'ARRONDI(nombre, décimales)', desc: 'Arrondit un nombre' },
+                                       { name: 'MIN', syntax: 'MIN(v1, v2...)', desc: 'Valeur minimale' },
+                                       { name: 'MAX', syntax: 'MAX(v1, v2...)', desc: 'Valeur maximale' },
+                                       { name: 'ABS', syntax: 'ABS(nombre)', desc: 'Valeur absolue' },
+                                    ].map(fn => (
+                                       <button 
+                                          key={fn.name}
+                                          onClick={() => insertIntoFormula(`${fn.name}(`)}
+                                          className="w-full text-left px-2 py-1.5 bg-white border border-slate-200 rounded hover:border-indigo-300 group"
+                                       >
+                                          <div className="flex justify-between items-center">
+                                             <span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span>
+                                             <span className="text-[10px] text-slate-400 font-mono">{fn.syntax}</span>
+                                          </div>
+                                          <div className="text-[10px] text-slate-500 mt-0.5">{fn.desc}</div>
+                                       </button>
+                                    ))}
+                                 </div>
+                              )}
+                           </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Options & Preview */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                           <label className="block text-xs font-bold text-slate-600 mb-1">Type de résultat</label>
+                           <select 
+                              className="block w-full rounded-md border-slate-300 text-sm p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                              value={newField.outputType}
+                              onChange={e => setNewField({...newField, outputType: e.target.value as any})}
+                           >
+                              <option value="number">Nombre</option>
+                              <option value="text">Texte</option>
+                              <option value="boolean">Vrai/Faux</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="block text-xs font-bold text-slate-600 mb-1">Unité (opt)</label>
+                           <input 
+                              type="text" 
+                              className="block w-full rounded-md border-slate-300 text-sm p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                              placeholder="Ex: €"
+                              value={newField.unit}
+                              onChange={e => setNewField({...newField, unit: e.target.value})}
+                           />
+                        </div>
+                    </div>
+
+                    {/* Live Preview Box */}
+                    <div className={`p-3 rounded border ${previewResult?.error ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} transition-colors`}>
+                        <div className="text-[10px] font-bold uppercase mb-1 flex justify-between">
+                           <span className={previewResult?.error ? 'text-red-700' : 'text-green-700'}>
+                              {previewResult?.error ? 'Erreur' : 'Aperçu (1ère ligne)'}
+                           </span>
+                        </div>
+                        <div className={`text-sm font-mono ${previewResult?.error ? 'text-red-800' : 'text-green-900 font-bold'}`}>
+                           {previewResult ? (previewResult.error || String(previewResult.value)) : '...'}
+                        </div>
+                    </div>
+
+                </div>
+
+                <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => setIsCalcDrawerOpen(false)}>Annuler</Button>
+                    <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula || !!previewResult?.error}>
+                        Créer le champ
+                    </Button>
+                </div>
+             </div>
+         )}
+
+         {/* CONDITIONAL FORMATTING MODAL */}
+         {isFormatModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+               <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                  <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <Palette className="w-5 h-5 text-purple-600" />
+                        Formatage Conditionnel
+                     </h3>
+                     <button onClick={() => setIsFormatModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                  </div>
+                  
+                  <div className="p-5 space-y-6">
+                     {/* SELECT COLUMN */}
+                     <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Appliquer sur la colonne</label>
+                        <select 
+                           className="w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500"
+                           value={selectedFormatCol}
+                           onChange={e => setSelectedFormatCol(e.target.value)}
+                        >
+                           {currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                     </div>
+
+                     {/* EXISTING RULES */}
+                     <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Règles existantes</label>
+                        <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-slate-50 p-2 rounded border border-slate-200">
+                           {(currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).length === 0 ? (
+                              <div className="text-xs text-slate-400 italic text-center py-2">Aucune règle définie pour cette colonne.</div>
+                           ) : (
+                              (currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).map(rule => (
+                                 <div key={rule.id} className="flex items-center justify-between bg-white p-2 rounded border border-slate-200 shadow-sm text-xs">
+                                    <div className="flex items-center gap-2">
+                                       <span className="font-mono bg-slate-100 px-1 rounded text-slate-600">
+                                          {rule.operator === 'gt' ? '>' : rule.operator === 'lt' ? '<' : rule.operator === 'contains' ? 'contient' : '='} {rule.value}
+                                       </span>
+                                       <ArrowRight className="w-3 h-3 text-slate-400" />
+                                       <span className={`px-2 py-0.5 rounded ${rule.style.color} ${rule.style.backgroundColor} ${rule.style.fontWeight}`}>
+                                          Exemple
+                                       </span>
+                                    </div>
+                                    <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-slate-400 hover:text-red-500">
+                                       <Trash2 className="w-4 h-4" />
+                                    </button>
+                                 </div>
+                              ))
+                           )}
+                        </div>
+                     </div>
+
+                     {/* NEW RULE CREATOR */}
+                     <div className="bg-purple-50 p-3 rounded border border-purple-100 space-y-3">
+                        <div className="text-xs font-bold text-purple-800">Nouvelle règle</div>
+                        <div className="flex gap-2">
+                           <select 
+                              className="w-1/3 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
+                              value={newRule.operator}
+                              onChange={e => setNewRule({...newRule, operator: e.target.value as any})}
+                           >
+                              <option value="gt">Supérieur à (&gt;)</option>
+                              <option value="lt">Inférieur à (&lt;)</option>
+                              <option value="eq">Égal à (=)</option>
+                              <option value="contains">Contient</option>
+                              <option value="empty">Est vide</option>
+                           </select>
+                           {newRule.operator !== 'empty' && (
+                              <input 
+                                 type={newRule.operator === 'contains' ? 'text' : 'number'}
+                                 className="flex-1 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
+                                 placeholder="Valeur..."
+                                 value={newRule.value}
+                                 onChange={e => setNewRule({...newRule, value: e.target.value})}
+                              />
+                           )}
+                        </div>
+                        
+                        <div className="flex gap-2 items-center">
+                           <span className="text-xs text-purple-800">Alors :</span>
+                           <select 
+                              className="flex-1 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
+                              value={newRule.style?.color}
+                              onChange={e => setNewRule({...newRule, style: { ...newRule.style, color: e.target.value }})}
+                           >
+                              <option value="text-slate-900">Texte Noir</option>
+                              <option value="text-red-600">Texte Rouge</option>
+                              <option value="text-green-600">Texte Vert</option>
+                              <option value="text-blue-600">Texte Bleu</option>
+                              <option value="text-orange-600">Texte Orange</option>
+                           </select>
+                           <select 
+                              className="flex-1 p-1.5 text-xs border-purple-200 rounded focus:ring-purple-500"
+                              value={newRule.style?.backgroundColor}
+                              onChange={e => setNewRule({...newRule, style: { ...newRule.style, backgroundColor: e.target.value }})}
+                           >
+                              <option value="">Fond (Aucun)</option>
+                              <option value="bg-red-100">Fond Rouge</option>
+                              <option value="bg-green-100">Fond Vert</option>
+                              <option value="bg-blue-100">Fond Bleu</option>
+                              <option value="bg-yellow-100">Fond Jaune</option>
+                           </select>
+                           <button 
+                              onClick={() => setNewRule({...newRule, style: { ...newRule.style, fontWeight: newRule.style?.fontWeight === 'font-bold' ? 'font-normal' : 'font-bold' }})}
+                              className={`px-2 py-1.5 border rounded text-xs font-bold ${newRule.style?.fontWeight === 'font-bold' ? 'bg-purple-200 border-purple-300 text-purple-800' : 'bg-white border-purple-200 text-slate-500'}`}
+                           >
+                              B
+                           </button>
+                        </div>
+
+                        <button onClick={handleAddConditionalRule} className="w-full py-1.5 bg-purple-600 text-white text-xs font-bold rounded shadow-sm hover:bg-purple-700">
+                           Ajouter cette règle
+                        </button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
+
+      </div>
+
+      {/* DETAILS DRAWER (RIGHT SIDE) - HISTORY & AUDIT */}
+      {isDrawerOpen && selectedRow && (
+         <div className="fixed inset-y-0 right-0 w-[600px] bg-white shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-slate-200">
+            {/* Drawer Header */}
+            <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-start">
+               <div>
+                  <div className="flex items-center gap-2 mb-1">
+                     <History className="w-5 h-5 text-blue-600" />
+                     <h3 className="text-lg font-bold text-slate-800">Fiche Détail & Historique</h3>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                     Suivi de l'entité via la clé : <strong className="text-slate-700">{trackingKey}</strong>
+                  </p>
+               </div>
+               <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white rounded-full p-1 shadow-sm border border-slate-200">
+                  <X className="w-5 h-5" />
+               </button>
+            </div>
+
+            {/* Config Key Selector */}
+            <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3">
+               <span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span>
+               <select 
+                  className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={trackingKey}
+                  onChange={(e) => setTrackingKey(e.target.value)}
+               >
+                  {currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}
+               </select>
+            </div>
+
+            {/* Drawer Content */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/50 space-y-8">
+               
+               {/* 1. Current State Card */}
+               <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-blue-50/50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
+                     <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">État Actuel</span>
+                     <span className="text-[10px] bg-white px-2 py-0.5 rounded-full border border-blue-200 text-blue-600 font-mono">
+                        {formatDateFr(selectedRow._importDate)}
+                     </span>
+                  </div>
+                  <div className="p-4 grid grid-cols-2 gap-4">
+                     {Object.entries(selectedRow)
+                        .filter(([k]) => !k.startsWith('_') && k !== 'id')
+                        .map(([key, val]) => (
+                           <div key={key} className="space-y-1">
+                              <dt className="text-[10px] font-medium text-slate-400 uppercase">{key}</dt>
+                              <dd className="text-sm font-medium text-slate-800 break-words bg-slate-50 p-2 rounded border border-slate-100">
+                                 {val !== undefined && val !== null && val !== '' ? String(val) : <span className="text-slate-300 italic">Vide</span>}
+                              </dd>
+                           </div>
+                        ))}
+                  </div>
+               </div>
+
+               {/* 2. Timeline */}
+               <div className="relative">
+                  <div className="absolute top-0 bottom-0 left-4 w-px bg-slate-200"></div>
+                  <h4 className="text-sm font-bold text-slate-700 mb-4 ml-10 flex items-center gap-2">
+                     <GitCommit className="w-4 h-4" /> Chronologie des modifications
+                  </h4>
+                  
+                  <div className="space-y-6">
+                     {historyData.map((histRow, idx) => {
+                        const prevRow = historyData[idx + 1]; // Next in array is older in time
+                        
+                        // Detect changes
+                        const changes = prevRow 
+                           ? currentDataset.fields.filter(f => String(histRow[f]) !== String(prevRow[f]))
+                           : []; // No prev row = creation (or first import)
+
+                        const isCreation = !prevRow;
+
+                        return (
+                           <div key={histRow._batchId} className="relative pl-10 group">
+                              {/* Dot */}
+                              <div className={`absolute left-[13px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm z-10
+                                 ${isCreation ? 'bg-green-500' : (changes.length > 0 ? 'bg-amber-500' : 'bg-slate-300')}
+                              `}></div>
+                              
+                              {/* Card */}
+                              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
+                                 <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                       <div className="text-xs font-bold text-slate-500">
+                                          {formatDateFr(histRow._importDate)}
+                                       </div>
+                                       <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                          Batch: {histRow._batchId}
+                                       </div>
+                                    </div>
+                                    {isCreation ? (
+                                       <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase">Création</span>
+                                    ) : changes.length > 0 ? (
+                                       <span className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase">{changes.length} Modif(s)</span>
+                                    ) : (
+                                       <span className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full uppercase">Inchangé</span>
+                                    )}
+                                 </div>
+
+                                 {/* Changes Diff */}
+                                 {changes.length > 0 && prevRow && (
+                                    <div className="space-y-2 bg-amber-50/50 p-3 rounded border border-amber-100/50">
+                                       {changes.map(field => (
+                                          <div key={field} className="text-xs grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+                                             <div className="text-right text-slate-500 line-through decoration-red-400 decoration-2">{String(prevRow[field] || 'Vide')}</div>
+                                             <div className="text-center text-slate-300"><ArrowRight className="w-3 h-3 inline" /></div>
+                                             <div className="font-bold text-slate-800">{String(histRow[field] || 'Vide')}</div>
+                                             <div className="col-span-3 text-[10px] text-slate-400 uppercase tracking-wider text-center mt-0.5">{field}</div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+                        );
+                     })}
+                  </div>
+               </div>
+
+            </div>
+         </div>
+      )}
+    </div>
+  );
+};

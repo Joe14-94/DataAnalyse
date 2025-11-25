@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useData } from '../context/DataContext';
+import { useWidgets, useBatches, useDatasets } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
 import { 
@@ -23,7 +23,9 @@ const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24'
 // --- DATA PROCESSING ENGINE ---
 
 const useWidgetData = (widget: DashboardWidget) => {
-   const { batches, datasets, dashboardFilters } = useData();
+   const { batches } = useBatches();
+   const { datasets } = useDatasets();
+   const { dashboardFilters } = useWidgets();
 
    return useMemo(() => {
       // TEXT WIDGET BYPASS
@@ -234,7 +236,7 @@ const useWidgetData = (widget: DashboardWidget) => {
 // --- SUB COMPONENTS ---
 
 const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widget, data }) => {
-   const { setDashboardFilter } = useData();
+   const { setDashboardFilter } = useWidgets();
    
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-xs">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-400 text-xs">{data.error}</div>;
@@ -349,7 +351,6 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    const { chartType } = widget.config;
    
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
-   const axisFormatter = (val: any) => `${val.toLocaleString()} ${unit || ''}`;
    
    // Default explicit white tooltip style to override any potential dark defaults
    const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
@@ -561,9 +562,9 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
 export const Dashboard: React.FC = () => {
   const { 
      dashboardWidgets, addDashboardWidget, removeDashboardWidget, 
-     updateDashboardWidget, moveDashboardWidget, datasets,
-     dashboardFilters, clearDashboardFilters, setDashboardFilter
-  } = useData();
+     updateDashboardWidget, moveDashboardWidget, dashboardFilters, clearDashboardFilters, setDashboardFilter
+  } = useWidgets();
+  const { datasets } = useDatasets();
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
@@ -692,15 +693,8 @@ export const Dashboard: React.FC = () => {
                      <span className="text-xs font-bold text-slate-800">{String(value)}</span>
                      <button 
                         onClick={() => {
-                           const newF = {...dashboardFilters};
-                           delete newF[field];
-                           if(Object.keys(newF).length === 0) clearDashboardFilters();
-                           else {
-                               // Since setDashboardFilter only sets, clear all is safest for now
-                               // to respect current context limitations. 
-                               // Or implement granular remove in context (future task).
-                               clearDashboardFilters(); 
-                           }
+                           // Simple implementation: clear all if user removes one (limitation of current simple API)
+                           clearDashboardFilters(); 
                         }}
                         className="ml-2 text-slate-400 hover:text-red-500"
                      >
@@ -870,7 +864,7 @@ export const Dashboard: React.FC = () => {
                                onChange={e => setTempWidget({
                                   ...tempWidget, 
                                   config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } }
-                               })}
+                                })}
                             >
                                {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                             </select>

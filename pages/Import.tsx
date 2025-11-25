@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType, readExcelFile } from '../utils';
@@ -27,6 +26,9 @@ export const Import: React.FC = () => {
   // Pagination for Preview
   const [previewPage, setPreviewPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Delete Confirmation State
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'row' | 'header', index?: number } | null>(null);
 
   // Drag & Drop State
   const [isDragging, setIsDragging] = useState(false);
@@ -180,10 +182,11 @@ export const Import: React.FC = () => {
      }
   };
 
-  const handleRemoveRow = (indexInView: number) => {
-      if (!rawData) return;
+  const handleRemoveRow = () => {
+      if (!rawData || !deleteConfirm || deleteConfirm.type !== 'row' || deleteConfirm.index === undefined) return;
+      
       // Calculate true index based on page
-      const trueIndex = (previewPage - 1) * rowsPerPage + indexInView;
+      const trueIndex = (previewPage - 1) * rowsPerPage + deleteConfirm.index;
       const newRows = [...rawData.rows];
       newRows.splice(trueIndex, 1);
       setRawData({
@@ -191,6 +194,20 @@ export const Import: React.FC = () => {
           rows: newRows,
           totalRows: newRows.length
       });
+      setDeleteConfirm(null);
+  };
+
+  const handleRemoveHeader = () => {
+      if (!rawData || rawData.rows.length === 0) return;
+      
+      const newHeaders = rawData.rows[0];
+      const newRows = rawData.rows.slice(1);
+      setRawData({
+          headers: newHeaders,
+          rows: newRows,
+          totalRows: newRows.length
+      });
+      setDeleteConfirm(null);
   };
 
 
@@ -472,8 +489,35 @@ export const Import: React.FC = () => {
     const hasStructureChanges = selectedDS && (newFields.length > 0 || missingFields.length > 0);
 
     return (
-      <div className="space-y-6 animate-in slide-in-from-right duration-300">
+      <div className="space-y-6 animate-in slide-in-from-right duration-300 relative">
         
+        {/* CONFIRMATION MODAL */}
+        {deleteConfirm && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-3 bg-red-100 rounded-full text-red-600">
+                            <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800">
+                            {deleteConfirm.type === 'header' ? "Supprimer l'en-tête ?" : "Supprimer cette ligne ?"}
+                        </h3>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                        {deleteConfirm.type === 'header' 
+                            ? "La ligne d'en-tête actuelle sera supprimée. La première ligne de données deviendra le nouvel en-tête des colonnes."
+                            : "Cette ligne sera exclue de l'import. Cette action est irréversible pour cette session d'import."}
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Annuler</Button>
+                        <Button variant="danger" onClick={deleteConfirm.type === 'header' ? handleRemoveHeader : handleRemoveRow}>
+                            Confirmer la suppression
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {/* Choix du Dataset Cible */}
         <Card className="p-6 border-blue-200 bg-blue-50">
            <div className="flex justify-between items-start">
@@ -669,7 +713,15 @@ export const Import: React.FC = () => {
             <table className="min-w-full divide-y divide-slate-200" style={{ contentVisibility: 'auto' }}>
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="px-2 py-3 w-10 border-b-2 border-slate-200"></th> {/* Delete Action Column */}
+                  <th className="px-2 py-3 w-10 border-b-2 border-slate-200 text-center">
+                        <button 
+                            onClick={() => setDeleteConfirm({ type: 'header' })}
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                            title="Supprimer cette ligne d'en-tête (utilise la ligne suivante)"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                  </th> 
                   {rawData.headers.map((header, idx) => {
                     const mappedVal = mapping[idx];
                     const isMapped = mappedVal && mappedVal !== 'ignore';
@@ -794,7 +846,7 @@ export const Import: React.FC = () => {
                   <tr key={rowIdx} className="group hover:bg-red-50/50">
                     <td className="px-2 py-2 text-center border-r border-slate-100">
                         <button 
-                            onClick={() => handleRemoveRow(rowIdx)}
+                            onClick={() => setDeleteConfirm({ type: 'row', index: rowIdx })}
                             className="text-slate-300 hover:text-red-600 transition-colors p-1"
                             title="Supprimer cette ligne de l'import"
                         >
