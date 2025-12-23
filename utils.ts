@@ -1,10 +1,8 @@
-
-
 import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from './types';
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-206";
+export const APP_VERSION = "202512-301";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
