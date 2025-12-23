@@ -91,6 +91,9 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           const sourceDS = config.datasets.find(d => d.name === dsName);
           if (sourceDS?.fieldConfigs?.[originalFieldName]?.unit) {
               valUnit = sourceDS.fieldConfigs[originalFieldName].unit;
+          } else if (sourceDS?.calculatedFields) {
+              const cf = sourceDS.calculatedFields.find(c => c.name === originalFieldName);
+              if (cf?.unit) valUnit = cf.unit;
           }
       }
   }
@@ -397,6 +400,13 @@ export const formatPivotOutput = (val: number | string, valField: string, aggTyp
                const originalFieldName = prefixMatch[2];
                const sourceDS = allDatasets.find(d => d.name === dsName);
                config = sourceDS?.fieldConfigs?.[originalFieldName];
+               
+               if (!config && sourceDS?.calculatedFields) {
+                   const cf = sourceDS.calculatedFields.find(c => c.name === originalFieldName);
+                   if (cf?.unit) {
+                       config = { type: 'number', unit: cf.unit };
+                   }
+               }
            }
         }
         

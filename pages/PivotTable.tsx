@@ -169,9 +169,11 @@ export const PivotTable: React.FC = () => {
       const secDS = datasets.find(d => d.id === secondaryDatasetId);
       if (!secDS) return baseFields;
 
-      // Préfixer les champs de la seconde source pour éviter les conflits et clarifier l'UI
-      const prefixedSecFields = secDS.fields.map(f => `[${secDS.name}] ${f}`);
-      return [...baseFields, ...prefixedSecFields];
+      // Préfixer les champs de la seconde source (Natifs + Calculés)
+      const secNativeFields = secDS.fields.map(f => `[${secDS.name}] ${f}`);
+      const secCalcFields = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);
+      
+      return [...baseFields, ...secNativeFields, ...secCalcFields];
   }, [fields, secondaryDatasetId, datasets, currentDataset]);
 
   // --- BLENDING LOGIC (Memoized) ---
@@ -179,7 +181,7 @@ export const PivotTable: React.FC = () => {
   const blendedRows = useMemo(() => {
      if (!currentBatch) return [];
      
-     // 1. Injection des champs calculés
+     // 1. Injection des champs calculés (Dataset Principal)
      const calcFields = currentDataset?.calculatedFields || [];
      let rows = currentBatch.rows;
 
@@ -203,9 +205,22 @@ export const PivotTable: React.FC = () => {
          
          if (secBatches.length > 0 && secDS) {
             const secBatch = secBatches[secBatches.length - 1];
+            
+            // Calcul des champs calculés pour la source secondaire AVANT indexation
+            let secRows = secBatch.rows;
+            if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
+                secRows = secRows.map(r => {
+                    const enriched = { ...r };
+                    secDS.calculatedFields?.forEach(cf => {
+                        enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                    });
+                    return enriched;
+                });
+            }
+
             // Utilisation Map pour performance (O(1) lookup)
             const lookup = new Map<string, any>();
-            secBatch.rows.forEach(r => {
+            secRows.forEach(r => {
                const k = String(r[joinKeySecondary]).trim();
                if (k) lookup.set(k, r);
             });
