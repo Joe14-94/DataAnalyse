@@ -1,10 +1,9 @@
 
-
 import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from './types';
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202511-204";
+export const APP_VERSION = "202511-205";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -138,6 +137,36 @@ export const parseRawData = (text: string): RawImportData => {
     rows,
     totalRows: rows.length
   };
+};
+
+/**
+ * Lit un fichier texte/CSV en gérant automatiquement l'encodage (UTF-8 ou Windows-1252)
+ * Résout les problèmes d'accents corrompus ().
+ */
+export const readTextFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      // Si on détecte le caractère de remplacement unicode (), c'est que l'UTF-8 a échoué.
+      // On retente avec l'encodage Windows-1252 (typique des exports Excel CSV en France/Europe).
+      if (text.includes('\uFFFD')) {
+        console.warn("Encodage UTF-8 potentiellement invalide ( détecté). Nouvelle tentative en Windows-1252.");
+        const retryReader = new FileReader();
+        retryReader.onload = (evt) => {
+           resolve(evt.target?.result as string);
+        };
+        retryReader.onerror = reject;
+        retryReader.readAsText(file, 'windows-1252');
+      } else {
+        resolve(text);
+      }
+    };
+    
+    reader.onerror = reject;
+    reader.readAsText(file, 'UTF-8');
+  });
 };
 
 /**

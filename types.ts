@@ -1,5 +1,4 @@
 
-
 export interface DataRow {
   id: string;
   [key: string]: any; // Permet des champs dynamiques
@@ -90,7 +89,18 @@ export interface FilterRule {
 // --- ETATS PERSISTANTS (PERSISTENCE) ---
 export interface PivotState {
   datasetId: string;
-  config: any; // rowFields, colField, etc.
+  config: {
+      rowFields: string[];
+      colField: string;
+      valField: string;
+      aggType: string;
+      filters: FilterRule[];
+      // Data Blending
+      secondaryDatasetId?: string;
+      joinKeyPrimary?: string;
+      joinKeySecondary?: string;
+      [key: string]: any;
+  }; 
 }
 
 export interface AnalyticsState {

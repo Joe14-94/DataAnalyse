@@ -87,7 +87,7 @@ export const PivotTable: React.FC = () => {
          setColField(c.colField || '');
          setColGrouping(c.colGrouping || 'none');
          setValField(c.valField || '');
-         setAggType(c.aggType || 'count');
+         setAggType((c.aggType as AggregationType) || 'count');
          setValFormatting(c.valFormatting || {});
          
          if (c.filters) {
@@ -305,8 +305,6 @@ export const PivotTable: React.FC = () => {
 
   const getDistinctValuesForField = (field: string) => {
     if (blendedRows.length === 0) return [];
-    // Optimisation : Limiter l'échantillon pour les très gros jeux de données si nécessaire
-    // Mais pour les filtres on veut généralement tout.
     const set = new Set<string>();
     for (let i = 0; i < blendedRows.length; i++) {
         const val = blendedRows[i][field] !== undefined ? String(blendedRows[i][field]) : '';
@@ -488,7 +486,14 @@ export const PivotTable: React.FC = () => {
         drillFilters['_batchId'] = targetBatchId;
      }
 
-     navigate('/data', { state: { prefilledFilters: drillFilters } });
+     // Construction de la configuration de jointure pour le drill-down
+     const blendingConfig = secondaryDatasetId && joinKeyPrimary && joinKeySecondary ? {
+         secondaryDatasetId,
+         joinKeyPrimary,
+         joinKeySecondary
+     } : undefined;
+
+     navigate('/data', { state: { prefilledFilters: drillFilters, blendingConfig } });
   };
 
   const applyStyle = (updates: Partial<PivotStyleRule['style']>) => {
@@ -524,6 +529,9 @@ export const PivotTable: React.FC = () => {
   }, [pivotData, currentPage, pageSize]);
 
   const totalPages = pivotData ? Math.ceil(pivotData.displayRows.length / pageSize) : 0;
+
+  // Récupérer le nom de la source secondaire pour l'affichage
+  const secondaryDatasetName = secondaryDatasetId ? datasets.find(d => d.id === secondaryDatasetId)?.name : null;
 
   return (
     <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
@@ -573,6 +581,15 @@ export const PivotTable: React.FC = () => {
                <select className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500 max-w-[200px]" value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)}>
                   {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
                </select>
+               
+               {/* Indicateur de source secondaire */}
+               {secondaryDatasetName && joinKeyPrimary && joinKeySecondary && (
+                   <div className="hidden lg:flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-200 rounded text-indigo-700 text-xs font-bold whitespace-nowrap animate-in fade-in">
+                       <LinkIcon className="w-3 h-3" />
+                       Lié avec : {secondaryDatasetName} (Dernier import)
+                   </div>
+               )}
+
                {selectedBatchId && <button onClick={handleDeleteBatch} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>}
             </div>
           </div>

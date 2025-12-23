@@ -559,6 +559,7 @@ export const DataExplorer: React.FC = () => {
               return stringVal;
            }),
            ...calculatedFields.map(f => {
+              // FIX: Use f.name instead of f
               let val = row[f.name];
               return val !== undefined ? String(val) : '';
            })
