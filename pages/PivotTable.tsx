@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
 import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr } from '../utils';
@@ -8,13 +7,13 @@ import {
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
   AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
-  PieChart
+  PieChart, Loader2
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
 import { PivotStyleRule, FilterRule } from '../types';
-import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping } from '../logic/pivotEngine';
+import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
 
 export const PivotTable: React.FC = () => {
   const { 
@@ -26,51 +25,45 @@ export const PivotTable: React.FC = () => {
 
   // --- STATE ---
   
-  // Flag d'initialisation pour éviter d'écraser la sauvegarde au montage
   const [isInitialized, setIsInitialized] = useState(false);
-
-  // Configuration de source
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   
-  // DATA BLENDING STATE
+  // DATA BLENDING
   const [secondaryDatasetId, setSecondaryDatasetId] = useState<string>('');
   const [joinKeyPrimary, setJoinKeyPrimary] = useState<string>('');
   const [joinKeySecondary, setJoinKeySecondary] = useState<string>('');
 
-  // Configuration TCD
-  const [rowFields, setRowFields] = useState<string[]>([]); // Multi-niveaux
+  // CONFIG TCD
+  const [rowFields, setRowFields] = useState<string[]>([]);
   const [colField, setColField] = useState<string>('');
   const [colGrouping, setColGrouping] = useState<DateGrouping>('none'); 
   const [valField, setValField] = useState<string>('');
   const [aggType, setAggType] = useState<AggregationType>('count');
   
-  // Filtres (Structure avancée)
+  // FILTRES
   const [filters, setFilters] = useState<FilterRule[]>([]);
   
-  // Options d'affichage
+  // AFFICHAGE & TRI
   const [showSubtotals, setShowSubtotals] = useState(true);
   const [showTotalCol, setShowTotalCol] = useState(true);
-
-  // Options de tri
   const [sortBy, setSortBy] = useState<SortBy>('label');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  // Largeur des colonnes (key -> width px)
+  // UI STATE
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const resizingRef = useRef<{ colId: string, startX: number, startWidth: number } | null>(null);
-
-  // SAVE UI STATE
   const [isSaving, setIsSaving] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
-
-  // STYLING STATE
   const [isStyleMode, setIsStyleMode] = useState(false);
   const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
   const [activeStyleTarget, setActiveStyleTarget] = useState<{type: 'row'|'col'|'cell'|'total', key?: string} | null>(null);
 
+  // ASYNC CALCULATION STATE
+  const [pivotData, setPivotData] = useState<PivotResult | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
   // --- DERIVED STATE ---
   
-  // Filter batches to only show those belonging to the current dataset
   const datasetBatches = useMemo(() => {
     if (!currentDataset) return [];
     return batches
@@ -80,7 +73,6 @@ export const PivotTable: React.FC = () => {
 
   // --- INITIALISATION & PERSISTENCE ---
 
-  // Chargement de l'état (LOAD)
   useEffect(() => {
      if (lastPivotState && currentDataset && lastPivotState.datasetId === currentDataset.id) {
          const c = lastPivotState.config;
@@ -90,7 +82,6 @@ export const PivotTable: React.FC = () => {
          setValField(c.valField || '');
          setAggType(c.aggType || 'count');
          
-         // Backward compat for filters
          if (c.filters) {
              const loadedFilters = c.filters.map((f: any) => {
                  if (f.values) return { field: f.field, operator: 'in', value: f.values };
@@ -111,7 +102,6 @@ export const PivotTable: React.FC = () => {
          setStyleRules(c.styleRules || []);
          if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
      } else {
-         // Default config si pas d'état sauvegardé
          setRowFields(fields.length > 0 ? [fields[0]] : []);
          setColField('');
          setColGrouping('none');
@@ -128,7 +118,6 @@ export const PivotTable: React.FC = () => {
      setIsInitialized(true);
   }, [currentDataset?.id]);
 
-  // Sauvegarde de l'état (SAVE)
   useEffect(() => {
      if (!isInitialized) return;
 
@@ -143,7 +132,6 @@ export const PivotTable: React.FC = () => {
      }
   }, [rowFields, colField, colGrouping, valField, aggType, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId, currentDataset, isInitialized]);
 
-  // Validation sélection Batch
   useEffect(() => {
     if (isLoading || !isInitialized) return; 
     
@@ -167,7 +155,7 @@ export const PivotTable: React.FC = () => {
       return secDS ? [...fields, ...secDS.fields] : fields;
   }, [fields, secondaryDatasetId, datasets]);
 
-  // --- BLENDING LOGIC ---
+  // --- BLENDING LOGIC (Memoized) ---
 
   const blendedRows = useMemo(() => {
      if (!currentBatch) return [];
@@ -180,6 +168,7 @@ export const PivotTable: React.FC = () => {
          
          if (secBatches.length > 0) {
             const secBatch = secBatches[secBatches.length - 1];
+            // Utilisation Map pour performance (O(1) lookup)
             const lookup = new Map<string, any>();
             secBatch.rows.forEach(r => {
                const k = String(r[joinKeySecondary]).trim();
@@ -198,6 +187,35 @@ export const PivotTable: React.FC = () => {
      }
      return rows;
   }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, batches]);
+
+  // --- ASYNC CALCULATION EFFECT ---
+  useEffect(() => {
+      // Déclencher le calcul de manière asynchrone pour ne pas bloquer l'UI
+      setIsCalculating(true);
+      
+      const timer = setTimeout(() => {
+          const result = calculatePivotData({
+            rows: blendedRows,
+            rowFields,
+            colField,
+            colGrouping,
+            valField,
+            aggType,
+            filters,
+            sortBy,
+            sortOrder,
+            showSubtotals,
+            currentDataset,
+            secondaryDatasetId,
+            datasets
+         });
+         setPivotData(result);
+         setIsCalculating(false);
+      }, 10); // Petit délai pour laisser le rendu React afficher le loader
+
+      return () => clearTimeout(timer);
+  }, [blendedRows, rowFields, colField, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, secondaryDatasetId]);
+
 
   // --- HANDLERS ---
   
@@ -222,11 +240,13 @@ export const PivotTable: React.FC = () => {
 
   const getDistinctValuesForField = (field: string) => {
     if (blendedRows.length === 0) return [];
+    // Optimisation : Limiter l'échantillon pour les très gros jeux de données si nécessaire
+    // Mais pour les filtres on veut généralement tout.
     const set = new Set<string>();
-    blendedRows.forEach(r => {
-       const val = r[field] !== undefined ? String(r[field]) : '';
-       if (val) set.add(val);
-    });
+    for (let i = 0; i < blendedRows.length; i++) {
+        const val = blendedRows[i][field] !== undefined ? String(blendedRows[i][field]) : '';
+        if (val) set.add(val);
+    }
     return Array.from(set).sort();
   };
 
@@ -258,7 +278,6 @@ export const PivotTable: React.FC = () => {
     setRowFields(newFields);
   };
 
-  // Filter Management
   const addFilter = () => combinedFields.length > 0 && setFilters([...filters, { field: combinedFields[0], operator: 'in', value: [] }]);
   const updateFilter = (index: number, updates: Partial<FilterRule>) => { 
       const n = [...filters]; 
@@ -296,8 +315,8 @@ export const PivotTable: React.FC = () => {
      
      if (c.filters) {
          const loadedFilters = c.filters.map((f: any) => {
-             if (f.values) return { field: f.field, operator: 'in', value: f.values }; // Old
-             return f; // New
+             if (f.values) return { field: f.field, operator: 'in', value: f.values }; 
+             return f; 
          });
          setFilters(loadedFilters);
      } else setFilters([]);
@@ -374,7 +393,6 @@ export const PivotTable: React.FC = () => {
         return;
      }
 
-     // Drill-down Logic
      const drillFilters: Record<string, string> = {};
      rowFields.forEach((field, index) => {
         if (index < rowKeys.length) {
@@ -418,25 +436,6 @@ export const PivotTable: React.FC = () => {
 
   const getStyleForTarget = (type: string, key?: string) => styleRules.find(r => r.targetType === type && r.targetKey === key)?.style || {};
   const getCSSFromStyle = (style: any) => ({ color: style.textColor, backgroundColor: style.backgroundColor, fontWeight: style.fontWeight, fontStyle: style.fontStyle, textDecoration: style.textDecoration });
-
-  // --- PIVOT ENGINE USE ---
-  const pivotData = useMemo(() => {
-     return calculatePivotData({
-        rows: blendedRows,
-        rowFields,
-        colField,
-        colGrouping,
-        valField,
-        aggType,
-        filters,
-        sortBy,
-        sortOrder,
-        showSubtotals,
-        currentDataset,
-        secondaryDatasetId,
-        datasets
-     });
-  }, [blendedRows, rowFields, colField, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, secondaryDatasetId]);
 
   if (!currentDataset) {
     return (
@@ -703,6 +702,13 @@ export const PivotTable: React.FC = () => {
 
           {/* MAIN TABLE AREA */}
           <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
+             {isCalculating && (
+                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
+                     <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                     <span className="text-sm font-bold text-slate-600">Calcul en cours...</span>
+                 </div>
+             )}
+             
              <div className="flex-1 overflow-auto custom-scrollbar">
                 {pivotData ? (
                    <table className="min-w-full divide-y divide-slate-200 border-collapse">
@@ -800,7 +806,7 @@ export const PivotTable: React.FC = () => {
                                              onClick={() => handleCellClick(row.keys, col)}
                                              style={getCSSFromStyle(cellStyle)}
                                           >
-                                             {val !== undefined ? formatOutput(val) : '-'}
+                                             {formatOutput(val)}
                                           </td>
                                       )
                                   })}

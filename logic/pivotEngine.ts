@@ -1,5 +1,4 @@
 
-
 import { parseSmartNumber, getGroupedLabel, detectColumnType, formatNumberValue } from '../utils';
 import { FieldConfig, Dataset, FilterRule } from '../types';
 
@@ -26,7 +25,7 @@ export interface PivotConfig {
   colGrouping: DateGrouping;
   valField: string;
   aggType: AggregationType;
-  filters: FilterRule[]; // NEW: Uses FilterRule instead of simplified structure
+  filters: FilterRule[];
   sortBy: SortBy;
   sortOrder: SortOrder;
   showSubtotals: boolean;
@@ -44,8 +43,16 @@ export interface PivotResult {
   grandTotal: number | string;
 }
 
+// Structure optimisée pour le calcul interne
+interface OptimizedRow {
+  rowKeys: string[];
+  colKey: string;
+  metricVal: number;
+  rawVal: any; // Pour le type 'list'
+}
+
 /**
- * MOTEUR TCD : Logique pure de calcul
+ * MOTEUR TCD : Logique pure de calcul optimisée
  */
 export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const { 
@@ -55,195 +62,235 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   if (rows.length === 0 || rowFields.length === 0) return null;
 
-  // 1. Filtrage (Support opérateurs avancés)
-  const filteredRows = rows.filter(row => {
-    if (!filters || filters.length === 0) return true;
+  // --- PHASE 1 : FILTRAGE & PRE-CALCUL (O(N)) ---
+  // On prépare les données une seule fois pour éviter de parser les nombres/dates dans les boucles récursives.
+  
+  const optimizedRows: OptimizedRow[] = [];
+  const colHeadersSet = new Set<string>();
+
+  // Cache pour l'unité du champ valeur (évite de chercher dans dataset config à chaque ligne)
+  let valUnit: string | undefined = undefined;
+  if (config.currentDataset?.fieldConfigs?.[valField]?.unit) {
+      valUnit = config.currentDataset.fieldConfigs[valField].unit;
+  } else if (config.secondaryDatasetId && config.datasets) {
+      const secDS = config.datasets.find(d => d.id === config.secondaryDatasetId);
+      valUnit = secDS?.fieldConfigs?.[valField]?.unit;
+  }
+
+  // Boucle unique de préparation
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
     
-    return filters.every(f => {
-       const rowVal = row[f.field];
-       const strRowVal = String(rowVal || '').toLowerCase();
-       const strFilterVal = String(f.value || '').toLowerCase();
+    // 1.1 Filtrage
+    if (filters && filters.length > 0) {
+      let pass = true;
+      for (const f of filters) {
+         const rowVal = row[f.field];
+         // Optimisation: traitement direct si tableau (cas fréquent)
+         if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
+             if (f.value.length > 0 && !f.value.includes(String(rowVal))) {
+                 pass = false; break;
+             }
+             continue;
+         }
+         
+         const strRowVal = String(rowVal || '').toLowerCase();
+         const strFilterVal = String(f.value || '').toLowerCase();
 
-       // Backward compatibility for array values (IN operator implicit)
-       if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
-           if (f.value.length === 0) return true;
-           return f.value.includes(String(rowVal));
-       }
+         if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) { pass = false; break; }
+         if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) { pass = false; break; }
+         if (f.operator === 'eq' && strRowVal !== strFilterVal) { pass = false; break; }
+         if (f.operator === 'gt' && parseSmartNumber(rowVal) <= parseSmartNumber(f.value)) { pass = false; break; }
+         if (f.operator === 'lt' && parseSmartNumber(rowVal) >= parseSmartNumber(f.value)) { pass = false; break; }
+      }
+      if (!pass) continue;
+    }
 
-       switch (f.operator) {
-           case 'in':
-               if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
-               return true;
-           case 'starts_with':
-               return strRowVal.startsWith(strFilterVal);
-           case 'contains':
-               return strRowVal.includes(strFilterVal);
-           case 'eq':
-               return strRowVal === strFilterVal;
-           case 'gt':
-               return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
-           case 'lt':
-               return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
-           default:
-               return true;
-       }
+    // 1.2 Extraction Clés Lignes
+    const rowKeys = rowFields.map(field => {
+       const v = row[field];
+       return v !== undefined && v !== null ? String(v) : '(Vide)';
     });
-  });
 
-  // 2. Extraction des en-têtes de colonnes (Distinct)
-  const colHeaders = new Set<string>();
-  if (colField) {
-    filteredRows.forEach(row => {
-      let val = row[colField] !== undefined ? String(row[colField]) : '(Vide)';
-      val = getGroupedLabel(val, colGrouping);
-      colHeaders.add(val);
+    // 1.3 Extraction Clé Colonne
+    let colKey = 'ALL';
+    if (colField) {
+       let v = row[colField];
+       if (v === undefined || v === null) v = '(Vide)';
+       else v = String(v);
+       colKey = getGroupedLabel(v, colGrouping);
+       colHeadersSet.add(colKey);
+    }
+
+    // 1.4 Extraction Métrique (Parsing Unique)
+    let metricVal = 0;
+    if (aggType !== 'count' && aggType !== 'list') {
+       metricVal = parseSmartNumber(row[valField], valUnit);
+    }
+
+    optimizedRows.push({
+       rowKeys,
+       colKey,
+       metricVal,
+       rawVal: row[valField]
     });
   }
-  const sortedColHeaders = Array.from(colHeaders).sort();
 
-  // Helper: Récupération valeur numérique sécurisée
-  const getNumericValue = (row: any, fieldName: string): number => {
-      const raw = row[fieldName];
-      // Tentative de récupération de l'unité depuis les datasets passés en config
-      let unit = config.currentDataset?.fieldConfigs?.[fieldName]?.unit;
-      if (!unit && config.secondaryDatasetId && config.datasets) {
-         const secDS = config.datasets.find(d => d.id === config.secondaryDatasetId);
-         unit = secDS?.fieldConfigs?.[fieldName]?.unit;
-      }
-      return parseSmartNumber(raw, unit);
+  const sortedColHeaders = Array.from(colHeadersSet).sort();
+
+  // --- PHASE 2 : AGREGATION RECURSIVE ---
+
+  // Helper pour initialiser les stats d'un groupe
+  const initStats = () => {
+      // Utilisation d'une Map pour les colonnes éparses (Performance + Memory)
+      return {
+          colMetrics: new Map<string, any>(),
+          rowTotalMetric: (aggType === 'min' ? Infinity : aggType === 'max' ? -Infinity : (aggType === 'list' ? new Set() : 0)) as any,
+          count: 0, // Pour AVG global
+          colCounts: new Map<string, number>() // Pour AVG par colonne
+      };
   };
 
-  // Helper: Valeur pour agrégation
-  const getMetricValue = (row: any) => {
-      if (aggType === 'count') return 1;
-      if (aggType === 'list') return String(row[valField] || '');
-      return getNumericValue(row, valField);
-  };
+  const computeGroupStats = (groupRows: OptimizedRow[]) => {
+      const stats = initStats();
 
-  // 3. Fonction d'agrégation (Single Pass)
-  const computeStats = (groupRows: any[]) => {
-      const stats: Record<string, number | Set<string> | string[] | string> = {}; 
-      let total: number | Set<string> | string[] | string = aggType === 'min' ? Infinity : aggType === 'max' ? -Infinity : 0;
-      
-      if (aggType === 'list') total = new Set();
-      else if (aggType === 'min' || aggType === 'max') total = aggType === 'min' ? Infinity : -Infinity;
-      else total = 0;
-
-      // Init stats
-      sortedColHeaders.forEach(c => {
-          if (aggType === 'list') stats[c] = new Set();
-          else if (aggType === 'min') stats[c] = Infinity;
-          else if (aggType === 'max') stats[c] = -Infinity;
-          else stats[c] = 0;
-      });
-
-      let totalCount = 0; // Pour AVG global
-      const colCounts: Record<string, number> = {}; // Pour AVG par colonne
-
-      groupRows.forEach(row => {
-          const val = getMetricValue(row);
-          
-          // Clé de colonne
-          let colKey = 'ALL'; 
-          if (colField) {
-             let v = row[colField] !== undefined ? String(row[colField]) : '(Vide)';
-             colKey = getGroupedLabel(v, colGrouping);
-          }
+      for (const row of groupRows) {
+          const val = aggType === 'count' ? 1 : row.metricVal;
+          const colKey = row.colKey;
 
           // Mise à jour Total Ligne
           if (aggType === 'sum' || aggType === 'count') {
-              total = (total as number) + (val as number);
+              stats.rowTotalMetric += val;
           } else if (aggType === 'avg') {
-              total = (total as number) + (val as number);
-              totalCount++;
+              stats.rowTotalMetric += val;
+              stats.count++;
           } else if (aggType === 'min') {
-              total = Math.min(total as number, val as number);
+              stats.rowTotalMetric = Math.min(stats.rowTotalMetric, val);
           } else if (aggType === 'max') {
-              total = Math.max(total as number, val as number);
+              stats.rowTotalMetric = Math.max(stats.rowTotalMetric, val);
           } else if (aggType === 'list') {
-              if (val) (total as Set<string>).add(val as string);
+              if (row.rawVal) stats.rowTotalMetric.add(String(row.rawVal));
           }
 
-          // Mise à jour Métrique Colonne
-          if (colField && stats[colKey] !== undefined) {
-               if (aggType === 'sum' || aggType === 'count') {
-                  stats[colKey] = (stats[colKey] as number) + (val as number);
-               } else if (aggType === 'avg') {
-                  stats[colKey] = (stats[colKey] as number) + (val as number);
-                  colCounts[colKey] = (colCounts[colKey] || 0) + 1;
-               } else if (aggType === 'min') {
-                  stats[colKey] = Math.min(stats[colKey] as number, val as number);
+          // Mise à jour Métrique Colonne (Si colonne définie)
+          if (colField) {
+              let currentVal = stats.colMetrics.get(colKey);
+              
+              // Init value if undefined
+              if (currentVal === undefined) {
+                  if (aggType === 'min') currentVal = Infinity;
+                  else if (aggType === 'max') currentVal = -Infinity;
+                  else if (aggType === 'list') currentVal = new Set();
+                  else currentVal = 0;
+              }
+
+              if (aggType === 'sum' || aggType === 'count') {
+                  stats.colMetrics.set(colKey, currentVal + val);
+              } else if (aggType === 'avg') {
+                  stats.colMetrics.set(colKey, currentVal + val);
+                  stats.colCounts.set(colKey, (stats.colCounts.get(colKey) || 0) + 1);
+              } else if (aggType === 'min') {
+                  stats.colMetrics.set(colKey, Math.min(currentVal, val));
               } else if (aggType === 'max') {
-                  stats[colKey] = Math.max(stats[colKey] as number, val as number);
+                  stats.colMetrics.set(colKey, Math.max(currentVal, val));
               } else if (aggType === 'list') {
-                  if (val) (stats[colKey] as Set<string>).add(val as string);
+                  if (row.rawVal) currentVal.add(String(row.rawVal));
+                  stats.colMetrics.set(colKey, currentVal); // Set reference back if needed (for Set it works by ref but good practice)
               }
           }
-      });
+      }
 
-      // Finalisation AVG et LIST
-      if (aggType === 'avg') {
-          if (totalCount > 0) total = (total as number) / totalCount;
-          sortedColHeaders.forEach(c => {
-              if (colCounts[c] > 0) stats[c] = (stats[c] as number) / colCounts[c];
+      return finalizeStats(stats, sortedColHeaders, aggType);
+  };
+
+  // Transformation finale des stats (Map -> Object pour affichage)
+  const finalizeStats = (stats: any, headers: string[], type: AggregationType) => {
+      const finalMetrics: Record<string, number | string> = {};
+      let finalTotal = stats.rowTotalMetric;
+
+      // Finalisation AVG
+      if (type === 'avg') {
+          if (stats.count > 0) finalTotal = finalTotal / stats.count;
+          else finalTotal = 0;
+          
+          stats.colMetrics.forEach((val: number, key: string) => {
+              const count = stats.colCounts.get(key) || 1;
+              stats.colMetrics.set(key, val / count);
           });
       }
-      if (aggType === 'list') {
+
+      // Finalisation LIST
+      if (type === 'list') {
           const formatList = (s: Set<string>) => {
               const arr = Array.from(s);
               if (arr.length === 0) return '-';
               if (arr.length > 3) return `${arr.slice(0, 3).join(', ')} (+${arr.length - 3})`;
               return arr.join(', ');
           };
-          total = formatList(total as Set<string>);
-          sortedColHeaders.forEach(c => {
-              stats[c] = formatList(stats[c] as Set<string>);
+          finalTotal = formatList(finalTotal);
+          stats.colMetrics.forEach((val: Set<string>, key: string) => {
+              stats.colMetrics.set(key, formatList(val));
           });
       }
 
       // Nettoyage Infinity
-      if (aggType === 'min' || aggType === 'max') {
-           if (total === Infinity || total === -Infinity) total = 0;
-           sortedColHeaders.forEach(c => {
-               if (stats[c] === Infinity || stats[c] === -Infinity) stats[c] = 0;
-           });
+      if (type === 'min' || type === 'max') {
+          if (!isFinite(finalTotal)) finalTotal = 0;
       }
 
-      return { metrics: stats as Record<string, number|string>, rowTotal: total as number|string };
+      // Remplissage de l'objet final (Sparse -> Dense pour l'affichage tableau)
+      // On ne remplit que si nécessaire, sinon undefined (le composant affichera '-')
+      headers.forEach(h => {
+          let val = stats.colMetrics.get(h);
+          if (val === undefined) {
+              if (type === 'min' || type === 'max') val = undefined; // Reste vide
+              else if (type === 'list') val = '-';
+              else val = undefined; // 0 ou undefined selon préférence affichage. Ici undefined pour '-'
+          } else if ((type === 'min' || type === 'max') && !isFinite(val)) {
+              val = undefined;
+          }
+          finalMetrics[h] = val;
+      });
+
+      return { metrics: finalMetrics, rowTotal: finalTotal };
   };
 
-  // 4. Regroupement Récursif
   const displayRows: PivotRow[] = [];
 
-  const processLevel = (groupRows: any[], level: number, parentKeys: string[]) => {
-    const currentField = rowFields[level];
+  const processLevel = (levelRows: OptimizedRow[], level: number, parentKeys: string[]) => {
+    // Groupement par clé du niveau actuel
+    // Map est plus rapide que Object pour les clés dynamiques et évite le prototypage
+    const groups = new Map<string, OptimizedRow[]>();
     
-    // Groupement
-    const groups: Record<string, any[]> = {};
-    groupRows.forEach(row => {
-      const key = row[currentField] !== undefined ? String(row[currentField]) : '(Vide)';
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(row);
-    });
+    for (const r of levelRows) {
+        const key = r.rowKeys[level];
+        const g = groups.get(key);
+        if (g) g.push(r);
+        else groups.set(key, [r]);
+    }
 
     // Tri des clés
-    const keys = Object.keys(groups).sort((a, b) => {
+    const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
       if (sortBy === 'label') {
         return sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
       } else {
-        // Tri par valeur
-        const statsA = computeStats(groups[a]);
-        const statsB = computeStats(groups[b]);
+        // Tri par valeur : nécessite un calcul anticipé (coûteux mais nécessaire)
+        // On ne calcule les stats complètes que si nécessaire pour le tri
+        const groupA = groups.get(a)!;
+        const groupB = groups.get(b)!;
+        
+        // Approximation rapide : somme locale sans recalculer toute la structure si possible ?
+        // Pour être exact, il faut computeStats.
+        const statsA = computeGroupStats(groupA);
+        const statsB = computeGroupStats(groupB);
         
         let valA: any = 0;
         let valB: any = 0;
 
-        if (sortBy === 'value') {
-          // Tri par Total Ligne (Grand Total)
+        if (sortBy === 'value') { // Grand Total
           valA = statsA.rowTotal;
           valB = statsB.rowTotal;
-        } else {
-          // Tri par colonne spécifique (si sortBy est une clé de colonne)
+        } else { // Specific Column
           valA = statsA.metrics[sortBy] ?? 0;
           valB = statsB.metrics[sortBy] ?? 0;
         }
@@ -251,21 +298,20 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
         if (typeof valA === 'number' && typeof valB === 'number') {
           return sortOrder === 'asc' ? valA - valB : valB - valA;
         }
-        // Fallback pour string (list)
         return sortOrder === 'asc' 
            ? String(valA).localeCompare(String(valB)) 
            : String(valB).localeCompare(String(valA));
       }
     });
 
-    // Traitement
-    keys.forEach(key => {
-      const subgroupRows = groups[key];
+    // Construction des lignes
+    for (const key of sortedKeys) {
+      const subgroupRows = groups.get(key)!;
       const currentKeys = [...parentKeys, key];
 
-      // Niveau le plus bas (Donnée)
       if (level === rowFields.length - 1) {
-        const { metrics, rowTotal } = computeStats(subgroupRows);
+        // Niveau Feuille
+        const { metrics, rowTotal } = computeGroupStats(subgroupRows);
         displayRows.push({
           type: 'data',
           keys: currentKeys,
@@ -274,12 +320,11 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           rowTotal
         });
       } else {
-        // Niveau intermédiaire
+        // Niveau Nœud
         processLevel(subgroupRows, level + 1, currentKeys);
 
-        // Sous-total
         if (showSubtotals) {
-          const { metrics, rowTotal } = computeStats(subgroupRows);
+          const { metrics, rowTotal } = computeGroupStats(subgroupRows);
           displayRows.push({
             type: 'subtotal',
             keys: currentKeys,
@@ -290,14 +335,14 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           });
         }
       }
-    });
+    }
   };
 
   // Lancement récursif
-  processLevel(filteredRows, 0, []);
+  processLevel(optimizedRows, 0, []);
 
   // Total Général
-  const { metrics: colTotals, rowTotal: grandTotal } = computeStats(filteredRows);
+  const { metrics: colTotals, rowTotal: grandTotal } = computeGroupStats(optimizedRows);
 
   return {
     colHeaders: sortedColHeaders,
@@ -311,6 +356,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
  * Helper de formatage d'affichage
  */
 export const formatPivotOutput = (val: number | string, valField: string, aggType: string, dataset?: Dataset | null, secondaryDatasetId?: string, allDatasets?: Dataset[]) => {
+    if (val === undefined || val === null) return '-';
     if (typeof val === 'string') return val;
     
     // Utiliser config standard si numérique
