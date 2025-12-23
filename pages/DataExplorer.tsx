@@ -303,9 +303,21 @@ export const DataExplorer: React.FC = () => {
             if (secBatches.length > 0) {
                 const secBatch = secBatches[secBatches.length - 1]; // Latest blending source
                 
+                // Pré-calcul des champs calculés pour la source secondaire (CRITIQUE pour le Drill-down)
+                let processedSecRows = secBatch.rows;
+                if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
+                    processedSecRows = processedSecRows.map(r => {
+                        const enriched = { ...r };
+                        secDS.calculatedFields?.forEach(cf => {
+                            enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                        });
+                        return enriched;
+                    });
+                }
+
                 // Build Lookup Map
                 const lookup = new Map<string, any>();
-                secBatch.rows.forEach(r => {
+                processedSecRows.forEach(r => {
                     const k = String(r[blendingConfig.joinKeySecondary]).trim();
                     if (k) lookup.set(k, r);
                 });
@@ -542,6 +554,7 @@ export const DataExplorer: React.FC = () => {
     if (!currentDataset || processedRows.length === 0) return;
     
     // Inclure les champs calculés et les champs blendés
+    const calculatedFields = currentDataset.calculatedFields || [];
     const headers = ['Date import', 'Id', ...displayFields, ...calculatedFields.map(f => f.name)];
     
     const csvContent = [

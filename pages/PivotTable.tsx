@@ -163,6 +163,15 @@ export const PivotTable: React.FC = () => {
     datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0], 
   [datasetBatches, selectedBatchId]);
 
+  // NEW : Récupérer le batch de la source secondaire pour afficher sa date
+  const secondaryBatch = useMemo(() => {
+      if (!secondaryDatasetId) return null;
+      const secBatches = batches
+          .filter(b => b.datasetId === secondaryDatasetId)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      return secBatches.length > 0 ? secBatches[secBatches.length - 1] : null;
+  }, [batches, secondaryDatasetId]);
+
   const combinedFields = useMemo(() => {
       // Intégration des champs calculés dans la liste des champs disponibles
       let baseFields = fields;
@@ -204,15 +213,12 @@ export const PivotTable: React.FC = () => {
      // 2. Data Blending
      if (secondaryDatasetId && joinKeyPrimary && joinKeySecondary) {
          const secDS = datasets.find(d => d.id === secondaryDatasetId);
-         const secBatches = batches
-            .filter(b => b.datasetId === secondaryDatasetId)
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
          
-         if (secBatches.length > 0 && secDS) {
-            const secBatch = secBatches[secBatches.length - 1];
+         // On utilise la logique de récupération du batch secondaire (déjà fait dans secondaryBatch)
+         if (secondaryBatch && secDS) {
             
             // Calcul des champs calculés pour la source secondaire AVANT indexation
-            let secRows = secBatch.rows;
+            let secRows = secondaryBatch.rows;
             if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
                 secRows = secRows.map(r => {
                     const enriched = { ...r };
@@ -248,7 +254,7 @@ export const PivotTable: React.FC = () => {
          }
      }
      return rows;
-  }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, batches, currentDataset, datasets]);
+  }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, secondaryBatch, currentDataset, datasets]);
 
   // --- ASYNC CALCULATION EFFECT ---
   useEffect(() => {
@@ -574,24 +580,37 @@ export const PivotTable: React.FC = () => {
                  </div>
              )}
 
-             <div className="h-6 w-px bg-slate-300 mx-1 hidden xl:block"></div>
+             {/* SEPARATEUR ET CONTENU DE CONTEXTE DE DONNEES (Droiite) */}
+             <div className="flex flex-col items-end gap-1 border-l border-slate-200 pl-4 ml-2">
+                
+                {/* Source Principale */}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Principal</span>
+                    <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded border border-slate-200" title="Typologie actuelle">
+                        <Database className="w-3 h-3 text-slate-500" />
+                        <span className="text-xs font-bold text-slate-700">{currentDataset.name}</span>
+                    </div>
+                    <select className="bg-white border-slate-300 text-slate-700 text-xs rounded shadow-sm p-1 focus:ring-blue-500 focus:border-blue-500 max-w-[180px]" value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)}>
+                        {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
+                    </select>
+                    {selectedBatchId && <button onClick={handleDeleteBatch} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Supprimer cet import"><Trash2 className="w-3 h-3" /></button>}
+                </div>
 
-             <div className="flex items-center gap-2 bg-white p-1 rounded border border-slate-200">
-               <span className="text-xs font-bold text-slate-500 px-2 hidden sm:inline">Source :</span>
-               <select className="bg-white border-slate-300 text-slate-700 text-sm rounded shadow-sm p-1.5 focus:ring-blue-500 focus:border-blue-500 max-w-[200px]" value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)}>
-                  {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
-               </select>
-               
-               {/* Indicateur de source secondaire */}
-               {secondaryDatasetName && joinKeyPrimary && joinKeySecondary && (
-                   <div className="hidden lg:flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-200 rounded text-indigo-700 text-xs font-bold whitespace-nowrap animate-in fade-in">
-                       <LinkIcon className="w-3 h-3" />
-                       Lié avec : {secondaryDatasetName} (Dernier import)
+                {/* Source Secondaire (Jointure) - Affichage Détaillé */}
+                {secondaryDatasetId && joinKeyPrimary && joinKeySecondary && (
+                   <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Jointure</span>
+                        <div className="flex items-center gap-2 bg-indigo-50 px-2 py-1 rounded border border-indigo-200 text-indigo-700 text-xs shadow-sm">
+                            <LinkIcon className="w-3 h-3" />
+                            <span className="font-bold" title="Typologie liée">{secondaryDatasetName}</span>
+                            <span className="w-px h-3 bg-indigo-200 mx-1"></span>
+                            <CalendarClock className="w-3 h-3" />
+                            <span title="Date de l'import utilisé pour la jointure">{secondaryBatch ? formatDateFr(secondaryBatch.date) : 'Aucun import'}</span>
+                        </div>
                    </div>
-               )}
+                )}
+             </div>
 
-               {selectedBatchId && <button onClick={handleDeleteBatch} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>}
-            </div>
           </div>
        </div>
 
