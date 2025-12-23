@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { formatDateFr, parseSmartNumber } from '../utils';
@@ -9,7 +8,7 @@ import {
 } from 'recharts';
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
-  LayoutGrid, TrendingUp, Settings2, Database, HelpCircle,
+  LayoutGrid, TrendingUp, Settings2, Database,
   Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown,
   LayoutDashboard, Save
 } from 'lucide-react';
@@ -18,6 +17,23 @@ import { FieldConfig, ChartType as WidgetChartType, FilterRule } from '../types'
 type ChartType = 'bar' | 'column' | 'pie' | 'area' | 'radar' | 'treemap' | 'kpi' | 'line';
 type AnalysisMode = 'snapshot' | 'trend';
 type MetricType = 'count' | 'distinct' | 'sum';
+
+// --- Treemap Content ---
+const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6', '#a3e635'];
+
+const TreemapContent = (props: any) => {
+  const { x, y, width, height, name, index } = props;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} fill={COLORS[index % COLORS.length]} stroke="#fff" />
+      {width > 60 && height > 30 && (
+        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize={12} dy={4} style={{textShadow: '0 1px 2px rgba(0,0,0,0.2)'}}>
+           {name.substring(0, 12)}
+        </text>
+      )}
+    </g>
+  );
+};
 
 // --- Multi Select Component ---
 interface MultiSelectProps {
@@ -108,41 +124,24 @@ export const CustomAnalytics: React.FC = () => {
   const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
 
-  // --- State Configuration ---
   const [mode, setMode] = useState<AnalysisMode>('snapshot');
-  
-  // Snapshot Mode State
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-  
-  // Trend Mode State
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-
-  // Common Config
   const [dimension, setDimension] = useState<string>(''); 
   const [metric, setMetric] = useState<MetricType>('count');
   const [valueField, setValueField] = useState<string>(''); 
   const [segment, setSegment] = useState<string>(''); 
   const [chartType, setChartType] = useState<ChartType>('bar');
-  const [limit, setLimit] = useState<number>(10); // Custom Limit
-  
-  // Advanced State
+  const [limit, setLimit] = useState<number>(10);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'alpha'>('desc');
   const [isCumulative, setIsCumulative] = useState<boolean>(false);
   const [showTable, setShowTable] = useState<boolean>(false);
-  
-  // Updated Filters Structure
   const [filters, setFilters] = useState<FilterRule[]>([]);
-
-  // Save UI State
   const [isSaving, setIsSaving] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // --- Colors ---
-  const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6', '#a3e635'];
-
-  // --- Initialization ---
   useEffect(() => {
     if (!selectedBatchId && batches.length > 0) {
       setSelectedBatchId(batches[batches.length - 1].id);
@@ -174,7 +173,6 @@ export const CustomAnalytics: React.FC = () => {
       }
   }, [successMessage]);
 
-  // --- Helpers ---
   const currentBatch = useMemo(() => 
     batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1], 
   [batches, selectedBatchId]);
@@ -190,48 +188,39 @@ export const CustomAnalytics: React.FC = () => {
     return Array.from(set).sort();
   };
 
-  // Identifie les champs numériques via la configuration du dataset ou par détection basique
   const numericFields = useMemo(() => {
      if (!currentDataset) return [];
-     
-     // 1. Vérifier la configuration explicite
      const configuredNumeric = Object.entries(currentDataset.fieldConfigs || ({} as Record<string, FieldConfig>))
         .filter(([_, config]) => (config as FieldConfig).type === 'number')
         .map(([name, _]) => name);
      
      if (configuredNumeric.length > 0) {
-        // Filtrer pour ne garder que ceux qui existent encore dans fields
         return configuredNumeric.filter(f => fields.includes(f));
      }
 
-     // 2. Fallback : Détection automatique sur les données
      if (!currentBatch || currentBatch.rows.length === 0) return [];
      const sample = currentBatch.rows.slice(0, 20);
      return fields.filter(f => {
-        return sample.some(r => {
+        return sample.some((r: any) => {
            const val = r[f];
            if (val === undefined || val === '' || val === null) return false;
-           // On teste le parsing "intelligent" (qui vire les unités courantes)
            return parseSmartNumber(val) !== 0 || val === '0' || val === 0;
         });
      });
   }, [currentBatch, fields, currentDataset]);
 
-  // Auto-select value field
   useEffect(() => {
      if (metric === 'sum' && !valueField && numericFields.length > 0) {
         setValueField(numericFields[0]);
      }
   }, [metric, numericFields, valueField]);
 
-  // Wrapper pour le parsing qui utilise la config
   const getValue = (row: any, fieldName: string): number => {
      const raw = row[fieldName];
      const unit = currentDataset?.fieldConfigs?.[fieldName]?.unit;
      return parseSmartNumber(raw, unit);
   };
 
-  // --- FILTER LOGIC ---
   const addFilter = () => {
     if (fields.length > 0) {
        setFilters([...filters, { field: fields[0], operator: 'in', value: [] }]);
@@ -241,7 +230,6 @@ export const CustomAnalytics: React.FC = () => {
   const updateFilter = (index: number, updates: Partial<FilterRule>) => {
      const newFilters = [...filters];
      newFilters[index] = { ...newFilters[index], ...updates };
-     // Reset value if operator changes to something incompatible with array
      if (updates.operator && updates.operator !== 'in' && Array.isArray(newFilters[index].value)) {
          newFilters[index].value = '';
      }
@@ -255,7 +243,6 @@ export const CustomAnalytics: React.FC = () => {
      setFilters(filters.filter((_, i) => i !== index));
   };
 
-  // --- EXPORT FUNCTION ---
   const handleExportToDashboard = () => {
       if (!currentDataset) return;
 
@@ -268,7 +255,7 @@ export const CustomAnalytics: React.FC = () => {
          if (['bar', 'column', 'line', 'area', 'pie', 'donut', 'radial', 'radar', 'treemap', 'funnel'].includes(chartType)) {
              widgetChartType = chartType as WidgetChartType;
          } else {
-             widgetChartType = 'bar'; // Default
+             widgetChartType = 'bar';
          }
       }
 
@@ -278,7 +265,7 @@ export const CustomAnalytics: React.FC = () => {
          title: title,
          type: widgetType,
          size: 'md',
-         height: 'md', // Hauteur standard par défaut
+         height: 'md',
          config: {
             source: { 
                datasetId: currentDataset.id, 
@@ -289,7 +276,7 @@ export const CustomAnalytics: React.FC = () => {
             valueField: metric === 'sum' ? valueField : undefined,
             chartType: widgetChartType,
             showTrend: mode === 'snapshot',
-            limit: limit // Export de la limite actuelle
+            limit: limit
          }
       });
       
@@ -298,7 +285,6 @@ export const CustomAnalytics: React.FC = () => {
 
    const handleSaveAnalysis = () => {
       if (!analysisName.trim() || !currentDataset) return;
-      
       saveAnalysis({
          name: analysisName,
          type: 'analytics',
@@ -309,7 +295,6 @@ export const CustomAnalytics: React.FC = () => {
             sortOrder, isCumulative, filters
          }
       });
-      
       setAnalysisName('');
       setIsSaving(false);
       setSuccessMessage("Vue d'analyse sauvegardée avec succès.");
@@ -329,11 +314,10 @@ export const CustomAnalytics: React.FC = () => {
       if (c.limit) setLimit(c.limit);
       if (c.sortOrder) setSortOrder(c.sortOrder);
       if (c.isCumulative !== undefined) setIsCumulative(c.isCumulative);
-      // Retro-compatibility for old filter format
       if (c.filters) {
           const loadedFilters = c.filters.map((f: any) => {
-              if (f.values) return { field: f.field, operator: 'in', value: f.values }; // Old format
-              return f; // New format
+              if (f.values) return { field: f.field, operator: 'in', value: f.values }; // Old
+              return f; // New
           });
           setFilters(loadedFilters);
       }
@@ -343,12 +327,10 @@ export const CustomAnalytics: React.FC = () => {
 
    const availableAnalyses = savedAnalyses.filter(a => a.type === 'analytics' && a.datasetId === currentDataset?.id);
 
-  // --- SNAPSHOT DATA ENGINE ---
   const snapshotData = useMemo(() => {
     if (mode !== 'snapshot' || !currentBatch || !dimension) return [];
 
-    // 1. Filter Rows
-    const filteredRows = currentBatch.rows.filter(row => {
+    const filteredRows = currentBatch.rows.filter((row: any) => {
        if (filters.length === 0) return true;
        return filters.every(f => {
           const rowVal = row[f.field];
@@ -356,7 +338,6 @@ export const CustomAnalytics: React.FC = () => {
           const strFilterVal = String(f.value || '').toLowerCase();
 
           if (f.operator === 'in') {
-              // Multi-select check
               if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
               return true;
           }
@@ -365,61 +346,42 @@ export const CustomAnalytics: React.FC = () => {
           if (f.operator === 'eq') return strRowVal === strFilterVal;
           if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
           if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
-          
           return true;
        });
     });
 
-    // 2. Aggregation
     const agg: Record<string, any> = {};
-    filteredRows.forEach(row => {
+    filteredRows.forEach((row: any) => {
       const dimVal = String(row[dimension] || 'Non défini');
       if (!agg[dimVal]) agg[dimVal] = { name: dimVal, count: 0, distinctSet: new Set(), sum: 0 };
 
       agg[dimVal].count++;
-      
-      if (metric === 'distinct') {
-         agg[dimVal].distinctSet.add(row.id);
-      }
-      
-      if (metric === 'sum' && valueField) {
-         agg[dimVal].sum += getValue(row, valueField);
-      }
+      if (metric === 'distinct') agg[dimVal].distinctSet.add(row.id);
+      if (metric === 'sum' && valueField) agg[dimVal].sum += getValue(row, valueField);
 
-      // Segment aggregation
       if (segment) {
         const segVal = String(row[segment] !== undefined ? row[segment] : 'N/A');
         if (!agg[dimVal][segVal]) agg[dimVal][segVal] = 0;
-        
-        if (metric === 'sum' && valueField) {
-           agg[dimVal][segVal] += getValue(row, valueField);
-        } else {
-           agg[dimVal][segVal]++;
-        }
+        if (metric === 'sum' && valueField) agg[dimVal][segVal] += getValue(row, valueField);
+        else agg[dimVal][segVal]++;
       }
     });
 
-    // 3. Transform
     let result = Object.values(agg).map((item: any) => {
       const { distinctSet, ...rest } = item;
       let finalVal = 0;
-      
       if (metric === 'distinct') finalVal = distinctSet.size;
       else if (metric === 'sum') finalVal = parseFloat(item.sum.toFixed(2));
       else finalVal = item.count;
-
       return { ...rest, value: finalVal, size: finalVal };
     });
 
-    // 4. Sort
     if (sortOrder === 'alpha') result.sort((a, b) => a.name.localeCompare(b.name));
     else if (sortOrder === 'asc') result.sort((a, b) => a.value - b.value);
     else result.sort((a, b) => b.value - a.value);
 
-    // 5. Limit
     if (limit > 0) result = result.slice(0, limit);
 
-    // 6. Cumulative
     if (isCumulative) {
        let runningTotal = 0;
        result = result.map(item => {
@@ -431,7 +393,6 @@ export const CustomAnalytics: React.FC = () => {
     return result;
   }, [mode, currentBatch, dimension, metric, valueField, segment, limit, filters, sortOrder, isCumulative, currentDataset]);
 
-  // --- TREND DATA ENGINE ---
   const trendData = useMemo(() => {
     if (mode !== 'trend' || !dimension) return { data: [], series: [] };
 
@@ -445,7 +406,7 @@ export const CustomAnalytics: React.FC = () => {
     const globalCounts: Record<string, number> = {};
     
     targetBatches.forEach(batch => {
-       const batchRows = batch.rows.filter(row => {
+       const batchRows = batch.rows.filter((row: any) => {
           if (filters.length === 0) return true;
           return filters.every(f => {
              const rowVal = row[f.field];
@@ -465,14 +426,10 @@ export const CustomAnalytics: React.FC = () => {
           });
        });
 
-       batchRows.forEach(row => {
+       batchRows.forEach((row: any) => {
           const val = String(row[dimension] || 'Non défini');
           let increment = 1;
-          
-          if (metric === 'sum' && valueField) {
-             increment = getValue(row, valueField);
-          }
-          
+          if (metric === 'sum' && valueField) increment = getValue(row, valueField);
           globalCounts[val] = (globalCounts[val] || 0) + increment;
        });
     });
@@ -483,7 +440,7 @@ export const CustomAnalytics: React.FC = () => {
        .map(e => e[0]);
 
     const timeData = targetBatches.map(batch => {
-       const batchRows = batch.rows.filter(row => {
+       const batchRows = batch.rows.filter((row: any) => {
           if (filters.length === 0) return true;
           return filters.every(f => {
              const rowVal = row[f.field];
@@ -511,21 +468,15 @@ export const CustomAnalytics: React.FC = () => {
 
        topSeries.forEach(s => point[s] = 0);
 
-       batchRows.forEach(row => {
+       batchRows.forEach((row: any) => {
           const val = String(row[dimension] || 'Non défini');
           if (topSeries.includes(val)) {
              let qty = 1;
-             if (metric === 'sum' && valueField) {
-                qty = getValue(row, valueField);
-             }
+             if (metric === 'sum' && valueField) qty = getValue(row, valueField);
              point[val] = parseFloat(((point[val] || 0) + qty).toFixed(2));
           }
-          
-          if (metric === 'sum' && valueField) {
-             point.total += getValue(row, valueField);
-          } else {
-             point.total++;
-          }
+          if (metric === 'sum' && valueField) point.total += getValue(row, valueField);
+          else point.total++;
        });
        
        point.total = parseFloat(point.total.toFixed(2));
@@ -535,7 +486,6 @@ export const CustomAnalytics: React.FC = () => {
     return { data: timeData, series: topSeries };
   }, [mode, batches, startDate, endDate, dimension, limit, filters, currentDataset, metric, valueField]);
 
-  // --- Insight Text ---
   const insightText = useMemo(() => {
     const metricLabel = metric === 'sum' ? 'Total' : 'Occurrences';
     const unitLabel = (metric === 'sum' && valueField && currentDataset?.fieldConfigs?.[valueField]?.unit) 
@@ -555,7 +505,6 @@ export const CustomAnalytics: React.FC = () => {
     }
   }, [mode, snapshotData, trendData, currentBatch, metric, valueField, currentDataset]);
 
-  // --- Styles ---
   const tooltipStyle = {
     backgroundColor: '#ffffff',
     borderRadius: '6px',
@@ -566,12 +515,10 @@ export const CustomAnalytics: React.FC = () => {
     padding: '8px'
   };
 
-  // --- Render Chart ---
   const renderVisuals = () => {
     const data = mode === 'snapshot' ? snapshotData : trendData.data;
     if (!data || data.length === 0) return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée disponible</div>;
 
-    // TABLE VIEW
     if (showTable) {
        if (mode === 'snapshot') {
           return (
@@ -585,7 +532,7 @@ export const CustomAnalytics: React.FC = () => {
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {snapshotData.map((row, idx) => (
+                      {snapshotData.map((row: any, idx: number) => (
                          <tr key={idx} className="hover:bg-slate-50">
                             <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.name}</td>
                             <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.value.toLocaleString()}</td>
@@ -626,7 +573,6 @@ export const CustomAnalytics: React.FC = () => {
        }
     }
 
-    // CHART VIEW
     if (mode === 'trend') {
        if (chartType === 'area') {
           return (
@@ -670,7 +616,7 @@ export const CustomAnalytics: React.FC = () => {
               <YAxis stroke="#94a3b8" fontSize={12} />
               <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
               <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[4, 4, 0, 0]}>
-                {snapshotData.map((entry, index) => (
+                {snapshotData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Bar>
@@ -686,7 +632,7 @@ export const CustomAnalytics: React.FC = () => {
               <YAxis dataKey="name" type="category" width={140} tick={{fontSize: 11}} stroke="#94a3b8" />
               <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} />
               <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[0, 4, 4, 0]}>
-                {snapshotData.map((entry, index) => (
+                {snapshotData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Bar>
@@ -708,7 +654,7 @@ export const CustomAnalytics: React.FC = () => {
                 stroke="#fff"
                 strokeWidth={2}
               >
-                {snapshotData.map((entry, index) => (
+                {snapshotData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -750,19 +696,7 @@ export const CustomAnalytics: React.FC = () => {
               aspectRatio={4 / 3}
               stroke="#fff"
               fill="#8884d8"
-              content={(props: any) => {
-                  const { x, y, width, height, name, index } = props;
-                  return (
-                    <g>
-                      <rect x={x} y={y} width={width} height={height} fill={COLORS[index % COLORS.length]} stroke="#fff" />
-                      {width > 60 && height > 30 && (
-                        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize={12} dy={4} style={{textShadow: '0 1px 2px rgba(0,0,0,0.2)'}}>
-                           {name.substring(0, 12)}
-                        </text>
-                      )}
-                    </g>
-                  );
-              }}
+              content={<TreemapContent />}
             >
               <Tooltip contentStyle={tooltipStyle} />
             </Treemap>
@@ -771,7 +705,7 @@ export const CustomAnalytics: React.FC = () => {
       case 'kpi':
         return (
            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto h-full p-2">
-              {snapshotData.map((item, idx) => (
+              {snapshotData.map((item: any, idx: number) => (
                 <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col items-center justify-center text-center">
                    <div className="text-xs text-slate-500 uppercase font-bold truncate w-full mb-2" title={item.name}>{item.name}</div>
                    <div className="text-2xl font-bold text-slate-700">{item.value.toLocaleString()}</div>
@@ -800,14 +734,6 @@ export const CustomAnalytics: React.FC = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] gap-4 relative">
       
-      {/* Success Notification */}
-      {successMessage && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2 fade-in">
-              <Check className="w-4 h-4" />
-              <span className="text-sm font-medium">{successMessage}</span>
-          </div>
-      )}
-
       {/* HEADER & MODE SELECTOR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0 gap-4">
         <div className="flex items-center gap-2">

@@ -16,6 +16,13 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "./*.ts", 
+    "./*.tsx", 
+    "./pages/**/*.tsx", 
+    "./components/**/*.tsx", 
+    "./context/**/*.tsx", 
+    "./logic/**/*.ts"
+  ],
+  "exclude": ["node_modules", "src"]
 }
