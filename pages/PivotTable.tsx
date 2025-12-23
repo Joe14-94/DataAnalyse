@@ -7,12 +7,12 @@ import {
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
   AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
-  PieChart, Loader2, ChevronLeft, ChevronRight
+  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule, FilterRule } from '../types';
+import { PivotStyleRule, FilterRule, FieldConfig } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
 
 export const PivotTable: React.FC = () => {
@@ -40,6 +40,9 @@ export const PivotTable: React.FC = () => {
   const [valField, setValField] = useState<string>('');
   const [aggType, setAggType] = useState<AggregationType>('count');
   
+  // NOUVEAU : Formatage Spécifique TCD
+  const [valFormatting, setValFormatting] = useState<Partial<FieldConfig>>({});
+
   // FILTRES
   const [filters, setFilters] = useState<FilterRule[]>([]);
   
@@ -85,6 +88,7 @@ export const PivotTable: React.FC = () => {
          setColGrouping(c.colGrouping || 'none');
          setValField(c.valField || '');
          setAggType(c.aggType || 'count');
+         setValFormatting(c.valFormatting || {});
          
          if (c.filters) {
              const loadedFilters = c.filters.map((f: any) => {
@@ -111,6 +115,7 @@ export const PivotTable: React.FC = () => {
          setColGrouping('none');
          setValField(fields.length > 0 ? fields[0] : '');
          setAggType('count');
+         setValFormatting({});
          setFilters([]);
          setSecondaryDatasetId('');
          setJoinKeyPrimary('');
@@ -129,12 +134,12 @@ export const PivotTable: React.FC = () => {
         savePivotState({
             datasetId: currentDataset.id,
             config: {
-                rowFields, colField, colGrouping, valField, aggType, filters, showSubtotals, showTotalCol, 
+                rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, 
                 sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId 
             }
         });
      }
-  }, [rowFields, colField, colGrouping, valField, aggType, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId, currentDataset, isInitialized]);
+  }, [rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId, currentDataset, isInitialized]);
 
   useEffect(() => {
     if (isLoading || !isInitialized) return; 
@@ -278,6 +283,9 @@ export const PivotTable: React.FC = () => {
   
   const handleValFieldChange = (newField: string) => {
      setValField(newField);
+     // Reset formatting when field changes to use default
+     setValFormatting({});
+     
      if (blendedRows.length > 0) {
         const sample = blendedRows.slice(0, 50).map(r => r[newField] !== undefined ? String(r[newField]) : '');
         const type = detectColumnType(sample);
@@ -352,7 +360,7 @@ export const PivotTable: React.FC = () => {
         type: 'pivot',
         datasetId: currentDataset.id,
         config: {
-           rowFields, colField, colGrouping, valField, aggType, filters, showSubtotals, showTotalCol, 
+           rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, 
            sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId 
         }
      });
@@ -369,6 +377,7 @@ export const PivotTable: React.FC = () => {
      setColGrouping(c.colGrouping || 'none');
      setValField(c.valField || '');
      setAggType(c.aggType || 'count');
+     setValFormatting(c.valFormatting || {});
      
      if (c.filters) {
          const loadedFilters = c.filters.map((f: any) => {
@@ -505,7 +514,7 @@ export const PivotTable: React.FC = () => {
   }
 
   const isDrillDownEnabled = aggType !== 'list';
-  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, secondaryDatasetId, datasets);
+  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, secondaryDatasetId, datasets, valFormatting);
 
   // Pagination Logic
   const paginatedRows = useMemo(() => {
@@ -707,6 +716,57 @@ export const PivotTable: React.FC = () => {
                        ))}
                    </div>
                    
+                   {/* FORMATAGE SPECIFIQUE (OVERRIDE) */}
+                   {aggType !== 'count' && aggType !== 'list' && (
+                       <div className="mt-2 pt-2 border-t border-blue-100 animate-in fade-in">
+                           <div className="flex items-center justify-between mb-1.5">
+                               <label className="text-[10px] font-bold text-blue-800 flex items-center gap-1">
+                                   <Palette className="w-3 h-3" /> Formatage affichage
+                               </label>
+                               {(valFormatting.unit || valFormatting.displayScale !== undefined || valFormatting.decimalPlaces !== undefined) && (
+                                   <button onClick={() => setValFormatting({})} className="text-[9px] text-blue-500 hover:underline">Réinitialiser</button>
+                               )}
+                           </div>
+                           <div className="grid grid-cols-3 gap-1">
+                               <div className="relative group">
+                                   <input 
+                                       type="number" 
+                                       min="0" max="5" 
+                                       placeholder="Auto"
+                                       className="w-full text-[10px] p-1 border border-blue-200 rounded text-center focus:ring-blue-500"
+                                       value={valFormatting.decimalPlaces !== undefined ? valFormatting.decimalPlaces : ''}
+                                       onChange={e => setValFormatting({...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined})}
+                                       title="Nombre de décimales"
+                                   />
+                                   <Hash className="w-3 h-3 text-slate-400 absolute right-1 top-1.5 pointer-events-none opacity-50" />
+                               </div>
+                               <div className="relative">
+                                   <select 
+                                       className="w-full text-[10px] p-1 border border-blue-200 rounded bg-white focus:ring-blue-500 appearance-none text-center"
+                                       value={valFormatting.displayScale || 'none'}
+                                       onChange={e => setValFormatting({...valFormatting, displayScale: e.target.value as any})}
+                                       title="Échelle (k, M, Md)"
+                                   >
+                                       <option value="none">1:1</option>
+                                       <option value="thousands">k</option>
+                                       <option value="millions">M</option>
+                                       <option value="billions">Md</option>
+                                   </select>
+                                   <Scaling className="w-3 h-3 text-slate-400 absolute right-1 top-1.5 pointer-events-none opacity-50" />
+                               </div>
+                               <div>
+                                   <input 
+                                       type="text" 
+                                       placeholder="Unité"
+                                       className="w-full text-[10px] p-1 border border-blue-200 rounded text-center focus:ring-blue-500"
+                                       value={valFormatting.unit || ''}
+                                       onChange={e => setValFormatting({...valFormatting, unit: e.target.value})}
+                                   />
+                               </div>
+                           </div>
+                       </div>
+                   )}
+
                    {isAggRisky && (
                       <div className="flex items-start gap-2 text-[10px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-100">
                          <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />

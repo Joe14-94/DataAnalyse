@@ -34,6 +34,7 @@ export interface PivotConfig {
   currentDataset?: Dataset | null;
   secondaryDatasetId?: string;
   datasets?: Dataset[];
+  valFormatting?: Partial<FieldConfig>;
 }
 
 export interface PivotResult {
@@ -376,12 +377,17 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 /**
  * Helper de formatage d'affichage
  */
-export const formatPivotOutput = (val: number | string, valField: string, aggType: string, dataset?: Dataset | null, secondaryDatasetId?: string, allDatasets?: Dataset[]) => {
+export const formatPivotOutput = (val: number | string, valField: string, aggType: string, dataset?: Dataset | null, secondaryDatasetId?: string, allDatasets?: Dataset[], overrideConfig?: Partial<FieldConfig>) => {
     if (val === undefined || val === null) return '-';
     if (typeof val === 'string') return val;
     
     // Utiliser config standard si numérique
     if (aggType !== 'count' && valField) {
+        // Si une config spécifique est fournie par le TCD, on l'utilise
+        if (overrideConfig && (overrideConfig.decimalPlaces !== undefined || overrideConfig.displayScale !== undefined || overrideConfig.unit)) {
+            return formatNumberValue(val, overrideConfig as FieldConfig);
+        }
+
         let config = dataset?.fieldConfigs?.[valField];
         
         // Si pas de config standard, chercher dans calculated fields
