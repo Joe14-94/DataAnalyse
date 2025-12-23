@@ -70,11 +70,29 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   // Cache pour l'unité du champ valeur (évite de chercher dans dataset config à chaque ligne)
   let valUnit: string | undefined = undefined;
+  
+  // 1. Chercher dans fieldConfigs du dataset principal
   if (config.currentDataset?.fieldConfigs?.[valField]?.unit) {
       valUnit = config.currentDataset.fieldConfigs[valField].unit;
-  } else if (config.secondaryDatasetId && config.datasets) {
-      const secDS = config.datasets.find(d => d.id === config.secondaryDatasetId);
-      valUnit = secDS?.fieldConfigs?.[valField]?.unit;
+  } 
+  // 2. Chercher dans calculatedFields du dataset courant
+  else if (config.currentDataset?.calculatedFields) {
+      const cf = config.currentDataset.calculatedFields.find(c => c.name === valField);
+      if (cf?.unit) valUnit = cf.unit;
+  }
+  // 3. Chercher dans dataset secondaire (blending avec préfixe)
+  else if (config.secondaryDatasetId && config.datasets) {
+      // Vérifier si le champ commence par [NomDataset]
+      const prefixMatch = valField.match(/^\[(.*?)\] (.*)$/);
+      if (prefixMatch) {
+          const dsName = prefixMatch[1];
+          const originalFieldName = prefixMatch[2];
+          // Trouver le dataset correspondant au nom
+          const sourceDS = config.datasets.find(d => d.name === dsName);
+          if (sourceDS?.fieldConfigs?.[originalFieldName]?.unit) {
+              valUnit = sourceDS.fieldConfigs[originalFieldName].unit;
+          }
+      }
   }
 
   // Boucle unique de préparation
@@ -361,12 +379,27 @@ export const formatPivotOutput = (val: number | string, valField: string, aggTyp
     
     // Utiliser config standard si numérique
     if (aggType !== 'count' && valField) {
-        const config = dataset?.fieldConfigs?.[valField];
-        if (!config && secondaryDatasetId && allDatasets) {
-           const secDS = allDatasets.find(d => d.id === secondaryDatasetId);
-           const secConfig = secDS?.fieldConfigs?.[valField];
-           if (secConfig) return formatNumberValue(val, secConfig);
+        let config = dataset?.fieldConfigs?.[valField];
+        
+        // Si pas de config standard, chercher dans calculated fields
+        if (!config && dataset?.calculatedFields) {
+            const cf = dataset.calculatedFields.find(c => c.name === valField);
+            if (cf?.unit) {
+                config = { type: 'number', unit: cf.unit };
+            }
         }
+
+        // Si toujours rien, chercher dans le dataset secondaire via préfixe
+        if (!config && allDatasets) {
+           const prefixMatch = valField.match(/^\[(.*?)\] (.*)$/);
+           if (prefixMatch) {
+               const dsName = prefixMatch[1];
+               const originalFieldName = prefixMatch[2];
+               const sourceDS = allDatasets.find(d => d.name === dsName);
+               config = sourceDS?.fieldConfigs?.[originalFieldName];
+           }
+        }
+        
         if (config) return formatNumberValue(val, config);
     }
     

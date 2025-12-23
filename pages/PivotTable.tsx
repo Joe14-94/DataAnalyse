@@ -1,13 +1,13 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr } from '../utils';
+import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr, evaluateFormula } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
   AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
-  PieChart, Loader2
+  PieChart, Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -48,6 +48,10 @@ export const PivotTable: React.FC = () => {
   const [showTotalCol, setShowTotalCol] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('label');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
+  // PAGINATION STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
 
   // UI STATE
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
@@ -143,6 +147,11 @@ export const PivotTable: React.FC = () => {
     if (!exists) setSelectedBatchId(datasetBatches[0].id);
   }, [datasetBatches, selectedBatchId, isLoading, isInitialized]);
 
+  // Reset pagination on config change
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [rowFields, colField, filters, sortBy, sortOrder, selectedBatchId]);
+
   // --- HELPERS ---
 
   const currentBatch = useMemo(() => 
@@ -150,23 +159,49 @@ export const PivotTable: React.FC = () => {
   [datasetBatches, selectedBatchId]);
 
   const combinedFields = useMemo(() => {
-      if (!secondaryDatasetId) return fields;
+      // Intégration des champs calculés dans la liste des champs disponibles
+      let baseFields = fields;
+      if (currentDataset && currentDataset.calculatedFields) {
+          baseFields = [...fields, ...currentDataset.calculatedFields.map(cf => cf.name)];
+      }
+
+      if (!secondaryDatasetId) return baseFields;
       const secDS = datasets.find(d => d.id === secondaryDatasetId);
-      return secDS ? [...fields, ...secDS.fields] : fields;
-  }, [fields, secondaryDatasetId, datasets]);
+      if (!secDS) return baseFields;
+
+      // Préfixer les champs de la seconde source pour éviter les conflits et clarifier l'UI
+      const prefixedSecFields = secDS.fields.map(f => `[${secDS.name}] ${f}`);
+      return [...baseFields, ...prefixedSecFields];
+  }, [fields, secondaryDatasetId, datasets, currentDataset]);
 
   // --- BLENDING LOGIC (Memoized) ---
 
   const blendedRows = useMemo(() => {
      if (!currentBatch) return [];
+     
+     // 1. Injection des champs calculés
+     const calcFields = currentDataset?.calculatedFields || [];
      let rows = currentBatch.rows;
 
+     // On enrichit chaque ligne avec les champs calculés
+     if (calcFields.length > 0) {
+         rows = rows.map(r => {
+             const enriched = { ...r };
+             calcFields.forEach(cf => {
+                 enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+             });
+             return enriched;
+         });
+     }
+
+     // 2. Data Blending
      if (secondaryDatasetId && joinKeyPrimary && joinKeySecondary) {
+         const secDS = datasets.find(d => d.id === secondaryDatasetId);
          const secBatches = batches
             .filter(b => b.datasetId === secondaryDatasetId)
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
          
-         if (secBatches.length > 0) {
+         if (secBatches.length > 0 && secDS) {
             const secBatch = secBatches[secBatches.length - 1];
             // Utilisation Map pour performance (O(1) lookup)
             const lookup = new Map<string, any>();
@@ -179,14 +214,21 @@ export const PivotTable: React.FC = () => {
                const k = String(row[joinKeyPrimary]).trim();
                const match = lookup.get(k);
                if (match) {
-                  return { ...row, ...match };
+                  // Renommage des clés pour correspondre à combinedFields
+                  const prefixedMatch: any = {};
+                  Object.keys(match).forEach(key => {
+                      if (key !== 'id') { // On ne préfixe pas l'ID technique interne
+                          prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
+                      }
+                  });
+                  return { ...row, ...prefixedMatch };
                }
                return row;
             });
          }
      }
      return rows;
-  }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, batches]);
+  }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, batches, currentDataset, datasets]);
 
   // --- ASYNC CALCULATION EFFECT ---
   useEffect(() => {
@@ -450,6 +492,15 @@ export const PivotTable: React.FC = () => {
   const isDrillDownEnabled = aggType !== 'list';
   const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, secondaryDatasetId, datasets);
 
+  // Pagination Logic
+  const paginatedRows = useMemo(() => {
+      if (!pivotData) return [];
+      const start = (currentPage - 1) * pageSize;
+      return pivotData.displayRows.slice(start, start + pageSize);
+  }, [pivotData, currentPage, pageSize]);
+
+  const totalPages = pivotData ? Math.ceil(pivotData.displayRows.length / pageSize) : 0;
+
   return (
     <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
        {/* HEADER BAR */}
@@ -709,8 +760,10 @@ export const PivotTable: React.FC = () => {
                  </div>
              )}
              
-             <div className="flex-1 overflow-auto custom-scrollbar">
+             <div className="flex-1 overflow-auto custom-scrollbar flex flex-col">
                 {pivotData ? (
+                   <>
+                   <div className="flex-1 overflow-auto">
                    <table className="min-w-full divide-y divide-slate-200 border-collapse">
                       <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                          <tr>
@@ -771,7 +824,7 @@ export const PivotTable: React.FC = () => {
                       </thead>
                       
                       <tbody className="bg-white divide-y divide-slate-200">
-                         {pivotData.displayRows.map((row, rIdx) => {
+                         {paginatedRows.map((row, rIdx) => {
                             const isSubtotal = row.type === 'subtotal';
                             const labelStyle = getStyleForTarget('row', row.keys[row.keys.length - 1]);
 
@@ -824,12 +877,12 @@ export const PivotTable: React.FC = () => {
                             );
                          })}
 
-                         {/* Ligne Total Général */}
+                         {/* Ligne Total Général (visible uniquement sur la dernière page ou sticky, ici on le laisse en bas du tableau paginé) */}
                          <tr className="bg-slate-100 border-t-2 border-slate-300 font-bold shadow-inner">
                             <td colSpan={rowFields.length} className="px-4 py-3 text-right text-sm uppercase text-slate-600">Total Général</td>
                             {pivotData.colHeaders.map(col => {
-                               const style = getStyleForTarget('col', col);
-                               return (
+                                const style = getStyleForTarget('col', col);
+                                return (
                                  <td 
                                     key={col} 
                                     className="px-4 py-3 text-right text-sm text-slate-900 border-r border-slate-200 cursor-pointer hover:bg-slate-300"
@@ -851,6 +904,51 @@ export const PivotTable: React.FC = () => {
                          </tr>
                       </tbody>
                    </table>
+                   </div>
+
+                   {/* PAGINATION FOOTER */}
+                   <div className="bg-white border-t border-slate-200 px-4 py-2 flex items-center justify-between flex-shrink-0 z-10 h-14">
+                        <div className="text-xs text-slate-500">
+                            {pivotData.displayRows.length > 0 
+                                ? `${(currentPage - 1) * pageSize + 1} - ${Math.min(currentPage * pageSize, pivotData.displayRows.length)} sur ${pivotData.displayRows.length}`
+                                : '0 résultat'
+                            }
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <select 
+                                className="text-xs border-slate-300 rounded bg-white text-slate-600 focus:ring-blue-500 focus:border-blue-500"
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                            >
+                                <option value={50}>50 lignes</option>
+                                <option value={100}>100 lignes</option>
+                                <option value={500}>500 lignes</option>
+                                <option value={1000}>1000 lignes</option>
+                            </select>
+
+                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="relative inline-flex items-center px-2 py-1.5 rounded-l-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <span className="relative inline-flex items-center px-4 py-1.5 border border-slate-300 bg-white text-xs font-medium text-slate-700">
+                                    Page {currentPage} / {Math.max(1, totalPages)}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    className="relative inline-flex items-center px-2 py-1.5 rounded-r-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                   </>
                 ) : (
                    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                       <Layout className="w-12 h-12 mb-3 opacity-20" />
