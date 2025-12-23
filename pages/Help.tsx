@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '../components/ui/Card';
 import { 
@@ -70,7 +69,7 @@ export const Help: React.FC = () => {
                    Puisque DataScope fonctionne sans serveur, <strong>si vous videz le cache de votre navigateur, vous perdez vos données</strong>.
                 </p>
                 <div className="text-xs bg-white p-3 rounded border border-indigo-200 text-slate-600">
-                   Allez dans <strong>Paramètres > Sauvegarde</strong> pour télécharger régulièrement votre fichier <code>.json</code> de sécurité.
+                   Allez dans <strong>Paramètres &gt; Sauvegarde</strong> pour télécharger régulièrement votre fichier <code>.json</code> de sécurité.
                 </div>
              </div>
           </Card>
