@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useBatches, useDatasets } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
@@ -12,7 +11,7 @@ import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
   Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
-  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, Copy
 } from 'lucide-react';
 import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle, WidgetHeight } from '../types';
 
@@ -561,7 +560,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
 
 export const Dashboard: React.FC = () => {
   const { 
-     dashboardWidgets, addDashboardWidget, removeDashboardWidget, 
+     dashboardWidgets, addDashboardWidget, removeDashboardWidget, duplicateDashboardWidget,
      updateDashboardWidget, moveDashboardWidget, dashboardFilters, clearDashboardFilters, setDashboardFilter
   } = useWidgets();
   const { datasets } = useDatasets();
@@ -738,11 +737,13 @@ export const Dashboard: React.FC = () => {
                      return (
                         <div className={`${bgColor} rounded-lg border ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
                            {isEditMode && (
-                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded shadow-sm z-10">
-                                 <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowLeft className="w-3 h-3" /></button>
-                                 <button onClick={() => moveDashboardWidget(widget.id, 'right')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowRight className="w-3 h-3" /></button>
-                                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-blue-50 rounded text-blue-600"><Settings className="w-3 h-3" /></button>
-                                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600"><Trash2 className="w-3 h-3" /></button>
+                              <div className="absolute top-2 right-2 flex gap-1 bg-white/90 p-1 rounded shadow-sm z-10 border border-slate-200">
+                                 <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Déplacer à gauche"><ArrowLeft className="w-3 h-3" /></button>
+                                 <button onClick={() => moveDashboardWidget(widget.id, 'right')} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Déplacer à droite"><ArrowRight className="w-3 h-3" /></button>
+                                 <div className="w-px bg-slate-300 mx-0.5"></div>
+                                 <button onClick={() => duplicateDashboardWidget(widget.id)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600" title="Dupliquer"><Copy className="w-3 h-3" /></button>
+                                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-blue-50 rounded text-blue-600" title="Modifier"><Settings className="w-3 h-3" /></button>
+                                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
                               </div>
                            )}
                            

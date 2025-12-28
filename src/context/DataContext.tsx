@@ -25,6 +25,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
   const [lastPivotState, setLastPivotState] = useState<PivotState | null>(null);
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
+  const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,7 +34,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const currentDataset = datasets.find(d => d.id === currentDatasetId) || null;
   const filteredBatches = batches
     .filter(b => b.datasetId === currentDatasetId)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => new Date(a.date).getTime() - new Date(a.date).getTime());
 
   // --- LOAD & MIGRATION ---
   useEffect(() => {
@@ -49,6 +50,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSavedAnalyses(dbData.savedAnalyses || []);
           setLastPivotState(dbData.lastPivotState || null);
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
+          setCompanyLogo(dbData.companyLogo); // NEW
 
           if (dbData.currentDatasetId) {
             setCurrentDatasetId(dbData.currentDatasetId);
@@ -66,6 +68,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSavedAnalyses(parsed.savedAnalyses || []);
             setLastPivotState(parsed.lastPivotState || null);
             setLastAnalyticsState(parsed.lastAnalyticsState || null);
+            setCompanyLogo(parsed.companyLogo); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
             
             await db.save(parsed);
@@ -99,7 +102,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         savedMappings,
         currentDatasetId,
         lastPivotState,
-        lastAnalyticsState
+        lastAnalyticsState,
+        companyLogo
       };
       
       db.save(state).catch(e => console.error("Failed to save to DB", e));
@@ -108,7 +112,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -158,7 +162,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const deleteDatasetField = useCallback((datasetId: string, fieldName: string) => {
-    // 1. Update definition
     setDatasets(prev => prev.map(d => {
       if (d.id !== datasetId) return d;
       const newConfigs = { ...d.fieldConfigs };
@@ -170,7 +173,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }));
 
-    // 2. Clean data
     setAllBatches(prev => prev.map(b => {
        if (b.datasetId !== datasetId) return b;
        return {
@@ -186,7 +188,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const renameDatasetField = useCallback((datasetId: string, oldName: string, newName: string) => {
     if (oldName === newName || !newName.trim()) return;
 
-    // 1. Update definition
     setDatasets(prev => prev.map(d => {
         if (d.id !== datasetId) return d;
         const newFields = d.fields.map(f => f === oldName ? newName : f);
@@ -198,7 +199,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...d, fields: newFields, fieldConfigs: newConfigs };
     }));
 
-    // 2. Update data
     setAllBatches(prev => prev.map(b => {
         if (b.datasetId !== datasetId) return b;
         const newRows = b.rows.map(r => {
@@ -273,6 +273,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDashboardWidgets(prev => [...prev, newWidget]);
   }, []);
 
+  const duplicateDashboardWidget = useCallback((widgetId: string) => {
+    setDashboardWidgets(prev => {
+      const widgetIndex = prev.findIndex(w => w.id === widgetId);
+      if (widgetIndex === -1) return prev;
+      
+      const original = prev[widgetIndex];
+      const newWidget = {
+        ...original,
+        id: generateId(),
+        title: `${original.title} (Copie)`
+      };
+      
+      // Insert right after original
+      const newWidgets = [...prev];
+      newWidgets.splice(widgetIndex + 1, 0, newWidget);
+      return newWidgets;
+    });
+  }, []);
+
   const updateDashboardWidget = useCallback((widgetId: string, updates: Partial<DashboardWidget>) => {
     setDashboardWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, ...updates } : w));
   }, []);
@@ -337,6 +356,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDashboardWidgets([]);
     setDashboardFilters({});
     setSavedAnalyses([]);
+    setCompanyLogo(undefined); // NEW
     setCurrentDatasetId(null);
     setLastPivotState(null);
     setLastAnalyticsState(null);
@@ -368,14 +388,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSavedMappings(prev => ({ ...prev, ...newMappings }));
   }, []);
 
+  const updateCompanyLogo = useCallback((logo: string | undefined) => {
+      setCompanyLogo(logo);
+  }, []);
+
   const getBackupJson = useCallback(() => {
     const state: AppState = { 
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
-      lastPivotState, lastAnalyticsState, exportDate: new Date().toISOString()
+      lastPivotState, lastAnalyticsState, companyLogo,
+      exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo]);
 
   const importBackup = useCallback(async (jsonData: string) => {
     try {
@@ -390,6 +415,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSavedAnalyses(parsed.savedAnalyses || []);
       setLastPivotState(parsed.lastPivotState || null);
       setLastAnalyticsState(parsed.lastAnalyticsState || null);
+      setCompanyLogo(parsed.companyLogo); // NEW
       
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
@@ -411,10 +437,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <PersistenceContext.Provider value={{ isLoading, savedMappings, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings }}>
+    <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings }}>
       <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
         <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
-          <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
+          <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
             <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
               {children}
             </AnalyticsContext.Provider>
@@ -425,7 +451,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Legacy hook for backward compatibility
 export const useData = () => {
   const ds = useContext(DatasetContext);
   const bt = useContext(BatchContext);
@@ -437,11 +462,5 @@ export const useData = () => {
     throw new Error("useData must be used within DataProvider");
   }
 
-  return {
-    ...ds,
-    ...bt,
-    ...wg,
-    ...an,
-    ...ps
-  };
+  return { ...ds, ...bt, ...wg, ...an, ...ps };
 };

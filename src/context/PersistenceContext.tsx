@@ -1,8 +1,11 @@
+
 import React, { createContext, useContext } from 'react';
 
 interface PersistenceContextType {
   isLoading: boolean;
   savedMappings: Record<string, string>;
+  companyLogo?: string; // NEW
+  updateCompanyLogo: (logo: string | undefined) => void; // NEW
   importBackup: (jsonData: string) => Promise<boolean>;
   getBackupJson: () => string;
   clearAll: () => void;

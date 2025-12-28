@@ -210,6 +210,7 @@ export interface AppState {
   savedMappings?: Record<string, string>; // Dictionnaire Global
   currentDatasetId?: string | null; 
   exportDate?: string; 
+  companyLogo?: string; // NOUVEAU : Logo de l'entreprise (Base64)
   
   // Persistence
   lastPivotState?: PivotState | null;

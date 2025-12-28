@@ -86,6 +86,14 @@ export interface FilterRule {
   value: any; // Array for 'in', string/number for others
 }
 
+// --- JOINTURES MULTIPLES (NOUVEAU) ---
+export interface PivotJoin {
+  id: string;
+  datasetId: string;
+  joinKeyPrimary: string;
+  joinKeySecondary: string;
+}
+
 // --- ETATS PERSISTANTS (PERSISTENCE) ---
 export interface PivotState {
   datasetId: string;
@@ -95,7 +103,9 @@ export interface PivotState {
       valField: string;
       aggType: string;
       filters: FilterRule[];
-      // Data Blending
+      // Data Blending (Nouveau support multi-jointures)
+      joins?: PivotJoin[];
+      // Deprecated fields kept for migration compatibility
       secondaryDatasetId?: string;
       joinKeyPrimary?: string;
       joinKeySecondary?: string;

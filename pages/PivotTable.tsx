@@ -1,18 +1,18 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr, evaluateFormula } from '../utils';
+import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr, evaluateFormula, generateId } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
   AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
-  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling
+  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling, Plug
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule, FilterRule, FieldConfig } from '../types';
+import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
 
 export const PivotTable: React.FC = () => {
@@ -28,10 +28,8 @@ export const PivotTable: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   
-  // DATA BLENDING
-  const [secondaryDatasetId, setSecondaryDatasetId] = useState<string>('');
-  const [joinKeyPrimary, setJoinKeyPrimary] = useState<string>('');
-  const [joinKeySecondary, setJoinKeySecondary] = useState<string>('');
+  // DATA BLENDING (MULTI SOURCES)
+  const [joins, setJoins] = useState<PivotJoin[]>([]);
 
   // CONFIG TCD
   const [rowFields, setRowFields] = useState<string[]>([]);
@@ -104,9 +102,21 @@ export const PivotTable: React.FC = () => {
          setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
          setSortBy(c.sortBy || 'label');
          setSortOrder(c.sortOrder || 'asc');
-         setSecondaryDatasetId(c.secondaryDatasetId || '');
-         setJoinKeyPrimary(c.joinKeyPrimary || '');
-         setJoinKeySecondary(c.joinKeySecondary || '');
+         
+         // Migration Legacy -> New Multi Join Array
+         if (c.joins) {
+             setJoins(c.joins);
+         } else if (c.secondaryDatasetId && c.joinKeyPrimary && c.joinKeySecondary) {
+             setJoins([{
+                 id: generateId(),
+                 datasetId: c.secondaryDatasetId,
+                 joinKeyPrimary: c.joinKeyPrimary,
+                 joinKeySecondary: c.joinKeySecondary
+             }]);
+         } else {
+             setJoins([]);
+         }
+
          setStyleRules(c.styleRules || []);
          if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
      } else {
@@ -117,9 +127,7 @@ export const PivotTable: React.FC = () => {
          setAggType('count');
          setValFormatting({});
          setFilters([]);
-         setSecondaryDatasetId('');
-         setJoinKeyPrimary('');
-         setJoinKeySecondary('');
+         setJoins([]);
          setStyleRules([]);
          setSortBy('label');
          setSortOrder('asc');
@@ -135,11 +143,11 @@ export const PivotTable: React.FC = () => {
             datasetId: currentDataset.id,
             config: {
                 rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, 
-                sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId 
+                sortBy, sortOrder, joins, styleRules, selectedBatchId 
             }
         });
      }
-  }, [rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId, currentDataset, isInitialized]);
+  }, [rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, sortBy, sortOrder, joins, styleRules, selectedBatchId, currentDataset, isInitialized]);
 
   useEffect(() => {
     if (isLoading || !isInitialized) return; 
@@ -163,15 +171,6 @@ export const PivotTable: React.FC = () => {
     datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0], 
   [datasetBatches, selectedBatchId]);
 
-  // NEW : Récupérer le batch de la source secondaire pour afficher sa date
-  const secondaryBatch = useMemo(() => {
-      if (!secondaryDatasetId) return null;
-      const secBatches = batches
-          .filter(b => b.datasetId === secondaryDatasetId)
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      return secBatches.length > 0 ? secBatches[secBatches.length - 1] : null;
-  }, [batches, secondaryDatasetId]);
-
   const combinedFields = useMemo(() => {
       // Intégration des champs calculés dans la liste des champs disponibles
       let baseFields = fields;
@@ -179,18 +178,24 @@ export const PivotTable: React.FC = () => {
           baseFields = [...fields, ...currentDataset.calculatedFields.map(cf => cf.name)];
       }
 
-      if (!secondaryDatasetId) return baseFields;
-      const secDS = datasets.find(d => d.id === secondaryDatasetId);
-      if (!secDS) return baseFields;
+      if (joins.length === 0) return baseFields;
 
-      // Préfixer les champs de la seconde source (Natifs + Calculés)
-      const secNativeFields = secDS.fields.map(f => `[${secDS.name}] ${f}`);
-      const secCalcFields = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);
+      // Iterer sur les jointures pour ajouter les champs préfixés
+      const allJoinedFields: string[] = [];
       
-      return [...baseFields, ...secNativeFields, ...secCalcFields];
-  }, [fields, secondaryDatasetId, datasets, currentDataset]);
+      joins.forEach(join => {
+          const ds = datasets.find(d => d.id === join.datasetId);
+          if (ds) {
+              const secNativeFields = ds.fields.map(f => `[${ds.name}] ${f}`);
+              const secCalcFields = (ds.calculatedFields || []).map(f => `[${ds.name}] ${f.name}`);
+              allJoinedFields.push(...secNativeFields, ...secCalcFields);
+          }
+      });
+      
+      return [...baseFields, ...allJoinedFields];
+  }, [fields, joins, datasets, currentDataset]);
 
-  // --- BLENDING LOGIC (Memoized) ---
+  // --- BLENDING LOGIC (Multi-Source) ---
 
   const blendedRows = useMemo(() => {
      if (!currentBatch) return [];
@@ -199,7 +204,6 @@ export const PivotTable: React.FC = () => {
      const calcFields = currentDataset?.calculatedFields || [];
      let rows = currentBatch.rows;
 
-     // On enrichit chaque ligne avec les champs calculés
      if (calcFields.length > 0) {
          rows = rows.map(r => {
              const enriched = { ...r };
@@ -210,55 +214,64 @@ export const PivotTable: React.FC = () => {
          });
      }
 
-     // 2. Data Blending
-     if (secondaryDatasetId && joinKeyPrimary && joinKeySecondary) {
-         const secDS = datasets.find(d => d.id === secondaryDatasetId);
-         
-         // On utilise la logique de récupération du batch secondaire (déjà fait dans secondaryBatch)
-         if (secondaryBatch && secDS) {
-            
-            // Calcul des champs calculés pour la source secondaire AVANT indexation
-            let secRows = secondaryBatch.rows;
-            if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
-                secRows = secRows.map(r => {
-                    const enriched = { ...r };
-                    secDS.calculatedFields?.forEach(cf => {
-                        enriched[cf.name] = evaluateFormula(enriched, cf.formula);
-                    });
-                    return enriched;
-                });
-            }
+     // 2. Data Blending (Boucle sur toutes les jointures)
+     if (joins.length > 0) {
+         // Pour chaque jointure configurée
+         joins.forEach(join => {
+             const secDS = datasets.find(d => d.id === join.datasetId);
+             
+             if (secDS) {
+                 // Récupérer le dernier batch de ce dataset
+                 const secBatches = batches
+                    .filter(b => b.datasetId === join.datasetId)
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                 
+                 if (secBatches.length > 0) {
+                     const secBatch = secBatches[0]; // Latest
+                     
+                     // Calcul champs calculés secondaires
+                     let secRows = secBatch.rows;
+                     if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
+                         secRows = secRows.map(r => {
+                             const enriched = { ...r };
+                             secDS.calculatedFields?.forEach(cf => {
+                                 enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                             });
+                             return enriched;
+                         });
+                     }
 
-            // Utilisation Map pour performance (O(1) lookup)
-            const lookup = new Map<string, any>();
-            secRows.forEach(r => {
-               const k = String(r[joinKeySecondary]).trim();
-               if (k) lookup.set(k, r);
-            });
+                     // Build Lookup Map
+                     const lookup = new Map<string, any>();
+                     secRows.forEach(r => {
+                        const k = String(r[join.joinKeySecondary]).trim();
+                        if (k) lookup.set(k, r);
+                     });
 
-            rows = rows.map(row => {
-               const k = String(row[joinKeyPrimary]).trim();
-               const match = lookup.get(k);
-               if (match) {
-                  // Renommage des clés pour correspondre à combinedFields
-                  const prefixedMatch: any = {};
-                  Object.keys(match).forEach(key => {
-                      if (key !== 'id') { // On ne préfixe pas l'ID technique interne
-                          prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
-                      }
-                  });
-                  return { ...row, ...prefixedMatch };
-               }
-               return row;
-            });
-         }
+                     // Apply Left Join to accumulator 'rows'
+                     rows = rows.map(row => {
+                        const k = String(row[join.joinKeyPrimary]).trim();
+                        const match = lookup.get(k);
+                        if (match) {
+                           const prefixedMatch: any = {};
+                           Object.keys(match).forEach(key => {
+                               if (key !== 'id') {
+                                   prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
+                               }
+                           });
+                           return { ...row, ...prefixedMatch };
+                        }
+                        return row;
+                     });
+                 }
+             }
+         });
      }
      return rows;
-  }, [currentBatch, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, secondaryBatch, currentDataset, datasets]);
+  }, [currentBatch, joins, currentDataset, datasets, batches]);
 
   // --- ASYNC CALCULATION EFFECT ---
   useEffect(() => {
-      // Déclencher le calcul de manière asynchrone pour ne pas bloquer l'UI
       setIsCalculating(true);
       
       const timer = setTimeout(() => {
@@ -274,22 +287,21 @@ export const PivotTable: React.FC = () => {
             sortOrder,
             showSubtotals,
             currentDataset,
-            secondaryDatasetId,
+            joins, // Pass full array
             datasets
          });
          setPivotData(result);
          setIsCalculating(false);
-      }, 10); // Petit délai pour laisser le rendu React afficher le loader
+      }, 10); 
 
       return () => clearTimeout(timer);
-  }, [blendedRows, rowFields, colField, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, secondaryDatasetId]);
+  }, [blendedRows, rowFields, colField, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, currentDataset, datasets, joins]);
 
 
   // --- HANDLERS ---
   
   const handleValFieldChange = (newField: string) => {
      setValField(newField);
-     // Reset formatting when field changes to use default
      setValFormatting({});
      
      if (blendedRows.length > 0) {
@@ -347,6 +359,19 @@ export const PivotTable: React.FC = () => {
     setRowFields(newFields);
   };
 
+  // Join Handlers
+  const addJoin = () => {
+      setJoins([...joins, { id: generateId(), datasetId: '', joinKeyPrimary: '', joinKeySecondary: '' }]);
+  };
+
+  const removeJoin = (id: string) => {
+      setJoins(joins.filter(j => j.id !== id));
+  };
+
+  const updateJoin = (id: string, field: keyof PivotJoin, value: string) => {
+      setJoins(joins.map(j => j.id === id ? { ...j, [field]: value } : j));
+  };
+
   const addFilter = () => combinedFields.length > 0 && setFilters([...filters, { field: combinedFields[0], operator: 'in', value: [] }]);
   const updateFilter = (index: number, updates: Partial<FilterRule>) => { 
       const n = [...filters]; 
@@ -365,7 +390,7 @@ export const PivotTable: React.FC = () => {
         datasetId: currentDataset.id,
         config: {
            rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, 
-           sortBy, sortOrder, secondaryDatasetId, joinKeyPrimary, joinKeySecondary, styleRules, selectedBatchId 
+           sortBy, sortOrder, joins, styleRules, selectedBatchId 
         }
      });
      setAnalysisName('');
@@ -395,9 +420,12 @@ export const PivotTable: React.FC = () => {
      setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
      setSortBy(c.sortBy || 'label');
      setSortOrder(c.sortOrder || 'asc');
-     setSecondaryDatasetId(c.secondaryDatasetId || '');
-     setJoinKeyPrimary(c.joinKeyPrimary || '');
-     setJoinKeySecondary(c.joinKeySecondary || '');
+     
+     if (c.joins) setJoins(c.joins);
+     else if (c.secondaryDatasetId) {
+         setJoins([{ id: generateId(), datasetId: c.secondaryDatasetId, joinKeyPrimary: c.joinKeyPrimary, joinKeySecondary: c.joinKeySecondary }]);
+     } else setJoins([]);
+
      setStyleRules(c.styleRules || []);
      if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
   };
@@ -493,10 +521,13 @@ export const PivotTable: React.FC = () => {
      }
 
      // Construction de la configuration de jointure pour le drill-down
-     const blendingConfig = secondaryDatasetId && joinKeyPrimary && joinKeySecondary ? {
-         secondaryDatasetId,
-         joinKeyPrimary,
-         joinKeySecondary
+     // Note: DataExplorer supporte actuellement 1 jointure. On passe la première si elle existe.
+     // TODO: Upgrade DataExplorer pour supporter N jointures
+     const primaryJoin = joins.length > 0 ? joins[0] : null;
+     const blendingConfig = primaryJoin ? {
+         secondaryDatasetId: primaryJoin.datasetId,
+         joinKeyPrimary: primaryJoin.joinKeyPrimary,
+         joinKeySecondary: primaryJoin.joinKeySecondary
      } : undefined;
 
      navigate('/data', { state: { prefilledFilters: drillFilters, blendingConfig } });
@@ -525,7 +556,7 @@ export const PivotTable: React.FC = () => {
   }
 
   const isDrillDownEnabled = aggType !== 'list';
-  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, secondaryDatasetId, datasets, valFormatting);
+  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, undefined, datasets, valFormatting);
 
   // Pagination Logic
   const paginatedRows = useMemo(() => {
@@ -535,9 +566,6 @@ export const PivotTable: React.FC = () => {
   }, [pivotData, currentPage, pageSize]);
 
   const totalPages = pivotData ? Math.ceil(pivotData.displayRows.length / pageSize) : 0;
-
-  // Récupérer le nom de la source secondaire pour l'affichage
-  const secondaryDatasetName = secondaryDatasetId ? datasets.find(d => d.id === secondaryDatasetId)?.name : null;
 
   return (
     <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
@@ -596,17 +624,23 @@ export const PivotTable: React.FC = () => {
                     {selectedBatchId && <button onClick={handleDeleteBatch} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Supprimer cet import"><Trash2 className="w-3 h-3" /></button>}
                 </div>
 
-                {/* Source Secondaire (Jointure) - Affichage Détaillé */}
-                {secondaryDatasetId && joinKeyPrimary && joinKeySecondary && (
-                   <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Jointure</span>
-                        <div className="flex items-center gap-2 bg-indigo-50 px-2 py-1 rounded border border-indigo-200 text-indigo-700 text-xs shadow-sm">
-                            <LinkIcon className="w-3 h-3" />
-                            <span className="font-bold" title="Typologie liée">{secondaryDatasetName}</span>
-                            <span className="w-px h-3 bg-indigo-200 mx-1"></span>
-                            <CalendarClock className="w-3 h-3" />
-                            <span title="Date de l'import utilisé pour la jointure">{secondaryBatch ? formatDateFr(secondaryBatch.date) : 'Aucun import'}</span>
-                        </div>
+                {/* Sources Secondaires (Jointures) */}
+                {joins.length > 0 && (
+                   <div className="flex flex-wrap gap-2 justify-end animate-in fade-in slide-in-from-top-1 max-w-[400px]">
+                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mt-1">Liaisons:</span>
+                        {joins.map((join, idx) => {
+                            const ds = datasets.find(d => d.id === join.datasetId);
+                            const lastBatch = batches.filter(b => b.datasetId === join.datasetId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                            
+                            return (
+                                <div key={join.id} className="flex items-center gap-2 bg-indigo-50 px-2 py-1 rounded border border-indigo-200 text-indigo-700 text-xs shadow-sm">
+                                    <LinkIcon className="w-3 h-3" />
+                                    <span className="font-bold" title="Typologie liée">{ds?.name || 'Inconnu'}</span>
+                                    <span className="w-px h-3 bg-indigo-200 mx-1"></span>
+                                    <span title="Date import">{lastBatch ? formatDateFr(lastBatch.date) : '-'}</span>
+                                </div>
+                            );
+                        })}
                    </div>
                 )}
              </div>
@@ -659,35 +693,61 @@ export const PivotTable: React.FC = () => {
              
              <div className="p-4 space-y-6">
                 
-                {/* 0. DATA BLENDING */}
+                {/* 0. DATA BLENDING (MULTI) */}
                 <div className="bg-indigo-50 border border-indigo-100 p-3 rounded">
                     <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-bold text-indigo-800 flex items-center gap-1"><LinkIcon className="w-3 h-3" /> Lier une autre source</label>
-                        {secondaryDatasetId && <button onClick={() => setSecondaryDatasetId('')} className="text-[10px] text-red-600 hover:underline">Retirer</button>}
+                        <label className="text-xs font-bold text-indigo-800 flex items-center gap-1"><Plug className="w-3 h-3" /> Sources Liées ({joins.length})</label>
+                        <button onClick={addJoin} className="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-2 py-0.5 rounded hover:bg-indigo-100">+ Ajouter</button>
                     </div>
-                    <select className="w-full p-1.5 bg-white border border-indigo-200 rounded text-xs mb-2" value={secondaryDatasetId} onChange={(e) => setSecondaryDatasetId(e.target.value)}>
-                        <option value="">(Aucune jointure)</option>
-                        {datasets.filter(d => d.id !== currentDataset.id).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
+                    
+                    <div className="space-y-3">
+                        {joins.map((join, idx) => (
+                            <div key={join.id} className="bg-white p-2 rounded border border-indigo-200 relative group animate-in fade-in">
+                                <button onClick={() => removeJoin(join.id)} className="absolute top-1 right-1 text-slate-300 hover:text-red-500"><X className="w-3 h-3" /></button>
+                                
+                                {/* Dataset Selector */}
+                                <div className="mb-2">
+                                    <span className="text-[9px] text-indigo-400 uppercase font-bold">Source {idx + 1}</span>
+                                    <select 
+                                        className="w-full p-1 bg-slate-50 border border-indigo-100 rounded text-xs text-indigo-900"
+                                        value={join.datasetId}
+                                        onChange={(e) => updateJoin(join.id, 'datasetId', e.target.value)}
+                                    >
+                                        <option value="">-- Choisir --</option>
+                                        {datasets.filter(d => d.id !== currentDataset.id).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
+                                </div>
 
-                    {secondaryDatasetId && (
-                        <div className="space-y-2 animate-in fade-in">
-                            <div>
-                                <span className="text-[10px] text-indigo-600 block mb-1">Clé dans {currentDataset.name}</span>
-                                <select className="w-full p-1 bg-white border border-indigo-200 rounded text-xs" value={joinKeyPrimary} onChange={(e) => setJoinKeyPrimary(e.target.value)}>
-                                    <option value="">-- Choisir --</option>
-                                    {fields.map(f => <option key={f} value={f}>{f}</option>)}
-                                </select>
+                                {join.datasetId && (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <span className="text-[9px] text-slate-400 block mb-0.5">Clé Princ.</span>
+                                            <select 
+                                                className="w-full p-1 bg-white border border-slate-200 rounded text-[10px]"
+                                                value={join.joinKeyPrimary}
+                                                onChange={(e) => updateJoin(join.id, 'joinKeyPrimary', e.target.value)}
+                                            >
+                                                <option value="">--</option>
+                                                {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] text-slate-400 block mb-0.5">Clé Liée</span>
+                                            <select 
+                                                className="w-full p-1 bg-white border border-slate-200 rounded text-[10px]"
+                                                value={join.joinKeySecondary}
+                                                onChange={(e) => updateJoin(join.id, 'joinKeySecondary', e.target.value)}
+                                            >
+                                                <option value="">--</option>
+                                                {datasets.find(d => d.id === join.datasetId)?.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div>
-                                <span className="text-[10px] text-indigo-600 block mb-1">Correspond à...</span>
-                                <select className="w-full p-1 bg-white border border-indigo-200 rounded text-xs" value={joinKeySecondary} onChange={(e) => setJoinKeySecondary(e.target.value)}>
-                                    <option value="">-- Choisir --</option>
-                                    {datasets.find(d => d.id === secondaryDatasetId)?.fields.map(f => <option key={f} value={f}>{f}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                    )}
+                        ))}
+                        {joins.length === 0 && <p className="text-[10px] text-indigo-400 italic text-center">Aucune source liée.</p>}
+                    </div>
                 </div>
 
                 {/* 1. Lignes */}

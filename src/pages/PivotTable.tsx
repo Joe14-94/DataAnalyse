@@ -7,18 +7,20 @@ import {
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
   AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
-  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling, Plug
+  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling, Plug, FileText
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
 import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const PivotTable: React.FC = () => {
   const { 
     batches, currentDataset, datasets, savedAnalyses, saveAnalysis, 
-    lastPivotState, savePivotState, deleteBatch, isLoading 
+    lastPivotState, savePivotState, deleteBatch, isLoading, companyLogo 
   } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
   const navigate = useNavigate();
@@ -447,6 +449,109 @@ export const PivotTable: React.FC = () => {
       navigate('/analytics', { state: { fromPivot: pivotConfig } });
   };
 
+  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, undefined, datasets, valFormatting);
+
+  // PDF Export Handler
+  const handleExportPDF = () => {
+      if (!pivotData) return;
+
+      const doc = new jsPDF({ orientation: 'landscape' });
+      
+      // 1. Add Logo if exists
+      if (companyLogo) {
+          try {
+              // Add simple logo at top left (20x20 max aprox)
+              doc.addImage(companyLogo, 'PNG', 14, 10, 25, 12, undefined, 'FAST');
+          } catch (e) {
+              console.warn("Could not add logo to PDF", e);
+          }
+      }
+
+      // 2. Title & Metadata
+      doc.setFontSize(16);
+      doc.text("Rapport Analyse Croisée", companyLogo ? 45 : 14, 18);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      const dateText = `Généré le ${new Date().toLocaleDateString()} | Données: ${currentDataset?.name}`;
+      doc.text(dateText, companyLogo ? 45 : 14, 24);
+
+      // 3. Prepare Data for autoTable
+      // Flatten hierarchical structure
+      const tableHead = [...rowFields, ...pivotData.colHeaders];
+      if (showTotalCol) tableHead.push("Total");
+
+      const tableBody: any[] = [];
+
+      pivotData.displayRows.forEach(row => {
+          const rowData: string[] = [];
+          
+          // Fill Keys (Handle indentation visually or just fill sparse)
+          for (let i = 0; i < rowFields.length; i++) {
+              if (i < row.keys.length) {
+                  rowData.push(row.keys[i]);
+              } else {
+                  rowData.push(""); // Spacer
+              }
+          }
+
+          // If subtotal, override last key with Label
+          if (row.type === 'subtotal' && row.label) {
+              rowData[row.level] = row.label; 
+          }
+
+          // Metrics
+          pivotData.colHeaders.forEach(col => {
+              rowData.push(String(formatOutput(row.metrics[col])));
+          });
+
+          // Row Total
+          if (showTotalCol) {
+              rowData.push(String(formatOutput(row.rowTotal)));
+          }
+
+          // Add styling metadata for autotable hook if needed, for now just raw data
+          // We can use a specific property to identify subtotals for styling
+          (rowData as any).isSubtotal = row.type === 'subtotal';
+          
+          tableBody.push(rowData);
+      });
+
+      // Add Grand Total Row
+      const totalRow: string[] = Array(rowFields.length).fill("");
+      totalRow[0] = "TOTAL GÉNÉRAL";
+      pivotData.colHeaders.forEach(col => {
+          totalRow.push(String(formatOutput(pivotData.colTotals[col])));
+      });
+      if (showTotalCol) totalRow.push(String(formatOutput(pivotData.grandTotal)));
+      (totalRow as any).isTotal = true;
+      tableBody.push(totalRow);
+
+      // 4. Generate Table
+      autoTable(doc, {
+          startY: 35,
+          head: [tableHead],
+          body: tableBody,
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' }, // Blue
+          didParseCell: (data) => {
+              const row = data.row.raw as any;
+              if (row.isSubtotal) {
+                  data.cell.styles.fontStyle = 'bold';
+                  data.cell.styles.fillColor = [241, 245, 249]; // Slate-100
+              }
+              if (row.isTotal) {
+                  data.cell.styles.fontStyle = 'bold';
+                  data.cell.styles.fillColor = [226, 232, 240]; // Slate-200
+                  data.cell.styles.textColor = 0;
+              }
+          }
+      });
+
+      doc.save(`TCD_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const availableAnalyses = savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === currentDataset?.id);
 
   // Resize Handlers
@@ -556,7 +661,6 @@ export const PivotTable: React.FC = () => {
   }
 
   const isDrillDownEnabled = aggType !== 'list';
-  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, undefined, datasets, valFormatting);
 
   // Pagination Logic
   const paginatedRows = useMemo(() => {
@@ -580,6 +684,11 @@ export const PivotTable: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
+             {/* PDF Export Button */}
+             <button onClick={handleExportPDF} disabled={!pivotData} className="flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <FileText className="w-4 h-4" /> Export PDF
+             </button>
+
              <button onClick={handleToChart} className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors">
                 <PieChart className="w-4 h-4" /> Créer graphique
              </button>

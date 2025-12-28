@@ -3,7 +3,7 @@ import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, Diag
 import * as XLSX from 'xlsx';
 
 // Updated version
-export const APP_VERSION = "202512-305";
+export const APP_VERSION = "202512-310";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -137,6 +137,45 @@ export const parseRawData = (text: string): RawImportData => {
     rows,
     totalRows: rows.length
   };
+};
+
+/**
+ * Lit un fichier texte/CSV en gérant automatiquement l'encodage (UTF-8 ou Windows-1252)
+ * Utilise TextDecoder avec fatal:true pour une détection fiable.
+ */
+export const readTextFile = (file: File, encoding: 'auto' | 'UTF-8' | 'windows-1252' = 'auto'): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      
+      if (encoding === 'auto') {
+         // Tentative UTF-8 stricte
+         try {
+            const decoder = new TextDecoder('utf-8', { fatal: true });
+            const text = decoder.decode(buffer);
+            resolve(text);
+         } catch (err) {
+            // Echec UTF-8 -> Fallback Windows-1252 (ANSI)
+            console.warn("Détection Auto : Echec UTF-8, bascule vers Windows-1252.");
+            const decoder = new TextDecoder('windows-1252');
+            resolve(decoder.decode(buffer));
+         }
+      } else {
+         // Encodage forcé
+         try {
+            const decoder = new TextDecoder(encoding);
+            resolve(decoder.decode(buffer));
+         } catch (err) {
+            reject(err);
+         }
+      }
+    };
+    
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
 };
 
 /**

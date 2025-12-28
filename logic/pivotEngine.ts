@@ -1,6 +1,6 @@
 
 import { parseSmartNumber, getGroupedLabel, formatNumberValue } from '../utils';
-import { FieldConfig, Dataset, FilterRule } from '../types';
+import { FieldConfig, Dataset, FilterRule, PivotJoin } from '../types';
 
 // Types spécifiques au moteur
 export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
@@ -32,7 +32,7 @@ export interface PivotConfig {
   
   // Context pour le formatage
   currentDataset?: Dataset | null;
-  secondaryDatasetId?: string;
+  joins?: PivotJoin[]; // NEW: Multi-join support
   datasets?: Dataset[];
   valFormatting?: Partial<FieldConfig>;
 }
@@ -76,13 +76,15 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   
   // Cache pour l'unité du champ valeur
   let valUnit: string | undefined = undefined;
+  
+  // 1. Chercher dans dataset principal
   if (config.currentDataset?.fieldConfigs?.[valField]?.unit) {
       valUnit = config.currentDataset.fieldConfigs[valField].unit;
   } else if (config.currentDataset?.calculatedFields) {
       const cf = config.currentDataset.calculatedFields.find(c => c.name === valField);
       if (cf?.unit) valUnit = cf.unit;
-  } else if (config.secondaryDatasetId && config.datasets) {
-      // Tentative de récupération de l'unité sur le dataset secondaire si le champ est préfixé
+  } else if (config.datasets) {
+      // 2. Chercher dans les datasets joints via préfixe
       const prefixMatch = valField.match(/^\[(.*?)\] (.*)$/);
       if (prefixMatch) {
           const dsName = prefixMatch[1];
@@ -440,7 +442,7 @@ export const formatPivotOutput = (val: number | string, valField: string, aggTyp
             }
         }
 
-        // Si toujours rien, chercher dans le dataset secondaire via préfixe
+        // Si toujours rien, chercher dans les datasets secondaires via préfixe
         if (!config && allDatasets) {
            const prefixMatch = valField.match(/^\[(.*?)\] (.*)$/);
            if (prefixMatch) {

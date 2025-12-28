@@ -1,20 +1,25 @@
+
 import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X } from 'lucide-react';
 import { APP_VERSION, runSelfDiagnostics } from '../utils';
 import { useNavigate } from 'react-router-dom';
-import { DiagnosticSuite } from '../types';
+import { DiagnosticSuite, Dataset } from '../types';
 
 export const Settings: React.FC = () => {
-  const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset } = useData();
+  const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   // Diagnostics State
   const [diagResults, setDiagResults] = useState<DiagnosticSuite[] | null>(null);
   const [isRunningDiag, setIsRunningDiag] = useState(false);
+
+  // Renaming State
+  const [editingDatasetId, setEditingDatasetId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const handleDownloadBackup = () => {
     const json = getBackupJson();
@@ -94,6 +99,24 @@ export const Settings: React.FC = () => {
         setDiagResults(results);
         setIsRunningDiag(false);
      }, 800);
+  };
+
+  // Renaming Handlers
+  const startEditing = (ds: Dataset) => {
+      setEditingDatasetId(ds.id);
+      setEditName(ds.name);
+  };
+
+  const saveEditing = () => {
+      if (editingDatasetId && editName.trim()) {
+          updateDatasetName(editingDatasetId, editName.trim());
+          setEditingDatasetId(null);
+      }
+  };
+
+  const cancelEditing = () => {
+      setEditingDatasetId(null);
+      setEditName('');
   };
 
   return (
@@ -181,14 +204,38 @@ export const Settings: React.FC = () => {
                                  ? Math.max(...dsBatches.map(b => b.createdAt)) 
                                  : ds.createdAt;
                               
+                              const isEditing = editingDatasetId === ds.id;
+
                               return (
-                                 <div key={ds.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-start gap-3">
+                                 <div key={ds.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors group">
+                                    <div className="flex items-start gap-3 flex-1">
                                        <div className="p-2 bg-blue-50 rounded text-blue-600 mt-0.5">
                                           <Table2 className="w-5 h-5" />
                                        </div>
-                                       <div>
-                                          <h4 className="font-bold text-slate-800">{ds.name}</h4>
+                                       <div className="flex-1">
+                                          {isEditing ? (
+                                              <div className="flex items-center gap-2">
+                                                  <input 
+                                                      type="text" 
+                                                      className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-full max-w-[250px]"
+                                                      value={editName}
+                                                      onChange={(e) => setEditName(e.target.value)}
+                                                      autoFocus
+                                                      onKeyDown={(e) => { if(e.key === 'Enter') saveEditing(); if(e.key === 'Escape') cancelEditing(); }}
+                                                  />
+                                                  <button onClick={saveEditing} className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200" title="Sauvegarder">
+                                                      <Check className="w-4 h-4" />
+                                                  </button>
+                                                  <button onClick={cancelEditing} className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200" title="Annuler">
+                                                      <X className="w-4 h-4" />
+                                                  </button>
+                                              </div>
+                                          ) : (
+                                              <div className="flex items-center gap-2">
+                                                  <h4 className="font-bold text-slate-800">{ds.name}</h4>
+                                              </div>
+                                          )}
+                                          
                                           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
                                              <span className="flex items-center gap-1">
                                                 <Database className="w-3 h-3" />
@@ -205,15 +252,28 @@ export const Settings: React.FC = () => {
                                        </div>
                                     </div>
                                     
-                                    <Button 
-                                       variant="outline" 
-                                       size="sm" 
-                                       className="text-red-600 hover:bg-red-50 hover:border-red-200 border-slate-200"
-                                       onClick={() => handleDeleteDataset(ds.id, ds.name)}
-                                    >
-                                       <Trash2 className="w-4 h-4 mr-2" />
-                                       Supprimer
-                                    </Button>
+                                    {!isEditing && (
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Button 
+                                               variant="outline" 
+                                               size="sm" 
+                                               className="text-slate-600 hover:bg-slate-50 border-slate-200"
+                                               onClick={() => startEditing(ds)}
+                                            >
+                                               <Edit2 className="w-4 h-4 mr-2" />
+                                               Renommer
+                                            </Button>
+                                            <Button 
+                                               variant="outline" 
+                                               size="sm" 
+                                               className="text-red-600 hover:bg-red-50 hover:border-red-200 border-slate-200"
+                                               onClick={() => handleDeleteDataset(ds.id, ds.name)}
+                                            >
+                                               <Trash2 className="w-4 h-4 mr-2" />
+                                               Supprimer
+                                            </Button>
+                                        </div>
+                                    )}
                                  </div>
                               );
                            })

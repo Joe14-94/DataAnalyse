@@ -9,8 +9,13 @@ import { useNavigate } from 'react-router-dom';
 import { DiagnosticSuite, Dataset } from '../types';
 
 export const Settings: React.FC = () => {
-  const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName } = useData();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { 
+    getBackupJson, importBackup, clearAll, loadDemoData, 
+    batches, datasets, deleteDataset, updateDatasetName
+  } = useData();
+  
+  // Ref pour l'import de backup JSON uniquement
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   // Diagnostics State
@@ -26,27 +31,25 @@ export const Settings: React.FC = () => {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     
-    // Safer download implementation
     const link = document.createElement('a');
     link.href = url;
     link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
     link.style.display = 'none';
-    link.target = '_blank'; // Fixes some restrictive sandbox issues
+    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     
-    // Cleanup with delay
     setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }, 100);
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleImportBackupClick = () => {
+    backupInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackupFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -63,7 +66,6 @@ export const Settings: React.FC = () => {
       }
     };
     reader.readAsText(file);
-    // Reset input
     e.target.value = '';
   };
 
@@ -74,7 +76,7 @@ export const Settings: React.FC = () => {
       }
     }
     loadDemoData();
-    navigate('/'); // Rediriger vers le dashboard pour voir le résultat
+    navigate('/');
   };
 
   const handleReset = () => {
@@ -92,8 +94,6 @@ export const Settings: React.FC = () => {
   const handleRunDiagnostics = () => {
      setIsRunningDiag(true);
      setDiagResults(null);
-     
-     // Simulation d'un petit délai pour l'UX
      setTimeout(() => {
         const results = runSelfDiagnostics();
         setDiagResults(results);
@@ -125,24 +125,19 @@ export const Settings: React.FC = () => {
          <h2 className="text-2xl font-bold text-slate-800">Paramètres et maintenance</h2>
          
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column (Main Content) */}
+            {/* Colonne Gauche (Contenu Principal) */}
             <div className="lg:col-span-2 space-y-6">
                
-               {/* DIAGNOSTICS & COMPLIANCE (NOUVEAU) */}
+               {/* 1. DIAGNOSTICS */}
                <Card title="Centre de Conformité & Diagnostic">
                   <div className="space-y-4">
                      <p className="text-sm text-slate-600">
-                        Vérifiez l'intégrité des moteurs de calcul (parsing, formules, dates) pour garantir la fiabilité des analyses.
-                        Utile avant de présenter des chiffres critiques.
+                        Vérifiez l'intégrité des moteurs de calcul.
                      </p>
 
                      <div className="flex items-center gap-4">
                         <Button onClick={handleRunDiagnostics} disabled={isRunningDiag} className="bg-emerald-600 hover:bg-emerald-700">
-                           {isRunningDiag ? (
-                              <>Exécution en cours...</>
-                           ) : (
-                              <><Stethoscope className="w-4 h-4 mr-2" /> Lancer l'audit de conformité</>
-                           )}
+                           {isRunningDiag ? 'Analyse...' : <><Stethoscope className="w-4 h-4 mr-2" /> Lancer l'audit</>}
                         </Button>
                      </div>
 
@@ -171,9 +166,6 @@ export const Settings: React.FC = () => {
                                                 )}
                                                 <span className="text-slate-700">{test.name}</span>
                                              </div>
-                                             {test.message && (
-                                                <span className="text-red-600 font-mono bg-red-50 px-1 rounded">{test.message}</span>
-                                             )}
                                           </div>
                                        ))}
                                     </div>
@@ -185,11 +177,11 @@ export const Settings: React.FC = () => {
                   </div>
                </Card>
 
-               {/* GESTION DES DATASETS */}
+               {/* 2. GESTION DES TYPOLOGIES */}
                <Card title="Gestion des typologies">
                   <div className="space-y-4">
                      <p className="text-sm text-slate-600">
-                        Gérez vos typologies de tableaux. La suppression d'une typologie efface également tout l'historique des données associées.
+                        Gérez vos typologies de tableaux.
                      </p>
                      
                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
@@ -200,10 +192,6 @@ export const Settings: React.FC = () => {
                         ) : (
                            datasets.map(ds => {
                               const dsBatches = batches.filter(b => b.datasetId === ds.id);
-                              const lastUpdate = dsBatches.length > 0 
-                                 ? Math.max(...dsBatches.map(b => b.createdAt)) 
-                                 : ds.createdAt;
-                              
                               const isEditing = editingDatasetId === ds.id;
 
                               return (
@@ -223,12 +211,8 @@ export const Settings: React.FC = () => {
                                                       autoFocus
                                                       onKeyDown={(e) => { if(e.key === 'Enter') saveEditing(); if(e.key === 'Escape') cancelEditing(); }}
                                                   />
-                                                  <button onClick={saveEditing} className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200" title="Sauvegarder">
-                                                      <Check className="w-4 h-4" />
-                                                  </button>
-                                                  <button onClick={cancelEditing} className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200" title="Annuler">
-                                                      <X className="w-4 h-4" />
-                                                  </button>
+                                                  <button onClick={saveEditing} className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200"><Check className="w-4 h-4" /></button>
+                                                  <button onClick={cancelEditing} className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200"><X className="w-4 h-4" /></button>
                                               </div>
                                           ) : (
                                               <div className="flex items-center gap-2">
@@ -241,36 +225,17 @@ export const Settings: React.FC = () => {
                                                 <Database className="w-3 h-3" />
                                                 {dsBatches.length} import(s)
                                              </span>
-                                             <span className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                MAJ : {new Date(lastUpdate).toLocaleDateString('fr-FR')}
-                                             </span>
-                                             <span>
-                                                • {ds.fields.length} colonnes
-                                             </span>
                                           </div>
                                        </div>
                                     </div>
                                     
                                     {!isEditing && (
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <Button 
-                                               variant="outline" 
-                                               size="sm" 
-                                               className="text-slate-600 hover:bg-slate-50 border-slate-200"
-                                               onClick={() => startEditing(ds)}
-                                            >
-                                               <Edit2 className="w-4 h-4 mr-2" />
-                                               Renommer
+                                            <Button variant="outline" size="sm" onClick={() => startEditing(ds)}>
+                                               <Edit2 className="w-4 h-4 mr-2" /> Renommer
                                             </Button>
-                                            <Button 
-                                               variant="outline" 
-                                               size="sm" 
-                                               className="text-red-600 hover:bg-red-50 hover:border-red-200 border-slate-200"
-                                               onClick={() => handleDeleteDataset(ds.id, ds.name)}
-                                            >
-                                               <Trash2 className="w-4 h-4 mr-2" />
-                                               Supprimer
+                                            <Button variant="outline" size="sm" className="text-red-600 border-slate-200" onClick={() => handleDeleteDataset(ds.id, ds.name)}>
+                                               <Trash2 className="w-4 h-4 mr-2" /> Supprimer
                                             </Button>
                                         </div>
                                     )}
@@ -281,68 +246,31 @@ export const Settings: React.FC = () => {
                      </div>
                   </div>
                </Card>
-
-               <Card title="Confidentialité & stockage" className="border-blue-200 bg-blue-50">
-                  <div className="flex items-start gap-4 text-blue-900">
-                    <div className="p-2 bg-white rounded-full shadow-sm">
-                       <WifiOff className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-lg">Mode 100% local</p>
-                      <p className="mt-1 text-blue-800 text-sm leading-relaxed">
-                        Cette application s'exécute exclusivement dans votre navigateur. 
-                        Aucune donnée n'est transmise vers un serveur externe ou le cloud.
-                        Vos informations sont stockées dans la mémoire locale de votre poste.
-                      </p>
-                    </div>
-                  </div>
-               </Card>
             </div>
 
-            {/* Right Column (Controls) */}
+            {/* Colonne Droite (Outils) */}
             <div className="space-y-6">
-               
                <Card title="Sauvegarde et restauration">
                  <div className="space-y-4">
                    <p className="text-sm text-slate-600">
-                     Pour sécuriser vos données ou les transférer sur un autre poste, effectuez des sauvegardes régulières via le fichier JSON.
+                     Sécurisez vos données via un fichier JSON.
                    </p>
-                   
                    <div className="flex flex-col gap-3 pt-2">
                      <Button onClick={handleDownloadBackup} disabled={batches.length === 0} className="w-full">
-                       <Download className="w-4 h-4 mr-2" />
-                       Télécharger la sauvegarde
+                       <Download className="w-4 h-4 mr-2" /> Télécharger sauvegarde
                      </Button>
-                     
-                     <Button variant="outline" onClick={handleImportClick} className="w-full">
-                       <Upload className="w-4 h-4 mr-2" />
-                       Restaurer une sauvegarde
-                     </Button>
-                     <input 
-                       type="file" 
-                       ref={fileInputRef} 
-                       className="hidden" 
-                       accept=".json" 
-                       onChange={handleFileChange}
-                     />
-                   </div>
-                 </div>
-               </Card>
-         
-               <Card title="Jeu de données de test" className="border-indigo-100">
-                 <div className="flex items-start gap-3">
-                   <div className="p-2 bg-indigo-50 rounded-full text-indigo-600">
-                     <Database className="w-5 h-5" />
-                   </div>
-                   <div className="flex-1">
-                     <h4 className="font-medium text-slate-900">Données de démonstration</h4>
-                     <p className="text-sm text-slate-600 mt-1 mb-3">
-                       Générez automatiquement un historique de données fictives sur 6 mois.
-                     </p>
-                     <Button variant="secondary" onClick={handleLoadDemo} className="w-full">
-                       <PlayCircle className="w-4 h-4 mr-2" />
-                       Générer données démo
-                     </Button>
+                     <div className="relative">
+                        <input 
+                           type="file" 
+                           ref={backupInputRef}
+                           className="hidden" 
+                           accept=".json" 
+                           onChange={handleBackupFileChange}
+                        />
+                        <Button variant="outline" onClick={handleImportBackupClick} className="w-full">
+                           <Upload className="w-4 h-4 mr-2" /> Restaurer sauvegarde
+                        </Button>
+                     </div>
                    </div>
                  </div>
                </Card>
@@ -356,14 +284,13 @@ export const Settings: React.FC = () => {
                      <div>
                        <h4 className="font-medium text-red-900">Réinitialisation totale</h4>
                        <p className="text-xs text-red-800 mt-1">
-                         Supprime toutes les typologies et tout l'historique définitivement.
+                         Supprime toutes les données définitivement.
                        </p>
                      </div>
                    </div>
                    <div className="pt-2">
                      <Button variant="danger" onClick={handleReset} className="w-full">
-                       <Trash2 className="w-4 h-4 mr-2" />
-                       Tout supprimer
+                       <Trash2 className="w-4 h-4 mr-2" /> Tout supprimer
                      </Button>
                    </div>
                  </div>

@@ -5,6 +5,7 @@ interface WidgetContextType {
   dashboardWidgets: DashboardWidget[];
   dashboardFilters: Record<string, any>;
   addDashboardWidget: (widget: Omit<DashboardWidget, 'id'>) => void;
+  duplicateDashboardWidget: (id: string) => void;
   updateDashboardWidget: (id: string, updates: Partial<DashboardWidget>) => void;
   removeDashboardWidget: (id: string) => void;
   moveDashboardWidget: (id: string, direction: 'left' | 'right') => void;
