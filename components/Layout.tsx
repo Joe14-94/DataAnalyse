@@ -1,7 +1,5 @@
-
-
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -14,7 +12,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
-  const { datasets, currentDatasetId, switchDataset, batches, getBackupJson } = useData();
+  const { datasets, currentDatasetId, switchDataset, batches, getBackupJson, companyLogo } = useData();
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
   
@@ -28,6 +26,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Historique imports', icon: History, path: '/history' },
     { name: 'Création de graphiques', icon: PieChart, path: '/analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
+    { name: 'Personnalisation', icon: Palette, path: '/customization' }, // NOUVEAU MENU
     { name: 'Paramètres', icon: Settings, path: '/settings' },
     { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
   ];
@@ -65,7 +64,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     link.href = url;
     link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
     link.style.display = 'none';
-    link.target = '_blank'; // Fixes some sandbox navigation issues
+    link.target = '_blank';
     
     document.body.appendChild(link);
     link.click();
@@ -92,11 +91,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         `}
       >
         <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
-          <div className="flex items-center gap-2 font-bold text-xl text-blue-700 mb-6 overflow-hidden">
-            <div className="p-1.5 bg-blue-600 rounded-md text-white shrink-0">
-              <Database size={20} />
-            </div>
-            {!isCollapsed && <span className="whitespace-nowrap">DataScope</span>}
+          <div className="flex items-center gap-2 font-bold text-xl text-blue-700 mb-6 overflow-hidden min-h-[40px]">
+            {companyLogo ? (
+               <img 
+                  src={companyLogo} 
+                  alt="Logo Entreprise" 
+                  className={`object-contain max-h-10 ${isCollapsed ? 'w-full' : 'w-auto max-w-[180px]'}`} 
+               />
+            ) : (
+               <>
+                  <div className="p-1.5 bg-blue-600 rounded-md text-white shrink-0">
+                    <Database size={20} />
+                  </div>
+                  {!isCollapsed && <span className="whitespace-nowrap">DataScope</span>}
+               </>
+            )}
           </div>
 
           {/* Collapse Toggle Button */}

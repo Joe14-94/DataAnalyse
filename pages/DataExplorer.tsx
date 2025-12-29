@@ -292,72 +292,42 @@ export const DataExplorer: React.FC = () => {
       }));
 
     // Data Blending (Join) logic
-    // Support Multi-Joins (Legacy support + New Array)
-    let joinsToProcess = [];
-    
-    // Check Legacy format
     if (blendingConfig && blendingConfig.secondaryDatasetId && blendingConfig.joinKeyPrimary && blendingConfig.joinKeySecondary) {
-       joinsToProcess.push({
-          datasetId: blendingConfig.secondaryDatasetId,
-          joinKeyPrimary: blendingConfig.joinKeyPrimary,
-          joinKeySecondary: blendingConfig.joinKeySecondary
-       });
-    }
-    
-    // Check if new array format is passed (future proof)
-    if (blendingConfig && Array.isArray(blendingConfig.joins)) {
-        joinsToProcess = blendingConfig.joins;
-    }
-
-    if (joinsToProcess.length > 0) {
-        joinsToProcess.forEach((join: any) => {
-            const secDS = datasets.find(d => d.id === join.datasetId);
-            if (secDS) {
-                const secBatches = batches
-                    .filter(b => b.datasetId === join.datasetId)
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const secDS = datasets.find(d => d.id === blendingConfig.secondaryDatasetId);
+        if (secDS) {
+            // Get secondary data (latest batch for consistency with TCD logic)
+            const secBatches = batches
+                .filter(b => b.datasetId === blendingConfig.secondaryDatasetId)
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+            if (secBatches.length > 0) {
+                const secBatch = secBatches[secBatches.length - 1]; // Latest blending source
                 
-                if (secBatches.length > 0) {
-                    const secBatch = secBatches[0]; // Latest blending source
-                    
-                    // Pré-calcul des champs calculés pour la source secondaire (CRITIQUE pour le Drill-down)
-                    let processedSecRows = secBatch.rows;
-                    if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
-                        processedSecRows = processedSecRows.map(r => {
-                            const enriched = { ...r };
-                            secDS.calculatedFields?.forEach(cf => {
-                                enriched[cf.name] = evaluateFormula(enriched, cf.formula);
-                            });
-                            return enriched;
+                // Build Lookup Map
+                const lookup = new Map<string, any>();
+                secBatch.rows.forEach(r => {
+                    const k = String(r[blendingConfig.joinKeySecondary]).trim();
+                    if (k) lookup.set(k, r);
+                });
+
+                // Apply Left Join
+                rows = rows.map(row => {
+                    const k = String(row[blendingConfig.joinKeyPrimary]).trim();
+                    const match = lookup.get(k);
+                    if (match) {
+                        const prefixedMatch: any = {};
+                        // Prefix fields from secondary source
+                        Object.keys(match).forEach(key => {
+                            if (key !== 'id') {
+                                prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
+                            }
                         });
+                        return { ...row, ...prefixedMatch };
                     }
-
-                    // Build Lookup Map
-                    const lookup = new Map<string, any>();
-                    processedSecRows.forEach(r => {
-                        const k = String(r[join.joinKeySecondary]).trim();
-                        if (k) lookup.set(k, r);
-                    });
-
-                    // Apply Left Join
-                    rows = rows.map(row => {
-                        const k = String(row[join.joinKeyPrimary]).trim();
-                        const match = lookup.get(k);
-                        if (match) {
-                            const prefixedMatch: any = {};
-                            // Prefix fields from secondary source
-                            Object.keys(match).forEach(key => {
-                                if (key !== 'id') {
-                                    prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
-                                }
-                            });
-                            return { ...row, ...prefixedMatch };
-                        }
-                        return row;
-                    });
-                }
+                    return row;
+                });
             }
-        });
+        }
     }
 
     return rows;
@@ -368,25 +338,15 @@ export const DataExplorer: React.FC = () => {
       if (!currentDataset) return [];
       const primFields = [...currentDataset.fields];
       
-      let joinsToProcess = [];
       if (blendingConfig && blendingConfig.secondaryDatasetId) {
-          joinsToProcess.push({ datasetId: blendingConfig.secondaryDatasetId });
-      }
-      if (blendingConfig && Array.isArray(blendingConfig.joins)) {
-          joinsToProcess = blendingConfig.joins;
-      }
-
-      const joinedFields: string[] = [];
-      joinsToProcess.forEach((join: any) => {
-          const secDS = datasets.find(d => d.id === join.datasetId);
+          const secDS = datasets.find(d => d.id === blendingConfig.secondaryDatasetId);
           if (secDS) {
-              const secNative = secDS.fields.map(f => `[${secDS.name}] ${f}`);
-              const secCalc = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);
-              joinedFields.push(...secNative, ...secCalc);
+              const secFields = secDS.fields.map(f => `[${secDS.name}] ${f}`);
+              const secCalcFields = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);
+              return [...primFields, ...secFields, ...secCalcFields];
           }
-      });
-      
-      return [...primFields, ...joinedFields];
+      }
+      return primFields;
   }, [currentDataset, blendingConfig, datasets]);
 
   // 2. Process: Filter (Global & Column) + Sort
@@ -582,7 +542,6 @@ export const DataExplorer: React.FC = () => {
     if (!currentDataset || processedRows.length === 0) return;
     
     // Inclure les champs calculés et les champs blendés
-    const calculatedFields = currentDataset.calculatedFields || [];
     const headers = ['Date import', 'Id', ...displayFields, ...calculatedFields.map(f => f.name)];
     
     const csvContent = [
@@ -600,6 +559,7 @@ export const DataExplorer: React.FC = () => {
               return stringVal;
            }),
            ...calculatedFields.map(f => {
+              // FIX: Use f.name instead of f
               let val = row[f.name];
               return val !== undefined ? String(val) : '';
            })
@@ -1545,3 +1505,4 @@ export const DataExplorer: React.FC = () => {
     </div>
   );
 };
+    

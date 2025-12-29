@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
@@ -7,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Import } from './pages/Import';
 import { History } from './pages/History';
 import { Settings } from './pages/Settings';
+import { Customization } from './pages/Customization';
 import { CustomAnalytics } from './pages/CustomAnalytics';
 import { DataExplorer } from './pages/DataExplorer';
 import { PivotTable } from './pages/PivotTable';
@@ -24,6 +24,7 @@ const App: React.FC = () => {
             <Route path="/history" element={<History />} />
             <Route path="/analytics" element={<CustomAnalytics />} />
             <Route path="/pivot" element={<PivotTable />} />
+            <Route path="/customization" element={<Customization />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/" replace />} />

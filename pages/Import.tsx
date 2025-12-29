@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType, readExcelFile } from '../utils';
+import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType, readExcelFile, readTextFile } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataRow, RawImportData, FieldConfig } from '../types';
-import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX, ChevronLeft, ChevronRight, Hash, Trash2 } from 'lucide-react';
+import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, Database, FileSpreadsheet, FileText, X, Wand2, CaseUpper, CaseLower, Eraser, CopyX, ChevronLeft, ChevronRight, Hash, Trash2, Settings2 } from 'lucide-react';
 
 export const Import: React.FC = () => {
   const { 
@@ -18,6 +18,9 @@ export const Import: React.FC = () => {
   const [text, setText] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
+  // File Encoding Option
+  const [fileEncoding, setFileEncoding] = useState<'auto' | 'UTF-8' | 'windows-1252'>('auto');
+
   const [rawData, setRawData] = useState<RawImportData | null>(null);
   const [mapping, setMapping] = useState<Record<number, string | 'ignore'>>({});
   const [autoMappedIndices, setAutoMappedIndices] = useState<number[]>([]);
@@ -118,8 +121,8 @@ export const Import: React.FC = () => {
       if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
         result = await readExcelFile(file);
       } else {
-        // Assume text/csv
-        const textContent = await file.text();
+        // Assume text/csv, use selected encoding
+        const textContent = await readTextFile(file, fileEncoding);
         result = parseRawData(textContent);
       }
 
@@ -130,7 +133,7 @@ export const Import: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de la lecture du fichier.");
+      alert("Erreur lors de la lecture du fichier. Vérifiez le format.");
     } finally {
       setIsProcessingFile(false);
     }
@@ -412,10 +415,27 @@ export const Import: React.FC = () => {
              />
           </Card>
 
-          <Card className="p-6 flex flex-col h-64">
-             <label className="block text-sm font-bold text-slate-700 mb-3">
-               2. Fichier source
-             </label>
+          <Card className="p-6 flex flex-col h-64 relative">
+             <div className="flex justify-between items-center mb-3">
+                <label className="block text-sm font-bold text-slate-700">
+                  2. Fichier source
+                </label>
+                
+                {/* ENCODING SELECTOR */}
+                <div className="flex items-center gap-2">
+                   <Settings2 className="w-3 h-3 text-slate-400" />
+                   <select 
+                      className="text-[10px] bg-slate-50 border border-slate-200 rounded py-0.5 px-1 text-slate-600 focus:ring-blue-500"
+                      value={fileEncoding}
+                      onChange={(e) => setFileEncoding(e.target.value as any)}
+                      title="Forcer l'encodage si les accents sont incorrects"
+                   >
+                      <option value="auto">Auto-détection</option>
+                      <option value="UTF-8">UTF-8</option>
+                      <option value="windows-1252">Windows-1252 (Excel FR)</option>
+                   </select>
+                </div>
+             </div>
              
              <div 
                 className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200

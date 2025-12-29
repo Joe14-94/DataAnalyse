@@ -1,13 +1,13 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr, evaluateFormula, generateId } from '../utils';
+import { parseSmartNumber, detectColumnType, formatNumberValue, formatDateFr, evaluateFormula, generateId, exportView } from '../utils';
 import { 
   Database, Filter, ArrowDownWideNarrow, Calculator, X, Layout,
   Table2, ArrowUpDown, SlidersHorizontal, Plus, Trash2, Layers,
   ArrowUp, ArrowDown, Link as LinkIcon, Save, Check,
   AlertTriangle, CalendarClock, Palette, PaintBucket, Type, Bold, Italic, Underline,
-  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling, Plug
+  PieChart, Loader2, ChevronLeft, ChevronRight, Hash, Scaling, Plug, FileDown, FileType, Printer
 } from 'lucide-react';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -18,7 +18,7 @@ import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrd
 export const PivotTable: React.FC = () => {
   const { 
     batches, currentDataset, datasets, savedAnalyses, saveAnalysis, 
-    lastPivotState, savePivotState, deleteBatch, isLoading 
+    lastPivotState, savePivotState, deleteBatch, isLoading, companyLogo
   } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
   const navigate = useNavigate();
@@ -62,6 +62,7 @@ export const PivotTable: React.FC = () => {
   const [isStyleMode, setIsStyleMode] = useState(false);
   const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
   const [activeStyleTarget, setActiveStyleTarget] = useState<{type: 'row'|'col'|'cell'|'total', key?: string} | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // ASYNC CALCULATION STATE
   const [pivotData, setPivotData] = useState<PivotResult | null>(null);
@@ -447,6 +448,12 @@ export const PivotTable: React.FC = () => {
       navigate('/analytics', { state: { fromPivot: pivotConfig } });
   };
 
+  const handleExport = (format: 'pdf' | 'html', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
+      setShowExportMenu(false);
+      const title = `TCD - ${currentDataset?.name}`;
+      exportView(format, 'pivot-export-container', title, companyLogo, pdfMode);
+  };
+
   const availableAnalyses = savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === currentDataset?.id);
 
   // Resize Handlers
@@ -583,6 +590,43 @@ export const PivotTable: React.FC = () => {
              <button onClick={handleToChart} className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors">
                 <PieChart className="w-4 h-4" /> Créer graphique
              </button>
+
+             <div className="relative">
+                <button
+                   onClick={() => setShowExportMenu(!showExportMenu)}
+                   className="px-3 py-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50 flex items-center gap-1"
+                   title="Exporter"
+                >
+                   <FileDown className="w-4 h-4" /> Export
+                </button>
+                {showExportMenu && (
+                   <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format PDF</div>
+                      <button 
+                         onClick={() => handleExport('pdf', 'A4')}
+                         className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                         title="Redimensionne le contenu pour tenir sur une page A4"
+                      >
+                         <FileType className="w-4 h-4 text-red-500" /> PDF (A4 ajusté)
+                      </button>
+                      <button 
+                         onClick={() => handleExport('pdf', 'adaptive')}
+                         className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                         title="Adapte la hauteur de la page au contenu (tout sur une page)"
+                      >
+                         <Printer className="w-4 h-4 text-red-500" /> PDF (Hauteur adaptative)
+                      </button>
+                      <div className="border-t border-slate-100 my-1"></div>
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format Web</div>
+                      <button 
+                         onClick={() => handleExport('html')}
+                         className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                      >
+                         <FileType className="w-4 h-4 text-orange-500" /> Export HTML
+                      </button>
+                   </div>
+                )}
+             </div>
 
              <button onClick={() => { setIsStyleMode(!isStyleMode); setActiveStyleTarget(null); }} className={`flex items-center gap-2 px-3 py-2 rounded text-xs font-bold transition-all border ${isStyleMode ? 'bg-pink-100 text-pink-700 border-pink-300' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
                 <Palette className="w-4 h-4" /> {isStyleMode ? 'Mode Design' : 'Personnaliser'}
@@ -923,7 +967,7 @@ export const PivotTable: React.FC = () => {
           </div>
 
           {/* MAIN TABLE AREA */}
-          <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
+          <div id="pivot-export-container" className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
              {isCalculating && (
                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
                      <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />

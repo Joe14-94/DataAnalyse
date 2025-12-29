@@ -1,9 +1,11 @@
 
 import { DataRow, RawImportData, ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from './types';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Updated version
-export const APP_VERSION = "202512-310";
+export const APP_VERSION = "202512-317";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -460,6 +462,197 @@ export const extractDomain = (email: string): string => {
     return email.split('@')[1].trim().toLowerCase();
   } catch (e) {
     return 'Format invalide';
+  }
+};
+
+// --- EXPORT FUNCTION (PDF/HTML) ---
+export const exportView = async (
+  format: 'pdf' | 'html', 
+  elementId: string, 
+  title: string, 
+  logo?: string,
+  pdfMode: 'A4' | 'adaptive' = 'adaptive' // Nouvelle option pour contrôler la hauteur
+) => {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    alert('Élément introuvable pour l\'export');
+    return;
+  }
+
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${timestamp}`;
+
+  if (format === 'pdf') {
+    try {
+      // 1. Clone element to remove scrollbars and show full content
+      const clone = element.cloneNode(true) as HTMLElement;
+      
+      // Force styles on clone to ensure visibility of full content
+      clone.style.position = 'fixed';
+      clone.style.top = '-10000px';
+      clone.style.left = '0';
+      clone.style.width = '1200px'; // Force fixed width to ensure consistency
+      clone.style.height = 'auto'; // Let height grow
+      clone.style.maxHeight = 'none';
+      clone.style.overflow = 'visible';
+      clone.style.zIndex = '-1';
+      clone.style.background = 'white';
+      
+      // Inject clone into body
+      document.body.appendChild(clone);
+
+      // 2. Capture content
+      const canvas = await html2canvas(clone, { 
+        scale: 2, // Better resolution
+        useCORS: true,
+        logging: false,
+        windowWidth: 1200 // Match clone width
+      });
+      
+      // Remove clone
+      document.body.removeChild(clone);
+      
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      // 3. Setup PDF
+      // A4 Size in mm: 210 x 297
+      const pdfWidthMM = 297; // Landscape default preference for tables
+      const margin = 10;
+      const contentWidthMM = pdfWidthMM - (margin * 2);
+      
+      // Calculate scaled image dimensions in mm
+      const ratio = contentWidthMM / imgWidth;
+      const scaledHeightMM = imgHeight * ratio;
+
+      let pdfHeightMM = 210; // Default A4 Height (Landscape)
+      let orientation: 'p' | 'l' = 'l';
+
+      if (pdfMode === 'adaptive') {
+          // Mode Adaptive: PDF page height grows to fit content
+          // We add extra space for Header (30mm) + Image Height + Margin
+          pdfHeightMM = Math.max(210, scaledHeightMM + 40); 
+          // Orientation doesn't matter much with custom size, but let's keep logic simple
+      } else {
+          // Mode A4 Standard: We fit into A4
+          // If content is very tall, it will be shrunk (user choice)
+          orientation = scaledHeightMM > 210 ? 'p' : 'l';
+          if (orientation === 'p') {
+             // Recalculate for Portrait
+             // A4 Portrait: 210 width
+             const pContentWidth = 210 - (margin * 2);
+             const pRatio = pContentWidth / imgWidth;
+             const pScaledHeight = imgHeight * pRatio;
+             // If strictly 'A4' (not adaptive), we might just fit vertically? 
+             // Usually for charts 'A4' means fit on one page.
+             // If table is super long, it will be tiny.
+          }
+      }
+
+      // Initialize PDF with dynamic or static size
+      const pdf = new jsPDF({
+        orientation: orientation,
+        unit: 'mm',
+        format: pdfMode === 'adaptive' ? [pdfWidthMM, pdfHeightMM] : 'a4'
+      });
+
+      // Recalculate content width based on final PDF page width (in case of Adaptive)
+      const finalPdfWidth = pdf.internal.pageSize.getWidth();
+      const finalPdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Header with Logo
+      let startY = 10;
+      if (logo) {
+        pdf.addImage(logo, 'PNG', 10, 10, 25, 12); // Small logo top left
+        startY = 25;
+      }
+
+      // Title
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(title, logo ? 40 : 10, 18);
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Exporté le ${new Date().toLocaleDateString()}`, logo ? 40 : 10, 24);
+
+      // Render Image
+      const renderWidth = finalPdfWidth - (margin * 2);
+      const renderHeight = (imgHeight * renderWidth) / imgWidth;
+      
+      // If A4 strict mode, check bounds
+      let finalRenderHeight = renderHeight;
+      let finalRenderWidth = renderWidth;
+
+      if (pdfMode === 'A4') {
+          const availableHeight = finalPdfHeight - startY - margin;
+          if (renderHeight > availableHeight) {
+              const fitRatio = availableHeight / renderHeight;
+              finalRenderHeight = availableHeight;
+              finalRenderWidth = renderWidth * fitRatio;
+          }
+      }
+
+      pdf.addImage(imgData, 'PNG', margin, startY + 5, finalRenderWidth, finalRenderHeight);
+      pdf.save(`${filename}.pdf`);
+
+    } catch (err) {
+      console.error('PDF Export Error', err);
+      alert('Erreur lors de la génération du PDF');
+    }
+  } 
+  
+  else if (format === 'html') {
+    try {
+      // Clone element to sanitize and ensure styles
+      // For a robust HTML export, we embed a minimal HTML structure with Tailwind CDN
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+          <meta charset="UTF-8">
+          <title>${title}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            body { padding: 2rem; background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+            .export-container { max-width: 1200px; margin: 0 auto; background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+            .header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; }
+            .logo { height: 40px; width: auto; object-fit: contain; }
+            .title h1 { font-size: 1.5rem; font-weight: bold; color: #1e293b; margin: 0; }
+            .title p { font-size: 0.875rem; color: #64748b; margin: 0; }
+          </style>
+        </head>
+        <body>
+          <div class="export-container">
+            <div class="header">
+              ${logo ? `<img src="${logo}" class="logo" alt="Logo" />` : ''}
+              <div class="title">
+                <h1>${title}</h1>
+                <p>Exporté le ${new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div class="content">
+              ${element.innerHTML}
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download =(`${filename}.html`);
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => document.body.removeChild(link), 100);
+
+    } catch (err) {
+      console.error('HTML Export Error', err);
+      alert('Erreur lors de l\'export HTML');
+    }
   }
 };
 

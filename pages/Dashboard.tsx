@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useBatches, useDatasets } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
@@ -7,13 +8,13 @@ import {
   Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList
 } from 'recharts';
-import { parseSmartNumber } from '../utils';
+import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
-  Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
-  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, PaintBucket, Eye
+  Minimize2, Settings, BarChart3, LineChart as LineChartIcon, Check, TrendingUp,
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, Copy, PaintBucket, Eye
 } from 'lucide-react';
-import { DashboardWidget, WidgetSize, WidgetType, WidgetHeight, KpiStyle } from '../types';
+import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle, WidgetHeight } from '../types';
 
 // --- UTILS ---
 
@@ -88,7 +89,7 @@ const useWidgetData = (widget: DashboardWidget) => {
 
       // --- JOINTURE DE DONNEES (DATA BLENDING) ---
       let workingRows = targetBatch.rows;
-      let secondaryDataset: any = undefined;
+      let secondaryDataset: Dataset | undefined = undefined;
       
       if (secondarySource && secondarySource.datasetId) {
          secondaryDataset = datasets.find(d => d.id === secondarySource.datasetId);
@@ -101,13 +102,13 @@ const useWidgetData = (widget: DashboardWidget) => {
             
             // Création d'une Map pour la performance : CléJointure -> Row
             const lookup = new Map<string, any>();
-            secBatch.rows.forEach((r: any) => {
+            secBatch.rows.forEach(r => {
                const key = String(r[secondarySource.joinFieldSecondary]).trim();
                if (key) lookup.set(key, r);
             });
 
             // Fusion (Left Join)
-            workingRows = workingRows.map((row: any) => {
+            workingRows = workingRows.map(row => {
                const key = String(row[secondarySource.joinFieldPrimary]).trim();
                const match = lookup.get(key);
                if (match) {
@@ -120,7 +121,7 @@ const useWidgetData = (widget: DashboardWidget) => {
 
       // --- GLOBAL FILTERING (DRILL DOWN) ---
       if (Object.keys(dashboardFilters).length > 0) {
-         workingRows = workingRows.filter((row: any) => {
+         workingRows = workingRows.filter(row => {
             return Object.entries(dashboardFilters).every(([field, val]) => {
                // Check if field exists in row (could be from primary or secondary)
                if (row[field] === undefined) return true; // Ignore if field not present
@@ -128,6 +129,15 @@ const useWidgetData = (widget: DashboardWidget) => {
             });
          });
       }
+
+      const parseVal = (row: any, field: string) => {
+         // Vérifier si le champ vient du dataset principal ou secondaire
+         let unit = dataset.fieldConfigs?.[field]?.unit;
+         if (!unit && secondaryDataset) {
+            unit = secondaryDataset.fieldConfigs?.[field]?.unit;
+         }
+         return parseSmartNumber(row[field], unit);
+      };
 
       // Helper to get unit
       const getUnit = (field: string | undefined) => {
@@ -142,12 +152,12 @@ const useWidgetData = (widget: DashboardWidget) => {
       // If LIST widget (Ranking)
       if (widget.type === 'list') {
          const counts: Record<string, number> = {};
-         workingRows.forEach((row: any) => {
+         workingRows.forEach(row => {
             const key = String(row[dimension || ''] || 'Non défini');
             if (metric === 'count' || metric === 'distinct') { // List usually works on count or sum
                counts[key] = (counts[key] || 0) + 1;
             } else if (metric === 'sum' && valueField) {
-               counts[key] = (counts[key] || 0) + parseSmartNumber(row[valueField], currentUnit);
+               counts[key] = (counts[key] || 0) + parseVal(row, valueField);
             }
          });
          
@@ -167,11 +177,11 @@ const useWidgetData = (widget: DashboardWidget) => {
       // If CHART or KPI with Dimension
       if (dimension) {
          const counts: Record<string, number> = {};
-         workingRows.forEach((row: any) => {
+         workingRows.forEach(row => {
             const key = String(row[dimension] || 'Non défini');
             let val = 1;
             if (metric === 'sum' && valueField) {
-               val = parseSmartNumber(row[valueField], currentUnit);
+               val = parseVal(row, valueField);
             }
             counts[key] = (counts[key] || 0) + val;
          });
@@ -218,10 +228,10 @@ const useWidgetData = (widget: DashboardWidget) => {
             if (!rows) return 0;
             if (metric === 'count') return rows.length;
             if (metric === 'sum' && valueField) {
-               return rows.reduce((acc: number, r: any) => acc + parseSmartNumber(r[valueField], currentUnit), 0);
+               return rows.reduce((acc: number, r: any) => acc + parseVal(r, valueField), 0);
             }
             if (metric === 'avg' && valueField) {
-               const sum = rows.reduce((acc: number, r: any) => acc + parseSmartNumber(r[valueField], currentUnit), 0);
+               const sum = rows.reduce((acc: number, r: any) => acc + parseVal(r, valueField), 0);
                return sum / (rows.length || 1);
             }
             if (metric === 'distinct' && valueField) { // Count distinct
@@ -590,12 +600,9 @@ const LivePreview: React.FC<{ widget: DashboardWidget }> = ({ widget }) => {
    );
 };
 
-// ... Rest of the file (Dashboard main component) kept mostly same but updated with LivePreview usage and drawer logic ...
-// For brevity, I'm providing the corrected Dashboard main component structure below.
-
 export const Dashboard: React.FC = () => {
   const { 
-     dashboardWidgets, addDashboardWidget, removeDashboardWidget, 
+     dashboardWidgets, addDashboardWidget, removeDashboardWidget, duplicateDashboardWidget,
      updateDashboardWidget, moveDashboardWidget, dashboardFilters, clearDashboardFilters, setDashboardFilter
   } = useWidgets();
   const { datasets } = useDatasets();
@@ -612,9 +619,6 @@ export const Dashboard: React.FC = () => {
      style: { borderColor: 'border-slate-200', borderWidth: '1' },
      config: { metric: 'count' }
   });
-
-  // ... Handlers (handleSaveWidget, openNewWidget, etc.) identical to previous logic ...
-  // Re-implementing them here to ensure full file integrity.
 
   const handleSaveWidget = () => {
      if (!tempWidget.title) return;
@@ -784,11 +788,13 @@ export const Dashboard: React.FC = () => {
                      return (
                         <div className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-blue-50 border-blue-300' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
                            {isEditMode && (
-                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded shadow-sm z-10">
-                                 <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowLeft className="w-3 h-3" /></button>
-                                 <button onClick={() => moveDashboardWidget(widget.id, 'right')} className="p-1 hover:bg-slate-100 rounded text-slate-500"><ArrowRight className="w-3 h-3" /></button>
-                                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-blue-50 rounded text-blue-600"><Settings className="w-3 h-3" /></button>
-                                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600"><Trash2 className="w-3 h-3" /></button>
+                              <div className="absolute top-2 right-2 flex gap-1 bg-white/90 p-1 rounded shadow-sm z-10 border border-slate-200">
+                                 <button onClick={() => moveDashboardWidget(widget.id, 'left')} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Déplacer à gauche"><ArrowLeft className="w-3 h-3" /></button>
+                                 <button onClick={() => moveDashboardWidget(widget.id, 'right')} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Déplacer à droite"><ArrowRight className="w-3 h-3" /></button>
+                                 <div className="w-px bg-slate-300 mx-0.5"></div>
+                                 <button onClick={() => duplicateDashboardWidget(widget.id)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600" title="Dupliquer"><Copy className="w-3 h-3" /></button>
+                                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-blue-50 rounded text-blue-600" title="Modifier"><Settings className="w-3 h-3" /></button>
+                                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
                               </div>
                            )}
                            

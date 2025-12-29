@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, parseSmartNumber } from '../utils';
+import { formatDateFr, parseSmartNumber, exportView } from '../utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
@@ -10,7 +11,7 @@ import {
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
   LayoutGrid, TrendingUp, Settings2, Database,
   Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown,
-  LayoutDashboard, Save
+  LayoutDashboard, Save, FileDown, FileType, Printer
 } from 'lucide-react';
 import { FieldConfig, ChartType as WidgetChartType, FilterRule } from '../types';
 
@@ -121,7 +122,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
 };
 
 export const CustomAnalytics: React.FC = () => {
-  const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis } = useData();
+  const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis, companyLogo } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
 
   const [mode, setMode] = useState<AnalysisMode>('snapshot');
@@ -141,6 +142,7 @@ export const CustomAnalytics: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     if (!selectedBatchId && batches.length > 0) {
@@ -323,6 +325,12 @@ export const CustomAnalytics: React.FC = () => {
       }
       if (c.startDate) setStartDate(c.startDate);
       if (c.endDate) setEndDate(c.endDate);
+   };
+
+   const handleExport = (format: 'pdf' | 'html', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
+      setShowExportMenu(false);
+      const title = `Analyse ${dimension} - ${metric === 'sum' ? 'Somme' : 'Compte'}`;
+      exportView(format, 'analytics-export-container', title, companyLogo, pdfMode);
    };
 
    const availableAnalyses = savedAnalyses.filter(a => a.type === 'analytics' && a.datasetId === currentDataset?.id);
@@ -791,6 +799,44 @@ export const CustomAnalytics: React.FC = () => {
 
              <div className="h-6 w-px bg-slate-300 mx-1"></div>
 
+             {/* EXPORT BUTTON */}
+             <div className="relative">
+                <button
+                   onClick={() => setShowExportMenu(!showExportMenu)}
+                   className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50 flex items-center gap-1"
+                   title="Exporter"
+                >
+                   <FileDown className="w-5 h-5" />
+                </button>
+                {showExportMenu && (
+                   <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format PDF</div>
+                      <button 
+                         onClick={() => handleExport('pdf', 'A4')}
+                         className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                         title="Redimensionne le contenu pour tenir sur une page A4"
+                      >
+                         <FileType className="w-4 h-4 text-red-500" /> PDF (A4 ajusté)
+                      </button>
+                      <button 
+                         onClick={() => handleExport('pdf', 'adaptive')}
+                         className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                         title="Adapte la hauteur de la page au contenu (tout sur une page)"
+                      >
+                         <Printer className="w-4 h-4 text-red-500" /> PDF (Hauteur adaptative)
+                      </button>
+                      <div className="border-t border-slate-100 my-1"></div>
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format Web</div>
+                      <button 
+                         onClick={() => handleExport('html')}
+                         className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                      >
+                         <FileType className="w-4 h-4 text-orange-500" /> Export HTML
+                      </button>
+                   </div>
+                )}
+             </div>
+
              <button
                 onClick={handleExportToDashboard}
                 className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
@@ -940,7 +986,7 @@ export const CustomAnalytics: React.FC = () => {
                              <option value="contains">Contient</option>
                              <option value="gt">Supérieur à (&gt;)</option>
                              <option value="lt">Inférieur à (&lt;)</option>
-                             <option value="eq">Égal à (= strict)</option>
+                             <option value="eq">Égal à (=)</option>
                           </select>
                           
                           {/* Value Input (Dynamic based on operator) */}
@@ -1108,7 +1154,7 @@ export const CustomAnalytics: React.FC = () => {
            </div>
 
            {/* Chart Container */}
-           <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col relative overflow-hidden min-h-[300px]">
+           <div id="analytics-export-container" className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col relative overflow-hidden min-h-[300px]">
               <div className="p-4 border-b border-slate-100 text-center bg-white z-10 flex justify-between items-center">
                  <h3 className="text-base font-bold text-slate-700 flex items-center gap-2">
                     {showTable ? <TableIcon className="w-4 h-4" /> : (mode === 'trend' ? <Activity className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />)}
