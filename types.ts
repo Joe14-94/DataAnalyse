@@ -99,13 +99,14 @@ export interface PivotState {
   datasetId: string;
   config: {
       rowFields: string[];
-      colField: string;
+      colFields: string[]; // Changed from colField (single) to colFields (array)
       valField: string;
       aggType: string;
       filters: FilterRule[];
       // Data Blending (Nouveau support multi-jointures)
       joins?: PivotJoin[];
       // Deprecated fields kept for migration compatibility
+      colField?: string; 
       secondaryDatasetId?: string;
       joinKeyPrimary?: string;
       joinKeySecondary?: string;
@@ -211,6 +212,7 @@ export interface AppState {
   currentDatasetId?: string | null; 
   exportDate?: string; 
   companyLogo?: string; // NOUVEAU : Logo de l'entreprise (Base64)
+  hasSeenOnboarding?: boolean; // NOUVEAU : État du tour guidé
   
   // Persistence
   lastPivotState?: PivotState | null;

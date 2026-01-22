@@ -21,7 +21,7 @@ export interface PivotRow {
 export interface PivotConfig {
   rows: any[]; // Données brutes (déjà jointes/blended si nécessaire)
   rowFields: string[];
-  colField: string;
+  colFields: string[]; // UPDATED: Array support
   colGrouping: DateGrouping;
   valField: string;
   aggType: AggregationType;
@@ -67,7 +67,7 @@ interface GroupStats {
  */
 export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const { 
-    rows, rowFields, colField, colGrouping, valField, aggType, 
+    rows, rowFields, colFields, colGrouping, valField, aggType, 
     filters, sortBy, sortOrder, showSubtotals, showVariations
   } = config;
 
@@ -153,13 +153,17 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
         rowKeys[j] = v !== undefined && v !== null ? String(v) : '(Vide)';
     }
 
-    // 1.3 Extraction Clé Colonne
+    // 1.3 Extraction Clé Colonne (UPDATED FOR MULTI COLS)
     let colKey = 'ALL';
-    if (colField) {
-       let v = row[colField];
-       if (v === undefined || v === null) v = '(Vide)';
-       else v = String(v);
-       colKey = getGroupedLabel(v, colGrouping);
+    if (colFields && colFields.length > 0) {
+       const keyParts = colFields.map(field => {
+           let v = row[field];
+           if (v === undefined || v === null) v = '(Vide)';
+           else v = String(v);
+           // Apply grouping to any field (safe as getGroupedLabel returns val if not date)
+           return getGroupedLabel(v, colGrouping);
+       });
+       colKey = keyParts.join(' - ');
        colHeadersSet.add(colKey);
     }
 
@@ -209,7 +213,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           }
 
           // Mise à jour Métrique Colonne
-          if (colField) {
+          if (colFields && colFields.length > 0) {
               let currentVal = stats.colMetrics.get(colKey);
               
               if (currentVal === undefined) {
@@ -300,7 +304,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       });
 
       // TIME INTELLIGENCE: CALCUL DES VARIATIONS
-      if (showVariations && (aggType === 'sum' || aggType === 'count' || aggType === 'avg')) {
+      if (showVariations && colFields && colFields.length > 0 && (aggType === 'sum' || aggType === 'count' || aggType === 'avg')) {
           for (let i = 1; i < headers.length; i++) {
               const currHeader = headers[i];
               const prevHeader = headers[i - 1];
@@ -412,7 +416,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   // Construction des headers finaux avec variations
   let finalHeaders = [...sortedColHeaders];
-  if (showVariations && colField && (aggType === 'sum' || aggType === 'count' || aggType === 'avg')) {
+  if (showVariations && colFields && colFields.length > 0 && (aggType === 'sum' || aggType === 'count' || aggType === 'avg')) {
       const enrichedHeaders: string[] = [];
       if (sortedColHeaders.length > 0) enrichedHeaders.push(sortedColHeaders[0]);
       

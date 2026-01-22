@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useWidgets, useBatches, useDatasets } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -15,9 +15,11 @@ import { formatDateFr, parseSmartNumber } from '../utils';
 import { 
   Activity, Layout, PieChart as PieIcon, Edit3, Plus, X, ArrowLeft, ArrowRight, Trash2, 
   Minimize2, Settings, BarChart3, Check, TrendingUp,
-  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, Copy, PaintBucket, Eye, GripHorizontal, Move, CalendarRange, MousePointerClick
+  ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, Copy, PaintBucket, Eye, GripHorizontal, Move, CalendarRange, MousePointerClick, MoreVertical, Download, Image as ImageIcon, Maximize2, FileText
 } from 'lucide-react';
 import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle, WidgetHeight } from '../types';
+import html2canvas from 'html2canvas';
+import { useNavigate } from 'react-router-dom';
 
 // --- UTILS ---
 const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6'];
@@ -91,8 +93,6 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
 
       if (source.mode === 'specific' && source.batchId) {
          const specific = dsBatches.find(b => b.id === source.batchId);
-         // Si le batch spécifique est hors de la plage de date globale, on l'affiche quand même ou on le masque ?
-         // Ici on priorise la sélection explicite de l'utilisateur dans la config widget
          if (specific) targetBatch = specific;
          else return { error: 'Import introuvable' };
       }
@@ -105,7 +105,6 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
          secondaryDataset = datasets.find(d => d.id === secondarySource.datasetId);
          let secBatches = batches.filter(b => b.datasetId === secondarySource.datasetId);
          
-         // On applique aussi le filtre de date à la source secondaire pour cohérence
          if (globalDateRange.start) secBatches = secBatches.filter(b => b.date >= globalDateRange.start);
          if (globalDateRange.end) secBatches = secBatches.filter(b => b.date <= globalDateRange.end);
          
@@ -296,6 +295,103 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    );
 };
 
+// --- NEW WIDGET ITEM COMPONENT FOR SAFE HOOK CALLING ---
+interface WidgetItemProps {
+  widget: DashboardWidget;
+  index: number;
+  isEditMode: boolean;
+  globalDateRange: { start: string; end: string };
+  openMenuWidgetId: string | null;
+  setOpenMenuWidgetId: (id: string | null) => void;
+  setFullscreenWidgetId: (id: string | null) => void;
+  handleExportImage: (id: string, title: string) => void;
+  handleExportCSV: (data: any, title: string) => void;
+  handleDragStart: (e: React.DragEvent, index: number) => void;
+  handleDragOver: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent, targetIndex: number) => void;
+  updateDashboardWidget: (id: string, updates: Partial<DashboardWidget>) => void;
+  duplicateDashboardWidget: (id: string) => void;
+  openEditWidget: (w: DashboardWidget) => void;
+  removeDashboardWidget: (id: string) => void;
+}
+
+const WidgetItem: React.FC<WidgetItemProps> = ({ 
+  widget, index, isEditMode, globalDateRange, 
+  openMenuWidgetId, setOpenMenuWidgetId, setFullscreenWidgetId,
+  handleExportImage, handleExportCSV,
+  handleDragStart, handleDragOver, handleDrop,
+  updateDashboardWidget, duplicateDashboardWidget, openEditWidget, removeDashboardWidget
+}) => {
+  const widgetData = useWidgetData(widget, globalDateRange);
+  
+  const colSpan = widget.size === 'full' ? 'md:col-span-2 lg:col-span-4' : widget.size === 'lg' ? 'md:col-span-2 lg:col-span-3' : widget.size === 'md' ? 'md:col-span-2' : 'col-span-1';
+  const heightClass = widget.height === 'sm' ? 'h-32' : widget.height === 'lg' ? 'h-96' : widget.height === 'xl' ? 'h-[500px]' : 'h-64';
+  const isText = widget.type === 'text';
+  const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-brand-50 border-brand-200' : 'bg-surface';
+  const borderClass = widget.style?.borderColor || 'border-border-default';
+  const widthClass = widget.style?.borderWidth === '0' ? 'border-0' : widget.style?.borderWidth === '2' ? 'border-2' : widget.style?.borderWidth === '4' ? 'border-4' : 'border';
+
+  return (
+     <div 
+        key={widget.id} 
+        className={`${colSpan}`}
+        draggable={isEditMode}
+        onDragStart={(e) => handleDragStart(e, index)}
+        onDragOver={handleDragOver}
+        onDrop={(e) => handleDrop(e, index)}
+     >
+        <div id={`widget-container-${widget.id}`} className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-brand-100 border-brand-300 cursor-move' : ''} shadow-card p-4 flex flex-col ${heightClass} relative group transition-all`}>
+           
+           {!isEditMode && (
+               <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <div className="relative">
+                       <button onClick={() => setOpenMenuWidgetId(openMenuWidgetId === widget.id ? null : widget.id)} className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+                           <MoreVertical className="w-4 h-4" />
+                       </button>
+                       {openMenuWidgetId === widget.id && (
+                           <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 animate-in fade-in zoom-in-95 duration-100">
+                               <button onClick={() => setFullscreenWidgetId(widget.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                                   <Maximize2 className="w-3 h-3" /> Agrandir
+                               </button>
+                               <div className="border-t border-slate-100 my-1"></div>
+                               <button onClick={() => handleExportImage(widget.id, widget.title)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                                   <ImageIcon className="w-3 h-3" /> Image (.png)
+                               </button>
+                               <button onClick={() => handleExportCSV(widgetData, widget.title)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                                   <FileText className="w-3 h-3" /> Données (.csv)
+                               </button>
+                           </div>
+                       )}
+                   </div>
+               </div>
+           )}
+
+           {isEditMode && (
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 p-1 bg-slate-100/80 rounded-full text-slate-400 opacity-50 group-hover:opacity-100">
+                 <GripHorizontal className="w-4 h-4" />
+              </div>
+           )}
+
+           {isEditMode && (
+              <div className="absolute top-2 right-2 flex gap-1 bg-surface/90 p-1 rounded shadow-sm z-10 border border-border-default opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="flex gap-0.5 mr-2">
+                     <button onClick={() => updateDashboardWidget(widget.id, { size: widget.size === 'full' ? 'sm' : widget.size === 'lg' ? 'full' : widget.size === 'md' ? 'lg' : 'md' })} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Changer largeur"><Move className="w-3 h-3" /></button>
+                 </div>
+                 <div className="w-px bg-border-default mx-0.5"></div>
+                 <button onClick={() => duplicateDashboardWidget(widget.id)} className="p-1 hover:bg-brand-50 rounded text-brand-600"><Copy className="w-3 h-3" /></button>
+                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-brand-50 rounded text-brand-600"><Settings className="w-3 h-3" /></button>
+                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-danger-bg rounded text-danger-text"><Trash2 className="w-3 h-3" /></button>
+              </div>
+           )}
+           <h3 className="text-xs font-bold text-txt-secondary mb-2 uppercase tracking-wider truncate" title={widget.title}>{widget.title}</h3>
+           <div className="flex-1 min-h-0 pointer-events-none md:pointer-events-auto">
+               <WidgetDisplay widget={widget} data={widgetData} />
+           </div>
+        </div>
+     </div>
+  );
+};
+
 const LivePreview: React.FC<{ widget: DashboardWidget, globalDateRange: any }> = ({ widget, globalDateRange }) => {
    const data = useWidgetData(widget, globalDateRange);
    const isText = widget.type === 'text';
@@ -314,17 +410,22 @@ const LivePreview: React.FC<{ widget: DashboardWidget, globalDateRange: any }> =
 
 export const Dashboard: React.FC = () => {
   const { dashboardWidgets, addDashboardWidget, removeDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, reorderDashboardWidgets, dashboardFilters, clearDashboardFilters, setDashboardFilter } = useWidgets();
-  const { datasets } = useDatasets();
+  const { datasets, currentDatasetId, switchDataset } = useDatasets();
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
   const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
   const [tempWidget, setTempWidget] = useState<Partial<DashboardWidget>>({ type: 'kpi', size: 'sm', height: 'md', style: { borderColor: 'border-slate-200', borderWidth: '1' }, config: { metric: 'count' } });
+  const navigate = useNavigate();
 
   // D&D State
   const [draggedWidgetIndex, setDraggedWidgetIndex] = useState<number | null>(null);
 
   // GLOBAL DATE FILTERS
   const [globalDateRange, setGlobalDateRange] = useState<{ start: string, end: string }>({ start: '', end: '' });
+
+  // WIDGET MENUS STATE
+  const [openMenuWidgetId, setOpenMenuWidgetId] = useState<string | null>(null);
+  const [fullscreenWidgetId, setFullscreenWidgetId] = useState<string | null>(null);
 
   const handleSaveWidget = () => {
      if (!tempWidget.title) return;
@@ -346,6 +447,62 @@ export const Dashboard: React.FC = () => {
      setEditingWidgetId(w.id);
      setTempWidget({ ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } });
      setShowWidgetDrawer(true);
+  };
+
+  // EXPORT HANDLERS
+  const handleExportImage = async (widgetId: string, title: string) => {
+      setOpenMenuWidgetId(null);
+      const element = document.getElementById(`widget-container-${widgetId}`);
+      if (!element) return;
+      try {
+          const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff', logging: false });
+          const url = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `widget_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+          link.href = url;
+          link.click();
+      } catch (e) {
+          console.error("Export image failed", e);
+      }
+  };
+
+  const handleExportCSV = (data: any, title: string) => {
+      setOpenMenuWidgetId(null);
+      if (!data) return;
+      let csvContent = "";
+      
+      if (data.current && Array.isArray(data.current)) {
+          // List Type
+          csvContent = "Label;Valeur\n" + data.current.map((i: any) => `${i.name};${i.value}`).join("\n");
+      } else if (data.data && Array.isArray(data.data)) {
+          // Chart Type
+          csvContent = "Label;Valeur\n" + data.data.map((i: any) => `${i.name};${i.value}`).join("\n");
+      } else if (data.current !== undefined) {
+          // KPI Type
+          csvContent = `Indicateur;Valeur;Variation\n${title};${data.current};${data.trend || 0}%`;
+      }
+
+      if (csvContent) {
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `widget_data_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => document.body.removeChild(link), 100);
+      }
+  };
+
+  const handlePresentationMode = () => {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) {
+          elem.requestFullscreen().catch(err => {
+              console.error(`Error attempting to enable fullscreen mode: ${err.message} (${err.name})`);
+          });
+      } else {
+          document.exitFullscreen();
+      }
   };
 
   // Drag Handlers
@@ -381,6 +538,26 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar relative bg-canvas">
+      {fullscreenWidgetId && (
+          <div className="fixed inset-0 z-50 bg-white p-8 flex flex-col animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-slate-800">
+                      {dashboardWidgets.find(w => w.id === fullscreenWidgetId)?.title}
+                  </h2>
+                  <button onClick={() => setFullscreenWidgetId(null)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+                      <X className="w-6 h-6 text-slate-600" />
+                  </button>
+              </div>
+              <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-6 shadow-inner">
+                  {(() => {
+                      const w = dashboardWidgets.find(w => w.id === fullscreenWidgetId);
+                      if(w) return <WidgetDisplay widget={w} data={useWidgetData(w, globalDateRange)} />
+                      return null;
+                  })()}
+              </div>
+          </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6 pb-12">
          {/* Header */}
          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -390,7 +567,28 @@ export const Dashboard: React.FC = () => {
                </Heading>
                <Text variant="muted">Vue d'ensemble de vos données</Text>
             </div>
+            
+            {/* GLOBAL DATASET SELECTOR IN HEADER */}
+            <div className="relative">
+                <select
+                    className="w-full md:w-64 appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                    value={currentDatasetId || ''}
+                    onChange={(e) => {
+                       if (e.target.value === '__NEW__') navigate('/import');
+                       else switchDataset(e.target.value);
+                    }}
+                >
+                    {datasets.length === 0 && <option value="">Aucun tableau</option>}
+                    {datasets.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                    <option disabled>──────────</option>
+                    <option value="__NEW__">+ Nouvelle typologie...</option>
+                </select>
+            </div>
+
             <div className="flex gap-2">
+               <Button variant="ghost" onClick={handlePresentationMode} icon={<Maximize2 className="w-4 h-4" />}>Plein Écran</Button>
                {isEditMode ? (
                   <>
                      <Button variant="secondary" onClick={openNewWidget} icon={<Plus className="w-4 h-4" />}>Ajouter</Button>
@@ -475,52 +673,27 @@ export const Dashboard: React.FC = () => {
             </div>
          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-               {dashboardWidgets.map((widget, index) => {
-                  const colSpan = widget.size === 'full' ? 'md:col-span-2 lg:col-span-4' : widget.size === 'lg' ? 'md:col-span-2 lg:col-span-3' : widget.size === 'md' ? 'md:col-span-2' : 'col-span-1';
-                  const heightClass = widget.height === 'sm' ? 'h-32' : widget.height === 'lg' ? 'h-96' : widget.height === 'xl' ? 'h-[500px]' : 'h-64';
-                  const isText = widget.type === 'text';
-                  const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-brand-50 border-brand-200' : 'bg-surface';
-                  const borderClass = widget.style?.borderColor || 'border-border-default';
-                  const widthClass = widget.style?.borderWidth === '0' ? 'border-0' : widget.style?.borderWidth === '2' ? 'border-2' : widget.style?.borderWidth === '4' ? 'border-4' : 'border';
-
-                  return (
-                     <div 
-                        key={widget.id} 
-                        className={`${colSpan}`}
-                        draggable={isEditMode}
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, index)}
-                     >
-                        <div className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-brand-100 border-brand-300 cursor-move' : ''} shadow-card p-4 flex flex-col ${heightClass} relative group transition-all`}>
-                           
-                           {/* DRAG HANDLE INDICATOR */}
-                           {isEditMode && (
-                              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 p-1 bg-slate-100/80 rounded-full text-slate-400 opacity-50 group-hover:opacity-100">
-                                 <GripHorizontal className="w-4 h-4" />
-                              </div>
-                           )}
-
-                           {isEditMode && (
-                              <div className="absolute top-2 right-2 flex gap-1 bg-surface/90 p-1 rounded shadow-sm z-10 border border-border-default opacity-0 group-hover:opacity-100 transition-opacity">
-                                 {/* Size Controls */}
-                                 <div className="flex gap-0.5 mr-2">
-                                     <button onClick={() => updateDashboardWidget(widget.id, { size: widget.size === 'full' ? 'sm' : widget.size === 'lg' ? 'full' : widget.size === 'md' ? 'lg' : 'md' })} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Changer largeur"><Move className="w-3 h-3" /></button>
-                                 </div>
-                                 <div className="w-px bg-border-default mx-0.5"></div>
-                                 <button onClick={() => duplicateDashboardWidget(widget.id)} className="p-1 hover:bg-brand-50 rounded text-brand-600"><Copy className="w-3 h-3" /></button>
-                                 <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-brand-50 rounded text-brand-600"><Settings className="w-3 h-3" /></button>
-                                 <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-danger-bg rounded text-danger-text"><Trash2 className="w-3 h-3" /></button>
-                              </div>
-                           )}
-                           <h3 className="text-xs font-bold text-txt-secondary mb-2 uppercase tracking-wider truncate" title={widget.title}>{widget.title}</h3>
-                           <div className="flex-1 min-h-0 pointer-events-none md:pointer-events-auto">
-                               <WidgetDisplay widget={widget} data={useWidgetData(widget, globalDateRange)} />
-                           </div>
-                        </div>
-                     </div>
-                  );
-               })}
+               {dashboardWidgets.map((widget, index) => (
+                  <WidgetItem 
+                    key={widget.id}
+                    widget={widget}
+                    index={index}
+                    isEditMode={isEditMode}
+                    globalDateRange={globalDateRange}
+                    openMenuWidgetId={openMenuWidgetId}
+                    setOpenMenuWidgetId={setOpenMenuWidgetId}
+                    setFullscreenWidgetId={setFullscreenWidgetId}
+                    handleExportImage={handleExportImage}
+                    handleExportCSV={handleExportCSV}
+                    handleDragStart={handleDragStart}
+                    handleDragOver={handleDragOver}
+                    handleDrop={handleDrop}
+                    updateDashboardWidget={updateDashboardWidget}
+                    duplicateDashboardWidget={duplicateDashboardWidget}
+                    openEditWidget={openEditWidget}
+                    removeDashboardWidget={removeDashboardWidget}
+                  />
+               ))}
             </div>
          )}
       </div>

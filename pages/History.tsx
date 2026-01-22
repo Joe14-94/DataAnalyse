@@ -5,10 +5,12 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Trash2, Filter, Download, Database, AlertCircle } from 'lucide-react';
 import { formatDateFr } from '../utils';
+import { useNavigate } from 'react-router-dom';
 
 export const History: React.FC = () => {
-  const { batches, deleteBatch, currentDataset, datasets } = useData();
+  const { batches, deleteBatch, currentDataset, datasets, currentDatasetId, switchDataset } = useData();
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+  const navigate = useNavigate();
 
   // Reset selection when dataset changes
   useEffect(() => {
@@ -76,9 +78,23 @@ export const History: React.FC = () => {
        <div className="h-full flex flex-col items-center justify-center text-center bg-white rounded-lg border border-dashed border-slate-300 m-4">
           <Database className="w-12 h-12 text-slate-300 mb-4" />
           <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
-          <p className="text-slate-500 text-sm max-w-md mt-2">
-             Utilisez le menu en haut pour sélectionner un tableau ou en créer un nouveau.
-          </p>
+          <div className="mt-4">
+            <select
+                className="appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                value=""
+                onChange={(e) => {
+                    if (e.target.value === '__NEW__') navigate('/import');
+                    else switchDataset(e.target.value);
+                }}
+            >
+                <option value="" disabled>Choisir une typologie</option>
+                {datasets.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+                <option disabled>──────────</option>
+                <option value="__NEW__">+ Nouvelle typologie...</option>
+            </select>
+        </div>
        </div>
     );
  }
@@ -88,8 +104,28 @@ export const History: React.FC = () => {
        <div className="space-y-6 pb-12"> {/* Removed max-w-7xl */}
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
            <div>
-              <h2 className="text-2xl font-bold text-slate-800">Historique : {currentDataset.name}</h2>
-              <p className="text-sm text-slate-500 mt-1">Gérez les imports passés de ce tableau.</p>
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <History className="w-6 h-6 text-slate-500" />
+                  Historique
+              </h2>
+              {/* DATASET SELECTOR */}
+              <div className="mt-2">
+                  <select
+                        className="appearance-none bg-white border border-slate-300 text-slate-800 font-bold text-sm rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                        value={currentDatasetId || ''}
+                        onChange={(e) => {
+                          if (e.target.value === '__NEW__') navigate('/import');
+                          else switchDataset(e.target.value);
+                        }}
+                    >
+                        {datasets.length === 0 && <option value="">Aucun tableau</option>}
+                        {datasets.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                        <option disabled>──────────</option>
+                        <option value="__NEW__">+ Nouvelle typologie...</option>
+                    </select>
+              </div>
            </div>
            
            <div className="flex items-center gap-2 bg-white p-1 rounded-md border border-slate-200 shadow-sm">

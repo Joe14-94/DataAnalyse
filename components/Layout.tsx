@@ -6,6 +6,7 @@ import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
 import { Badge } from './ui/Badge';
 import { Text } from './ui/Typography';
+import { OnboardingTour } from './OnboardingTour';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,7 +16,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
-  const { datasets, currentDatasetId, switchDataset, batches, getBackupJson, companyLogo } = useData();
+  const { datasets, batches, getBackupJson, companyLogo } = useData();
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
   
@@ -23,11 +24,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
-    { name: 'Tableau de bord', icon: LayoutDashboard, path: '/' },
-    { name: 'Données', icon: Table2, path: '/data' },
-    { name: 'Importation', icon: Upload, path: '/import' },
+    { name: 'Tableau de bord', icon: LayoutDashboard, path: '/', id: 'tour-nav-dashboard' },
+    { name: 'Données', icon: Table2, path: '/data', id: 'tour-nav-data' },
+    { name: 'Importation', icon: Upload, path: '/import', id: 'tour-nav-import' },
     { name: 'Historique imports', icon: History, path: '/history' },
-    { name: 'Création de graphiques', icon: PieChart, path: '/analytics' },
+    { name: 'Création de graphiques', icon: PieChart, path: '/analytics', id: 'tour-nav-analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
     { name: 'Personnalisation', icon: Palette, path: '/customization' },
     { name: 'Paramètres', icon: Settings, path: '/settings' },
@@ -75,6 +76,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="h-screen w-screen bg-canvas flex flex-col md:flex-row overflow-hidden text-txt-main font-sans">
+      <OnboardingTour />
+      
       {/* Sidebar */}
       <aside 
         className={`bg-surface border-b md:border-b-0 md:border-r border-border-default flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
@@ -105,41 +108,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
-
-          <div className={`mb-6 ${isCollapsed ? 'hidden' : 'block'}`}>
-            <label className="block text-xs font-bold text-txt-secondary uppercase tracking-wider mb-2">Typologie</label>
-            <div className="relative">
-              <select
-                className="w-full appearance-none bg-canvas border border-border-default text-txt-main text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                value={currentDatasetId || ''}
-                onChange={(e) => {
-                   if (e.target.value === '__NEW__') navigate('/import');
-                   else switchDataset(e.target.value);
-                }}
-              >
-                {datasets.length === 0 && <option value="">Aucun tableau</option>}
-                {datasets.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-                <option disabled>──────────</option>
-                <option value="__NEW__">+ Nouvelle typologie...</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-txt-muted">
-                <ChevronDown size={14} />
-              </div>
-            </div>
-          </div>
-          
-          {isCollapsed && (
-             <div className="mb-6 flex justify-center" title="Changer de typologie">
-                <button 
-                  onClick={() => setIsCollapsed(false)}
-                  className="w-10 h-10 rounded bg-canvas flex items-center justify-center text-txt-muted hover:bg-brand-50 hover:text-brand-600 transition-colors"
-                >
-                   <Table2 size={20} />
-                </button>
-             </div>
-          )}
         </div>
 
         <nav className="flex md:flex-col p-2 md:p-3 gap-1 overflow-x-auto md:overflow-visible flex-1 custom-scrollbar">
@@ -149,6 +117,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             return (
               <Link
                 key={item.path}
+                id={item.id}
                 to={item.path}
                 title={isCollapsed ? item.name : ''}
                 className={`flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap

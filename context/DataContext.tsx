@@ -27,6 +27,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lastPivotState, setLastPivotState] = useState<PivotState | null>(null);
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
   
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,6 +53,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLastPivotState(dbData.lastPivotState || null);
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
           setCompanyLogo(dbData.companyLogo); // NEW
+          setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
 
           if (dbData.currentDatasetId) {
             setCurrentDatasetId(dbData.currentDatasetId);
@@ -70,6 +72,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLastPivotState(parsed.lastPivotState || null);
             setLastAnalyticsState(parsed.lastAnalyticsState || null);
             setCompanyLogo(parsed.companyLogo); // NEW
+            setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
             
             await db.save(parsed);
@@ -104,7 +107,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentDatasetId,
         lastPivotState,
         lastAnalyticsState,
-        companyLogo
+        companyLogo,
+        hasSeenOnboarding
       };
       
       db.save(state).catch(e => console.error("Failed to save to DB", e));
@@ -113,7 +117,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -370,6 +374,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentDatasetId(null);
     setLastPivotState(null);
     setLastAnalyticsState(null);
+    setHasSeenOnboarding(false);
     await db.clear();
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
@@ -402,15 +407,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCompanyLogo(logo);
   }, []);
 
+  const completeOnboarding = useCallback(() => {
+      setHasSeenOnboarding(true);
+  }, []);
+
   const getBackupJson = useCallback(() => {
     const state: AppState = { 
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
+      hasSeenOnboarding,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding]);
 
   const importBackup = useCallback(async (jsonData: string) => {
     try {
@@ -426,6 +436,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastPivotState(parsed.lastPivotState || null);
       setLastAnalyticsState(parsed.lastAnalyticsState || null);
       setCompanyLogo(parsed.companyLogo); // NEW
+      setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
       
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
@@ -447,7 +458,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings }}>
+    <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding }}>
       <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
         <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
           <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>

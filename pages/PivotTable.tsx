@@ -7,7 +7,8 @@ import {
   Table2, ArrowUpDown, Layers,
   ArrowUp, ArrowDown, Save, Check,
   PieChart, Loader2, ChevronLeft, ChevronRight, FileDown, FileType, Printer,
-  GripVertical, MousePointer2, TrendingUp
+  GripVertical, MousePointer2, TrendingUp, Link as LinkIcon, Plus, Trash2, Split,
+  ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
@@ -18,20 +19,41 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 // --- DRAG & DROP TYPES ---
 type DropZoneType = 'row' | 'col' | 'val' | 'filter';
 
+// New Interface for Source Management
+interface PivotSourceConfig {
+    id: string;
+    datasetId: string;
+    isPrimary: boolean;
+    joinConfig?: { // Only for secondary sources
+        primaryKey: string;
+        secondaryKey: string;
+    };
+    color: string; // UI Color helper
+}
+
+const SOURCE_COLORS = ['blue', 'indigo', 'purple', 'pink', 'teal', 'orange'];
+
 export const PivotTable: React.FC = () => {
   const { 
     batches, currentDataset, datasets, savedAnalyses, saveAnalysis, 
     lastPivotState, savePivotState, isLoading, companyLogo
   } = useData();
-  const fields = currentDataset ? currentDataset.fields : [];
   const navigate = useNavigate();
 
   // --- STATE ---
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // DATA SOURCES STATE (New unified approach)
+  const [sources, setSources] = useState<PivotSourceConfig[]>([]);
+  const [isAddingSource, setIsAddingSource] = useState(false);
+  const [newSourceConfig, setNewSourceConfig] = useState<{ targetId: string, key1: string, key2: string }>({ targetId: '', key1: '', key2: '' });
+  
+  // SELECTION STATE (For the primary source, allows changing batch)
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-  const [joins, setJoins] = useState<PivotJoin[]>([]);
+
+  // PIVOT CONFIG STATE
   const [rowFields, setRowFields] = useState<string[]>([]);
-  const [colField, setColField] = useState<string>('');
+  const [colFields, setColFields] = useState<string[]>([]); 
   const [valField, setValField] = useState<string>('');
   const [colGrouping, setColGrouping] = useState<DateGrouping>('none'); 
   const [aggType, setAggType] = useState<AggregationType>('count');
@@ -39,7 +61,7 @@ export const PivotTable: React.FC = () => {
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [showSubtotals, setShowSubtotals] = useState(true);
   const [showTotalCol, setShowTotalCol] = useState(true);
-  const [showVariations, setShowVariations] = useState(false); // NEW
+  const [showVariations, setShowVariations] = useState(false); 
   const [sortBy, setSortBy] = useState<SortBy>('label');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   
@@ -48,10 +70,11 @@ export const PivotTable: React.FC = () => {
   const [analysisName, setAnalysisName] = useState('');
   const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   // D&D STATE
   const [draggedField, setDraggedField] = useState<string | null>(null);
-  const [dragSource, setDragSource] = useState<'list' | DropZoneType | null>(null);
+  // Removed dragSource state dependency for drop logic to fix async issues
 
   // ASYNC CALCULATION STATE
   const [pivotData, setPivotData] = useState<PivotResult | null>(null);
@@ -61,19 +84,78 @@ export const PivotTable: React.FC = () => {
   const parentRef = useRef<HTMLDivElement>(null);
 
   // --- DERIVED STATE ---
+  
+  // Get the primary dataset from our local sources list, NOT global context
+  const primarySourceConfig = sources.find(s => s.isPrimary);
+  const primaryDataset = primarySourceConfig ? datasets.find(d => d.id === primarySourceConfig.datasetId) : null;
+
   const datasetBatches = useMemo(() => {
-    if (!currentDataset) return [];
+    if (!primaryDataset) return [];
     return batches
-      .filter(b => b.datasetId === currentDataset.id)
+      .filter(b => b.datasetId === primaryDataset.id)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [batches, currentDataset]);
+  }, [batches, primaryDataset]);
+
+  // Determine which fields are already in use
+  const usedFields = useMemo(() => {
+      const used = new Set<string>();
+      rowFields.forEach(f => used.add(f));
+      colFields.forEach(f => used.add(f));
+      if (valField) used.add(valField);
+      filters.forEach(f => used.add(f.field));
+      return used;
+  }, [rowFields, colFields, valField, filters]);
 
   // --- INITIALISATION & PERSISTENCE ---
+  
+  // Load State
   useEffect(() => {
+     // Only load if we have a primary source
+     if (primaryDataset) {
+        savePivotState({
+            datasetId: primaryDataset.id,
+            config: {
+                sources, // Save the full source stack
+                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations,
+                sortBy, sortOrder, styleRules, selectedBatchId 
+            }
+        });
+     }
+  }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized]);
+
+  // Load State
+  useEffect(() => {
+     // Only load if we haven't initialized yet
+     if (isInitialized) return;
+
      if (lastPivotState && currentDataset && lastPivotState.datasetId === currentDataset.id) {
          const c = lastPivotState.config;
+         
+         // Restore Sources
+         if (c.sources) {
+             setSources(c.sources);
+         } else {
+             // Migration from old state structure
+             const migratedSources: PivotSourceConfig[] = [];
+             // Add primary
+             migratedSources.push({ id: 'main', datasetId: currentDataset.id, isPrimary: true, color: SOURCE_COLORS[0] });
+             // Add joins
+             if (c.joins) {
+                 c.joins.forEach((j: PivotJoin, idx: number) => {
+                     migratedSources.push({
+                         id: j.id,
+                         datasetId: j.datasetId,
+                         isPrimary: false,
+                         joinConfig: { primaryKey: j.joinKeyPrimary, secondaryKey: j.joinKeySecondary },
+                         color: SOURCE_COLORS[(idx + 1) % SOURCE_COLORS.length]
+                     });
+                 });
+             }
+             setSources(migratedSources);
+         }
+
          setRowFields(c.rowFields || []);
-         setColField(c.colField || '');
+         setColFields(c.colFields || (c.colField ? [c.colField] : []));
          setColGrouping(c.colGrouping || 'none');
          setValField(c.valField || '');
          setAggType((c.aggType as AggregationType) || 'count');
@@ -92,39 +174,20 @@ export const PivotTable: React.FC = () => {
          setShowVariations(c.showVariations !== undefined ? c.showVariations : false);
          setSortBy(c.sortBy || 'label');
          setSortOrder(c.sortOrder || 'asc');
-         if (c.joins) setJoins(c.joins);
-         else if (c.secondaryDatasetId) {
-             setJoins([{
-                 id: generateId(),
-                 datasetId: c.secondaryDatasetId,
-                 joinKeyPrimary: c.joinKeyPrimary,
-                 joinKeySecondary: c.joinKeySecondary
-             }]);
-         } else setJoins([]);
          setStyleRules(c.styleRules || []);
          if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
      } else {
+         // Default Empty State
+         setSources([]);
          setRowFields([]);
-         setColField('');
+         setColFields([]);
          setValField('');
          setFilters([]);
      }
      setIsInitialized(true);
-  }, [currentDataset?.id]);
+  }, [currentDataset?.id, lastPivotState]);
 
-  useEffect(() => {
-     if (!isInitialized) return;
-     if (currentDataset) {
-        savePivotState({
-            datasetId: currentDataset.id,
-            config: {
-                rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations,
-                sortBy, sortOrder, joins, styleRules, selectedBatchId 
-            }
-        });
-     }
-  }, [rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, joins, styleRules, selectedBatchId, currentDataset, isInitialized]);
-
+  // Auto-select batch
   useEffect(() => {
     if (isLoading || !isInitialized) return; 
     if (datasetBatches.length === 0) {
@@ -140,28 +203,56 @@ export const PivotTable: React.FC = () => {
     datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0], 
   [datasetBatches, selectedBatchId]);
 
-  const combinedFields = useMemo(() => {
-      let baseFields = fields;
-      if (currentDataset && currentDataset.calculatedFields) {
-          baseFields = [...fields, ...currentDataset.calculatedFields.map(cf => cf.name)];
-      }
-      if (joins.length === 0) return baseFields;
-      const allJoinedFields: string[] = [];
-      joins.forEach(join => {
-          const ds = datasets.find(d => d.id === join.datasetId);
-          if (ds) {
-              const secNativeFields = ds.fields.map(f => `[${ds.name}] ${f}`);
-              const secCalcFields = (ds.calculatedFields || []).map(f => `[${ds.name}] ${f.name}`);
-              allJoinedFields.push(...secNativeFields, ...secCalcFields);
+  // Group fields by dataset for the UI
+  const groupedFields = useMemo(() => {
+      const groups = [];
+      
+      // Iterate through our configured sources
+      sources.forEach(src => {
+          const ds = datasets.find(d => d.id === src.datasetId);
+          if (!ds) return;
+
+          let fields = [];
+          if (src.isPrimary) {
+              fields = [...ds.fields];
+              if (ds.calculatedFields) {
+                  fields.push(...ds.calculatedFields.map(cf => cf.name));
+              }
+          } else {
+              // Prefix fields for secondary sources
+              const nativeFields = ds.fields.map(f => `[${ds.name}] ${f}`);
+              const calcFields = (ds.calculatedFields || []).map(f => `[${ds.name}] ${f.name}`);
+              fields = [...nativeFields, ...calcFields];
           }
+
+          groups.push({
+              id: src.id,
+              name: ds.name,
+              isPrimary: src.isPrimary,
+              fields: fields,
+              color: src.color,
+              sourceConfig: src
+          });
       });
-      return [...baseFields, ...allJoinedFields];
-  }, [fields, joins, datasets, currentDataset]);
+
+      return groups;
+  }, [sources, datasets]);
+
+  // Auto-expand sections when sources change
+  useEffect(() => {
+      const newExpanded = { ...expandedSections };
+      sources.forEach(s => {
+          if (newExpanded[s.id] === undefined) newExpanded[s.id] = true;
+      });
+      setExpandedSections(newExpanded);
+  }, [sources.length]);
 
   // --- BLENDING LOGIC ---
   const blendedRows = useMemo(() => {
-     if (!currentBatch) return [];
-     const calcFields = currentDataset?.calculatedFields || [];
+     if (!currentBatch || !primaryDataset) return [];
+     
+     // 1. Prepare Primary Rows
+     const calcFields = primaryDataset.calculatedFields || [];
      let rows = currentBatch.rows;
      if (calcFields.length > 0) {
          rows = rows.map(r => {
@@ -172,16 +263,25 @@ export const PivotTable: React.FC = () => {
              return enriched;
          });
      }
-     if (joins.length > 0) {
-         joins.forEach(join => {
-             const secDS = datasets.find(d => d.id === join.datasetId);
-             if (secDS) {
+
+     // 2. Blend Secondary Sources
+     const secondarySources = sources.filter(s => !s.isPrimary);
+     
+     if (secondarySources.length > 0) {
+         secondarySources.forEach(src => {
+             const secDS = datasets.find(d => d.id === src.datasetId);
+             const join = src.joinConfig;
+             
+             if (secDS && join) {
                  const secBatches = batches
-                    .filter(b => b.datasetId === join.datasetId)
+                    .filter(b => b.datasetId === src.datasetId)
                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                 
                  if (secBatches.length > 0) {
                      const secBatch = secBatches[0];
                      let secRows = secBatch.rows;
+                     
+                     // Enrich secondary rows
                      if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
                          secRows = secRows.map(r => {
                              const enriched = { ...r };
@@ -191,13 +291,17 @@ export const PivotTable: React.FC = () => {
                              return enriched;
                          });
                      }
+
+                     // Build Lookup Map
                      const lookup = new Map<string, any>();
                      secRows.forEach(r => {
-                        const k = String(r[join.joinKeySecondary]).trim();
+                        const k = String(r[join.secondaryKey]).trim();
                         if (k) lookup.set(k, r);
                      });
+
+                     // Merge
                      rows = rows.map(row => {
-                        const k = String(row[join.joinKeyPrimary]).trim();
+                        const k = String(row[join.primaryKey]).trim();
                         const match = lookup.get(k);
                         if (match) {
                            const prefixedMatch: any = {};
@@ -213,7 +317,7 @@ export const PivotTable: React.FC = () => {
          });
      }
      return rows;
-  }, [currentBatch, joins, currentDataset, datasets, batches]);
+  }, [currentBatch, sources, primaryDataset, datasets, batches]);
 
   // --- ASYNC CALCULATION ---
   useEffect(() => {
@@ -221,14 +325,16 @@ export const PivotTable: React.FC = () => {
       const timer = setTimeout(() => {
           const result = calculatePivotData({
             rows: blendedRows,
-            rowFields, colField, colGrouping, valField, aggType, filters, 
-            sortBy, sortOrder, showSubtotals, showVariations, currentDataset, joins, datasets
+            rowFields, colFields, colGrouping, valField, aggType, filters, 
+            sortBy, sortOrder, showSubtotals, showVariations, 
+            currentDataset: primaryDataset, // Pass context
+            datasets // Pass all datasets for lookup
          });
          setPivotData(result);
          setIsCalculating(false);
       }, 10); 
       return () => clearTimeout(timer);
-  }, [blendedRows, rowFields, colField, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, currentDataset, datasets, joins]);
+  }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets]);
 
   // --- HANDLERS ---
   const handleValFieldChange = (newField: string) => {
@@ -242,21 +348,24 @@ export const PivotTable: React.FC = () => {
   };
 
   const isColFieldDate = useMemo(() => {
-      if (!colField || blendedRows.length === 0) return false;
-      const sample = blendedRows.slice(0, 50).map(r => r[colField] !== undefined ? String(r[colField]) : '');
-      return detectColumnType(sample) === 'date';
-  }, [colField, blendedRows]);
+      if (colFields.length === 0 || blendedRows.length === 0) return false;
+      return colFields.some(field => {
+          const sample = blendedRows.slice(0, 50).map(r => r[field] !== undefined ? String(r[field]) : '');
+          return detectColumnType(sample) === 'date';
+      });
+  }, [colFields, blendedRows]);
 
   useEffect(() => {
       if (!isColFieldDate) setColGrouping('none');
-  }, [colField, isColFieldDate]);
+  }, [colFields, isColFieldDate]);
 
-  // --- DRAG AND DROP LOGIC ---
+  // --- DRAG AND DROP LOGIC (FIXED) ---
   const handleDragStart = (e: React.DragEvent, field: string, source: 'list' | DropZoneType) => {
       setDraggedField(field);
-      setDragSource(source);
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', field);
+      // IMPORTANT: Serialize all data into transfer to avoid stale state in drop handler
+      const dragData = JSON.stringify({ field, source });
+      e.dataTransfer.setData('application/json', dragData);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -266,27 +375,44 @@ export const PivotTable: React.FC = () => {
 
   const handleDrop = (e: React.DragEvent, targetZone: DropZoneType) => {
       e.preventDefault();
-      if (!draggedField) return;
-      if (dragSource === 'row') setRowFields(prev => prev.filter(f => f !== draggedField));
-      if (dragSource === 'col' && colField === draggedField) setColField('');
-      if (dragSource === 'val' && valField === draggedField) setValField('');
-      if (dragSource === 'filter') setFilters(prev => prev.filter(f => f.field !== draggedField));
-      if (targetZone === 'row') {
-          if (!rowFields.includes(draggedField) && rowFields.length < 5) setRowFields(prev => [...prev, draggedField]);
-      } else if (targetZone === 'col') {
-          setColField(draggedField);
-      } else if (targetZone === 'val') {
-          handleValFieldChange(draggedField);
-      } else if (targetZone === 'filter') {
-          if (!filters.some(f => f.field === draggedField)) setFilters(prev => [...prev, { field: draggedField, operator: 'in', value: [] }]);
+      
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (!dataStr) return;
+      
+      let field: string, source: string;
+      try {
+          const parsed = JSON.parse(dataStr);
+          field = parsed.field;
+          source = parsed.source;
+      } catch (e) {
+          return;
       }
+      
+      if (!field) return;
+
+      // Logic to remove from old zone
+      if (source === 'row') setRowFields(prev => prev.filter(f => f !== field));
+      if (source === 'col') setColFields(prev => prev.filter(f => f !== field));
+      if (source === 'val' && valField === field) setValField('');
+      if (source === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
+      
+      // Logic to add to new zone
+      if (targetZone === 'row') {
+          if (!rowFields.includes(field) && rowFields.length < 5) setRowFields(prev => [...prev, field]);
+      } else if (targetZone === 'col') {
+          if (!colFields.includes(field) && colFields.length < 3) setColFields(prev => [...prev, field]);
+      } else if (targetZone === 'val') {
+          handleValFieldChange(field);
+      } else if (targetZone === 'filter') {
+          if (!filters.some(f => f.field === field)) setFilters(prev => [...prev, { field: field, operator: 'in', value: [] }]);
+      }
+      
       setDraggedField(null);
-      setDragSource(null);
   };
 
   const removeField = (zone: DropZoneType, field: string) => {
       if (zone === 'row') setRowFields(prev => prev.filter(f => f !== field));
-      if (zone === 'col') setColField('');
+      if (zone === 'col') setColFields(prev => prev.filter(f => f !== field));
       if (zone === 'val') setValField('');
       if (zone === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
   };
@@ -294,12 +420,12 @@ export const PivotTable: React.FC = () => {
   // --- EXPORT & MISC ---
   const handleExport = (format: 'pdf' | 'html', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
       setShowExportMenu(false);
-      const title = `TCD - ${currentDataset?.name}`;
+      const title = `TCD - ${primaryDataset?.name || 'Analyse'}`;
       exportView(format, 'pivot-export-container', title, companyLogo, pdfMode);
   };
 
   const handleToChart = () => {
-      if (!currentDataset) return;
+      if (!primaryDataset) return;
       if (rowFields.length === 0) {
           alert("Veuillez configurer au moins une ligne pour générer un graphique.");
           return;
@@ -309,56 +435,159 @@ export const PivotTable: React.FC = () => {
   };
 
   const handleSaveAnalysis = () => {
-      if (!analysisName.trim() || !currentDataset) return;
+      if (!analysisName.trim() || !primaryDataset) return;
       saveAnalysis({
-          name: analysisName, type: 'pivot', datasetId: currentDataset.id,
-          config: { rowFields, colField, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, joins, styleRules, selectedBatchId }
+          name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
+          config: { 
+              sources, // Save full stack
+              rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId 
+          }
       });
       setAnalysisName('');
       setIsSaving(false);
   };
 
-  // VIRTUALIZATION
+  // --- SOURCE MANAGEMENT ---
+  
+  const startAddSource = () => {
+      setIsAddingSource(true);
+      setNewSourceConfig({ targetId: '', key1: '', key2: '' });
+  };
+
+  const confirmAddSource = () => {
+      if (!newSourceConfig.targetId) return;
+      
+      const isPrimary = sources.length === 0;
+      
+      // If adding primary, we don't need keys
+      if (isPrimary) {
+          const newSource: PivotSourceConfig = {
+              id: generateId(),
+              datasetId: newSourceConfig.targetId,
+              isPrimary: true,
+              color: SOURCE_COLORS[0]
+          };
+          setSources([newSource]);
+      } else {
+          // Adding secondary requires keys
+          if (!newSourceConfig.key1 || !newSourceConfig.key2) return;
+          
+          const newSource: PivotSourceConfig = {
+              id: generateId(),
+              datasetId: newSourceConfig.targetId,
+              isPrimary: false,
+              joinConfig: {
+                  primaryKey: newSourceConfig.key1,
+                  secondaryKey: newSourceConfig.key2
+              },
+              color: SOURCE_COLORS[sources.length % SOURCE_COLORS.length]
+          };
+          setSources(prev => [...prev, newSource]);
+      }
+      
+      setIsAddingSource(false);
+  };
+
+  const removeSource = (sourceId: string) => {
+      const sourceToRemove = sources.find(s => s.id === sourceId);
+      if (!sourceToRemove) return;
+
+      if (sourceToRemove.isPrimary) {
+          if (window.confirm("Supprimer la source principale réinitialisera tout le tableau. Continuer ?")) {
+              setSources([]);
+              setRowFields([]);
+              setColFields([]);
+              setValField('');
+              setFilters([]);
+          }
+      } else {
+          setSources(prev => prev.filter(s => s.id !== sourceId));
+          // Cleanup fields used from this source
+          const ds = datasets.find(d => d.id === sourceToRemove.datasetId);
+          if (ds) {
+              const prefix = `[${ds.name}] `;
+              setRowFields(prev => prev.filter(f => !f.startsWith(prefix)));
+              setColFields(prev => prev.filter(f => !f.startsWith(prefix)));
+              if(valField.startsWith(prefix)) setValField('');
+              setFilters(prev => prev.filter(f => !f.field.startsWith(prefix)));
+          }
+      }
+  };
+
+  // Auto-detect keys logic
+  useEffect(() => {
+      if (isAddingSource && newSourceConfig.targetId && !newSourceConfig.key1 && sources.length > 0) {
+          const targetDS = datasets.find(d => d.id === newSourceConfig.targetId);
+          if (primaryDataset && targetDS) {
+              const match = primaryDataset.fields.find(f => targetDS.fields.includes(f));
+              if (match) {
+                  setNewSourceConfig(prev => ({ ...prev, key1: match, key2: match }));
+              }
+          }
+      }
+  }, [isAddingSource, newSourceConfig.targetId, datasets, primaryDataset]);
+
+  const toggleSection = (id: string) => {
+      setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // VIRTUALIZATION SETUP
   const rowVirtualizer = useVirtualizer({
     count: pivotData ? pivotData.displayRows.length : 0,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 40,
+    estimateSize: () => 35, // Updated estimate
     overscan: 20
   });
 
   // FORMAT OUTPUT
-  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, currentDataset, undefined, datasets, valFormatting);
-
-  if (!currentDataset) {
-    return (
-       <div className="h-full flex flex-col items-center justify-center text-center bg-slate-50 rounded-lg border border-dashed border-slate-300 m-4">
-          <Database className="w-12 h-12 text-slate-300 mb-4" />
-          <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
-       </div>
-    );
-  }
+  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, primaryDataset, undefined, datasets, valFormatting);
 
   // COMPONENT: Draggable Field Chip
-  const FieldChip: React.FC<{ field: string, zone: DropZoneType | 'list', onDelete?: () => void }> = ({ field, zone, onDelete }) => (
-      <div 
-          draggable 
-          onDragStart={(e) => handleDragStart(e, field, zone)}
-          className="group flex items-center justify-between gap-2 px-2 py-1.5 bg-white border border-slate-200 rounded shadow-sm hover:border-blue-400 hover:shadow-md cursor-grab active:cursor-grabbing text-xs font-medium text-slate-700 select-none animate-in fade-in zoom-in-95 duration-200"
-      >
-          <div className="flex items-center gap-1.5 overflow-hidden">
-              <GripVertical className="w-3 h-3 text-slate-300 flex-shrink-0" />
-              <span className="truncate" title={field}>{field}</span>
-          </div>
-          {onDelete && (
-              <button 
-                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
-              >
-                  <X className="w-3 h-3" />
-              </button>
-          )}
-      </div>
-  );
+  const FieldChip: React.FC<{ field: string, zone: DropZoneType | 'list', onDelete?: () => void, disabled?: boolean, color?: string }> = ({ field, zone, onDelete, disabled, color = 'blue' }) => {
+      const isJoined = field.startsWith('[');
+      const displayLabel = field.includes('] ') ? field.split('] ')[1] : field;
+      
+      let baseStyle = `bg-white border-slate-200 text-slate-700 hover:border-${color}-400`;
+      if (isJoined) baseStyle = `bg-${color}-50 border-${color}-200 text-${color}-700`;
+      
+      if (disabled && zone === 'list') {
+          baseStyle = 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed';
+      }
+
+      return (
+        <div 
+            draggable={!disabled}
+            onDragStart={(e) => {
+                if (disabled) {
+                    e.preventDefault();
+                    return;
+                }
+                handleDragStart(e, field, zone);
+            }}
+            className={`group flex items-center justify-between gap-2 px-2 py-1.5 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-xs font-medium select-none animate-in fade-in zoom-in-95 duration-200 
+                ${baseStyle} ${!disabled ? 'cursor-grab' : ''}
+            `}
+        >
+            <div className="flex items-center gap-1.5 overflow-hidden">
+                <GripVertical className={`w-3 h-3 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
+                <span className="truncate" title={field}>{displayLabel}</span>
+            </div>
+            {onDelete && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
+                >
+                    <X className="w-3 h-3" />
+                </button>
+            )}
+        </div>
+      );
+  };
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom = virtualItems.length > 0 ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end : 0;
+  const totalColumns = rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0);
 
   return (
     <div className="h-full flex flex-col p-4 gap-4 relative">
@@ -375,14 +604,15 @@ export const PivotTable: React.FC = () => {
           
           <div className="flex flex-wrap items-center gap-2">
              {/* ACTIONS RAPIDES */}
-             <button onClick={handleToChart} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors">
+             <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50">
                 <PieChart className="w-3 h-3" /> Graphique
              </button>
 
              <div className="relative">
                 <button
                    onClick={() => setShowExportMenu(!showExportMenu)}
-                   className="px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1"
+                   disabled={!primaryDataset}
+                   className="px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50"
                 >
                    <FileDown className="w-3 h-3" /> Export
                 </button>
@@ -402,7 +632,7 @@ export const PivotTable: React.FC = () => {
 
              {/* SAUVEGARDE */}
              {!isSaving ? (
-                 <button onClick={() => setIsSaving(true)} className="p-1.5 text-slate-500 hover:text-blue-600 border border-slate-300 rounded bg-white" title="Sauvegarder"><Save className="w-4 h-4" /></button>
+                 <button onClick={() => setIsSaving(true)} disabled={!primaryDataset} className="p-1.5 text-slate-500 hover:text-blue-600 border border-slate-300 rounded bg-white disabled:opacity-50" title="Sauvegarder"><Save className="w-4 h-4" /></button>
              ) : (
                  <div className="flex items-center gap-1 animate-in fade-in">
                     <input type="text" className="p-1 text-xs border border-blue-300 rounded w-24" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
@@ -415,28 +645,166 @@ export const PivotTable: React.FC = () => {
 
        <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0">
           
-          {/* LEFT PANEL : FIELDS LIST & CONFIG ZONES */}
+          {/* LEFT PANEL : SOURCES & FIELDS */}
           <div className="xl:w-80 flex-shrink-0 flex flex-col gap-4 min-w-0">
              
-             {/* 1. DATA SOURCE & FIELDS */}
-             <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col flex-1 min-h-[300px] overflow-hidden">
-                <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700 flex justify-between items-center">
-                   <span className="flex items-center gap-1"><Database className="w-3 h-3" /> Champs disponibles</span>
-                   <select className="text-[10px] border-none bg-transparent focus:ring-0 p-0 text-slate-500 font-normal cursor-pointer" value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)}>
-                        {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)}</option>)}
-                   </select>
+             {/* 1. DATA SOURCES STACK */}
+             <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                <div className="p-3 bg-slate-50 border-b border-slate-200">
+                    <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1"><Database className="w-3 h-3" /> Sources de données</h3>
                 </div>
-                <div className="p-2 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/30">
-                   <div className="space-y-1.5">
-                      {combinedFields.map(f => (
-                         <FieldChip key={f} field={f} zone="list" />
-                      ))}
-                   </div>
+                
+                <div className="p-3 space-y-3">
+                    
+                    {/* LISTE DES SOURCES */}
+                    {sources.length === 0 ? (
+                        <div className="text-center p-4 border border-dashed border-slate-200 rounded bg-slate-50/50">
+                            <p className="text-xs text-slate-400 mb-2">Aucune source sélectionnée</p>
+                            <button 
+                                onClick={startAddSource}
+                                className="w-full py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                            >
+                                <Plus className="w-3 h-3" /> Définir source principale
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {sources.map((src) => {
+                                const ds = datasets.find(d => d.id === src.datasetId);
+                                if (!ds) return null;
+
+                                return (
+                                    <div key={src.id} className={`relative pl-3 border-l-2 border-${src.color}-500 group`}>
+                                        <div className="flex justify-between items-center">
+                                            <div className={`text-xs font-bold text-${src.color}-700 flex items-center gap-1`}>
+                                                {src.isPrimary ? <Database className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />} 
+                                                {ds.name}
+                                            </div>
+                                            <button onClick={() => removeSource(src.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
+                                        </div>
+                                        
+                                        {src.isPrimary ? (
+                                            <select 
+                                                className="mt-1 w-full text-[10px] border border-slate-200 rounded p-1 bg-slate-50 text-slate-600"
+                                                value={selectedBatchId}
+                                                onChange={(e) => setSelectedBatchId(e.target.value)}
+                                            >
+                                                {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
+                                            </select>
+                                        ) : (
+                                            <div className="text-[9px] text-slate-400 mt-0.5">
+                                                Clé: <span className="font-mono">{src.joinConfig?.primaryKey}</span> = <span className="font-mono">[{ds.name}] {src.joinConfig?.secondaryKey}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {/* ADD SOURCE CONTROL (SECONDARY) */}
+                            {!isAddingSource ? (
+                                <button 
+                                    onClick={startAddSource}
+                                    className="w-full py-1.5 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1"
+                                >
+                                    <Plus className="w-3 h-3" /> Croiser une autre source
+                                </button>
+                            ) : null}
+                        </div>
+                    )}
+
+                    {/* MODAL AJOUT */}
+                    {isAddingSource && (
+                        <div className="bg-slate-50 p-2 rounded border border-indigo-100 animate-in fade-in">
+                            <div className="text-[10px] font-bold text-indigo-800 mb-2">
+                                {sources.length === 0 ? "Choix de la source principale" : "Nouvelle jointure"}
+                            </div>
+                            <div className="space-y-2">
+                                <select 
+                                    className="w-full text-[10px] border border-slate-300 rounded p-1"
+                                    value={newSourceConfig.targetId}
+                                    onChange={e => setNewSourceConfig({...newSourceConfig, targetId: e.target.value})}
+                                >
+                                    <option value="">-- Choisir tableau --</option>
+                                    {datasets.filter(d => !sources.some(s => s.datasetId === d.id)).map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                    {currentDataset && !sources.some(s => s.datasetId === currentDataset.id) && (
+                                        <option value={currentDataset.id} className="font-bold">★ {currentDataset.name} (Suggéré)</option>
+                                    )}
+                                </select>
+                                
+                                {sources.length > 0 && newSourceConfig.targetId && (
+                                    <div className="flex items-center gap-1">
+                                        <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key1} onChange={e => setNewSourceConfig({...newSourceConfig, key1: e.target.value})}>
+                                            <option value="">Clé Principale</option>
+                                            {primaryDataset?.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                        </select>
+                                        <div className="text-slate-400">=</div>
+                                        <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key2} onChange={e => setNewSourceConfig({...newSourceConfig, key2: e.target.value})}>
+                                            <option value="">Clé Cible</option>
+                                            {datasets.find(d => d.id === newSourceConfig.targetId)?.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end gap-1 mt-2">
+                                    <button onClick={() => setIsAddingSource(false)} className="px-2 py-1 text-[10px] text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50">Annuler</button>
+                                    <button 
+                                        onClick={confirmAddSource}
+                                        disabled={!newSourceConfig.targetId || (sources.length > 0 && (!newSourceConfig.key1 || !newSourceConfig.key2))} 
+                                        className="px-2 py-1 text-[10px] text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
+                                    >
+                                        Valider
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
              </div>
 
-             {/* 2. DROP ZONES (Compact Layout) */}
-             <div className="flex flex-col gap-3">
+             {/* 2. FIELDS ACCORDION */}
+             <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[200px] overflow-hidden">
+                <div className="p-2 border-b border-slate-100 bg-slate-50">
+                    <input type="text" placeholder="Rechercher un champ..." className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500" disabled={sources.length === 0} />
+                </div>
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                    {sources.length === 0 && (
+                        <div className="text-center py-8 text-slate-300 text-xs italic">
+                            Ajoutez une source pour voir les champs disponibles.
+                        </div>
+                    )}
+                    {groupedFields.map(group => (
+                        <div key={group.id} className="mb-2">
+                            <button 
+                                onClick={() => toggleSection(group.id)}
+                                className={`w-full flex items-center gap-1 text-xs font-bold px-2 py-1.5 rounded transition-colors ${group.isPrimary ? `text-${group.color}-700 bg-${group.color}-50` : `text-${group.color}-700 bg-${group.color}-50`}`}
+                            >
+                                {expandedSections[group.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
+                                {group.name}
+                            </button>
+                            
+                            {expandedSections[group.id] && (
+                                <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                    {group.fields.map(f => (
+                                        <FieldChip 
+                                            key={f} 
+                                            field={f} 
+                                            zone="list"
+                                            disabled={usedFields.has(f)}
+                                            color={group.color} 
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+             </div>
+
+             {/* 3. DROP ZONES (Compact Layout) */}
+             <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                 {/* ZONES ROW 1: FILTERS & COLUMNS */}
                 <div className="grid grid-cols-2 gap-3">
                     {/* FILTRES */}
@@ -492,23 +860,23 @@ export const PivotTable: React.FC = () => {
                     >
                         <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Table2 className="w-3 h-3" /> Colonnes</div>
                         <div className="space-y-1.5 flex-1">
-                            {colField ? (
-                                <div>
-                                    <FieldChip field={colField} zone="col" onDelete={() => setColField('')} />
-                                    {isColFieldDate && (
-                                        <select 
-                                            className="w-full mt-1 text-[9px] border-slate-200 rounded bg-slate-50"
-                                            value={colGrouping}
-                                            onChange={(e) => setColGrouping(e.target.value as any)}
-                                        >
-                                            <option value="none">Date exacte</option>
-                                            <option value="year">Année</option>
-                                            <option value="quarter">Trimestre</option>
-                                            <option value="month">Mois</option>
-                                        </select>
-                                    )}
-                                </div>
-                            ) : <span className="text-[9px] text-slate-300 italic">Déposez une colonne ici</span>}
+                            {colFields.map((f, idx) => (
+                                <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
+                            ))}
+                            {colFields.length === 0 ? <span className="text-[9px] text-slate-300 italic">Déposez des colonnes ici</span> : (
+                                isColFieldDate && (
+                                    <select 
+                                        className="w-full mt-1 text-[9px] border-slate-200 rounded bg-slate-50"
+                                        value={colGrouping}
+                                        onChange={(e) => setColGrouping(e.target.value as any)}
+                                    >
+                                        <option value="none">Date exacte</option>
+                                        <option value="year">Année</option>
+                                        <option value="quarter">Trimestre</option>
+                                        <option value="month">Mois</option>
+                                    </select>
+                                )
+                            )}
                         </div>
                     </div>
                 </div>
@@ -583,7 +951,7 @@ export const PivotTable: React.FC = () => {
                 <div className="flex flex-col gap-2">
                     <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
                     <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
-                    {colField && aggType !== 'list' && (aggType !== 'min' && aggType !== 'max') && (
+                    {colFields.length > 0 && aggType !== 'list' && (aggType !== 'min' && aggType !== 'max') && (
                         <div className="mt-2 pt-2 border-t border-slate-100 animate-in fade-in">
                             <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Afficher variations (%)" className="text-blue-700 font-bold" />
                         </div>
@@ -603,9 +971,9 @@ export const PivotTable: React.FC = () => {
              )}
              
              {pivotData ? (
-               <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full">
-                   <div style={{ height: rowVirtualizer.getTotalSize(), width: '100%', position: 'relative' }}>
-                   <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0">
+               <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
+                   <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                   <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full">
                       <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                          <tr>
                             {/* Headers Lignes */}
@@ -636,15 +1004,14 @@ export const PivotTable: React.FC = () => {
                          </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-slate-200">
-                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                         {paddingTop > 0 && <tr><td style={{ height: `${paddingTop}px` }} colSpan={totalColumns} /></tr>}
+                         {virtualItems.map((virtualRow) => {
                             const row = pivotData.displayRows[virtualRow.index];
                             return (
                             <tr 
                                 key={virtualRow.key} 
-                                style={{
-                                    height: `${virtualRow.size}px`,
-                                    transform: `translateY(${virtualRow.start}px)`
-                                }}
+                                data-index={virtualRow.index}
+                                ref={rowVirtualizer.measureElement}
                                 className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'}`}
                             >
                                {rowFields.map((field, cIdx) => {
@@ -690,6 +1057,7 @@ export const PivotTable: React.FC = () => {
                             </tr>
                             );
                          })}
+                         {paddingBottom > 0 && <tr><td style={{ height: `${paddingBottom}px` }} colSpan={totalColumns} /></tr>}
                       </tbody>
                    </table>
                    </div>
@@ -697,10 +1065,12 @@ export const PivotTable: React.FC = () => {
              ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-slate-50/50">
                    <div className="p-4 bg-white rounded-full shadow-sm mb-4">
-                        <MousePointer2 className="w-8 h-8 text-blue-200 animate-bounce" />
+                        {sources.length === 0 ? <AlertCircle className="w-8 h-8 text-slate-300" /> : <MousePointerClick className="w-8 h-8 text-blue-200 animate-bounce" />}
                    </div>
-                   <p className="text-sm font-medium">Commencez par glisser des champs.</p>
-                   <p className="text-xs text-slate-400 mt-2">Zone de gauche &rarr; Lignes / Colonnes / Valeurs</p>
+                   <p className="text-sm font-medium">
+                       {sources.length === 0 ? "Veuillez définir une source de données." : "Commencez par glisser des champs."}
+                   </p>
+                   {sources.length > 0 && <p className="text-xs text-slate-400 mt-2">Zone de gauche &rarr; Lignes / Colonnes / Valeurs</p>}
                 </div>
              )}
              

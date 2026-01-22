@@ -14,6 +14,7 @@ import {
   LayoutDashboard, Save, FileDown, FileType, Printer
 } from 'lucide-react';
 import { FieldConfig, ChartType as WidgetChartType, FilterRule } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 type ChartType = 'bar' | 'column' | 'pie' | 'area' | 'radar' | 'treemap' | 'kpi' | 'line';
 type AnalysisMode = 'snapshot' | 'trend';
@@ -122,8 +123,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
 };
 
 export const CustomAnalytics: React.FC = () => {
-  const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis, companyLogo } = useData();
+  const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis, companyLogo, datasets, currentDatasetId, switchDataset } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
+  const navigate = useNavigate();
 
   const [mode, setMode] = useState<AnalysisMode>('snapshot');
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
@@ -747,9 +749,23 @@ export const CustomAnalytics: React.FC = () => {
       <div className="flex flex-col items-center justify-center h-96 text-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
         <Database className="w-12 h-12 text-slate-300 mb-4" />
         <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
-        <p className="text-slate-500 text-sm max-w-md mt-2">
-          Veuillez sélectionner un tableau dans le menu principal.
-        </p>
+        <div className="mt-4">
+            <select
+                className="appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                value=""
+                onChange={(e) => {
+                    if (e.target.value === '__NEW__') navigate('/import');
+                    else switchDataset(e.target.value);
+                }}
+            >
+                <option value="" disabled>Choisir une typologie</option>
+                {datasets.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+                <option disabled>──────────</option>
+                <option value="__NEW__">+ Nouvelle typologie...</option>
+            </select>
+        </div>
       </div>
     );
   }
@@ -763,7 +779,24 @@ export const CustomAnalytics: React.FC = () => {
            <Settings2 className="w-6 h-6 text-slate-500" />
            <div>
               <h2 className="text-xl font-bold text-slate-800">Studio d'Analyse</h2>
-              <p className="text-xs text-slate-500">Typologie : {currentDataset.name}</p>
+              {/* DATASET SELECTOR */}
+              <div className="mt-1">
+                  <select
+                        className="appearance-none bg-white border-0 text-slate-500 text-xs font-medium py-0 pr-6 pl-0 focus:outline-none cursor-pointer hover:text-slate-700"
+                        value={currentDatasetId || ''}
+                        onChange={(e) => {
+                          if (e.target.value === '__NEW__') navigate('/import');
+                          else switchDataset(e.target.value);
+                        }}
+                    >
+                        {datasets.length === 0 && <option value="">Aucun tableau</option>}
+                        {datasets.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                        <option disabled>──────────</option>
+                        <option value="__NEW__">+ Nouvelle typologie...</option>
+                    </select>
+              </div>
            </div>
         </div>
 

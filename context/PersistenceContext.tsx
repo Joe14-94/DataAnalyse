@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext } from 'react';
 
 interface PersistenceContextType {
@@ -10,6 +11,8 @@ interface PersistenceContextType {
   clearAll: () => void;
   loadDemoData: () => void;
   updateSavedMappings: (newMappings: Record<string, string>) => void;
+  hasSeenOnboarding: boolean; // NEW
+  completeOnboarding: () => void; // NEW
 }
 
 export const PersistenceContext = createContext<PersistenceContextType | undefined>(undefined);

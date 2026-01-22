@@ -8,14 +8,16 @@ import {
   Search, Download, Database, Table2, 
   Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X, 
   History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-  FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren
+  FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren, BarChart2
 } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-  const { currentDataset, batches, datasets, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, renameDatasetField } = useData();
+  const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, renameDatasetField } = useData();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // --- State ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -371,6 +373,25 @@ export const DataExplorer: React.FC = () => {
       return stats;
   }, [processedRows, showOutliers, displayFields, currentDataset]);
 
+  // --- DISTRIBUTION CHART DATA ---
+  const distributionData = useMemo(() => {
+      if (!selectedCol || processedRows.length === 0) return [];
+      
+      const counts: Record<string, number> = {};
+      processedRows.forEach(row => {
+          let val = row[selectedCol];
+          if (val === undefined || val === null || val === '') val = '(Vide)';
+          else val = String(val);
+          counts[val] = (counts[val] || 0) + 1;
+      });
+
+      // Top 10 frequent values
+      return Object.entries(counts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 15);
+  }, [selectedCol, processedRows]);
+
   // --- VIRTUALIZATION ---
   const rowVirtualizer = useVirtualizer({
     count: processedRows.length,
@@ -479,7 +500,23 @@ export const DataExplorer: React.FC = () => {
       <div className="h-full flex flex-col items-center justify-center text-center bg-slate-50 rounded-lg border border-dashed border-slate-300 m-4">
         <Database className="w-12 h-12 text-slate-300 mb-4" />
         <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
-        <p className="text-slate-500 text-sm max-w-md mt-2">Veuillez sélectionner une typologie de tableau.</p>
+        <div className="mt-4">
+            <select
+                className="appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                value=""
+                onChange={(e) => {
+                    if (e.target.value === '__NEW__') navigate('/import');
+                    else switchDataset(e.target.value);
+                }}
+            >
+                <option value="" disabled>Choisir une typologie</option>
+                {datasets.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+                <option disabled>──────────</option>
+                <option value="__NEW__">+ Nouvelle typologie...</option>
+            </select>
+        </div>
       </div>
     );
   }
@@ -536,12 +573,31 @@ export const DataExplorer: React.FC = () => {
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
-        <div>
-           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <Table2 className="w-6 h-6 text-slate-500" />
-              Données : {currentDataset.name}
-           </h2>
-           <div className="text-sm text-slate-500 mt-1 flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex flex-col gap-2">
+           <div className="flex items-center gap-4">
+               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <Table2 className="w-6 h-6 text-slate-500" />
+                  Données
+               </h2>
+               {/* DATASET SELECTOR IN HEADER */}
+               <select
+                    className="appearance-none bg-white border border-slate-300 text-slate-800 font-bold text-sm rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                    value={currentDatasetId || ''}
+                    onChange={(e) => {
+                       if (e.target.value === '__NEW__') navigate('/import');
+                       else switchDataset(e.target.value);
+                    }}
+                >
+                    {datasets.length === 0 && <option value="">Aucun tableau</option>}
+                    {datasets.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                    <option disabled>──────────</option>
+                    <option value="__NEW__">+ Nouvelle typologie...</option>
+                </select>
+           </div>
+
+           <div className="text-sm text-slate-500 flex flex-col sm:flex-row sm:items-center gap-2">
              <span>{processedRows.length} ligne(s) (Total : {allRows.length})</span>
              {activeBatchDate && (
                  <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 animate-in fade-in">
@@ -588,50 +644,76 @@ export const DataExplorer: React.FC = () => {
       </div>
 
       {/* Formatting & Actions Toolbar */}
-      <div className={`transition-all duration-300 overflow-hidden ${selectedCol ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
-         <div className="bg-white border border-teal-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-teal-50 flex flex-wrap items-center gap-4">
-             <div className="flex items-center gap-2 border-r border-teal-200 pr-4 mr-2">
-                <Columns className="w-4 h-4 text-teal-700" /> 
-                <div className="relative group">
-                   <input type="text" className="text-xs font-bold text-teal-800 bg-transparent border-b border-teal-300 focus:outline-none focus:border-teal-600 w-32" value={renamingValue} onChange={e => setRenamingValue(e.target.value)} placeholder={selectedCol || ''} />
-                   {renamingValue !== selectedCol && (
-                      <button onClick={handleRenameColumn} className="absolute -right-16 top-0 text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded hover:bg-teal-700 shadow-sm">Renommer</button>
-                   )}
-                </div>
-             </div>
+      <div className={`transition-all duration-300 overflow-hidden ${selectedCol ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
+         <div className="bg-white border border-teal-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-teal-50 flex flex-wrap items-start gap-4">
              
-             {isSelectedNumeric ? (
-               <>
-                  <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-600 font-medium">Décimales :</span>
-                      <div className="flex bg-white rounded border border-slate-200">
-                         <button onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))} className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-r border-slate-100">-</button>
-                         <span className="px-2 py-1 text-xs font-mono w-6 text-center">{selectedConfig?.decimalPlaces ?? 2}</span>
-                         <button onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))} className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-l border-slate-100">+</button>
-                      </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-600 font-medium">Échelle :</span>
-                      <select className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-teal-500" value={selectedConfig?.displayScale || 'none'} onChange={(e) => handleFormatChange('displayScale', e.target.value)}>
-                         <option value="none">Aucune</option>
-                         <option value="thousands">Milliers (k)</option>
-                         <option value="millions">Millions (M)</option>
-                         <option value="billions">Milliards (Md)</option>
-                      </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-600 font-medium">Unité :</span>
-                      <input type="text" className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-teal-500" placeholder="Ex: €" value={selectedConfig?.unit || ''} onChange={(e) => handleFormatChange('unit', e.target.value)} />
-                  </div>
-               </>
-             ) : (
-                <span className="text-xs text-slate-400 italic">Options de formatage non disponibles pour ce type.</span>
-             )}
-             
-             <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
-                <Button onClick={handleDeleteColumn} size="sm" className="bg-white hover:bg-red-50 text-red-600 border border-red-200 shadow-none text-xs"><Trash2 className="w-3 h-3 mr-1" /> Supprimer</Button>
-                <Button onClick={() => setSelectedCol(null)} size="sm" className="bg-teal-600 text-white hover:bg-teal-700 shadow-sm text-xs">Terminer</Button>
+             {/* LEFT: Renaming and Actions */}
+             <div className="flex-1 flex flex-col gap-2">
+                 <div className="flex items-center gap-2 border-b border-teal-100 pb-2 mb-2">
+                    <Columns className="w-4 h-4 text-teal-700" /> 
+                    <div className="relative group">
+                       <input type="text" className="text-sm font-bold text-teal-800 bg-transparent border-b border-teal-300 focus:outline-none focus:border-teal-600 w-48" value={renamingValue} onChange={e => setRenamingValue(e.target.value)} placeholder={selectedCol || ''} />
+                       {renamingValue !== selectedCol && (
+                          <button onClick={handleRenameColumn} className="absolute -right-16 top-0 text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded hover:bg-teal-700 shadow-sm">Renommer</button>
+                       )}
+                    </div>
+                 </div>
+                 
+                 <div className="flex flex-wrap gap-3 items-center">
+                     {isSelectedNumeric ? (
+                       <>
+                          <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-600 font-medium">Décimales :</span>
+                              <div className="flex bg-white rounded border border-slate-200">
+                                 <button onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))} className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-r border-slate-100">-</button>
+                                 <span className="px-2 py-1 text-xs font-mono w-6 text-center">{selectedConfig?.decimalPlaces ?? 2}</span>
+                                 <button onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))} className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-l border-slate-100">+</button>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-600 font-medium">Échelle :</span>
+                              <select className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-teal-500" value={selectedConfig?.displayScale || 'none'} onChange={(e) => handleFormatChange('displayScale', e.target.value)}>
+                                 <option value="none">Aucune</option>
+                                 <option value="thousands">Milliers (k)</option>
+                                 <option value="millions">Millions (M)</option>
+                                 <option value="billions">Milliards (Md)</option>
+                              </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-600 font-medium">Unité :</span>
+                              <input type="text" className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-teal-500" placeholder="Ex: €" value={selectedConfig?.unit || ''} onChange={(e) => handleFormatChange('unit', e.target.value)} />
+                          </div>
+                       </>
+                     ) : (
+                        <span className="text-xs text-slate-400 italic">Options de formatage non disponibles pour ce type.</span>
+                     )}
+                     
+                     <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
+                        <Button onClick={handleDeleteColumn} size="sm" className="bg-white hover:bg-red-50 text-red-600 border border-red-200 shadow-none text-xs"><Trash2 className="w-3 h-3 mr-1" /> Supprimer</Button>
+                        <Button onClick={() => setSelectedCol(null)} size="sm" className="bg-teal-600 text-white hover:bg-teal-700 shadow-sm text-xs">Terminer</Button>
+                     </div>
+                 </div>
              </div>
+
+             {/* RIGHT: Distribution Chart */}
+             <div className="w-64 h-32 bg-white rounded border border-slate-100 p-2 flex flex-col">
+                 <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                     <BarChart2 className="w-3 h-3" /> Distribution (Top 15)
+                 </div>
+                 <div className="flex-1 min-h-0">
+                     <ResponsiveContainer width="100%" height="100%">
+                         <BarChart data={distributionData}>
+                             <Tooltip 
+                                 cursor={{fill: '#f1f5f9'}}
+                                 contentStyle={{ fontSize: '10px', padding: '4px', borderRadius: '4px' }}
+                                 formatter={(value: number) => [value, 'Occurrences']}
+                             />
+                             <Bar dataKey="value" fill="#0d9488" radius={[2, 2, 0, 0]} />
+                         </BarChart>
+                     </ResponsiveContainer>
+                 </div>
+             </div>
+
          </div>
       </div>
 
