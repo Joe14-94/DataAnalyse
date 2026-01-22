@@ -571,6 +571,7 @@ export const Dashboard: React.FC = () => {
             {/* GLOBAL DATASET SELECTOR IN HEADER */}
             <div className="relative">
                 <select
+                    id="tour-dataset-selector"
                     className="w-full md:w-64 appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
                     value={currentDatasetId || ''}
                     onChange={(e) => {
