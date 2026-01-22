@@ -306,9 +306,9 @@ const CLEAN_NUM_REGEX = /[^0-9.-]/g;
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number') return val;
-  
+
   let str = String(val);
-  
+
   // Optimisation: Si unité présente, on l'enlève (Case Insensitive)
   if (unit && unit.length > 0) {
     // Escape special chars for regex (ex: $ or .)
@@ -317,12 +317,24 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
     str = str.replace(unitRegex, '');
   }
 
-  // Nettoyage générique optimisé
-  // 1. Remplacer virgule par point
-  str = str.replace(',', '.');
-  // 2. Supprimer les espaces
+  // Supprimer les espaces d'abord
   str = str.replace(/\s/g, '').replace(/\u00A0/g, '');
-  // 3. Regex clean (garde chiffres, point, moins)
+
+  // Détection du format français vs anglais
+  const lastCommaPos = str.lastIndexOf(',');
+  const lastDotPos = str.lastIndexOf('.');
+
+  if (lastCommaPos > lastDotPos) {
+    // Format français: "1.000,50" ou "1 000,50"
+    // Enlever les points (séparateurs de milliers), puis remplacer virgule par point
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else if (lastDotPos > lastCommaPos) {
+    // Format anglais: "1,000.50"
+    // Enlever les virgules (séparateurs de milliers)
+    str = str.replace(/,/g, '');
+  }
+
+  // Regex clean (garde chiffres, point, moins)
   str = str.replace(CLEAN_NUM_REGEX, '');
 
   const num = parseFloat(str);
@@ -675,6 +687,10 @@ class FormulaParser {
     this.tokens = this.tokenize(formula);
   }
 
+  private error(message: string): never {
+    throw new Error(`Erreur de formule: ${message}`);
+  }
+
   private tokenize(input: string): Token[] {
     const tokens: Token[] = [];
     let cursor = 0;
@@ -705,7 +721,13 @@ class FormulaParser {
         cursor++;
         let val = '';
         while (cursor < input.length && input[cursor] !== ']') val += input[cursor++];
-        cursor++;
+
+        // Vérifier que le bracket fermant a bien été trouvé
+        if (cursor >= input.length || input[cursor] !== ']') {
+          throw new Error(`Erreur de syntaxe: bracket fermant ']' manquant pour le champ`);
+        }
+
+        cursor++; // Consommer le ']'
         tokens.push({ type: 'FIELD', value: val });
         continue;
       }
@@ -799,10 +821,23 @@ class FormulaParser {
     if (token.type === 'FIELD') {
       this.consume();
       const val = this.row[token.value];
-      // Auto-convert to number if possible
-      const num = parseSmartNumber(val);
-      if (!isNaN(num) && val !== '' && val !== null && val !== undefined) return num;
-      return val === undefined ? 0 : val;
+
+      // Si la valeur n'existe pas, retourner 0
+      if (val === undefined || val === null) return 0;
+
+      // Si c'est déjà un nombre, le retourner
+      if (typeof val === 'number') return val;
+
+      // Si c'est une chaîne qui ressemble à un nombre, la convertir
+      const strVal = String(val).trim();
+      // Accepter les nombres avec ou sans unités (€, kg, %, etc.)
+      if (strVal !== '' && /^[-+]?[\d\s.,]+[\w€$£%°]*$/.test(strVal)) {
+        const num = parseSmartNumber(val);
+        if (!isNaN(num)) return num;
+      }
+
+      // Sinon, retourner la valeur telle quelle (texte, booléen, etc.)
+      return val;
     }
 
     if (token.type === 'IDENTIFIER') {
@@ -822,8 +857,8 @@ class FormulaParser {
        return -this.parseFactor();
     }
 
-    this.consume(); // Skip unknown
-    return 0;
+    // Token invalide : lever une exception au lieu de retourner 0
+    this.error(`Token inattendu: ${token.type} "${token.value}"`);
   }
 
   private parseFunctionCall(): any {
