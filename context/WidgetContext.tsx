@@ -9,6 +9,7 @@ interface WidgetContextType {
   updateDashboardWidget: (id: string, updates: Partial<DashboardWidget>) => void;
   removeDashboardWidget: (id: string) => void;
   moveDashboardWidget: (id: string, direction: 'left' | 'right') => void;
+  reorderDashboardWidgets: (startIndex: number, endIndex: number) => void; // NOUVEAU
   resetDashboard: () => void;
   setDashboardFilter: (field: string, value: any) => void;
   clearDashboardFilters: () => void;

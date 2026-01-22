@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
+import { Badge } from './ui/Badge';
+import { Text } from './ui/Typography';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,12 +29,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Historique imports', icon: History, path: '/history' },
     { name: 'Création de graphiques', icon: PieChart, path: '/analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
-    { name: 'Personnalisation', icon: Palette, path: '/customization' }, // NOUVEAU MENU
+    { name: 'Personnalisation', icon: Palette, path: '/customization' },
     { name: 'Paramètres', icon: Settings, path: '/settings' },
     { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
   ];
 
-  // Calculate Storage Usage using Navigator Storage API (IndexedDB support)
+  // Calculate Storage Usage
   useEffect(() => {
     const calculateStorage = async () => {
       if (navigator.storage && navigator.storage.estimate) {
@@ -48,9 +51,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
          }
       }
     };
-
     calculateStorage();
-    const interval = setInterval(calculateStorage, 10000); // Check periodically
+    const interval = setInterval(calculateStorage, 10000);
     return () => clearInterval(interval);
   }, [datasets, batches]);
 
@@ -58,22 +60,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const json = getBackupJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
-    // Safer download method
     const link = document.createElement('a');
     link.href = url;
     link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
-    link.style.display = 'none';
-    link.target = '_blank';
-    
-    document.body.appendChild(link);
     link.click();
-    
-    // Cleanup
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const getStorageColor = (p: number) => {
@@ -83,52 +74,47 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden text-slate-800">
-      {/* Sidebar / Mobile Header */}
+    <div className="h-screen w-screen bg-canvas flex flex-col md:flex-row overflow-hidden text-txt-main font-sans">
+      {/* Sidebar */}
       <aside 
-        className={`bg-white border-b md:border-b-0 md:border-r border-slate-200 flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
+        className={`bg-surface border-b md:border-b-0 md:border-r border-border-default flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
           ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-full
         `}
       >
         <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
-          <div className="flex items-center gap-2 font-bold text-xl text-blue-700 mb-6 overflow-hidden min-h-[40px]">
+          <div className="flex items-center gap-2 font-bold text-xl text-brand-600 mb-6 overflow-hidden min-h-[40px]">
             {companyLogo ? (
                <img 
                   src={companyLogo} 
-                  alt="Logo Entreprise" 
+                  alt="Logo" 
                   className={`object-contain max-h-10 ${isCollapsed ? 'w-full' : 'w-auto max-w-[180px]'}`} 
                />
             ) : (
                <>
-                  <div className="p-1.5 bg-blue-600 rounded-md text-white shrink-0">
+                  <div className="p-1.5 bg-brand-600 rounded-md text-white shrink-0">
                     <Database size={20} />
                   </div>
-                  {!isCollapsed && <span className="whitespace-nowrap">DataScope</span>}
+                  {!isCollapsed && <span className="whitespace-nowrap tracking-tight">DataScope</span>}
                </>
             )}
           </div>
 
-          {/* Collapse Toggle Button */}
           <button 
              onClick={() => setIsCollapsed(!isCollapsed)}
-             className="hidden md:flex absolute top-4 -right-3 bg-white border border-slate-200 rounded-full p-1 shadow-sm text-slate-500 hover:text-blue-600 z-30"
+             className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-1 shadow-sm text-txt-muted hover:text-brand-600 z-30"
           >
              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
 
-          {/* DATASET SELECTOR */}
           <div className={`mb-6 ${isCollapsed ? 'hidden' : 'block'}`}>
-            <label className="block text-xs font-semibold text-slate-500 mb-2">Typologie de tableau</label>
+            <label className="block text-xs font-bold text-txt-secondary uppercase tracking-wider mb-2">Typologie</label>
             <div className="relative">
               <select
-                className="w-full appearance-none bg-slate-100 border border-slate-200 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full appearance-none bg-canvas border border-border-default text-txt-main text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={currentDatasetId || ''}
                 onChange={(e) => {
-                   if (e.target.value === '__NEW__') {
-                      navigate('/import');
-                   } else {
-                      switchDataset(e.target.value);
-                   }
+                   if (e.target.value === '__NEW__') navigate('/import');
+                   else switchDataset(e.target.value);
                 }}
               >
                 {datasets.length === 0 && <option value="">Aucun tableau</option>}
@@ -138,18 +124,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <option disabled>──────────</option>
                 <option value="__NEW__">+ Nouvelle typologie...</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-txt-muted">
                 <ChevronDown size={14} />
               </div>
             </div>
           </div>
           
-          {/* Collapsed Dataset Indicator */}
           {isCollapsed && (
              <div className="mb-6 flex justify-center" title="Changer de typologie">
                 <button 
                   onClick={() => setIsCollapsed(false)}
-                  className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  className="w-10 h-10 rounded bg-canvas flex items-center justify-center text-txt-muted hover:bg-brand-50 hover:text-brand-600 transition-colors"
                 >
                    <Table2 size={20} />
                 </button>
@@ -168,8 +153,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 title={isCollapsed ? item.name : ''}
                 className={`flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap
                   ${isActive 
-                    ? 'bg-blue-50 text-blue-700' 
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-brand-50 text-brand-700' 
+                    : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
                   }
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
@@ -181,31 +166,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
         
-        {/* Footer Stats & Quick Save */}
-        <div className={`p-4 border-t border-slate-100 hidden md:flex flex-col bg-slate-50/50 space-y-3 ${isCollapsed ? 'items-center' : ''}`}>
-          
+        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-3 ${isCollapsed ? 'items-center' : ''}`}>
           <button 
              onClick={handleQuickSave}
-             className={`flex items-center justify-center gap-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 text-xs font-bold py-2 rounded transition-colors
+             className={`flex items-center justify-center gap-2 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-2 rounded transition-colors
                 ${isCollapsed ? 'w-10 h-10 p-0' : 'w-full px-4'}
              `}
-             title="Sauvegarder les données maintenant (JSON)"
+             title="Sauvegarde rapide"
           >
              <Save className={`${isCollapsed ? 'w-4 h-4' : 'w-3 h-3'}`} />
-             {!isCollapsed && "Sauvegarde rapide"}
+             {!isCollapsed && "Sauvegarde"}
           </button>
 
           {!isCollapsed && (
              <div>
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                   <div className="flex items-center gap-1" title="Stockage IndexedDB (Disque)">
+                <div className="flex items-center justify-between text-xs text-txt-muted mb-1">
+                   <div className="flex items-center gap-1">
                       <HardDrive size={12} />
                       <span>Disque : {storageUsed}</span>
                    </div>
                    {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
                 </div>
                 {storagePercent > 0 && (
-                   <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                   <div className="w-full bg-border-default rounded-full h-1.5 overflow-hidden">
                        <div 
                        className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`} 
                        style={{ width: `${Math.max(2, storagePercent)}%` }}
@@ -215,14 +198,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
              </div>
           )}
 
-          <div className="text-xs text-slate-400 text-center">
+          <div className="text-xs text-txt-muted text-center">
             {isCollapsed ? 'v25' : `v${APP_VERSION}`}
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 h-full relative overflow-hidden bg-slate-50">
+      <main className="flex-1 h-full relative overflow-hidden bg-canvas">
         {children}
       </main>
     </div>

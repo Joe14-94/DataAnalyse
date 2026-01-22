@@ -1,11 +1,11 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, parseSmartNumber, exportView } from '../utils';
+import { formatDateFr, parseSmartNumber, exportView, calculateLinearRegression } from '../utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
-  PieChart, Pie, AreaChart, Area, Treemap, LineChart, Line
+  PieChart, Pie, AreaChart, Area, Treemap, LineChart, Line, ComposedChart
 } from 'recharts';
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
@@ -138,6 +138,7 @@ export const CustomAnalytics: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'alpha'>('desc');
   const [isCumulative, setIsCumulative] = useState<boolean>(false);
   const [showTable, setShowTable] = useState<boolean>(false);
+  const [showForecast, setShowForecast] = useState<boolean>(false); // NEW
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
@@ -294,7 +295,7 @@ export const CustomAnalytics: React.FC = () => {
          config: {
             mode, selectedBatchId, startDate, endDate,
             dimension, metric, valueField, segment, chartType, limit,
-            sortOrder, isCumulative, filters
+            sortOrder, isCumulative, filters, showForecast
          }
       });
       setAnalysisName('');
@@ -316,10 +317,11 @@ export const CustomAnalytics: React.FC = () => {
       if (c.limit) setLimit(c.limit);
       if (c.sortOrder) setSortOrder(c.sortOrder);
       if (c.isCumulative !== undefined) setIsCumulative(c.isCumulative);
+      if (c.showForecast !== undefined) setShowForecast(c.showForecast);
       if (c.filters) {
           const loadedFilters = c.filters.map((f: any) => {
-              if (f.values) return { field: f.field, operator: 'in', value: f.values }; // Old
-              return f; // New
+              if (f.values) return { field: f.field, operator: 'in', value: f.values }; 
+              return f; 
           });
           setFilters(loadedFilters);
       }
@@ -491,8 +493,28 @@ export const CustomAnalytics: React.FC = () => {
        return point;
     });
 
+    // FORECASTING
+    if (showForecast && timeData.length >= 2) {
+       const totals = timeData.map(d => d.total);
+       const { slope, intercept } = calculateLinearRegression(totals);
+       timeData.forEach((d, i) => {
+          d.forecast = parseFloat((intercept + slope * i).toFixed(2));
+       });
+       // Add prediction point
+       const nextIndex = timeData.length;
+       const nextTotal = intercept + slope * nextIndex;
+       const nextDate = new Date(targetBatches[targetBatches.length-1].date);
+       nextDate.setMonth(nextDate.getMonth() + 1); // rough approx
+       timeData.push({
+          date: 'prediction',
+          displayDate: '(Proj.)',
+          total: null,
+          forecast: parseFloat(nextTotal.toFixed(2))
+       });
+    }
+
     return { data: timeData, series: topSeries };
-  }, [mode, batches, startDate, endDate, dimension, limit, filters, currentDataset, metric, valueField]);
+  }, [mode, batches, startDate, endDate, dimension, limit, filters, currentDataset, metric, valueField, showForecast]);
 
   const insightText = useMemo(() => {
     const metricLabel = metric === 'sum' ? 'Total' : 'Occurrences';
@@ -506,8 +528,10 @@ export const CustomAnalytics: React.FC = () => {
        return `En date du ${formatDateFr(currentBatch?.date || '')}, "${top.name}" domine avec ${top.value.toLocaleString()}${unitLabel}.`;
     } else {
        if (trendData.data.length === 0) return "Aucune donnée sur la période.";
-       const first = trendData.data[0];
-       const last = trendData.data[trendData.data.length - 1];
+       const validPoints = trendData.data.filter((d: any) => d.date !== 'prediction');
+       if (validPoints.length === 0) return "Données insuffisantes.";
+       const first = validPoints[0];
+       const last = validPoints[validPoints.length - 1];
        const growth = parseFloat((last.total - first.total).toFixed(2));
        return `Sur la période, le volume a évolué de ${growth > 0 ? '+' : ''}${growth.toLocaleString()}${unitLabel}.`;
     }
@@ -528,6 +552,7 @@ export const CustomAnalytics: React.FC = () => {
     if (!data || data.length === 0) return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée disponible</div>;
 
     if (showTable) {
+       // Table rendering remains same...
        if (mode === 'snapshot') {
           return (
              <div className="h-full overflow-auto w-full custom-scrollbar">
@@ -559,6 +584,7 @@ export const CustomAnalytics: React.FC = () => {
                      <tr>
                         <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total</th>
+                        {showForecast && <th className="px-4 py-2 text-right text-xs font-bold text-indigo-500 uppercase">Prévision</th>}
                         {trendData.series.map(s => (
                            <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">{s}</th>
                         ))}
@@ -566,9 +592,10 @@ export const CustomAnalytics: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                      {trendData.data.map((row: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-slate-50">
+                        <tr key={idx} className={`hover:bg-slate-50 ${row.date === 'prediction' ? 'bg-indigo-50/50 italic' : ''}`}>
                            <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.displayDate}</td>
-                           <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total.toLocaleString()}</td>
+                           <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total !== null ? row.total.toLocaleString() : '-'}</td>
+                           {showForecast && <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">{row.forecast?.toLocaleString()}</td>}
                            {trendData.series.map(s => (
                               <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>
                            ))}
@@ -582,25 +609,10 @@ export const CustomAnalytics: React.FC = () => {
     }
 
     if (mode === 'trend') {
-       if (chartType === 'area') {
-          return (
-            <ResponsiveContainer width="100%" height="100%">
-               <AreaChart data={trendData.data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend verticalAlign="top" iconType="circle" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
-                  {trendData.series.map((s, idx) => (
-                     <Area key={s} type="monotone" dataKey={s} stackId="1" stroke={COLORS[idx % COLORS.length]} fill={COLORS[idx % COLORS.length]} />
-                  ))}
-               </AreaChart>
-            </ResponsiveContainer>
-          );
-       }
+       // Use ComposedChart for Forecast line
        return (
          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trendData.data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={trendData.data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                <YAxis stroke="#94a3b8" fontSize={12} />
@@ -609,7 +621,10 @@ export const CustomAnalytics: React.FC = () => {
                {trendData.series.map((s, idx) => (
                   <Line key={s} type="monotone" dataKey={s} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} dot={true} />
                ))}
-            </LineChart>
+               {showForecast && (
+                  <Line type="monotone" dataKey="forecast" name="Tendance (Reg. Lin.)" stroke="#6366f1" strokeDasharray="5 5" strokeWidth={2} dot={false} />
+               )}
+            </ComposedChart>
          </ResponsiveContainer>
        );
     }
@@ -1115,6 +1130,16 @@ export const CustomAnalytics: React.FC = () => {
                        <input type="checkbox" className="hidden" checked={showTable} onChange={() => setShowTable(!showTable)} />
                        <span className="text-xs text-slate-700">Afficher Tableau</span>
                     </label>
+
+                    {mode === 'trend' && (
+                       <label className="flex items-center gap-2 cursor-pointer animate-in fade-in">
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${showForecast ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 bg-white'}`}>
+                             {showForecast && <Check className="w-3 h-3" />}
+                          </div>
+                          <input type="checkbox" className="hidden" checked={showForecast} onChange={() => setShowForecast(!showForecast)} />
+                          <span className="text-xs text-indigo-700 font-bold">Projection (Tendance)</span>
+                       </label>
+                    )}
                  </div>
 
                  {/* Segment (Snapshot only) */}

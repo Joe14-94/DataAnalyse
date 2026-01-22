@@ -12,10 +12,41 @@
         theme: {
           extend: {
             colors: {
-              primary: '#2563eb',
-              secondary: '#475569',
-              background: '#f8fafc',
-              surface: '#ffffff',
+              // --- DESIGN SYSTEM TOKENS ---
+              brand: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                200: '#bfdbfe',
+                500: '#3b82f6',
+                600: '#2563eb', // Primary Action
+                700: '#1d4ed8',
+                900: '#1e3a8a',
+              },
+              // Semantic Colors
+              canvas: '#f8fafc', // Global Background (slate-50)
+              surface: '#ffffff', // Card Background
+              
+              // Text Colors
+              'txt-main': '#1e293b', // slate-800
+              'txt-secondary': '#475569', // slate-600
+              'txt-muted': '#94a3b8', // slate-400
+              
+              // Status Colors
+              success: { bg: '#dcfce7', text: '#15803d', border: '#86efac' }, // green-100/700
+              warning: { bg: '#fef9c3', text: '#a16207', border: '#fde047' }, // yellow-100/700
+              danger:  { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' }, // red-100/700
+              info:    { bg: '#e0f2fe', text: '#0369a1', border: '#7dd3fc' }, // sky-100/700
+              
+              // Border
+              'border-default': '#e2e8f0', // slate-200
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+              mono: ['Fira Code', 'Consolas', 'monospace'],
+            },
+            boxShadow: {
+              'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+              'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
             }
           }
         }
@@ -41,23 +72,27 @@
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react": "https://esm.sh/react@18.2.0",
+    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "recharts": "https://esm.sh/recharts@2.12.2?deps=react@18.2.0,react-dom@18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.2.0,react-dom@18.2.0",
+    "vite": "https://esm.sh/vite@5.1.6",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@4.2.1",
     "jspdf": "https://esm.sh/jspdf@2.5.1",
     "jspdf-autotable": "https://esm.sh/jspdf-autotable@3.8.2",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1"
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "@tanstack/react-virtual": "https://esm.sh/@tanstack/react-virtual@3.0.0?deps=react@18.2.0,react-dom@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
 </head>
-  <body class="bg-background text-slate-800 antialiased">
+  <body class="bg-canvas text-txt-main antialiased font-sans">
     <div id="root"></div>
     <!-- Point d'entrée pour Vite -->
     <script type="module" src="/index.tsx"></script>

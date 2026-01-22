@@ -5,10 +5,33 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // Updated version
-export const APP_VERSION = "202512-317";
+export const APP_VERSION = "202512-401";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
+};
+
+// --- MATH & PREDICTIVE ---
+export const calculateLinearRegression = (yValues: number[]): { slope: number, intercept: number, r2: number } => {
+    const n = yValues.length;
+    if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+
+    const xValues = Array.from({ length: n }, (_, i) => i);
+    const sumX = xValues.reduce((a, b) => a + b, 0);
+    const sumY = yValues.reduce((a, b) => a + b, 0);
+    const sumXY = xValues.reduce((a, b, i) => a + b * yValues[i], 0);
+    const sumXX = xValues.reduce((a, b) => a + b * b, 0);
+    const sumYY = yValues.reduce((a, b) => a + b * b, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // R Squared calculation
+    const ssTot = sumYY - (sumY * sumY) / n;
+    const ssRes = sumYY - intercept * sumY - slope * sumXY; // Simplified for linear
+    const r2 = 1 - (ssRes / (ssTot || 1));
+
+    return { slope, intercept, r2 };
 };
 
 // --- INDEXED DB ENGINE ---
@@ -997,6 +1020,11 @@ export const runSelfDiagnostics = (): DiagnosticSuite[] => {
       if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
    });
    suites.push({ category: 'Moteur de Regroupement Temporel', tests: groupingTests });
+
+   // SUITE 4: Régression Linéaire
+   const regResult = calculateLinearRegression([10, 20, 30, 40]);
+   const regTest: DiagnosticResult = { id: 'r1', name: 'Régression Parfaite', status: regResult.r2 > 0.99 ? 'success' : 'failure', expected: '> 0.99', actual: regResult.r2.toFixed(2) };
+   suites.push({ category: 'Moteur Statistique', tests: [regTest] });
 
    return suites;
 };

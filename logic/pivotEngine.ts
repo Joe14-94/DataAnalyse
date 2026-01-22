@@ -29,10 +29,11 @@ export interface PivotConfig {
   sortBy: SortBy;
   sortOrder: SortOrder;
   showSubtotals: boolean;
+  showVariations?: boolean; // NEW: Enable Time Intelligence
   
   // Context pour le formatage
   currentDataset?: Dataset | null;
-  joins?: PivotJoin[]; // NEW: Multi-join support
+  joins?: PivotJoin[]; 
   datasets?: Dataset[];
   valFormatting?: Partial<FieldConfig>;
 }
@@ -67,24 +68,21 @@ interface GroupStats {
 export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const { 
     rows, rowFields, colField, colGrouping, valField, aggType, 
-    filters, sortBy, sortOrder, showSubtotals 
+    filters, sortBy, sortOrder, showSubtotals, showVariations
   } = config;
 
   if (rows.length === 0 || rowFields.length === 0) return null;
 
   // --- PHASE 0 : PREPARATION CONFIG & META-DONNEES ---
   
-  // Cache pour l'unité du champ valeur
   let valUnit: string | undefined = undefined;
   
-  // 1. Chercher dans dataset principal
   if (config.currentDataset?.fieldConfigs?.[valField]?.unit) {
       valUnit = config.currentDataset.fieldConfigs[valField].unit;
   } else if (config.currentDataset?.calculatedFields) {
       const cf = config.currentDataset.calculatedFields.find(c => c.name === valField);
       if (cf?.unit) valUnit = cf.unit;
   } else if (config.datasets) {
-      // 2. Chercher dans les datasets joints via préfixe
       const prefixMatch = valField.match(/^\[(.*?)\] (.*)$/);
       if (prefixMatch) {
           const dsName = prefixMatch[1];
@@ -100,7 +98,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   }
 
   // Optimisation 1.1 : Pré-calcul des valeurs de filtres
-  // On évite de parser les nombres ou lowercase les chaînes à chaque ligne
   const preparedFilters = filters.map(f => {
       let preparedValue = f.value;
       if (f.operator === 'gt' || f.operator === 'lt') {
@@ -116,7 +113,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const optimizedRows: OptimizedRow[] = [];
   const colHeadersSet = new Set<string>();
 
-  // Boucle unique optimisée
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     
@@ -126,10 +122,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       for (const f of preparedFilters) {
          const rowVal = row[f.field];
          
-         // Optimisation In : Set lookup si possible, sinon array includes
          if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
-             // Note: Pour de très gros filtres, transformer f.value en Set serait mieux, 
-             // mais Array.includes est très rapide pour les petits tableaux (<20 items)
              if (f.value.length > 0 && !f.value.includes(String(rowVal))) {
                  pass = false; break;
              }
@@ -143,7 +136,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
              continue;
          }
 
-         // Comparaisons String
          const strRowVal = String(rowVal || '').toLowerCase();
          const strFilterVal = f.preparedValue as string;
 
@@ -173,7 +165,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
     // 1.4 Extraction Métrique
     let metricVal = 0;
-    // On ne parse que si nécessaire
     if (aggType !== 'count' && aggType !== 'list') {
        metricVal = parseSmartNumber(row[valField], valUnit);
     }
@@ -200,7 +191,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const computeGroupStats = (groupRows: OptimizedRow[]): GroupStats => {
       const stats = initStats();
 
-      // Boucle chaude : doit être la plus performante possible
       for (let i = 0; i < groupRows.length; i++) {
           const row = groupRows[i];
           const val = aggType === 'count' ? 1 : row.metricVal;
@@ -241,7 +231,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               } else if (aggType === 'list') {
                   if (row.rawVal) {
                       currentVal.add(String(row.rawVal));
-                      // Set modifie la référence, pas besoin de set() strict mais plus propre
                   }
               }
           }
@@ -252,7 +241,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   const finalizeStats = (stats: any, headers: string[], type: AggregationType): GroupStats => {
       const finalMetrics: Record<string, number | string> = {};
-      const rawMetrics = new Map<string, number>(); // Pour le tri par colonne
+      const rawMetrics = new Map<string, number>(); 
       let finalTotal = stats.rowTotalMetric;
       let rawRowTotal = 0;
 
@@ -269,7 +258,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
       // Stockage de la valeur numérique brute pour le tri
       if (typeof finalTotal === 'number') rawRowTotal = finalTotal;
-      else if (type === 'list') rawRowTotal = (finalTotal as Set<string>).size; // Tri par nombre d'éléments
+      else if (type === 'list') rawRowTotal = (finalTotal as Set<string>).size;
 
       // Finalisation LIST
       if (type === 'list') {
@@ -310,6 +299,27 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           finalMetrics[h] = val;
       });
 
+      // TIME INTELLIGENCE: CALCUL DES VARIATIONS
+      if (showVariations && (aggType === 'sum' || aggType === 'count' || aggType === 'avg')) {
+          for (let i = 1; i < headers.length; i++) {
+              const currHeader = headers[i];
+              const prevHeader = headers[i - 1];
+              
+              const currVal = rawMetrics.get(currHeader) || 0;
+              const prevVal = rawMetrics.get(prevHeader) || 0;
+              
+              const diffKey = `${currHeader}_DIFF`;
+              const pctKey = `${currHeader}_PCT`;
+              
+              const diff = currVal - prevVal;
+              let pct = 0;
+              if (prevVal !== 0) pct = (diff / Math.abs(prevVal)) * 100;
+              
+              finalMetrics[diffKey] = diff;
+              finalMetrics[pctKey] = pct;
+          }
+      }
+
       return { metrics: finalMetrics, rowTotal: finalTotal, rawRowTotal, rawMetrics };
   };
 
@@ -329,16 +339,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
         g.push(r);
     }
 
-    // Optimisation 1.2 : Cache du tri par valeur
-    // Calculer les stats pour chaque groupe UNE SEULE FOIS avant le tri
-    // Structure: Map<Key, ComputedStats>
     const groupStatsCache = new Map<string, GroupStats>();
-    
-    // Si on trie par valeur, on doit pré-calculer
-    // Si on trie par label, on peut calculer à la demande (lazy), mais pour simplifier 
-    // et comme on a besoin des stats pour l'affichage de toute façon, on pré-calcule tout ici.
-    // C'est beaucoup plus performant que de recalculer dans le .sort()
-    
     const groupKeys = Array.from(groups.keys());
     
     // Calcul en masse
@@ -370,11 +371,11 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       }
     });
 
-    // 3. Construction des lignes (Réutilisation du cache)
+    // 3. Construction des lignes
     for (const key of sortedKeys) {
       const subgroupRows = groups.get(key)!;
       const currentKeys = [...parentKeys, key];
-      const stats = groupStatsCache.get(key)!; // Récupération directe, pas de recalcul !
+      const stats = groupStatsCache.get(key)!; 
 
       if (level === rowFields.length - 1) {
         // Niveau Feuille
@@ -407,11 +408,25 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   processLevel(optimizedRows, 0, []);
 
   // Total Général
-  // On utilise la fonction standard car elle n'est appelée qu'une fois
   const grandTotalStats = computeGroupStats(optimizedRows);
 
+  // Construction des headers finaux avec variations
+  let finalHeaders = [...sortedColHeaders];
+  if (showVariations && colField && (aggType === 'sum' || aggType === 'count' || aggType === 'avg')) {
+      const enrichedHeaders: string[] = [];
+      if (sortedColHeaders.length > 0) enrichedHeaders.push(sortedColHeaders[0]);
+      
+      for (let i = 1; i < sortedColHeaders.length; i++) {
+          const h = sortedColHeaders[i];
+          enrichedHeaders.push(`${h}_DIFF`); // Ecart
+          enrichedHeaders.push(`${h}_PCT`);  // %
+          enrichedHeaders.push(h);           // Valeur
+      }
+      finalHeaders = enrichedHeaders;
+  }
+
   return {
-    colHeaders: sortedColHeaders,
+    colHeaders: finalHeaders,
     displayRows,
     colTotals: grandTotalStats.metrics,
     grandTotal: grandTotalStats.rowTotal
@@ -427,14 +442,12 @@ export const formatPivotOutput = (val: number | string, valField: string, aggTyp
     
     // Utiliser config standard si numérique
     if (aggType !== 'count' && valField) {
-        // Si une config spécifique est fournie par le TCD, on l'utilise
         if (overrideConfig && (overrideConfig.decimalPlaces !== undefined || overrideConfig.displayScale !== undefined || overrideConfig.unit)) {
             return formatNumberValue(val, overrideConfig as FieldConfig);
         }
 
         let config = dataset?.fieldConfigs?.[valField];
         
-        // Si pas de config standard, chercher dans calculated fields
         if (!config && dataset?.calculatedFields) {
             const cf = dataset.calculatedFields.find(c => c.name === valField);
             if (cf?.unit) {
@@ -442,7 +455,6 @@ export const formatPivotOutput = (val: number | string, valField: string, aggTyp
             }
         }
 
-        // Si toujours rien, chercher dans les datasets secondaires via préfixe
         if (!config && allDatasets) {
            const prefixMatch = valField.match(/^\[(.*?)\] (.*)$/);
            if (prefixMatch) {
