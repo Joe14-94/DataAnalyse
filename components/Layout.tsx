@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { datasets, batches, getBackupJson, companyLogo } = useData();
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
-  
+
   // Sidebar State
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -39,17 +39,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   useEffect(() => {
     const calculateStorage = async () => {
       if (navigator.storage && navigator.storage.estimate) {
-         try {
-            const { usage, quota } = await navigator.storage.estimate();
-            if (usage !== undefined && quota !== undefined) {
-               const usageMB = (usage / (1024 * 1024)).toFixed(1);
-               const percent = (usage / quota) * 100;
-               setStorageUsed(`${usageMB} MB`);
-               setStoragePercent(percent);
-            }
-         } catch (e) {
-            console.warn("Storage estimate failed", e);
-         }
+        try {
+          const { usage, quota } = await navigator.storage.estimate();
+          if (usage !== undefined && quota !== undefined) {
+            const usageMB = (usage / (1024 * 1024)).toFixed(1);
+            const percent = (usage / quota) * 100;
+            setStorageUsed(`${usageMB} MB`);
+            setStoragePercent(percent);
+          }
+        } catch (e) {
+          console.warn("Storage estimate failed", e);
+        }
       }
     };
     calculateStorage();
@@ -77,9 +77,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="h-screen w-screen bg-canvas flex flex-col md:flex-row overflow-hidden text-txt-main font-sans">
       <OnboardingTour />
-      
+
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`bg-surface border-b md:border-b-0 md:border-r border-border-default flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
           ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-full
         `}
@@ -87,26 +87,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
           <div className="flex items-center gap-2 font-bold text-xl text-brand-600 mb-6 overflow-hidden min-h-[40px]">
             {companyLogo ? (
-               <img 
-                  src={companyLogo} 
-                  alt="Logo" 
-                  className={`object-contain max-h-10 ${isCollapsed ? 'w-full' : 'w-auto max-w-[180px]'}`} 
-               />
+              <img
+                src={companyLogo}
+                alt="Logo"
+                className={`object-contain max-h-10 ${isCollapsed ? 'w-full' : 'w-auto max-w-[180px]'}`}
+              />
             ) : (
-               <>
-                  <div className="p-1.5 bg-brand-600 rounded-md text-white shrink-0">
-                    <Database size={20} />
-                  </div>
-                  {!isCollapsed && <span className="whitespace-nowrap tracking-tight">DataScope</span>}
-               </>
+              <>
+                <div className="p-1.5 bg-brand-600 rounded-md text-white shrink-0">
+                  <Database size={20} />
+                </div>
+                {!isCollapsed && <span className="whitespace-nowrap tracking-tight">DataScope</span>}
+              </>
             )}
           </div>
 
-          <button 
-             onClick={() => setIsCollapsed(!isCollapsed)}
-             className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-1 shadow-sm text-txt-muted hover:text-brand-600 z-30"
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-1 shadow-sm text-txt-muted hover:text-brand-600 z-30"
           >
-             {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
         </div>
 
@@ -121,8 +121,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 to={item.path}
                 title={isCollapsed ? item.name : ''}
                 className={`flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap
-                  ${isActive 
-                    ? 'bg-brand-50 text-brand-700' 
+                  ${isActive
+                    ? 'bg-brand-50 text-brand-700'
                     : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
                   }
                   ${isCollapsed ? 'justify-center' : ''}
@@ -134,41 +134,41 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             );
           })}
         </nav>
-        
+
         <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-3 ${isCollapsed ? 'items-center' : ''}`}>
-          <button 
-             onClick={handleQuickSave}
-             className={`flex items-center justify-center gap-2 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-2 rounded transition-colors
+          <button
+            onClick={handleQuickSave}
+            className={`flex items-center justify-center gap-2 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-2 rounded transition-colors
                 ${isCollapsed ? 'w-10 h-10 p-0' : 'w-full px-4'}
              `}
-             title="Sauvegarde rapide"
+            title="Sauvegarde rapide"
           >
-             <Save className={`${isCollapsed ? 'w-4 h-4' : 'w-3 h-3'}`} />
-             {!isCollapsed && "Sauvegarde"}
+            <Save className={`${isCollapsed ? 'w-4 h-4' : 'w-3 h-3'}`} />
+            {!isCollapsed && "Sauvegarde"}
           </button>
 
           {!isCollapsed && (
-             <div>
-                <div className="flex items-center justify-between text-xs text-txt-muted mb-1">
-                   <div className="flex items-center gap-1">
-                      <HardDrive size={12} />
-                      <span>Disque : {storageUsed}</span>
-                   </div>
-                   {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
+            <div>
+              <div className="flex items-center justify-between text-xs text-txt-muted mb-1">
+                <div className="flex items-center gap-1">
+                  <HardDrive size={12} />
+                  <span>Disque : {storageUsed}</span>
                 </div>
-                {storagePercent > 0 && (
-                   <div className="w-full bg-border-default rounded-full h-1.5 overflow-hidden">
-                       <div 
-                       className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`} 
-                       style={{ width: `${Math.max(2, storagePercent)}%` }}
-                       ></div>
-                   </div>
-                )}
-             </div>
+                {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
+              </div>
+              {storagePercent > 0 && (
+                <div className="w-full bg-border-default rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`}
+                    style={{ width: `${Math.max(2, storagePercent)}%` }}
+                  ></div>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="text-xs text-txt-muted text-center">
-            {isCollapsed ? 'v25' : `v${APP_VERSION}`}
+            {isCollapsed ? `v22` : `v${APP_VERSION}`}
           </div>
         </div>
       </aside>
