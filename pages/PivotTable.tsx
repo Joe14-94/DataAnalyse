@@ -526,18 +526,7 @@ export const PivotTable: React.FC = () => {
         }
     };
 
-    // Auto-detect keys logic
-    useEffect(() => {
-        if (isAddingSource && newSourceConfig.targetId && !newSourceConfig.key1 && sources.length > 0) {
-            const targetDS = datasets.find(d => d.id === newSourceConfig.targetId);
-            if (primaryDataset && targetDS) {
-                const match = primaryDataset.fields.find(f => targetDS.fields.includes(f));
-                if (match) {
-                    setNewSourceConfig(prev => ({ ...prev, key1: match, key2: match }));
-                }
-            }
-        }
-    }, [isAddingSource, newSourceConfig.targetId, datasets, primaryDataset]);
+
 
     const toggleSection = (id: string) => {
         setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
@@ -719,64 +708,12 @@ export const PivotTable: React.FC = () => {
                                             );
                                         })}
 
-                                        {/* ADD SOURCE CONTROL (SECONDARY) */}
-                                        {!isAddingSource ? (
-                                            <button
-                                                onClick={startAddSource}
-                                                className="w-full py-1.5 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1"
-                                            >
-                                                <Plus className="w-3 h-3" /> Croiser une autre source
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                )}
-
-                                {/* MODAL AJOUT */}
-                                {isAddingSource && (
-                                    <div className="bg-slate-50 p-2 rounded border border-indigo-100 animate-in fade-in">
-                                        <div className="text-[10px] font-bold text-indigo-800 mb-2">
-                                            {sources.length === 0 ? "Choix de la source principale" : "Nouvelle jointure"}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <select
-                                                className="w-full text-[10px] border border-slate-300 rounded p-1"
-                                                value={newSourceConfig.targetId}
-                                                onChange={e => setNewSourceConfig({ ...newSourceConfig, targetId: e.target.value })}
-                                            >
-                                                <option value="">-- Choisir tableau --</option>
-                                                {datasets.filter(d => !sources.some(s => s.datasetId === d.id)).map(d => (
-                                                    <option key={d.id} value={d.id}>{d.name}</option>
-                                                ))}
-                                                {currentDataset && !sources.some(s => s.datasetId === currentDataset.id) && (
-                                                    <option value={currentDataset.id} className="font-bold">★ {currentDataset.name} (Suggéré)</option>
-                                                )}
-                                            </select>
-
-                                            {sources.length > 0 && newSourceConfig.targetId && (
-                                                <div className="flex items-center gap-1">
-                                                    <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key1} onChange={e => setNewSourceConfig({ ...newSourceConfig, key1: e.target.value })}>
-                                                        <option value="">Clé Principale</option>
-                                                        {primaryDataset?.fields.map(f => <option key={f} value={f}>{f}</option>)}
-                                                    </select>
-                                                    <div className="text-slate-400">=</div>
-                                                    <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key2} onChange={e => setNewSourceConfig({ ...newSourceConfig, key2: e.target.value })}>
-                                                        <option value="">Clé Cible</option>
-                                                        {datasets.find(d => d.id === newSourceConfig.targetId)?.fields.map(f => <option key={f} value={f}>{f}</option>)}
-                                                    </select>
-                                                </div>
-                                            )}
-
-                                            <div className="flex justify-end gap-1 mt-2">
-                                                <button onClick={() => setIsAddingSource(false)} className="px-2 py-1 text-[10px] text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50">Annuler</button>
-                                                <button
-                                                    onClick={confirmAddSource}
-                                                    disabled={!newSourceConfig.targetId || (sources.length > 0 && (!newSourceConfig.key1 || !newSourceConfig.key2))}
-                                                    className="px-2 py-1 text-[10px] text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
-                                                >
-                                                    Valider
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <button
+                                            onClick={startAddSource}
+                                            className="w-full py-2 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1"
+                                        >
+                                            <Plus className="w-3 h-3" /> Gérer les sources
+                                        </button>
                                     </div>
                                 )}
                             </div>
