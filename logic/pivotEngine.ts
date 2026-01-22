@@ -150,7 +150,8 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
     const rowKeys = new Array(rowFields.length);
     for(let j=0; j<rowFields.length; j++) {
         const v = row[rowFields[j]];
-        rowKeys[j] = v !== undefined && v !== null ? String(v) : '(Vide)';
+        // Gérer null, undefined ET chaînes vides
+        rowKeys[j] = v !== undefined && v !== null && String(v).trim() !== '' ? String(v) : '(Vide)';
     }
 
     // 1.3 Extraction Clé Colonne (UPDATED FOR MULTI COLS)
