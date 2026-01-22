@@ -33,6 +33,46 @@ interface PivotSourceConfig {
 
 const SOURCE_COLORS = ['blue', 'indigo', 'purple', 'pink', 'teal', 'orange'];
 
+// Static Tailwind classes for source colors (fixes dynamic class generation issue)
+const SOURCE_COLOR_CLASSES: Record<string, { border: string, text: string, bg: string, hover: string }> = {
+    blue: {
+        border: 'border-blue-500',
+        text: 'text-blue-700',
+        bg: 'bg-blue-50',
+        hover: 'hover:border-blue-400'
+    },
+    indigo: {
+        border: 'border-indigo-500',
+        text: 'text-indigo-700',
+        bg: 'bg-indigo-50',
+        hover: 'hover:border-indigo-400'
+    },
+    purple: {
+        border: 'border-purple-500',
+        text: 'text-purple-700',
+        bg: 'bg-purple-50',
+        hover: 'hover:border-purple-400'
+    },
+    pink: {
+        border: 'border-pink-500',
+        text: 'text-pink-700',
+        bg: 'bg-pink-50',
+        hover: 'hover:border-pink-400'
+    },
+    teal: {
+        border: 'border-teal-500',
+        text: 'text-teal-700',
+        bg: 'bg-teal-50',
+        hover: 'hover:border-teal-400'
+    },
+    orange: {
+        border: 'border-orange-500',
+        text: 'text-orange-700',
+        bg: 'bg-orange-50',
+        hover: 'hover:border-orange-400'
+    }
+};
+
 export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
@@ -546,9 +586,10 @@ export const PivotTable: React.FC = () => {
     const FieldChip: React.FC<{ field: string, zone: DropZoneType | 'list', onDelete?: () => void, disabled?: boolean, color?: string }> = ({ field, zone, onDelete, disabled, color = 'blue' }) => {
         const isJoined = field.startsWith('[');
         const displayLabel = field.includes('] ') ? field.split('] ')[1] : field;
+        const colorClasses = SOURCE_COLOR_CLASSES[color] || SOURCE_COLOR_CLASSES.blue;
 
-        let baseStyle = `bg-white border-slate-200 text-slate-700 hover:border-${color}-400`;
-        if (isJoined) baseStyle = `bg-${color}-50 border-${color}-200 text-${color}-700`;
+        let baseStyle = `bg-white border-slate-200 text-slate-700 ${colorClasses.hover}`;
+        if (isJoined) baseStyle = `${colorClasses.bg} ${colorClasses.border} ${colorClasses.text}`;
 
         if (disabled && zone === 'list') {
             baseStyle = 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed';
@@ -673,10 +714,11 @@ export const PivotTable: React.FC = () => {
                                         const ds = datasets.find(d => d.id === src.datasetId);
                                         if (!ds) return null;
 
+                                        const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
                                         return (
-                                            <div key={src.id} className={`relative pl-3 border-l-2 border-${src.color}-500 group`}>
+                                            <div key={src.id} className={`relative pl-3 border-l-2 ${srcColorClasses.border} group`}>
                                                 <div className="flex justify-between items-center">
-                                                    <div className={`text-xs font-bold text-${src.color}-700 flex items-center gap-1`}>
+                                                    <div className={`text-xs font-bold ${srcColorClasses.text} flex items-center gap-1`}>
                                                         {src.isPrimary ? <Database className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
                                                         {ds.name}
                                                     </div>
@@ -775,31 +817,34 @@ export const PivotTable: React.FC = () => {
                                     Ajoutez une source pour voir les champs disponibles.
                                 </div>
                             )}
-                            {groupedFields.map(group => (
-                                <div key={group.id} className="mb-2">
-                                    <button
-                                        onClick={() => toggleSection(group.id)}
-                                        className={`w-full flex items-center gap-1 text-xs font-bold px-2 py-1.5 rounded transition-colors ${group.isPrimary ? `text-${group.color}-700 bg-${group.color}-50` : `text-${group.color}-700 bg-${group.color}-50`}`}
-                                    >
-                                        {expandedSections[group.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
-                                        {group.name}
-                                    </button>
+                            {groupedFields.map(group => {
+                                const groupColorClasses = SOURCE_COLOR_CLASSES[group.color] || SOURCE_COLOR_CLASSES.blue;
+                                return (
+                                    <div key={group.id} className="mb-2">
+                                        <button
+                                            onClick={() => toggleSection(group.id)}
+                                            className={`w-full flex items-center gap-1 text-xs font-bold px-2 py-1.5 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
+                                        >
+                                            {expandedSections[group.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
+                                            {group.name}
+                                        </button>
 
-                                    {expandedSections[group.id] && (
-                                        <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
-                                            {group.fields.map((f: string) => (
-                                                <FieldChip
-                                                    key={f}
-                                                    field={f}
-                                                    zone="list"
-                                                    disabled={usedFields.has(f)}
-                                                    color={group.color}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                        {expandedSections[group.id] && (
+                                            <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                                {group.fields.map((f: string) => (
+                                                    <FieldChip
+                                                        key={f}
+                                                        field={f}
+                                                        zone="list"
+                                                        disabled={usedFields.has(f)}
+                                                        color={group.color}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
