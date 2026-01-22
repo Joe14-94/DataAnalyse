@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // Updated version
-export const APP_VERSION = "2026-01-22-01";
+export const APP_VERSION = "2026-01-22-02";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -13,25 +13,25 @@ export const generateId = (): string => {
 
 // --- MATH & PREDICTIVE ---
 export const calculateLinearRegression = (yValues: number[]): { slope: number, intercept: number, r2: number } => {
-    const n = yValues.length;
-    if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+  const n = yValues.length;
+  if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
 
-    const xValues = Array.from({ length: n }, (_, i) => i);
-    const sumX = xValues.reduce((a, b) => a + b, 0);
-    const sumY = yValues.reduce((a, b) => a + b, 0);
-    const sumXY = xValues.reduce((a, b, i) => a + b * yValues[i], 0);
-    const sumXX = xValues.reduce((a, b) => a + b * b, 0);
-    const sumYY = yValues.reduce((a, b) => a + b * b, 0);
+  const xValues = Array.from({ length: n }, (_, i) => i);
+  const sumX = xValues.reduce((a, b) => a + b, 0);
+  const sumY = yValues.reduce((a, b) => a + b, 0);
+  const sumXY = xValues.reduce((a, b, i) => a + b * yValues[i], 0);
+  const sumXX = xValues.reduce((a, b) => a + b * b, 0);
+  const sumYY = yValues.reduce((a, b) => a + b * b, 0);
 
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
 
-    // R Squared calculation
-    const ssTot = sumYY - (sumY * sumY) / n;
-    const ssRes = sumYY - intercept * sumY - slope * sumXY; // Simplified for linear
-    const r2 = 1 - (ssRes / (ssTot || 1));
+  // R Squared calculation
+  const ssTot = sumYY - (sumY * sumY) / n;
+  const ssRes = sumYY - intercept * sumY - slope * sumXY; // Simplified for linear
+  const r2 = 1 - (ssRes / (ssTot || 1));
 
-    return { slope, intercept, r2 };
+  return { slope, intercept, r2 };
 };
 
 // --- INDEXED DB ENGINE ---
@@ -105,17 +105,17 @@ export const db = {
  */
 export const areHeadersSimilar = (target: string[], candidate: string[]): boolean => {
   if (target.length === 0) return false;
-  
+
   // Normalisation
   const normTarget = target.map(t => t.toLowerCase().trim());
   const normCandidate = candidate.map(c => c.toLowerCase().trim());
-  
+
   // Compter les correspondances
   let matches = 0;
   for (const t of normTarget) {
     if (normCandidate.includes(t)) matches++;
   }
-  
+
   // Si plus de 75% des champs du target sont présents dans le candidat, c'est probablement le même dataset
   // OU si 100% des champs du candidat sont dans le target (sous-ensemble)
   const ratio = matches / normTarget.length;
@@ -171,33 +171,33 @@ export const parseRawData = (text: string): RawImportData => {
 export const readTextFile = (file: File, encoding: 'auto' | 'UTF-8' | 'windows-1252' = 'auto'): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       const buffer = e.target?.result as ArrayBuffer;
-      
+
       if (encoding === 'auto') {
-         // Tentative UTF-8 stricte
-         try {
-            const decoder = new TextDecoder('utf-8', { fatal: true });
-            const text = decoder.decode(buffer);
-            resolve(text);
-         } catch (err) {
-            // Echec UTF-8 -> Fallback Windows-1252 (ANSI)
-            console.warn("Détection Auto : Echec UTF-8, bascule vers Windows-1252.");
-            const decoder = new TextDecoder('windows-1252');
-            resolve(decoder.decode(buffer));
-         }
+        // Tentative UTF-8 stricte
+        try {
+          const decoder = new TextDecoder('utf-8', { fatal: true });
+          const text = decoder.decode(buffer);
+          resolve(text);
+        } catch (err) {
+          // Echec UTF-8 -> Fallback Windows-1252 (ANSI)
+          console.warn("Détection Auto : Echec UTF-8, bascule vers Windows-1252.");
+          const decoder = new TextDecoder('windows-1252');
+          resolve(decoder.decode(buffer));
+        }
       } else {
-         // Encodage forcé
-         try {
-            const decoder = new TextDecoder(encoding);
-            resolve(decoder.decode(buffer));
-         } catch (err) {
-            reject(err);
-         }
+        // Encodage forcé
+        try {
+          const decoder = new TextDecoder(encoding);
+          resolve(decoder.decode(buffer));
+        } catch (err) {
+          reject(err);
+        }
       }
     };
-    
+
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
@@ -209,19 +209,19 @@ export const readTextFile = (file: File, encoding: 'auto' | 'UTF-8' | 'windows-1
 export const readExcelFile = async (file: File): Promise<RawImportData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'array' });
-        
+
         // On prend la première feuille par défaut
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        
+
         // Conversion en tableau de tableaux (header: 1 signifie tableau de tableaux)
         const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
-        
+
         if (jsonData.length < 2) {
           resolve({ headers: [], rows: [], totalRows: 0 });
           return;
@@ -229,14 +229,14 @@ export const readExcelFile = async (file: File): Promise<RawImportData> => {
 
         // La première ligne est l'en-tête
         const headers = (jsonData[0] as string[]).map(h => String(h).trim());
-        
+
         // Les autres lignes sont les données
         // On s'assure que tout est converti en string pour respecter RawImportData
         const rows = jsonData.slice(1).map(row => {
-           // Remplir les cellules vides si la ligne est plus courte que les headers
-           const fullRow = [...row];
-           while(fullRow.length < headers.length) fullRow.push('');
-           return fullRow.map(cell => cell !== undefined && cell !== null ? String(cell) : '');
+          // Remplir les cellules vides si la ligne est plus courte que les headers
+          const fullRow = [...row];
+          while (fullRow.length < headers.length) fullRow.push('');
+          return fullRow.map(cell => cell !== undefined && cell !== null ? String(cell) : '');
         }).filter(row => row.some(cell => cell.trim() !== '')); // Filtre les lignes vides
 
         resolve({
@@ -261,7 +261,7 @@ export const readExcelFile = async (file: File): Promise<RawImportData> => {
  * Convertit les données brutes avec des clés dynamiques
  */
 export const mapDataToSchema = (
-  rawData: RawImportData, 
+  rawData: RawImportData,
   mapping: Record<number, string | 'ignore'>
 ): DataRow[] => {
   return rawData.rows.map(rowCells => {
@@ -296,7 +296,7 @@ export const formatDateFr = (dateStr: string): string => {
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    
+
     return new Intl.DateTimeFormat('fr-FR', {
       year: 'numeric',
       month: 'long',
@@ -314,7 +314,7 @@ export const getDaysDifference = (dateStr: string): number => {
     if (isNaN(target.getTime())) return 999;
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - target.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   } catch (e) {
     return 999;
   }
@@ -401,27 +401,27 @@ export const formatNumberValue = (value: number | string, config?: FieldConfig):
 
 // Logique de regroupement de date pour le TCD et les Diagnostics
 export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarter' | 'month') => {
-    if (!val || val === '(Vide)' || grouping === 'none') return val;
-    
-    try {
-       const d = new Date(val);
-       if (isNaN(d.getTime())) return val;
+  if (!val || val === '(Vide)' || grouping === 'none') return val;
 
-       if (grouping === 'year') {
-          return d.getFullYear().toString();
-       }
-       if (grouping === 'quarter') {
-          const q = Math.floor(d.getMonth() / 3) + 1;
-          return `${d.getFullYear()}-T${q}`;
-       }
-       if (grouping === 'month') {
-          // ISO format pour le tri correct, formaté ensuite si besoin
-          return d.toISOString().slice(0, 7); // YYYY-MM
-       }
-    } catch (e) {
-       return val;
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+
+    if (grouping === 'year') {
+      return d.getFullYear().toString();
     }
+    if (grouping === 'quarter') {
+      const q = Math.floor(d.getMonth() / 3) + 1;
+      return `${d.getFullYear()}-T${q}`;
+    }
+    if (grouping === 'month') {
+      // ISO format pour le tri correct, formaté ensuite si besoin
+      return d.toISOString().slice(0, 7); // YYYY-MM
+    }
+  } catch (e) {
     return val;
+  }
+  return val;
 };
 
 /**
@@ -433,7 +433,7 @@ export const detectUnit = (values: string[]): string => {
   if (sample.length === 0) return '';
 
   const getSuffix = (s: string) => {
-    const match = s.match(/[a-zA-Z€$£%°]+$/); 
+    const match = s.match(/[a-zA-Z€$£%°]+$/);
     return match ? match[0].trim() : '';
   };
 
@@ -466,22 +466,22 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
   let numberCount = 0;
   let boolCount = 0;
   let dateCount = 0;
-  
+
   const dateRegex = /^(\d{4}-\d{2}-\d{2})|(\d{2}\/\d{2}\/\d{4})|(\d{2}-\d{2}-\d{4})$/;
 
   sample.forEach(val => {
-     const cleanVal = val.trim();
-     const lower = cleanVal.toLowerCase();
-     if (['oui', 'non', 'yes', 'no', 'true', 'false', 'vrai', 'faux', '0', '1'].includes(lower)) boolCount++;
-     if (dateRegex.test(cleanVal) && !isNaN(Date.parse(cleanVal.split('/').reverse().join('-')))) dateCount++;
+    const cleanVal = val.trim();
+    const lower = cleanVal.toLowerCase();
+    if (['oui', 'non', 'yes', 'no', 'true', 'false', 'vrai', 'faux', '0', '1'].includes(lower)) boolCount++;
+    if (dateRegex.test(cleanVal) && !isNaN(Date.parse(cleanVal.split('/').reverse().join('-')))) dateCount++;
 
-     const startsWithValidNumChar = /^[-+0-9.,]/.test(cleanVal);
-     const startsWithCurrency = /^[$€£]/.test(cleanVal);
-     if (startsWithValidNumChar || startsWithCurrency) {
-        const withoutUnit = cleanVal.replace(/[\s]?[a-zA-Z%€$£%°]+$/, '');
-        const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, ''); 
-        if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) numberCount++;
-     }
+    const startsWithValidNumChar = /^[-+0-9.,]/.test(cleanVal);
+    const startsWithCurrency = /^[$€£]/.test(cleanVal);
+    if (startsWithValidNumChar || startsWithCurrency) {
+      const withoutUnit = cleanVal.replace(/[\s]?[a-zA-Z%€$£%°]+$/, '');
+      const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, '');
+      if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) numberCount++;
+    }
   });
 
   const threshold = sample.length * 0.8;
@@ -502,9 +502,9 @@ export const extractDomain = (email: string): string => {
 
 // --- EXPORT FUNCTION (PDF/HTML) ---
 export const exportView = async (
-  format: 'pdf' | 'html', 
-  elementId: string, 
-  title: string, 
+  format: 'pdf' | 'html',
+  elementId: string,
+  title: string,
   logo?: string,
   pdfMode: 'A4' | 'adaptive' = 'adaptive' // Nouvelle option pour contrôler la hauteur
 ) => {
@@ -521,7 +521,7 @@ export const exportView = async (
     try {
       // 1. Clone element to remove scrollbars and show full content
       const clone = element.cloneNode(true) as HTMLElement;
-      
+
       // Force styles on clone to ensure visibility of full content
       clone.style.position = 'fixed';
       clone.style.top = '-10000px';
@@ -532,21 +532,21 @@ export const exportView = async (
       clone.style.overflow = 'visible';
       clone.style.zIndex = '-1';
       clone.style.background = 'white';
-      
+
       // Inject clone into body
       document.body.appendChild(clone);
 
       // 2. Capture content
-      const canvas = await html2canvas(clone, { 
+      const canvas = await html2canvas(clone, {
         scale: 2, // Better resolution
         useCORS: true,
         logging: false,
         windowWidth: 1200 // Match clone width
       });
-      
+
       // Remove clone
       document.body.removeChild(clone);
-      
+
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
@@ -556,7 +556,7 @@ export const exportView = async (
       const pdfWidthMM = 297; // Landscape default preference for tables
       const margin = 10;
       const contentWidthMM = pdfWidthMM - (margin * 2);
-      
+
       // Calculate scaled image dimensions in mm
       const ratio = contentWidthMM / imgWidth;
       const scaledHeightMM = imgHeight * ratio;
@@ -565,24 +565,24 @@ export const exportView = async (
       let orientation: 'p' | 'l' = 'l';
 
       if (pdfMode === 'adaptive') {
-          // Mode Adaptive: PDF page height grows to fit content
-          // We add extra space for Header (30mm) + Image Height + Margin
-          pdfHeightMM = Math.max(210, scaledHeightMM + 40); 
-          // Orientation doesn't matter much with custom size, but let's keep logic simple
+        // Mode Adaptive: PDF page height grows to fit content
+        // We add extra space for Header (30mm) + Image Height + Margin
+        pdfHeightMM = Math.max(210, scaledHeightMM + 40);
+        // Orientation doesn't matter much with custom size, but let's keep logic simple
       } else {
-          // Mode A4 Standard: We fit into A4
-          // If content is very tall, it will be shrunk (user choice)
-          orientation = scaledHeightMM > 210 ? 'p' : 'l';
-          if (orientation === 'p') {
-             // Recalculate for Portrait
-             // A4 Portrait: 210 width
-             const pContentWidth = 210 - (margin * 2);
-             const pRatio = pContentWidth / imgWidth;
-             const pScaledHeight = imgHeight * pRatio;
-             // If strictly 'A4' (not adaptive), we might just fit vertically? 
-             // Usually for charts 'A4' means fit on one page.
-             // If table is super long, it will be tiny.
-          }
+        // Mode A4 Standard: We fit into A4
+        // If content is very tall, it will be shrunk (user choice)
+        orientation = scaledHeightMM > 210 ? 'p' : 'l';
+        if (orientation === 'p') {
+          // Recalculate for Portrait
+          // A4 Portrait: 210 width
+          const pContentWidth = 210 - (margin * 2);
+          const pRatio = pContentWidth / imgWidth;
+          const pScaledHeight = imgHeight * pRatio;
+          // If strictly 'A4' (not adaptive), we might just fit vertically? 
+          // Usually for charts 'A4' means fit on one page.
+          // If table is super long, it will be tiny.
+        }
       }
 
       // Initialize PDF with dynamic or static size
@@ -595,7 +595,7 @@ export const exportView = async (
       // Recalculate content width based on final PDF page width (in case of Adaptive)
       const finalPdfWidth = pdf.internal.pageSize.getWidth();
       const finalPdfHeight = pdf.internal.pageSize.getHeight();
-      
+
       // Header with Logo
       let startY = 10;
       if (logo) {
@@ -614,18 +614,18 @@ export const exportView = async (
       // Render Image
       const renderWidth = finalPdfWidth - (margin * 2);
       const renderHeight = (imgHeight * renderWidth) / imgWidth;
-      
+
       // If A4 strict mode, check bounds
       let finalRenderHeight = renderHeight;
       let finalRenderWidth = renderWidth;
 
       if (pdfMode === 'A4') {
-          const availableHeight = finalPdfHeight - startY - margin;
-          if (renderHeight > availableHeight) {
-              const fitRatio = availableHeight / renderHeight;
-              finalRenderHeight = availableHeight;
-              finalRenderWidth = renderWidth * fitRatio;
-          }
+        const availableHeight = finalPdfHeight - startY - margin;
+        if (renderHeight > availableHeight) {
+          const fitRatio = availableHeight / renderHeight;
+          finalRenderHeight = availableHeight;
+          finalRenderWidth = renderWidth * fitRatio;
+        }
       }
 
       pdf.addImage(imgData, 'PNG', margin, startY + 5, finalRenderWidth, finalRenderHeight);
@@ -635,13 +635,13 @@ export const exportView = async (
       console.error('PDF Export Error', err);
       alert('Erreur lors de la génération du PDF');
     }
-  } 
-  
+  }
+
   else if (format === 'html') {
     try {
       // Clone element to sanitize and ensure styles
       // For a robust HTML export, we embed a minimal HTML structure with Tailwind CDN
-      
+
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="fr">
@@ -679,7 +679,7 @@ export const exportView = async (
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download =(`${filename}.html`);
+      link.download = (`${filename}.html`);
       document.body.appendChild(link);
       link.click();
       setTimeout(() => document.body.removeChild(link), 100);
@@ -735,7 +735,7 @@ class FormulaParser {
         cursor++;
         let val = '';
         while (cursor < input.length && input[cursor] !== quote) val += input[cursor++];
-        cursor++; 
+        cursor++;
         tokens.push({ type: 'STRING', value: val });
         continue;
       }
@@ -821,8 +821,8 @@ class FormulaParser {
       const right = this.parseFactor();
       if (op === '*') left = (Number(left) || 0) * (Number(right) || 0);
       else if (op === '/') {
-         const r = Number(right) || 0;
-         left = r !== 0 ? (Number(left) || 0) / r : 0;
+        const r = Number(right) || 0;
+        left = r !== 0 ? (Number(left) || 0) / r : 0;
       }
     }
     return left;
@@ -830,12 +830,12 @@ class FormulaParser {
 
   private parseFactor(): any {
     const token = this.peek();
-    
+
     if (token.type === 'NUMBER') {
       this.consume();
       return parseFloat(token.value);
     }
-    
+
     if (token.type === 'STRING') {
       this.consume();
       return token.value;
@@ -876,8 +876,8 @@ class FormulaParser {
 
     // Unary minus
     if (token.type === 'OPERATOR' && token.value === '-') {
-       this.consume();
-       return -this.parseFactor();
+      this.consume();
+      return -this.parseFactor();
     }
 
     // Token invalide : lever une exception au lieu de retourner 0
@@ -939,11 +939,11 @@ export const evaluateFormula = (row: any, formula: string): number | string | nu
   try {
     const parser = new FormulaParser(formula, row);
     const result = parser.evaluate();
-    
+
     // Nettoyage résultat final
     if (typeof result === 'number') {
-       if (!isFinite(result) || isNaN(result)) return null;
-       return Math.round(result * 10000) / 10000; // Round to 4 decimals
+      if (!isFinite(result) || isNaN(result)) return null;
+      return Math.round(result * 10000) / 10000; // Round to 4 decimals
     }
     return result;
   } catch (e) {
@@ -962,38 +962,38 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
   const firstNames = ['Pierre', 'Paul', 'Jacques', 'Marie', 'Sophie', 'Isabelle', 'Thomas', 'Lucas', 'Nicolas', 'Julien', 'Camille', 'Antoine', 'Sarah', 'Alexandre', 'Manon', 'Emma', 'Chloé', 'Inès'];
   const lastNames = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand'];
   const domains = ['gmail.com', 'outlook.com', 'techcorp.com', 'innovate.fr', 'gouv.fr', 'cyber-defense.eu', 'energy.com'];
-  
+
   const batches: ImportBatch[] = [];
-  
+
   for (let i = 5; i >= 0; i--) {
-    const date = new Date(); 
+    const date = new Date();
     date.setMonth(date.getMonth() - i);
-    date.setDate(15); 
+    date.setDate(15);
 
     const dateStr = date.toISOString().split('T')[0];
-    const baseCount = 65 + (5-i) * 6 + (Math.random() * 15); 
+    const baseCount = 65 + (5 - i) * 6 + (Math.random() * 15);
     const rowCount = Math.floor(baseCount);
     const rows: DataRow[] = [];
-    
+
     for (let j = 0; j < rowCount; j++) {
       const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
       const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-      
-      let orgIndex = Math.floor(Math.random() * 6); 
+
+      let orgIndex = Math.floor(Math.random() * 6);
       if (i === 0) orgIndex = Math.floor(Math.random() * ORGS_LIST.length);
 
       let domain = domains[0];
       if (orgIndex === 0) domain = 'techcorp.com';
       else if (orgIndex === 1) domain = 'innovate.fr';
       else if (orgIndex > 3) domain = 'gouv.fr';
-      
+
       const hasComment = Math.random() > 0.3;
       const lastChangeDate = new Date(date);
       lastChangeDate.setDate(lastChangeDate.getDate() - Math.floor(Math.random() * 60));
       const amount = Math.floor(Math.random() * 1400) + 150;
-      
+
       rows.push({
-        id: `REF-${(10-i)}-${j.toString().padStart(4, '0')}`,
+        id: `REF-${(10 - i)}-${j.toString().padStart(4, '0')}`,
         'Nom': `${firstName} ${lastName}`,
         'Email': `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
         'Organisation': ORGS_LIST[orgIndex],
@@ -1003,7 +1003,7 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
         'Quantité': Math.floor(Math.random() * 25) + 1
       });
     }
-    
+
     batches.push({
       id: generateId(),
       datasetId: datasetId,
@@ -1017,49 +1017,49 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
 
 // --- AUDIT SYSTEM ---
 export const runSelfDiagnostics = (): DiagnosticSuite[] => {
-   const suites: DiagnosticSuite[] = [];
+  const suites: DiagnosticSuite[] = [];
 
-   // SUITE 1: Parsing Numérique
-   const parsingTests: DiagnosticResult[] = [
-      { id: '1', name: 'Nombre simple (123)', status: 'success', expected: 123, actual: parseSmartNumber('123') },
-      { id: '2', name: 'Nombre décimal (12.5)', status: 'success', expected: 12.5, actual: parseSmartNumber('12.5') },
-      { id: '3', name: 'Nombre avec unité (10 k€)', status: 'success', expected: 10, actual: parseSmartNumber('10 k€', 'k€') },
-      { id: '4', name: 'Espace insécable (1 000)', status: 'success', expected: 1000, actual: parseSmartNumber('1 000') },
-      { id: '5', name: 'Format FR (1.000,50)', status: 'success', expected: 1000.5, actual: parseSmartNumber('1.000,50') },
-   ];
-   parsingTests.forEach(t => {
-      if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
-   });
-   suites.push({ category: 'Moteur de Parsing Numérique', tests: parsingTests });
+  // SUITE 1: Parsing Numérique
+  const parsingTests: DiagnosticResult[] = [
+    { id: '1', name: 'Nombre simple (123)', status: 'success', expected: 123, actual: parseSmartNumber('123') },
+    { id: '2', name: 'Nombre décimal (12.5)', status: 'success', expected: 12.5, actual: parseSmartNumber('12.5') },
+    { id: '3', name: 'Nombre avec unité (10 k€)', status: 'success', expected: 10, actual: parseSmartNumber('10 k€', 'k€') },
+    { id: '4', name: 'Espace insécable (1 000)', status: 'success', expected: 1000, actual: parseSmartNumber('1 000') },
+    { id: '5', name: 'Format FR (1.000,50)', status: 'success', expected: 1000.5, actual: parseSmartNumber('1.000,50') },
+  ];
+  parsingTests.forEach(t => {
+    if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
+  });
+  suites.push({ category: 'Moteur de Parsing Numérique', tests: parsingTests });
 
-   // SUITE 2: Moteur de Formule (Tests du nouveau parser)
-   const formulaTests: DiagnosticResult[] = [
-      { id: 'f1', name: 'Opération simple', status: 'success', expected: 100, actual: evaluateFormula({ 'A': 10, 'B': 10 }, '[A] * [B]') },
-      { id: 'f2', name: 'Calcul avec unité', status: 'success', expected: 120, actual: evaluateFormula({ 'Prix': '10 €', 'Qte': 12 }, '[Prix] * [Qte]') },
-      { id: 'f3', name: 'Fonction SI', status: 'success', expected: 'Grand', actual: evaluateFormula({ 'Age': 20 }, "SI([Age] > 18, 'Grand', 'Petit')") },
-      { id: 'f4', name: 'Fonction SOMME', status: 'success', expected: 30, actual: evaluateFormula({ 'A': 10, 'B': 20 }, "SOMME([A], [B])") },
-      { id: 'f5', name: 'Priorité opérateurs', status: 'success', expected: 14, actual: evaluateFormula({}, "2 + 3 * 4") },
-      { id: 'f6', name: 'Parenthèses', status: 'success', expected: 20, actual: evaluateFormula({}, "(2 + 3) * 4") },
-   ];
-   formulaTests.forEach(t => {
-      if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
-   });
-   suites.push({ category: 'Calculateur de Champs (Parser Sécurisé)', tests: formulaTests });
+  // SUITE 2: Moteur de Formule (Tests du nouveau parser)
+  const formulaTests: DiagnosticResult[] = [
+    { id: 'f1', name: 'Opération simple', status: 'success', expected: 100, actual: evaluateFormula({ 'A': 10, 'B': 10 }, '[A] * [B]') },
+    { id: 'f2', name: 'Calcul avec unité', status: 'success', expected: 120, actual: evaluateFormula({ 'Prix': '10 €', 'Qte': 12 }, '[Prix] * [Qte]') },
+    { id: 'f3', name: 'Fonction SI', status: 'success', expected: 'Grand', actual: evaluateFormula({ 'Age': 20 }, "SI([Age] > 18, 'Grand', 'Petit')") },
+    { id: 'f4', name: 'Fonction SOMME', status: 'success', expected: 30, actual: evaluateFormula({ 'A': 10, 'B': 20 }, "SOMME([A], [B])") },
+    { id: 'f5', name: 'Priorité opérateurs', status: 'success', expected: 14, actual: evaluateFormula({}, "2 + 3 * 4") },
+    { id: 'f6', name: 'Parenthèses', status: 'success', expected: 20, actual: evaluateFormula({}, "(2 + 3) * 4") },
+  ];
+  formulaTests.forEach(t => {
+    if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
+  });
+  suites.push({ category: 'Calculateur de Champs (Parser Sécurisé)', tests: formulaTests });
 
-   // SUITE 3: Regroupement TCD
-   const groupingTests: DiagnosticResult[] = [
-      { id: 'd1', name: 'Année (2025-01-15)', expected: '2025', actual: getGroupedLabel('2025-01-15', 'year'), status: 'success' },
-      { id: 'd2', name: 'Mois (2025-01-15)', expected: '2025-01', actual: getGroupedLabel('2025-01-15', 'month'), status: 'success' },
-   ];
-   groupingTests.forEach(t => {
-      if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
-   });
-   suites.push({ category: 'Moteur de Regroupement Temporel', tests: groupingTests });
+  // SUITE 3: Regroupement TCD
+  const groupingTests: DiagnosticResult[] = [
+    { id: 'd1', name: 'Année (2025-01-15)', expected: '2025', actual: getGroupedLabel('2025-01-15', 'year'), status: 'success' },
+    { id: 'd2', name: 'Mois (2025-01-15)', expected: '2025-01', actual: getGroupedLabel('2025-01-15', 'month'), status: 'success' },
+  ];
+  groupingTests.forEach(t => {
+    if (t.actual !== t.expected) { t.status = 'failure'; t.message = `Attendu: ${t.expected}, Reçu: ${t.actual}`; }
+  });
+  suites.push({ category: 'Moteur de Regroupement Temporel', tests: groupingTests });
 
-   // SUITE 4: Régression Linéaire
-   const regResult = calculateLinearRegression([10, 20, 30, 40]);
-   const regTest: DiagnosticResult = { id: 'r1', name: 'Régression Parfaite', status: regResult.r2 > 0.99 ? 'success' : 'failure', expected: '> 0.99', actual: regResult.r2.toFixed(2) };
-   suites.push({ category: 'Moteur Statistique', tests: [regTest] });
+  // SUITE 4: Régression Linéaire
+  const regResult = calculateLinearRegression([10, 20, 30, 40]);
+  const regTest: DiagnosticResult = { id: 'r1', name: 'Régression Parfaite', status: regResult.r2 > 0.99 ? 'success' : 'failure', expected: '> 0.99', actual: regResult.r2.toFixed(2) };
+  suites.push({ category: 'Moteur Statistique', tests: [regTest] });
 
-   return suites;
+  return suites;
 };

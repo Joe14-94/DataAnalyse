@@ -699,13 +699,17 @@ export const PivotTable: React.FC = () => {
 
                             {/* LISTE DES SOURCES */}
                             {sources.length === 0 ? (
-                                <div className="text-center p-4 border border-dashed border-slate-200 rounded bg-slate-50/50">
-                                    <p className="text-xs text-slate-400 mb-2">Aucune source sélectionnée</p>
+                                <div className="text-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
+                                    <div className="mb-3">
+                                        <Database className="w-10 h-10 mx-auto text-blue-400 mb-2" />
+                                        <p className="text-sm font-semibold text-slate-700 mb-1">Commencez votre analyse</p>
+                                        <p className="text-xs text-slate-500">Sélectionnez une source de données</p>
+                                    </div>
                                     <button
                                         onClick={startAddSource}
-                                        className="w-full py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                        className="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                                     >
-                                        <Plus className="w-3 h-3" /> Définir source principale
+                                        <Plus className="w-4 h-4" /> Définir source principale
                                     </button>
                                 </div>
                             ) : (
@@ -1108,13 +1112,46 @@ export const PivotTable: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-slate-50/50">
-                            <div className="p-4 bg-white rounded-full shadow-sm mb-4">
-                                {sources.length === 0 ? <AlertCircle className="w-8 h-8 text-slate-300" /> : <MousePointerClick className="w-8 h-8 text-blue-200 animate-bounce" />}
-                            </div>
-                            <p className="text-sm font-medium">
-                                {sources.length === 0 ? "Veuillez définir une source de données." : "Commencez par glisser des champs."}
-                            </p>
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8">
+                            {sources.length === 0 ? (
+                                <div className="max-w-md text-center">
+                                    <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-lg mb-6 border border-blue-100">
+                                        <Database className="w-16 h-16 mx-auto text-blue-400 mb-4" />
+                                        <h3 className="text-lg font-bold text-slate-800 mb-2">Créez votre premier TCD</h3>
+                                        <p className="text-sm text-slate-600 mb-4">
+                                            Un Tableau Croisé Dynamique vous permet de croiser et analyser vos données de manière interactive.
+                                        </p>
+                                        <button
+                                            onClick={startAddSource}
+                                            className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-2 mx-auto"
+                                        >
+                                            <Plus className="w-5 h-5" /> Commencer
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 text-xs">
+                                        <div className="text-center p-3 bg-white rounded-lg border border-slate-200">
+                                            <div className="font-bold text-blue-600 mb-1">1. Source</div>
+                                            <div className="text-slate-500">Choisissez vos données</div>
+                                        </div>
+                                        <div className="text-center p-3 bg-white rounded-lg border border-slate-200">
+                                            <div className="font-bold text-indigo-600 mb-1">2. Champs</div>
+                                            <div className="text-slate-500">Glissez pour organiser</div>
+                                        </div>
+                                        <div className="text-center p-3 bg-white rounded-lg border border-slate-200">
+                                            <div className="font-bold text-purple-600 mb-1">3. Analyse</div>
+                                            <div className="text-slate-500">Visualisez les résultats</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center">
+                                    <div className="p-4 bg-white rounded-full shadow-sm mb-4 inline-block">
+                                        <MousePointerClick className="w-8 h-8 text-blue-400 animate-bounce" />
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-600">Commencez par glisser des champs</p>
+                                    <p className="text-xs text-slate-400 mt-2">Faites glisser les champs depuis la liste vers les zones ci-contre</p>
+                                </div>
+                            )}
                             {sources.length > 0 && <p className="text-xs text-slate-400 mt-2">Zone de gauche &rarr; Lignes / Colonnes / Valeurs</p>}
                         </div>
                     )}
