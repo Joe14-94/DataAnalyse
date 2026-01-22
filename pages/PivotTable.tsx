@@ -2,13 +2,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { parseSmartNumber, detectColumnType, formatDateFr, evaluateFormula, generateId, exportView } from '../utils';
-import { 
-  Database, Filter, Calculator, X, Layout,
-  Table2, ArrowUpDown, Layers,
-  ArrowUp, ArrowDown, Save, Check,
-  PieChart, Loader2, ChevronLeft, ChevronRight, FileDown, FileType, Printer,
-  GripVertical, MousePointer2, TrendingUp, Link as LinkIcon, Plus, Trash2, Split,
-  ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick
+import {
+    Database, Filter, Calculator, X, Layout,
+    Table2, ArrowUpDown, Layers,
+    ArrowUp, ArrowDown, Save, Check,
+    PieChart, Loader2, ChevronLeft, ChevronRight, FileDown, FileType, Printer,
+    GripVertical, MousePointer2, TrendingUp, Link as LinkIcon, Plus, Trash2, Split,
+    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
@@ -34,1078 +34,1078 @@ interface PivotSourceConfig {
 const SOURCE_COLORS = ['blue', 'indigo', 'purple', 'pink', 'teal', 'orange'];
 
 export const PivotTable: React.FC = () => {
-  const { 
-    batches, currentDataset, datasets, savedAnalyses, saveAnalysis, 
-    lastPivotState, savePivotState, isLoading, companyLogo
-  } = useData();
-  const navigate = useNavigate();
+    const {
+        batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
+        lastPivotState, savePivotState, isLoading, companyLogo
+    } = useData();
+    const navigate = useNavigate();
 
-  // --- STATE ---
-  const [isInitialized, setIsInitialized] = useState(false);
-  
-  // DATA SOURCES STATE (New unified approach)
-  const [sources, setSources] = useState<PivotSourceConfig[]>([]);
-  const [isAddingSource, setIsAddingSource] = useState(false);
-  const [newSourceConfig, setNewSourceConfig] = useState<{ targetId: string, key1: string, key2: string }>({ targetId: '', key1: '', key2: '' });
-  
-  // SELECTION STATE (For the primary source, allows changing batch)
-  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+    // --- STATE ---
+    const [isInitialized, setIsInitialized] = useState(false);
 
-  // PIVOT CONFIG STATE
-  const [rowFields, setRowFields] = useState<string[]>([]);
-  const [colFields, setColFields] = useState<string[]>([]); 
-  const [valField, setValField] = useState<string>('');
-  const [colGrouping, setColGrouping] = useState<DateGrouping>('none'); 
-  const [aggType, setAggType] = useState<AggregationType>('count');
-  const [valFormatting, setValFormatting] = useState<Partial<FieldConfig>>({});
-  const [filters, setFilters] = useState<FilterRule[]>([]);
-  const [showSubtotals, setShowSubtotals] = useState(true);
-  const [showTotalCol, setShowTotalCol] = useState(true);
-  const [showVariations, setShowVariations] = useState(false); 
-  const [sortBy, setSortBy] = useState<SortBy>('label');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  
-  // UI STATE
-  const [isSaving, setIsSaving] = useState(false);
-  const [analysisName, setAnalysisName] = useState('');
-  const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+    // DATA SOURCES STATE (New unified approach)
+    const [sources, setSources] = useState<PivotSourceConfig[]>([]);
+    const [isAddingSource, setIsAddingSource] = useState(false);
+    const [newSourceConfig, setNewSourceConfig] = useState<{ targetId: string, key1: string, key2: string }>({ targetId: '', key1: '', key2: '' });
 
-  // D&D STATE
-  const [draggedField, setDraggedField] = useState<string | null>(null);
-  // Removed dragSource state dependency for drop logic to fix async issues
+    // SELECTION STATE (For the primary source, allows changing batch)
+    const [selectedBatchId, setSelectedBatchId] = useState<string>('');
 
-  // ASYNC CALCULATION STATE
-  const [pivotData, setPivotData] = useState<PivotResult | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
+    // PIVOT CONFIG STATE
+    const [rowFields, setRowFields] = useState<string[]>([]);
+    const [colFields, setColFields] = useState<string[]>([]);
+    const [valField, setValField] = useState<string>('');
+    const [colGrouping, setColGrouping] = useState<DateGrouping>('none');
+    const [aggType, setAggType] = useState<AggregationType>('count');
+    const [valFormatting, setValFormatting] = useState<Partial<FieldConfig>>({});
+    const [filters, setFilters] = useState<FilterRule[]>([]);
+    const [showSubtotals, setShowSubtotals] = useState(true);
+    const [showTotalCol, setShowTotalCol] = useState(true);
+    const [showVariations, setShowVariations] = useState(false);
+    const [sortBy, setSortBy] = useState<SortBy>('label');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  // VIRTUALIZATION
-  const parentRef = useRef<HTMLDivElement>(null);
+    // UI STATE
+    const [isSaving, setIsSaving] = useState(false);
+    const [analysisName, setAnalysisName] = useState('');
+    const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
-  // --- DERIVED STATE ---
-  
-  // Get the primary dataset from our local sources list, NOT global context
-  const primarySourceConfig = sources.find(s => s.isPrimary);
-  const primaryDataset = primarySourceConfig ? datasets.find(d => d.id === primarySourceConfig.datasetId) : null;
+    // D&D STATE
+    const [draggedField, setDraggedField] = useState<string | null>(null);
+    // Removed dragSource state dependency for drop logic to fix async issues
 
-  const datasetBatches = useMemo(() => {
-    if (!primaryDataset) return [];
-    return batches
-      .filter(b => b.datasetId === primaryDataset.id)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [batches, primaryDataset]);
+    // ASYNC CALCULATION STATE
+    const [pivotData, setPivotData] = useState<PivotResult | null>(null);
+    const [isCalculating, setIsCalculating] = useState(false);
 
-  // Determine which fields are already in use
-  const usedFields = useMemo(() => {
-      const used = new Set<string>();
-      rowFields.forEach(f => used.add(f));
-      colFields.forEach(f => used.add(f));
-      if (valField) used.add(valField);
-      filters.forEach(f => used.add(f.field));
-      return used;
-  }, [rowFields, colFields, valField, filters]);
+    // VIRTUALIZATION
+    const parentRef = useRef<HTMLDivElement>(null);
 
-  // --- INITIALISATION & PERSISTENCE ---
-  
-  // Load State
-  useEffect(() => {
-     // Only load if we have a primary source
-     if (primaryDataset) {
-        savePivotState({
-            datasetId: primaryDataset.id,
+    // --- DERIVED STATE ---
+
+    // Get the primary dataset from our local sources list, NOT global context
+    const primarySourceConfig = sources.find(s => s.isPrimary);
+    const primaryDataset = primarySourceConfig ? datasets.find(d => d.id === primarySourceConfig.datasetId) : null;
+
+    const datasetBatches = useMemo(() => {
+        if (!primaryDataset) return [];
+        return batches
+            .filter(b => b.datasetId === primaryDataset.id)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [batches, primaryDataset]);
+
+    // Determine which fields are already in use
+    const usedFields = useMemo(() => {
+        const used = new Set<string>();
+        rowFields.forEach(f => used.add(f));
+        colFields.forEach(f => used.add(f));
+        if (valField) used.add(valField);
+        filters.forEach(f => used.add(f.field));
+        return used;
+    }, [rowFields, colFields, valField, filters]);
+
+    // --- INITIALISATION & PERSISTENCE ---
+
+    // Load State
+    useEffect(() => {
+        // Only load if we have a primary source
+        if (primaryDataset) {
+            savePivotState({
+                datasetId: primaryDataset.id,
+                config: {
+                    sources, // Save the full source stack
+                    rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations,
+                    sortBy, sortOrder, styleRules, selectedBatchId
+                }
+            });
+        }
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized]);
+
+    // Load State
+    useEffect(() => {
+        // Only load if we haven't initialized yet
+        if (isInitialized) return;
+
+        if (lastPivotState && currentDataset && lastPivotState.datasetId === currentDataset.id) {
+            const c = lastPivotState.config;
+
+            // Restore Sources
+            if (c.sources) {
+                setSources(c.sources);
+            } else {
+                // Migration from old state structure
+                const migratedSources: PivotSourceConfig[] = [];
+                // Add primary
+                migratedSources.push({ id: 'main', datasetId: currentDataset.id, isPrimary: true, color: SOURCE_COLORS[0] });
+                // Add joins
+                if (c.joins) {
+                    c.joins.forEach((j: PivotJoin, idx: number) => {
+                        migratedSources.push({
+                            id: j.id,
+                            datasetId: j.datasetId,
+                            isPrimary: false,
+                            joinConfig: { primaryKey: j.joinKeyPrimary, secondaryKey: j.joinKeySecondary },
+                            color: SOURCE_COLORS[(idx + 1) % SOURCE_COLORS.length]
+                        });
+                    });
+                }
+                setSources(migratedSources);
+            }
+
+            setRowFields(c.rowFields || []);
+            setColFields(c.colFields || (c.colField ? [c.colField] : []));
+            setColGrouping(c.colGrouping || 'none');
+            setValField(c.valField || '');
+            setAggType((c.aggType as AggregationType) || 'count');
+            setValFormatting(c.valFormatting || {});
+            if (c.filters) {
+                const loadedFilters = c.filters.map((f: any) => {
+                    if (f.values) return { field: f.field, operator: 'in', value: f.values };
+                    return f;
+                });
+                setFilters(loadedFilters);
+            } else {
+                setFilters([]);
+            }
+            setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
+            setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
+            setShowVariations(c.showVariations !== undefined ? c.showVariations : false);
+            setSortBy(c.sortBy || 'label');
+            setSortOrder(c.sortOrder || 'asc');
+            setStyleRules(c.styleRules || []);
+            if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
+        } else {
+            // Default Empty State
+            setSources([]);
+            setRowFields([]);
+            setColFields([]);
+            setValField('');
+            setFilters([]);
+        }
+        setIsInitialized(true);
+    }, [currentDataset?.id, lastPivotState]);
+
+    // Auto-select batch
+    useEffect(() => {
+        if (isLoading || !isInitialized) return;
+        if (datasetBatches.length === 0) {
+            if (selectedBatchId) setSelectedBatchId('');
+            return;
+        }
+        const exists = datasetBatches.find(b => b.id === selectedBatchId);
+        if (!exists) setSelectedBatchId(datasetBatches[0].id);
+    }, [datasetBatches, selectedBatchId, isLoading, isInitialized]);
+
+    // --- HELPERS ---
+    const currentBatch = useMemo(() =>
+        datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0],
+        [datasetBatches, selectedBatchId]);
+
+    // Group fields by dataset for the UI
+    const groupedFields = useMemo(() => {
+        const groups: any[] = [];
+
+        // Iterate through our configured sources
+        sources.forEach(src => {
+            const ds = datasets.find(d => d.id === src.datasetId);
+            if (!ds) return;
+
+            let fields = [];
+            if (src.isPrimary) {
+                fields = [...ds.fields];
+                if (ds.calculatedFields) {
+                    fields.push(...ds.calculatedFields.map(cf => cf.name));
+                }
+            } else {
+                // Prefix fields for secondary sources
+                const nativeFields = ds.fields.map(f => `[${ds.name}] ${f}`);
+                const calcFields = (ds.calculatedFields || []).map(f => `[${ds.name}] ${f.name}`);
+                fields = [...nativeFields, ...calcFields];
+            }
+
+            groups.push({
+                id: src.id,
+                name: ds.name,
+                isPrimary: src.isPrimary,
+                fields: fields,
+                color: src.color,
+                sourceConfig: src
+            });
+        });
+
+        return groups;
+    }, [sources, datasets]);
+
+    // Auto-expand sections when sources change
+    useEffect(() => {
+        const newExpanded = { ...expandedSections };
+        sources.forEach(s => {
+            if (newExpanded[s.id] === undefined) newExpanded[s.id] = true;
+        });
+        setExpandedSections(newExpanded);
+    }, [sources.length]);
+
+    // --- BLENDING LOGIC ---
+    const blendedRows = useMemo(() => {
+        if (!currentBatch || !primaryDataset) return [];
+
+        // 1. Prepare Primary Rows
+        const calcFields = primaryDataset.calculatedFields || [];
+        let rows = currentBatch.rows;
+        if (calcFields.length > 0) {
+            rows = rows.map(r => {
+                const enriched = { ...r };
+                calcFields.forEach(cf => {
+                    enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                });
+                return enriched;
+            });
+        }
+
+        // 2. Blend Secondary Sources
+        const secondarySources = sources.filter(s => !s.isPrimary);
+
+        if (secondarySources.length > 0) {
+            secondarySources.forEach(src => {
+                const secDS = datasets.find(d => d.id === src.datasetId);
+                const join = src.joinConfig;
+
+                if (secDS && join) {
+                    const secBatches = batches
+                        .filter(b => b.datasetId === src.datasetId)
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                    if (secBatches.length > 0) {
+                        const secBatch = secBatches[0];
+                        let secRows = secBatch.rows;
+
+                        // Enrich secondary rows
+                        if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
+                            secRows = secRows.map(r => {
+                                const enriched = { ...r };
+                                secDS.calculatedFields?.forEach(cf => {
+                                    enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                                });
+                                return enriched;
+                            });
+                        }
+
+                        // Build Lookup Map
+                        const lookup = new Map<string, any>();
+                        secRows.forEach(r => {
+                            const k = String(r[join.secondaryKey]).trim();
+                            if (k) lookup.set(k, r);
+                        });
+
+                        // Merge
+                        rows = rows.map(row => {
+                            const k = String(row[join.primaryKey]).trim();
+                            const match = lookup.get(k);
+                            if (match) {
+                                const prefixedMatch: any = {};
+                                Object.keys(match).forEach(key => {
+                                    if (key !== 'id') prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
+                                });
+                                return { ...row, ...prefixedMatch };
+                            }
+                            return row;
+                        });
+                    }
+                }
+            });
+        }
+        return rows;
+    }, [currentBatch, sources, primaryDataset, datasets, batches]);
+
+    // --- ASYNC CALCULATION ---
+    useEffect(() => {
+        setIsCalculating(true);
+        const timer = setTimeout(() => {
+            const result = calculatePivotData({
+                rows: blendedRows,
+                rowFields, colFields, colGrouping, valField, aggType, filters,
+                sortBy, sortOrder, showSubtotals, showVariations,
+                currentDataset: primaryDataset, // Pass context
+                datasets // Pass all datasets for lookup
+            });
+            setPivotData(result);
+            setIsCalculating(false);
+        }, 10);
+        return () => clearTimeout(timer);
+    }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets]);
+
+    // --- HANDLERS ---
+    const handleValFieldChange = (newField: string) => {
+        setValField(newField);
+        setValFormatting({});
+        if (blendedRows.length > 0) {
+            const sample = blendedRows.slice(0, 50).map(r => r[newField] !== undefined ? String(r[newField]) : '');
+            const type = detectColumnType(sample);
+            setAggType(type === 'number' ? 'sum' : 'count');
+        }
+    };
+
+    const isColFieldDate = useMemo(() => {
+        if (colFields.length === 0 || blendedRows.length === 0) return false;
+        return colFields.some(field => {
+            const sample = blendedRows.slice(0, 50).map(r => r[field] !== undefined ? String(r[field]) : '');
+            return detectColumnType(sample) === 'date';
+        });
+    }, [colFields, blendedRows]);
+
+    useEffect(() => {
+        if (!isColFieldDate) setColGrouping('none');
+    }, [colFields, isColFieldDate]);
+
+    // --- DRAG AND DROP LOGIC (FIXED) ---
+    const handleDragStart = (e: React.DragEvent, field: string, source: 'list' | DropZoneType) => {
+        setDraggedField(field);
+        e.dataTransfer.effectAllowed = 'move';
+        // IMPORTANT: Serialize all data into transfer to avoid stale state in drop handler
+        const dragData = JSON.stringify({ field, source });
+        e.dataTransfer.setData('application/json', dragData);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, targetZone: DropZoneType) => {
+        e.preventDefault();
+
+        const dataStr = e.dataTransfer.getData('application/json');
+        if (!dataStr) return;
+
+        let field: string, source: string;
+        try {
+            const parsed = JSON.parse(dataStr);
+            field = parsed.field;
+            source = parsed.source;
+        } catch (e) {
+            return;
+        }
+
+        if (!field) return;
+
+        // Logic to remove from old zone
+        if (source === 'row') setRowFields(prev => prev.filter(f => f !== field));
+        if (source === 'col') setColFields(prev => prev.filter(f => f !== field));
+        if (source === 'val' && valField === field) setValField('');
+        if (source === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
+
+        // Logic to add to new zone
+        if (targetZone === 'row') {
+            if (!rowFields.includes(field) && rowFields.length < 5) setRowFields(prev => [...prev, field]);
+        } else if (targetZone === 'col') {
+            if (!colFields.includes(field) && colFields.length < 3) setColFields(prev => [...prev, field]);
+        } else if (targetZone === 'val') {
+            handleValFieldChange(field);
+        } else if (targetZone === 'filter') {
+            if (!filters.some(f => f.field === field)) setFilters(prev => [...prev, { field: field, operator: 'in', value: [] }]);
+        }
+
+        setDraggedField(null);
+    };
+
+    const removeField = (zone: DropZoneType, field: string) => {
+        if (zone === 'row') setRowFields(prev => prev.filter(f => f !== field));
+        if (zone === 'col') setColFields(prev => prev.filter(f => f !== field));
+        if (zone === 'val') setValField('');
+        if (zone === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
+    };
+
+    // --- EXPORT & MISC ---
+    const handleExport = (format: 'pdf' | 'html', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
+        setShowExportMenu(false);
+        const title = `TCD - ${primaryDataset?.name || 'Analyse'}`;
+        exportView(format, 'pivot-export-container', title, companyLogo, pdfMode);
+    };
+
+    const handleToChart = () => {
+        if (!primaryDataset) return;
+        if (rowFields.length === 0) {
+            alert("Veuillez configurer au moins une ligne pour générer un graphique.");
+            return;
+        }
+        const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
+        navigate('/analytics', { state: { fromPivot: pivotConfig } });
+    };
+
+    const handleSaveAnalysis = () => {
+        if (!analysisName.trim() || !primaryDataset) return;
+        saveAnalysis({
+            name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
             config: {
-                sources, // Save the full source stack
-                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations,
-                sortBy, sortOrder, styleRules, selectedBatchId 
+                sources, // Save full stack
+                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId
             }
         });
-     }
-  }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized]);
+        setAnalysisName('');
+        setIsSaving(false);
+    };
 
-  // Load State
-  useEffect(() => {
-     // Only load if we haven't initialized yet
-     if (isInitialized) return;
+    // --- SOURCE MANAGEMENT ---
 
-     if (lastPivotState && currentDataset && lastPivotState.datasetId === currentDataset.id) {
-         const c = lastPivotState.config;
-         
-         // Restore Sources
-         if (c.sources) {
-             setSources(c.sources);
-         } else {
-             // Migration from old state structure
-             const migratedSources: PivotSourceConfig[] = [];
-             // Add primary
-             migratedSources.push({ id: 'main', datasetId: currentDataset.id, isPrimary: true, color: SOURCE_COLORS[0] });
-             // Add joins
-             if (c.joins) {
-                 c.joins.forEach((j: PivotJoin, idx: number) => {
-                     migratedSources.push({
-                         id: j.id,
-                         datasetId: j.datasetId,
-                         isPrimary: false,
-                         joinConfig: { primaryKey: j.joinKeyPrimary, secondaryKey: j.joinKeySecondary },
-                         color: SOURCE_COLORS[(idx + 1) % SOURCE_COLORS.length]
-                     });
-                 });
-             }
-             setSources(migratedSources);
-         }
+    const startAddSource = () => {
+        setIsAddingSource(true);
+        setNewSourceConfig({ targetId: '', key1: '', key2: '' });
+    };
 
-         setRowFields(c.rowFields || []);
-         setColFields(c.colFields || (c.colField ? [c.colField] : []));
-         setColGrouping(c.colGrouping || 'none');
-         setValField(c.valField || '');
-         setAggType((c.aggType as AggregationType) || 'count');
-         setValFormatting(c.valFormatting || {});
-         if (c.filters) {
-             const loadedFilters = c.filters.map((f: any) => {
-                 if (f.values) return { field: f.field, operator: 'in', value: f.values };
-                 return f;
-             });
-             setFilters(loadedFilters);
-         } else {
-             setFilters([]);
-         }
-         setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
-         setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
-         setShowVariations(c.showVariations !== undefined ? c.showVariations : false);
-         setSortBy(c.sortBy || 'label');
-         setSortOrder(c.sortOrder || 'asc');
-         setStyleRules(c.styleRules || []);
-         if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
-     } else {
-         // Default Empty State
-         setSources([]);
-         setRowFields([]);
-         setColFields([]);
-         setValField('');
-         setFilters([]);
-     }
-     setIsInitialized(true);
-  }, [currentDataset?.id, lastPivotState]);
+    const confirmAddSource = () => {
+        if (!newSourceConfig.targetId) return;
 
-  // Auto-select batch
-  useEffect(() => {
-    if (isLoading || !isInitialized) return; 
-    if (datasetBatches.length === 0) {
-       if (selectedBatchId) setSelectedBatchId('');
-       return;
-    }
-    const exists = datasetBatches.find(b => b.id === selectedBatchId);
-    if (!exists) setSelectedBatchId(datasetBatches[0].id);
-  }, [datasetBatches, selectedBatchId, isLoading, isInitialized]);
+        const isPrimary = sources.length === 0;
 
-  // --- HELPERS ---
-  const currentBatch = useMemo(() => 
-    datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0], 
-  [datasetBatches, selectedBatchId]);
+        // If adding primary, we don't need keys
+        if (isPrimary) {
+            const newSource: PivotSourceConfig = {
+                id: generateId(),
+                datasetId: newSourceConfig.targetId,
+                isPrimary: true,
+                color: SOURCE_COLORS[0]
+            };
+            setSources([newSource]);
+        } else {
+            // Adding secondary requires keys
+            if (!newSourceConfig.key1 || !newSourceConfig.key2) return;
 
-  // Group fields by dataset for the UI
-  const groupedFields = useMemo(() => {
-      const groups = [];
-      
-      // Iterate through our configured sources
-      sources.forEach(src => {
-          const ds = datasets.find(d => d.id === src.datasetId);
-          if (!ds) return;
+            const newSource: PivotSourceConfig = {
+                id: generateId(),
+                datasetId: newSourceConfig.targetId,
+                isPrimary: false,
+                joinConfig: {
+                    primaryKey: newSourceConfig.key1,
+                    secondaryKey: newSourceConfig.key2
+                },
+                color: SOURCE_COLORS[sources.length % SOURCE_COLORS.length]
+            };
+            setSources(prev => [...prev, newSource]);
+        }
 
-          let fields = [];
-          if (src.isPrimary) {
-              fields = [...ds.fields];
-              if (ds.calculatedFields) {
-                  fields.push(...ds.calculatedFields.map(cf => cf.name));
-              }
-          } else {
-              // Prefix fields for secondary sources
-              const nativeFields = ds.fields.map(f => `[${ds.name}] ${f}`);
-              const calcFields = (ds.calculatedFields || []).map(f => `[${ds.name}] ${f.name}`);
-              fields = [...nativeFields, ...calcFields];
-          }
+        setIsAddingSource(false);
+    };
 
-          groups.push({
-              id: src.id,
-              name: ds.name,
-              isPrimary: src.isPrimary,
-              fields: fields,
-              color: src.color,
-              sourceConfig: src
-          });
-      });
+    const removeSource = (sourceId: string) => {
+        const sourceToRemove = sources.find(s => s.id === sourceId);
+        if (!sourceToRemove) return;
 
-      return groups;
-  }, [sources, datasets]);
+        if (sourceToRemove.isPrimary) {
+            if (window.confirm("Supprimer la source principale réinitialisera tout le tableau. Continuer ?")) {
+                setSources([]);
+                setRowFields([]);
+                setColFields([]);
+                setValField('');
+                setFilters([]);
+            }
+        } else {
+            setSources(prev => prev.filter(s => s.id !== sourceId));
+            // Cleanup fields used from this source
+            const ds = datasets.find(d => d.id === sourceToRemove.datasetId);
+            if (ds) {
+                const prefix = `[${ds.name}] `;
+                setRowFields(prev => prev.filter(f => !f.startsWith(prefix)));
+                setColFields(prev => prev.filter(f => !f.startsWith(prefix)));
+                if (valField.startsWith(prefix)) setValField('');
+                setFilters(prev => prev.filter(f => !f.field.startsWith(prefix)));
+            }
+        }
+    };
 
-  // Auto-expand sections when sources change
-  useEffect(() => {
-      const newExpanded = { ...expandedSections };
-      sources.forEach(s => {
-          if (newExpanded[s.id] === undefined) newExpanded[s.id] = true;
-      });
-      setExpandedSections(newExpanded);
-  }, [sources.length]);
-
-  // --- BLENDING LOGIC ---
-  const blendedRows = useMemo(() => {
-     if (!currentBatch || !primaryDataset) return [];
-     
-     // 1. Prepare Primary Rows
-     const calcFields = primaryDataset.calculatedFields || [];
-     let rows = currentBatch.rows;
-     if (calcFields.length > 0) {
-         rows = rows.map(r => {
-             const enriched = { ...r };
-             calcFields.forEach(cf => {
-                 enriched[cf.name] = evaluateFormula(enriched, cf.formula);
-             });
-             return enriched;
-         });
-     }
-
-     // 2. Blend Secondary Sources
-     const secondarySources = sources.filter(s => !s.isPrimary);
-     
-     if (secondarySources.length > 0) {
-         secondarySources.forEach(src => {
-             const secDS = datasets.find(d => d.id === src.datasetId);
-             const join = src.joinConfig;
-             
-             if (secDS && join) {
-                 const secBatches = batches
-                    .filter(b => b.datasetId === src.datasetId)
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                 
-                 if (secBatches.length > 0) {
-                     const secBatch = secBatches[0];
-                     let secRows = secBatch.rows;
-                     
-                     // Enrich secondary rows
-                     if (secDS.calculatedFields && secDS.calculatedFields.length > 0) {
-                         secRows = secRows.map(r => {
-                             const enriched = { ...r };
-                             secDS.calculatedFields?.forEach(cf => {
-                                 enriched[cf.name] = evaluateFormula(enriched, cf.formula);
-                             });
-                             return enriched;
-                         });
-                     }
-
-                     // Build Lookup Map
-                     const lookup = new Map<string, any>();
-                     secRows.forEach(r => {
-                        const k = String(r[join.secondaryKey]).trim();
-                        if (k) lookup.set(k, r);
-                     });
-
-                     // Merge
-                     rows = rows.map(row => {
-                        const k = String(row[join.primaryKey]).trim();
-                        const match = lookup.get(k);
-                        if (match) {
-                           const prefixedMatch: any = {};
-                           Object.keys(match).forEach(key => {
-                               if (key !== 'id') prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
-                           });
-                           return { ...row, ...prefixedMatch };
-                        }
-                        return row;
-                     });
-                 }
-             }
-         });
-     }
-     return rows;
-  }, [currentBatch, sources, primaryDataset, datasets, batches]);
-
-  // --- ASYNC CALCULATION ---
-  useEffect(() => {
-      setIsCalculating(true);
-      const timer = setTimeout(() => {
-          const result = calculatePivotData({
-            rows: blendedRows,
-            rowFields, colFields, colGrouping, valField, aggType, filters, 
-            sortBy, sortOrder, showSubtotals, showVariations, 
-            currentDataset: primaryDataset, // Pass context
-            datasets // Pass all datasets for lookup
-         });
-         setPivotData(result);
-         setIsCalculating(false);
-      }, 10); 
-      return () => clearTimeout(timer);
-  }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets]);
-
-  // --- HANDLERS ---
-  const handleValFieldChange = (newField: string) => {
-     setValField(newField);
-     setValFormatting({});
-     if (blendedRows.length > 0) {
-        const sample = blendedRows.slice(0, 50).map(r => r[newField] !== undefined ? String(r[newField]) : '');
-        const type = detectColumnType(sample);
-        setAggType(type === 'number' ? 'sum' : 'count');
-     }
-  };
-
-  const isColFieldDate = useMemo(() => {
-      if (colFields.length === 0 || blendedRows.length === 0) return false;
-      return colFields.some(field => {
-          const sample = blendedRows.slice(0, 50).map(r => r[field] !== undefined ? String(r[field]) : '');
-          return detectColumnType(sample) === 'date';
-      });
-  }, [colFields, blendedRows]);
-
-  useEffect(() => {
-      if (!isColFieldDate) setColGrouping('none');
-  }, [colFields, isColFieldDate]);
-
-  // --- DRAG AND DROP LOGIC (FIXED) ---
-  const handleDragStart = (e: React.DragEvent, field: string, source: 'list' | DropZoneType) => {
-      setDraggedField(field);
-      e.dataTransfer.effectAllowed = 'move';
-      // IMPORTANT: Serialize all data into transfer to avoid stale state in drop handler
-      const dragData = JSON.stringify({ field, source });
-      e.dataTransfer.setData('application/json', dragData);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, targetZone: DropZoneType) => {
-      e.preventDefault();
-      
-      const dataStr = e.dataTransfer.getData('application/json');
-      if (!dataStr) return;
-      
-      let field: string, source: string;
-      try {
-          const parsed = JSON.parse(dataStr);
-          field = parsed.field;
-          source = parsed.source;
-      } catch (e) {
-          return;
-      }
-      
-      if (!field) return;
-
-      // Logic to remove from old zone
-      if (source === 'row') setRowFields(prev => prev.filter(f => f !== field));
-      if (source === 'col') setColFields(prev => prev.filter(f => f !== field));
-      if (source === 'val' && valField === field) setValField('');
-      if (source === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
-      
-      // Logic to add to new zone
-      if (targetZone === 'row') {
-          if (!rowFields.includes(field) && rowFields.length < 5) setRowFields(prev => [...prev, field]);
-      } else if (targetZone === 'col') {
-          if (!colFields.includes(field) && colFields.length < 3) setColFields(prev => [...prev, field]);
-      } else if (targetZone === 'val') {
-          handleValFieldChange(field);
-      } else if (targetZone === 'filter') {
-          if (!filters.some(f => f.field === field)) setFilters(prev => [...prev, { field: field, operator: 'in', value: [] }]);
-      }
-      
-      setDraggedField(null);
-  };
-
-  const removeField = (zone: DropZoneType, field: string) => {
-      if (zone === 'row') setRowFields(prev => prev.filter(f => f !== field));
-      if (zone === 'col') setColFields(prev => prev.filter(f => f !== field));
-      if (zone === 'val') setValField('');
-      if (zone === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
-  };
-
-  // --- EXPORT & MISC ---
-  const handleExport = (format: 'pdf' | 'html', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
-      setShowExportMenu(false);
-      const title = `TCD - ${primaryDataset?.name || 'Analyse'}`;
-      exportView(format, 'pivot-export-container', title, companyLogo, pdfMode);
-  };
-
-  const handleToChart = () => {
-      if (!primaryDataset) return;
-      if (rowFields.length === 0) {
-          alert("Veuillez configurer au moins une ligne pour générer un graphique.");
-          return;
-      }
-      const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
-      navigate('/analytics', { state: { fromPivot: pivotConfig } });
-  };
-
-  const handleSaveAnalysis = () => {
-      if (!analysisName.trim() || !primaryDataset) return;
-      saveAnalysis({
-          name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
-          config: { 
-              sources, // Save full stack
-              rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId 
-          }
-      });
-      setAnalysisName('');
-      setIsSaving(false);
-  };
-
-  // --- SOURCE MANAGEMENT ---
-  
-  const startAddSource = () => {
-      setIsAddingSource(true);
-      setNewSourceConfig({ targetId: '', key1: '', key2: '' });
-  };
-
-  const confirmAddSource = () => {
-      if (!newSourceConfig.targetId) return;
-      
-      const isPrimary = sources.length === 0;
-      
-      // If adding primary, we don't need keys
-      if (isPrimary) {
-          const newSource: PivotSourceConfig = {
-              id: generateId(),
-              datasetId: newSourceConfig.targetId,
-              isPrimary: true,
-              color: SOURCE_COLORS[0]
-          };
-          setSources([newSource]);
-      } else {
-          // Adding secondary requires keys
-          if (!newSourceConfig.key1 || !newSourceConfig.key2) return;
-          
-          const newSource: PivotSourceConfig = {
-              id: generateId(),
-              datasetId: newSourceConfig.targetId,
-              isPrimary: false,
-              joinConfig: {
-                  primaryKey: newSourceConfig.key1,
-                  secondaryKey: newSourceConfig.key2
-              },
-              color: SOURCE_COLORS[sources.length % SOURCE_COLORS.length]
-          };
-          setSources(prev => [...prev, newSource]);
-      }
-      
-      setIsAddingSource(false);
-  };
-
-  const removeSource = (sourceId: string) => {
-      const sourceToRemove = sources.find(s => s.id === sourceId);
-      if (!sourceToRemove) return;
-
-      if (sourceToRemove.isPrimary) {
-          if (window.confirm("Supprimer la source principale réinitialisera tout le tableau. Continuer ?")) {
-              setSources([]);
-              setRowFields([]);
-              setColFields([]);
-              setValField('');
-              setFilters([]);
-          }
-      } else {
-          setSources(prev => prev.filter(s => s.id !== sourceId));
-          // Cleanup fields used from this source
-          const ds = datasets.find(d => d.id === sourceToRemove.datasetId);
-          if (ds) {
-              const prefix = `[${ds.name}] `;
-              setRowFields(prev => prev.filter(f => !f.startsWith(prefix)));
-              setColFields(prev => prev.filter(f => !f.startsWith(prefix)));
-              if(valField.startsWith(prefix)) setValField('');
-              setFilters(prev => prev.filter(f => !f.field.startsWith(prefix)));
-          }
-      }
-  };
-
-  // Auto-detect keys logic
-  useEffect(() => {
-      if (isAddingSource && newSourceConfig.targetId && !newSourceConfig.key1 && sources.length > 0) {
-          const targetDS = datasets.find(d => d.id === newSourceConfig.targetId);
-          if (primaryDataset && targetDS) {
-              const match = primaryDataset.fields.find(f => targetDS.fields.includes(f));
-              if (match) {
-                  setNewSourceConfig(prev => ({ ...prev, key1: match, key2: match }));
-              }
-          }
-      }
-  }, [isAddingSource, newSourceConfig.targetId, datasets, primaryDataset]);
-
-  const toggleSection = (id: string) => {
-      setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // VIRTUALIZATION SETUP
-  const rowVirtualizer = useVirtualizer({
-    count: pivotData ? pivotData.displayRows.length : 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 35, // Updated estimate
-    overscan: 20
-  });
-
-  // FORMAT OUTPUT
-  const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, primaryDataset, undefined, datasets, valFormatting);
-
-  // COMPONENT: Draggable Field Chip
-  const FieldChip: React.FC<{ field: string, zone: DropZoneType | 'list', onDelete?: () => void, disabled?: boolean, color?: string }> = ({ field, zone, onDelete, disabled, color = 'blue' }) => {
-      const isJoined = field.startsWith('[');
-      const displayLabel = field.includes('] ') ? field.split('] ')[1] : field;
-      
-      let baseStyle = `bg-white border-slate-200 text-slate-700 hover:border-${color}-400`;
-      if (isJoined) baseStyle = `bg-${color}-50 border-${color}-200 text-${color}-700`;
-      
-      if (disabled && zone === 'list') {
-          baseStyle = 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed';
-      }
-
-      return (
-        <div 
-            draggable={!disabled}
-            onDragStart={(e) => {
-                if (disabled) {
-                    e.preventDefault();
-                    return;
+    // Auto-detect keys logic
+    useEffect(() => {
+        if (isAddingSource && newSourceConfig.targetId && !newSourceConfig.key1 && sources.length > 0) {
+            const targetDS = datasets.find(d => d.id === newSourceConfig.targetId);
+            if (primaryDataset && targetDS) {
+                const match = primaryDataset.fields.find(f => targetDS.fields.includes(f));
+                if (match) {
+                    setNewSourceConfig(prev => ({ ...prev, key1: match, key2: match }));
                 }
-                handleDragStart(e, field, zone);
-            }}
-            className={`group flex items-center justify-between gap-2 px-2 py-1.5 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-xs font-medium select-none animate-in fade-in zoom-in-95 duration-200 
+            }
+        }
+    }, [isAddingSource, newSourceConfig.targetId, datasets, primaryDataset]);
+
+    const toggleSection = (id: string) => {
+        setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    // VIRTUALIZATION SETUP
+    const rowVirtualizer = useVirtualizer({
+        count: pivotData ? pivotData.displayRows.length : 0,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 35, // Updated estimate
+        overscan: 20
+    });
+
+    // FORMAT OUTPUT
+    const formatOutput = (val: string | number) => formatPivotOutput(val, valField, aggType, primaryDataset, undefined, datasets, valFormatting);
+
+    // COMPONENT: Draggable Field Chip
+    const FieldChip: React.FC<{ field: string, zone: DropZoneType | 'list', onDelete?: () => void, disabled?: boolean, color?: string }> = ({ field, zone, onDelete, disabled, color = 'blue' }) => {
+        const isJoined = field.startsWith('[');
+        const displayLabel = field.includes('] ') ? field.split('] ')[1] : field;
+
+        let baseStyle = `bg-white border-slate-200 text-slate-700 hover:border-${color}-400`;
+        if (isJoined) baseStyle = `bg-${color}-50 border-${color}-200 text-${color}-700`;
+
+        if (disabled && zone === 'list') {
+            baseStyle = 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed';
+        }
+
+        return (
+            <div
+                draggable={!disabled}
+                onDragStart={(e) => {
+                    if (disabled) {
+                        e.preventDefault();
+                        return;
+                    }
+                    handleDragStart(e, field, zone);
+                }}
+                className={`group flex items-center justify-between gap-2 px-2 py-1.5 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-xs font-medium select-none animate-in fade-in zoom-in-95 duration-200 
                 ${baseStyle} ${!disabled ? 'cursor-grab' : ''}
             `}
-        >
-            <div className="flex items-center gap-1.5 overflow-hidden">
-                <GripVertical className={`w-3 h-3 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
-                <span className="truncate" title={field}>{displayLabel}</span>
-            </div>
-            {onDelete && (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                    className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
-                >
-                    <X className="w-3 h-3" />
-                </button>
-            )}
-        </div>
-      );
-  };
-
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom = virtualItems.length > 0 ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end : 0;
-  const totalColumns = rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0);
-
-  return (
-    <div className="h-full flex flex-col p-4 gap-4 relative">
-       
-       {/* HEADER */}
-       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-             <Layout className="w-5 h-5 text-blue-600" />
-             <div>
-                <h2 className="text-base font-bold text-slate-800">Tableau Croisé Dynamique</h2>
-                <p className="text-[10px] text-slate-500">Glissez les champs pour analyser</p>
-             </div>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2">
-             {/* ACTIONS RAPIDES */}
-             <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50">
-                <PieChart className="w-3 h-3" /> Graphique
-             </button>
-
-             <div className="relative">
-                <button
-                   onClick={() => setShowExportMenu(!showExportMenu)}
-                   disabled={!primaryDataset}
-                   className="px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50"
-                >
-                   <FileDown className="w-3 h-3" /> Export
-                </button>
-                {showExportMenu && (
-                   <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
-                      <button onClick={() => handleExport('pdf', 'adaptive')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
-                         <Printer className="w-3 h-3" /> PDF
-                      </button>
-                      <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
-                         <FileType className="w-3 h-3" /> HTML
-                      </button>
-                   </div>
-                )}
-             </div>
-
-             <div className="h-5 w-px bg-slate-200 mx-1"></div>
-
-             {/* SAUVEGARDE */}
-             {!isSaving ? (
-                 <button onClick={() => setIsSaving(true)} disabled={!primaryDataset} className="p-1.5 text-slate-500 hover:text-blue-600 border border-slate-300 rounded bg-white disabled:opacity-50" title="Sauvegarder"><Save className="w-4 h-4" /></button>
-             ) : (
-                 <div className="flex items-center gap-1 animate-in fade-in">
-                    <input type="text" className="p-1 text-xs border border-blue-300 rounded w-24" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
-                    <button onClick={handleSaveAnalysis} className="p-1 bg-blue-600 text-white rounded"><Check className="w-3 h-3" /></button>
-                    <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded"><X className="w-3 h-3" /></button>
-                 </div>
-             )}
-          </div>
-       </div>
-
-       <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0">
-          
-          {/* LEFT PANEL : SOURCES & FIELDS */}
-          <div className="xl:w-80 flex-shrink-0 flex flex-col gap-4 min-w-0">
-             
-             {/* 1. DATA SOURCES STACK */}
-             <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                <div className="p-3 bg-slate-50 border-b border-slate-200">
-                    <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1"><Database className="w-3 h-3" /> Sources de données</h3>
+            >
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                    <GripVertical className={`w-3 h-3 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
+                    <span className="truncate" title={field}>{displayLabel}</span>
                 </div>
-                
-                <div className="p-3 space-y-3">
-                    
-                    {/* LISTE DES SOURCES */}
-                    {sources.length === 0 ? (
-                        <div className="text-center p-4 border border-dashed border-slate-200 rounded bg-slate-50/50">
-                            <p className="text-xs text-slate-400 mb-2">Aucune source sélectionnée</p>
-                            <button 
-                                onClick={startAddSource}
-                                className="w-full py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                            >
-                                <Plus className="w-3 h-3" /> Définir source principale
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {sources.map((src) => {
-                                const ds = datasets.find(d => d.id === src.datasetId);
-                                if (!ds) return null;
+                {onDelete && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                        className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                )}
+            </div>
+        );
+    };
 
-                                return (
-                                    <div key={src.id} className={`relative pl-3 border-l-2 border-${src.color}-500 group`}>
-                                        <div className="flex justify-between items-center">
-                                            <div className={`text-xs font-bold text-${src.color}-700 flex items-center gap-1`}>
-                                                {src.isPrimary ? <Database className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />} 
-                                                {ds.name}
-                                            </div>
-                                            <button onClick={() => removeSource(src.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
-                                        </div>
-                                        
-                                        {src.isPrimary ? (
-                                            <select 
-                                                className="mt-1 w-full text-[10px] border border-slate-200 rounded p-1 bg-slate-50 text-slate-600"
-                                                value={selectedBatchId}
-                                                onChange={(e) => setSelectedBatchId(e.target.value)}
-                                            >
-                                                {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
-                                            </select>
-                                        ) : (
-                                            <div className="text-[9px] text-slate-400 mt-0.5">
-                                                Clé: <span className="font-mono">{src.joinConfig?.primaryKey}</span> = <span className="font-mono">[{ds.name}] {src.joinConfig?.secondaryKey}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+    const paddingBottom = virtualItems.length > 0 ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end : 0;
+    const totalColumns = rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0);
 
-                            {/* ADD SOURCE CONTROL (SECONDARY) */}
-                            {!isAddingSource ? (
-                                <button 
-                                    onClick={startAddSource}
-                                    className="w-full py-1.5 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1"
-                                >
-                                    <Plus className="w-3 h-3" /> Croiser une autre source
+    return (
+        <div className="h-full flex flex-col p-4 gap-4 relative">
+
+            {/* HEADER */}
+            <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-2">
+                    <Layout className="w-5 h-5 text-blue-600" />
+                    <div>
+                        <h2 className="text-base font-bold text-slate-800">Tableau Croisé Dynamique</h2>
+                        <p className="text-[10px] text-slate-500">Glissez les champs pour analyser</p>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* ACTIONS RAPIDES */}
+                    <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50">
+                        <PieChart className="w-3 h-3" /> Graphique
+                    </button>
+
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            disabled={!primaryDataset}
+                            className="px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50"
+                        >
+                            <FileDown className="w-3 h-3" /> Export
+                        </button>
+                        {showExportMenu && (
+                            <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                                <button onClick={() => handleExport('pdf', 'adaptive')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
+                                    <Printer className="w-3 h-3" /> PDF
                                 </button>
-                            ) : null}
+                                <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
+                                    <FileType className="w-3 h-3" /> HTML
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="h-5 w-px bg-slate-200 mx-1"></div>
+
+                    {/* SAUVEGARDE */}
+                    {!isSaving ? (
+                        <button onClick={() => setIsSaving(true)} disabled={!primaryDataset} className="p-1.5 text-slate-500 hover:text-blue-600 border border-slate-300 rounded bg-white disabled:opacity-50" title="Sauvegarder"><Save className="w-4 h-4" /></button>
+                    ) : (
+                        <div className="flex items-center gap-1 animate-in fade-in">
+                            <input type="text" className="p-1 text-xs border border-blue-300 rounded w-24" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
+                            <button onClick={handleSaveAnalysis} className="p-1 bg-blue-600 text-white rounded"><Check className="w-3 h-3" /></button>
+                            <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded"><X className="w-3 h-3" /></button>
                         </div>
                     )}
+                </div>
+            </div>
 
-                    {/* MODAL AJOUT */}
-                    {isAddingSource && (
-                        <div className="bg-slate-50 p-2 rounded border border-indigo-100 animate-in fade-in">
-                            <div className="text-[10px] font-bold text-indigo-800 mb-2">
-                                {sources.length === 0 ? "Choix de la source principale" : "Nouvelle jointure"}
-                            </div>
-                            <div className="space-y-2">
-                                <select 
-                                    className="w-full text-[10px] border border-slate-300 rounded p-1"
-                                    value={newSourceConfig.targetId}
-                                    onChange={e => setNewSourceConfig({...newSourceConfig, targetId: e.target.value})}
-                                >
-                                    <option value="">-- Choisir tableau --</option>
-                                    {datasets.filter(d => !sources.some(s => s.datasetId === d.id)).map(d => (
-                                        <option key={d.id} value={d.id}>{d.name}</option>
-                                    ))}
-                                    {currentDataset && !sources.some(s => s.datasetId === currentDataset.id) && (
-                                        <option value={currentDataset.id} className="font-bold">★ {currentDataset.name} (Suggéré)</option>
-                                    )}
-                                </select>
-                                
-                                {sources.length > 0 && newSourceConfig.targetId && (
-                                    <div className="flex items-center gap-1">
-                                        <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key1} onChange={e => setNewSourceConfig({...newSourceConfig, key1: e.target.value})}>
-                                            <option value="">Clé Principale</option>
-                                            {primaryDataset?.fields.map(f => <option key={f} value={f}>{f}</option>)}
-                                        </select>
-                                        <div className="text-slate-400">=</div>
-                                        <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key2} onChange={e => setNewSourceConfig({...newSourceConfig, key2: e.target.value})}>
-                                            <option value="">Clé Cible</option>
-                                            {datasets.find(d => d.id === newSourceConfig.targetId)?.fields.map(f => <option key={f} value={f}>{f}</option>)}
-                                        </select>
-                                    </div>
-                                )}
+            <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0">
 
-                                <div className="flex justify-end gap-1 mt-2">
-                                    <button onClick={() => setIsAddingSource(false)} className="px-2 py-1 text-[10px] text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50">Annuler</button>
-                                    <button 
-                                        onClick={confirmAddSource}
-                                        disabled={!newSourceConfig.targetId || (sources.length > 0 && (!newSourceConfig.key1 || !newSourceConfig.key2))} 
-                                        className="px-2 py-1 text-[10px] text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
+                {/* LEFT PANEL : SOURCES & FIELDS */}
+                <div className="xl:w-80 flex-shrink-0 flex flex-col gap-4 min-w-0">
+
+                    {/* 1. DATA SOURCES STACK */}
+                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                        <div className="p-3 bg-slate-50 border-b border-slate-200">
+                            <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1"><Database className="w-3 h-3" /> Sources de données</h3>
+                        </div>
+
+                        <div className="p-3 space-y-3">
+
+                            {/* LISTE DES SOURCES */}
+                            {sources.length === 0 ? (
+                                <div className="text-center p-4 border border-dashed border-slate-200 rounded bg-slate-50/50">
+                                    <p className="text-xs text-slate-400 mb-2">Aucune source sélectionnée</p>
+                                    <button
+                                        onClick={startAddSource}
+                                        className="w-full py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
                                     >
-                                        Valider
+                                        <Plus className="w-3 h-3" /> Définir source principale
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-             </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {sources.map((src) => {
+                                        const ds = datasets.find(d => d.id === src.datasetId);
+                                        if (!ds) return null;
 
-             {/* 2. FIELDS ACCORDION */}
-             <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[200px] overflow-hidden">
-                <div className="p-2 border-b border-slate-100 bg-slate-50">
-                    <input type="text" placeholder="Rechercher un champ..." className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500" disabled={sources.length === 0} />
-                </div>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                    {sources.length === 0 && (
-                        <div className="text-center py-8 text-slate-300 text-xs italic">
-                            Ajoutez une source pour voir les champs disponibles.
-                        </div>
-                    )}
-                    {groupedFields.map(group => (
-                        <div key={group.id} className="mb-2">
-                            <button 
-                                onClick={() => toggleSection(group.id)}
-                                className={`w-full flex items-center gap-1 text-xs font-bold px-2 py-1.5 rounded transition-colors ${group.isPrimary ? `text-${group.color}-700 bg-${group.color}-50` : `text-${group.color}-700 bg-${group.color}-50`}`}
-                            >
-                                {expandedSections[group.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
-                                {group.name}
-                            </button>
-                            
-                            {expandedSections[group.id] && (
-                                <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
-                                    {group.fields.map(f => (
-                                        <FieldChip 
-                                            key={f} 
-                                            field={f} 
-                                            zone="list"
-                                            disabled={usedFields.has(f)}
-                                            color={group.color} 
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-             </div>
+                                        return (
+                                            <div key={src.id} className={`relative pl-3 border-l-2 border-${src.color}-500 group`}>
+                                                <div className="flex justify-between items-center">
+                                                    <div className={`text-xs font-bold text-${src.color}-700 flex items-center gap-1`}>
+                                                        {src.isPrimary ? <Database className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
+                                                        {ds.name}
+                                                    </div>
+                                                    <button onClick={() => removeSource(src.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
+                                                </div>
 
-             {/* 3. DROP ZONES (Compact Layout) */}
-             <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                {/* ZONES ROW 1: FILTERS & COLUMNS */}
-                <div className="grid grid-cols-2 gap-3">
-                    {/* FILTRES */}
-                    <div 
-                        onDragOver={handleDragOver} 
-                        onDrop={(e) => handleDrop(e, 'filter')}
-                        className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[100px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                    >
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Filter className="w-3 h-3" /> Filtres</div>
-                        <div className="space-y-1.5 flex-1">
-                            {filters.map((f, idx) => (
-                                <div key={idx} className="relative group">
-                                    <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
-                                    {/* Mini Config Filter */}
-                                    <div className="mt-1 pl-1">
-                                        <select 
-                                            className="w-full text-[9px] border border-slate-200 rounded p-0.5 bg-slate-50"
-                                            value={f.operator || 'in'}
-                                            onChange={(e) => {
-                                                const n = [...filters];
-                                                n[idx] = { ...n[idx], operator: e.target.value as any };
-                                                setFilters(n);
-                                            }}
+                                                {src.isPrimary ? (
+                                                    <select
+                                                        className="mt-1 w-full text-[10px] border border-slate-200 rounded p-1 bg-slate-50 text-slate-600"
+                                                        value={selectedBatchId}
+                                                        onChange={(e) => setSelectedBatchId(e.target.value)}
+                                                    >
+                                                        {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-[9px] text-slate-400 mt-0.5">
+                                                        Clé: <span className="font-mono">{src.joinConfig?.primaryKey}</span> = <span className="font-mono">[{ds.name}] {src.joinConfig?.secondaryKey}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* ADD SOURCE CONTROL (SECONDARY) */}
+                                    {!isAddingSource ? (
+                                        <button
+                                            onClick={startAddSource}
+                                            className="w-full py-1.5 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1"
                                         >
-                                            <option value="in">Est égal à</option>
-                                            <option value="contains">Contient</option>
-                                            <option value="gt">&gt;</option>
-                                            <option value="lt">&lt;</option>
+                                            <Plus className="w-3 h-3" /> Croiser une autre source
+                                        </button>
+                                    ) : null}
+                                </div>
+                            )}
+
+                            {/* MODAL AJOUT */}
+                            {isAddingSource && (
+                                <div className="bg-slate-50 p-2 rounded border border-indigo-100 animate-in fade-in">
+                                    <div className="text-[10px] font-bold text-indigo-800 mb-2">
+                                        {sources.length === 0 ? "Choix de la source principale" : "Nouvelle jointure"}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <select
+                                            className="w-full text-[10px] border border-slate-300 rounded p-1"
+                                            value={newSourceConfig.targetId}
+                                            onChange={e => setNewSourceConfig({ ...newSourceConfig, targetId: e.target.value })}
+                                        >
+                                            <option value="">-- Choisir tableau --</option>
+                                            {datasets.filter(d => !sources.some(s => s.datasetId === d.id)).map(d => (
+                                                <option key={d.id} value={d.id}>{d.name}</option>
+                                            ))}
+                                            {currentDataset && !sources.some(s => s.datasetId === currentDataset.id) && (
+                                                <option value={currentDataset.id} className="font-bold">★ {currentDataset.name} (Suggéré)</option>
+                                            )}
                                         </select>
-                                        {/* Simplified Value Input */}
-                                        <input 
-                                            type="text" 
-                                            className="w-full text-[9px] border border-slate-200 rounded p-0.5 mt-0.5"
-                                            placeholder="Valeur..."
-                                            value={Array.isArray(f.value) ? f.value.join(',') : f.value}
-                                            onChange={(e) => {
-                                                const n = [...filters];
-                                                n[idx] = { ...n[idx], value: f.operator === 'in' ? e.target.value.split(',') : e.target.value };
-                                                setFilters(n);
-                                            }}
-                                        />
+
+                                        {sources.length > 0 && newSourceConfig.targetId && (
+                                            <div className="flex items-center gap-1">
+                                                <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key1} onChange={e => setNewSourceConfig({ ...newSourceConfig, key1: e.target.value })}>
+                                                    <option value="">Clé Principale</option>
+                                                    {primaryDataset?.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                                </select>
+                                                <div className="text-slate-400">=</div>
+                                                <select className="w-full text-[10px] border border-slate-300 rounded p-1" value={newSourceConfig.key2} onChange={e => setNewSourceConfig({ ...newSourceConfig, key2: e.target.value })}>
+                                                    <option value="">Clé Cible</option>
+                                                    {datasets.find(d => d.id === newSourceConfig.targetId)?.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end gap-1 mt-2">
+                                            <button onClick={() => setIsAddingSource(false)} className="px-2 py-1 text-[10px] text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50">Annuler</button>
+                                            <button
+                                                onClick={confirmAddSource}
+                                                disabled={!newSourceConfig.targetId || (sources.length > 0 && (!newSourceConfig.key1 || !newSourceConfig.key2))}
+                                                className="px-2 py-1 text-[10px] text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
+                                            >
+                                                Valider
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* COLONNES */}
-                    <div 
-                        onDragOver={handleDragOver} 
-                        onDrop={(e) => handleDrop(e, 'col')}
-                        className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[100px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                    >
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Table2 className="w-3 h-3" /> Colonnes</div>
-                        <div className="space-y-1.5 flex-1">
-                            {colFields.map((f, idx) => (
-                                <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
-                            ))}
-                            {colFields.length === 0 ? <span className="text-[9px] text-slate-300 italic">Déposez des colonnes ici</span> : (
-                                isColFieldDate && (
-                                    <select 
-                                        className="w-full mt-1 text-[9px] border-slate-200 rounded bg-slate-50"
-                                        value={colGrouping}
-                                        onChange={(e) => setColGrouping(e.target.value as any)}
-                                    >
-                                        <option value="none">Date exacte</option>
-                                        <option value="year">Année</option>
-                                        <option value="quarter">Trimestre</option>
-                                        <option value="month">Mois</option>
-                                    </select>
-                                )
                             )}
                         </div>
                     </div>
-                </div>
 
-                {/* ZONES ROW 2: ROWS & VALUES */}
-                <div className="grid grid-cols-2 gap-3">
-                    {/* LIGNES */}
-                    <div 
-                        onDragOver={handleDragOver} 
-                        onDrop={(e) => handleDrop(e, 'row')}
-                        className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[150px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                    >
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Layers className="w-3 h-3" /> Lignes</div>
-                        <div className="space-y-1.5 flex-1">
-                            {rowFields.map((f, idx) => (
-                                <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
-                            ))}
-                            {rowFields.length === 0 && <span className="text-[9px] text-slate-300 italic">Déposez des lignes ici</span>}
+                    {/* 2. FIELDS ACCORDION */}
+                    <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[200px] overflow-hidden">
+                        <div className="p-2 border-b border-slate-100 bg-slate-50">
+                            <input type="text" placeholder="Rechercher un champ..." className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500" disabled={sources.length === 0} />
                         </div>
-                    </div>
 
-                    {/* VALEURS */}
-                    <div 
-                        onDragOver={handleDragOver} 
-                        onDrop={(e) => handleDrop(e, 'val')}
-                        className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[150px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                    >
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Calculator className="w-3 h-3" /> Valeurs</div>
-                        <div className="space-y-1.5 flex-1">
-                            {valField ? (
-                                <div>
-                                    <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
-                                    <div className="mt-2 grid grid-cols-2 gap-1">
-                                        {['count', 'sum', 'avg', 'min', 'max'].map(t => (
-                                            <button 
-                                                key={t}
-                                                onClick={() => setAggType(t as AggregationType)}
-                                                className={`px-1 py-1 text-[9px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                                            >
-                                                {t}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    {/* Format Override */}
-                                    {aggType !== 'count' && (
-                                        <div className="mt-2 pt-2 border-t border-slate-100">
-                                            <input 
-                                                type="number" 
-                                                placeholder="Décimales"
-                                                className="w-full text-[9px] border-slate-200 rounded p-1 mb-1"
-                                                value={valFormatting.decimalPlaces ?? ''}
-                                                onChange={e => setValFormatting({...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined})}
-                                            />
-                                            <input 
-                                                type="text" 
-                                                placeholder="Unité (€)"
-                                                className="w-full text-[9px] border-slate-200 rounded p-1"
-                                                value={valFormatting.unit ?? ''}
-                                                onChange={e => setValFormatting({...valFormatting, unit: e.target.value})}
-                                            />
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                            {sources.length === 0 && (
+                                <div className="text-center py-8 text-slate-300 text-xs italic">
+                                    Ajoutez une source pour voir les champs disponibles.
+                                </div>
+                            )}
+                            {groupedFields.map(group => (
+                                <div key={group.id} className="mb-2">
+                                    <button
+                                        onClick={() => toggleSection(group.id)}
+                                        className={`w-full flex items-center gap-1 text-xs font-bold px-2 py-1.5 rounded transition-colors ${group.isPrimary ? `text-${group.color}-700 bg-${group.color}-50` : `text-${group.color}-700 bg-${group.color}-50`}`}
+                                    >
+                                        {expandedSections[group.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
+                                        {group.name}
+                                    </button>
+
+                                    {expandedSections[group.id] && (
+                                        <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                            {group.fields.map((f: string) => (
+                                                <FieldChip
+                                                    key={f}
+                                                    field={f}
+                                                    zone="list"
+                                                    disabled={usedFields.has(f)}
+                                                    color={group.color}
+                                                />
+                                            ))}
                                         </div>
                                     )}
                                 </div>
-                            ) : <span className="text-[9px] text-slate-300 italic">Déposez une valeur ici</span>}
+                            ))}
                         </div>
                     </div>
-                </div>
-             </div>
 
-             {/* DISPLAY OPTIONS */}
-             <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                <div className="flex flex-col gap-2">
-                    <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
-                    <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
-                    {colFields.length > 0 && aggType !== 'list' && (aggType !== 'min' && aggType !== 'max') && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 animate-in fade-in">
-                            <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Afficher variations (%)" className="text-blue-700 font-bold" />
+                    {/* 3. DROP ZONES (Compact Layout) */}
+                    <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                        {/* ZONES ROW 1: FILTERS & COLUMNS */}
+                        <div className="grid grid-cols-2 gap-3">
+                            {/* FILTRES */}
+                            <div
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, 'filter')}
+                                className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[100px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                            >
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Filter className="w-3 h-3" /> Filtres</div>
+                                <div className="space-y-1.5 flex-1">
+                                    {filters.map((f, idx) => (
+                                        <div key={idx} className="relative group">
+                                            <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
+                                            {/* Mini Config Filter */}
+                                            <div className="mt-1 pl-1">
+                                                <select
+                                                    className="w-full text-[9px] border border-slate-200 rounded p-0.5 bg-slate-50"
+                                                    value={f.operator || 'in'}
+                                                    onChange={(e) => {
+                                                        const n = [...filters];
+                                                        n[idx] = { ...n[idx], operator: e.target.value as any };
+                                                        setFilters(n);
+                                                    }}
+                                                >
+                                                    <option value="in">Est égal à</option>
+                                                    <option value="contains">Contient</option>
+                                                    <option value="gt">&gt;</option>
+                                                    <option value="lt">&lt;</option>
+                                                </select>
+                                                {/* Simplified Value Input */}
+                                                <input
+                                                    type="text"
+                                                    className="w-full text-[9px] border border-slate-200 rounded p-0.5 mt-0.5"
+                                                    placeholder="Valeur..."
+                                                    value={Array.isArray(f.value) ? f.value.join(',') : f.value}
+                                                    onChange={(e) => {
+                                                        const n = [...filters];
+                                                        n[idx] = { ...n[idx], value: f.operator === 'in' ? e.target.value.split(',') : e.target.value };
+                                                        setFilters(n);
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* COLONNES */}
+                            <div
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, 'col')}
+                                className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[100px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                            >
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Table2 className="w-3 h-3" /> Colonnes</div>
+                                <div className="space-y-1.5 flex-1">
+                                    {colFields.map((f, idx) => (
+                                        <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
+                                    ))}
+                                    {colFields.length === 0 ? <span className="text-[9px] text-slate-300 italic">Déposez des colonnes ici</span> : (
+                                        isColFieldDate && (
+                                            <select
+                                                className="w-full mt-1 text-[9px] border-slate-200 rounded bg-slate-50"
+                                                value={colGrouping}
+                                                onChange={(e) => setColGrouping(e.target.value as any)}
+                                            >
+                                                <option value="none">Date exacte</option>
+                                                <option value="year">Année</option>
+                                                <option value="quarter">Trimestre</option>
+                                                <option value="month">Mois</option>
+                                            </select>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ZONES ROW 2: ROWS & VALUES */}
+                        <div className="grid grid-cols-2 gap-3">
+                            {/* LIGNES */}
+                            <div
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, 'row')}
+                                className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[150px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                            >
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Layers className="w-3 h-3" /> Lignes</div>
+                                <div className="space-y-1.5 flex-1">
+                                    {rowFields.map((f, idx) => (
+                                        <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
+                                    ))}
+                                    {rowFields.length === 0 && <span className="text-[9px] text-slate-300 italic">Déposez des lignes ici</span>}
+                                </div>
+                            </div>
+
+                            {/* VALEURS */}
+                            <div
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, 'val')}
+                                className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[150px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                            >
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Calculator className="w-3 h-3" /> Valeurs</div>
+                                <div className="space-y-1.5 flex-1">
+                                    {valField ? (
+                                        <div>
+                                            <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
+                                            <div className="mt-2 grid grid-cols-2 gap-1">
+                                                {['count', 'sum', 'avg', 'min', 'max'].map(t => (
+                                                    <button
+                                                        key={t}
+                                                        onClick={() => setAggType(t as AggregationType)}
+                                                        className={`px-1 py-1 text-[9px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {/* Format Override */}
+                                            {aggType !== 'count' && (
+                                                <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Décimales"
+                                                        className="w-full text-[9px] border-slate-200 rounded p-1 mb-1"
+                                                        value={valFormatting.decimalPlaces ?? ''}
+                                                        onChange={e => setValFormatting({ ...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined })}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Unité (€)"
+                                                        className="w-full text-[9px] border-slate-200 rounded p-1"
+                                                        value={valFormatting.unit ?? ''}
+                                                        onChange={e => setValFormatting({ ...valFormatting, unit: e.target.value })}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : <span className="text-[9px] text-slate-300 italic">Déposez une valeur ici</span>}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* DISPLAY OPTIONS */}
+                    <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                        <div className="flex flex-col gap-2">
+                            <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
+                            <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
+                            {colFields.length > 0 && aggType !== 'list' && (aggType !== 'min' && aggType !== 'max') && (
+                                <div className="mt-2 pt-2 border-t border-slate-100 animate-in fade-in">
+                                    <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Afficher variations (%)" className="text-blue-700 font-bold" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* RIGHT PANEL : PIVOT GRID */}
+                <div id="pivot-export-container" className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
+                    {isCalculating && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
+                            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                            <span className="text-sm font-bold text-slate-600">Calcul en cours...</span>
+                        </div>
+                    )}
+
+                    {pivotData ? (
+                        <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
+                            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                                <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full">
+                                    <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            {/* Headers Lignes */}
+                                            {rowFields.map((field, idx) => (
+                                                <th key={field} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '150px' }}>
+                                                    {field}
+                                                </th>
+                                            ))}
+
+                                            {/* Headers Colonnes Dynamiques */}
+                                            {pivotData.colHeaders.map(col => {
+                                                const isDiff = col.endsWith('_DIFF');
+                                                const isPct = col.endsWith('_PCT');
+                                                const label = isDiff ? 'Var.' : isPct ? '%' : col;
+
+                                                return (
+                                                    <th key={col} className={`px-4 py-3 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
+                                                        {label}
+                                                    </th>
+                                                );
+                                            })}
+
+                                            {showTotalCol && (
+                                                <th className="px-4 py-3 text-right text-xs font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
+                                                    Total
+                                                </th>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-200">
+                                        {paddingTop > 0 && <tr><td style={{ height: `${paddingTop}px` }} colSpan={totalColumns} /></tr>}
+                                        {virtualItems.map((virtualRow: any) => {
+                                            const row = pivotData.displayRows[virtualRow.index];
+                                            return (
+                                                <tr
+                                                    key={virtualRow.key}
+                                                    data-index={virtualRow.index}
+                                                    ref={rowVirtualizer.measureElement}
+                                                    className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'}`}
+                                                >
+                                                    {rowFields.map((field, cIdx) => {
+                                                        if (row.type === 'subtotal') {
+                                                            if (cIdx < row.level) return <td key={cIdx} className="px-4 py-2 text-sm text-slate-500 border-r border-slate-200 bg-slate-50/30">{row.keys[cIdx]}</td>;
+                                                            if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200 font-bold italic text-right">{row.label}</td>;
+                                                            return null;
+                                                        }
+                                                        return <td key={cIdx} className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap">{row.keys[cIdx]}</td>;
+                                                    })}
+                                                    {pivotData.colHeaders.map(col => {
+                                                        const val = row.metrics[col];
+                                                        const isDiff = col.endsWith('_DIFF');
+                                                        const isPct = col.endsWith('_PCT');
+                                                        let formatted = formatOutput(val);
+                                                        let cellClass = "text-slate-600";
+
+                                                        if (isDiff) {
+                                                            if (Number(val) > 0) { formatted = `+${formatted}`; cellClass = "text-green-600 font-bold"; }
+                                                            else if (Number(val) < 0) { cellClass = "text-red-600 font-bold"; }
+                                                            else cellClass = "text-slate-400";
+                                                        }
+                                                        else if (isPct) {
+                                                            if (val === 0 || val === undefined) formatted = '-';
+                                                            else {
+                                                                formatted = `${Number(val).toFixed(1)}%`;
+                                                                if (Number(val) > 0) cellClass = "text-green-600 font-bold";
+                                                                else if (Number(val) < 0) cellClass = "text-red-600 font-bold";
+                                                            }
+                                                        }
+
+                                                        return (
+                                                            <td key={col} className={`px-4 py-2 text-sm text-right border-r border-slate-100 tabular-nums ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`}>
+                                                                {formatted}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    {showTotalCol && (
+                                                        <td className="px-4 py-2 text-sm text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200">
+                                                            {formatOutput(row.rowTotal)}
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            );
+                                        })}
+                                        {paddingBottom > 0 && <tr><td style={{ height: `${paddingBottom}px` }} colSpan={totalColumns} /></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-slate-50/50">
+                            <div className="p-4 bg-white rounded-full shadow-sm mb-4">
+                                {sources.length === 0 ? <AlertCircle className="w-8 h-8 text-slate-300" /> : <MousePointerClick className="w-8 h-8 text-blue-200 animate-bounce" />}
+                            </div>
+                            <p className="text-sm font-medium">
+                                {sources.length === 0 ? "Veuillez définir une source de données." : "Commencez par glisser des champs."}
+                            </p>
+                            {sources.length > 0 && <p className="text-xs text-slate-400 mt-2">Zone de gauche &rarr; Lignes / Colonnes / Valeurs</p>}
+                        </div>
+                    )}
+
+                    {/* FOOTER TOTALS (FIXED OUTSIDE SCROLL) */}
+                    {pivotData && (
+                        <div className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-hidden flex-shrink-0">
+                            <table className="min-w-full divide-y divide-slate-200">
+                                <tbody className="font-bold">
+                                    <tr>
+                                        <td className="px-4 py-3 text-right text-sm uppercase text-slate-600" style={{ width: '200px' }}>Total Général</td>
+                                        {pivotData.colHeaders.map(col => {
+                                            const isPct = col.endsWith('_PCT');
+                                            const val = pivotData.colTotals[col];
+                                            let formatted = formatOutput(val);
+                                            if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
+
+                                            return (
+                                                <td key={col} className="px-4 py-3 text-right text-sm text-slate-900 border-r border-slate-200">
+                                                    {formatted}
+                                                </td>
+                                            );
+                                        })}
+                                        {showTotalCol && (
+                                            <td className="px-4 py-3 text-right text-sm text-black bg-slate-200 border-l border-slate-300">
+                                                {formatOutput(pivotData.grandTotal)}
+                                            </td>
+                                        )}
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>
-             </div>
 
-          </div>
-
-          {/* RIGHT PANEL : PIVOT GRID */}
-          <div id="pivot-export-container" className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
-             {isCalculating && (
-                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
-                     <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                     <span className="text-sm font-bold text-slate-600">Calcul en cours...</span>
-                 </div>
-             )}
-             
-             {pivotData ? (
-               <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
-                   <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                   <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full">
-                      <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                         <tr>
-                            {/* Headers Lignes */}
-                            {rowFields.map((field, idx) => (
-                               <th key={field} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '150px' }}>
-                                  {field}
-                               </th>
-                            ))}
-                            
-                            {/* Headers Colonnes Dynamiques */}
-                            {pivotData.colHeaders.map(col => {
-                                const isDiff = col.endsWith('_DIFF');
-                                const isPct = col.endsWith('_PCT');
-                                const label = isDiff ? 'Var.' : isPct ? '%' : col;
-                                
-                                return (
-                                   <th key={col} className={`px-4 py-3 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
-                                      {label}
-                                   </th>
-                                );
-                            })}
-
-                            {showTotalCol && (
-                               <th className="px-4 py-3 text-right text-xs font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
-                                  Total
-                               </th>
-                            )}
-                         </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-slate-200">
-                         {paddingTop > 0 && <tr><td style={{ height: `${paddingTop}px` }} colSpan={totalColumns} /></tr>}
-                         {virtualItems.map((virtualRow) => {
-                            const row = pivotData.displayRows[virtualRow.index];
-                            return (
-                            <tr 
-                                key={virtualRow.key} 
-                                data-index={virtualRow.index}
-                                ref={rowVirtualizer.measureElement}
-                                className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'}`}
-                            >
-                               {rowFields.map((field, cIdx) => {
-                                  if (row.type === 'subtotal') {
-                                      if (cIdx < row.level) return <td key={cIdx} className="px-4 py-2 text-sm text-slate-500 border-r border-slate-200 bg-slate-50/30">{row.keys[cIdx]}</td>;
-                                      if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200 font-bold italic text-right">{row.label}</td>;
-                                      return null;
-                                  }
-                                  return <td key={cIdx} className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap">{row.keys[cIdx]}</td>;
-                               })}
-                               {pivotData.colHeaders.map(col => {
-                                  const val = row.metrics[col];
-                                  const isDiff = col.endsWith('_DIFF');
-                                  const isPct = col.endsWith('_PCT');
-                                  let formatted = formatOutput(val);
-                                  let cellClass = "text-slate-600";
-
-                                  if (isDiff) {
-                                      if (Number(val) > 0) { formatted = `+${formatted}`; cellClass = "text-green-600 font-bold"; }
-                                      else if (Number(val) < 0) { cellClass = "text-red-600 font-bold"; }
-                                      else cellClass = "text-slate-400";
-                                  }
-                                  else if (isPct) {
-                                      if (val === 0 || val === undefined) formatted = '-';
-                                      else {
-                                          formatted = `${Number(val).toFixed(1)}%`;
-                                          if (Number(val) > 0) cellClass = "text-green-600 font-bold";
-                                          else if (Number(val) < 0) cellClass = "text-red-600 font-bold";
-                                      }
-                                  }
-
-                                  return (
-                                      <td key={col} className={`px-4 py-2 text-sm text-right border-r border-slate-100 tabular-nums ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`}>
-                                         {formatted}
-                                      </td>
-                                  );
-                               })}
-                               {showTotalCol && (
-                                  <td className="px-4 py-2 text-sm text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200">
-                                     {formatOutput(row.rowTotal)}
-                                  </td>
-                               )}
-                            </tr>
-                            );
-                         })}
-                         {paddingBottom > 0 && <tr><td style={{ height: `${paddingBottom}px` }} colSpan={totalColumns} /></tr>}
-                      </tbody>
-                   </table>
-                   </div>
-               </div>
-             ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-slate-50/50">
-                   <div className="p-4 bg-white rounded-full shadow-sm mb-4">
-                        {sources.length === 0 ? <AlertCircle className="w-8 h-8 text-slate-300" /> : <MousePointerClick className="w-8 h-8 text-blue-200 animate-bounce" />}
-                   </div>
-                   <p className="text-sm font-medium">
-                       {sources.length === 0 ? "Veuillez définir une source de données." : "Commencez par glisser des champs."}
-                   </p>
-                   {sources.length > 0 && <p className="text-xs text-slate-400 mt-2">Zone de gauche &rarr; Lignes / Colonnes / Valeurs</p>}
-                </div>
-             )}
-             
-             {/* FOOTER TOTALS (FIXED OUTSIDE SCROLL) */}
-             {pivotData && (
-                 <div className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-hidden flex-shrink-0">
-                     <table className="min-w-full divide-y divide-slate-200">
-                         <tbody className="font-bold">
-                             <tr>
-                                <td className="px-4 py-3 text-right text-sm uppercase text-slate-600" style={{ width: '200px' }}>Total Général</td>
-                                {pivotData.colHeaders.map(col => {
-                                     const isPct = col.endsWith('_PCT');
-                                     const val = pivotData.colTotals[col];
-                                     let formatted = formatOutput(val);
-                                     if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
-                                     
-                                     return (
-                                         <td key={col} className="px-4 py-3 text-right text-sm text-slate-900 border-r border-slate-200">
-                                            {formatted}
-                                         </td>
-                                     );
-                                })}
-                                {showTotalCol && (
-                                   <td className="px-4 py-3 text-right text-sm text-black bg-slate-200 border-l border-slate-300">
-                                      {formatOutput(pivotData.grandTotal)}
-                                   </td>
-                                )}
-                             </tr>
-                         </tbody>
-                     </table>
-                 </div>
-             )}
-          </div>
-
-       </div>
-    </div>
-  );
+            </div>
+        </div>
+    );
 };
