@@ -28,7 +28,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -43,7 +43,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const init = async () => {
       try {
         const dbData = await db.load();
-        
+
         if (dbData) {
           setDatasets(dbData.datasets || []);
           setAllBatches(dbData.batches || []);
@@ -74,7 +74,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCompanyLogo(parsed.companyLogo); // NEW
             setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
-            
+
             await db.save(parsed);
             localStorage.removeItem(LEGACY_STORAGE_KEY);
           }
@@ -99,7 +99,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveTimeoutRef.current = setTimeout(() => {
       const state: AppState = {
         datasets,
-        batches, 
+        batches,
         dashboardWidgets,
         savedAnalyses,
         version: APP_VERSION,
@@ -110,7 +110,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         companyLogo,
         hasSeenOnboarding
       };
-      
+
       db.save(state).catch(e => console.error("Failed to save to DB", e));
     }, 1000);
 
@@ -122,7 +122,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
     setCurrentDatasetId(id);
-    setDashboardFilters({}); 
+    setDashboardFilters({});
   }, []);
 
   const createDataset = useCallback((name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => {
@@ -135,7 +135,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now()
     };
     setDatasets(prev => [...prev, newDataset]);
-    setCurrentDatasetId(newId); 
+    setCurrentDatasetId(newId);
     return newId;
   }, []);
 
@@ -148,7 +148,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAllBatches(prev => prev.filter(b => b.datasetId !== id));
     setDashboardWidgets(prev => prev.filter(w => w.config.source?.datasetId !== id));
     setSavedAnalyses(prev => prev.filter(a => a.datasetId !== id));
-    
+
     if (lastPivotState?.datasetId === id) setLastPivotState(null);
     if (lastAnalyticsState?.datasetId === id) setLastAnalyticsState(null);
 
@@ -179,14 +179,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
 
     setAllBatches(prev => prev.map(b => {
-       if (b.datasetId !== datasetId) return b;
-       return {
-          ...b,
-          rows: b.rows.map(r => {
-             const { [fieldName]: deleted, ...rest } = r;
-             return rest as DataRow;
-          })
-       };
+      if (b.datasetId !== datasetId) return b;
+      return {
+        ...b,
+        rows: b.rows.map(r => {
+          const { [fieldName]: deleted, ...rest } = r;
+          return rest as DataRow;
+        })
+      };
     }));
   }, []);
 
@@ -194,34 +194,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (oldName === newName || !newName.trim()) return;
 
     setDatasets(prev => prev.map(d => {
-        if (d.id !== datasetId) return d;
-        const newFields = d.fields.map(f => f === oldName ? newName : f);
-        const newConfigs = { ...d.fieldConfigs };
-        if (newConfigs[oldName]) {
-            newConfigs[newName] = newConfigs[oldName];
-            delete newConfigs[oldName];
-        }
-        return { ...d, fields: newFields, fieldConfigs: newConfigs };
+      if (d.id !== datasetId) return d;
+      const newFields = d.fields.map(f => f === oldName ? newName : f);
+      const newConfigs = { ...d.fieldConfigs };
+      if (newConfigs[oldName]) {
+        newConfigs[newName] = newConfigs[oldName];
+        delete newConfigs[oldName];
+      }
+      return { ...d, fields: newFields, fieldConfigs: newConfigs };
     }));
 
     setAllBatches(prev => prev.map(b => {
-        if (b.datasetId !== datasetId) return b;
-        const newRows = b.rows.map(r => {
-            const val = r[oldName];
-            const newRow = { ...r, [newName]: val };
-            delete newRow[oldName];
-            return newRow as DataRow;
-        });
-        return { ...b, rows: newRows };
+      if (b.datasetId !== datasetId) return b;
+      const newRows = b.rows.map(r => {
+        const val = r[oldName];
+        const newRow = { ...r, [newName]: val };
+        delete newRow[oldName];
+        return newRow as DataRow;
+      });
+      return { ...b, rows: newRows };
     }));
   }, []);
 
   const updateDatasetConfigs = useCallback((datasetId: string, configs: Record<string, FieldConfig>) => {
     setDatasets(prev => prev.map(d => {
       if (d.id !== datasetId) return d;
-      return { 
-        ...d, 
-        fieldConfigs: { ...d.fieldConfigs, ...configs } 
+      return {
+        ...d,
+        fieldConfigs: { ...d.fieldConfigs, ...configs }
       };
     }));
   }, []);
@@ -263,13 +263,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const deleteBatchRow = useCallback((batchId: string, rowId: string) => {
-     setAllBatches(prev => prev.map(b => {
-        if (b.id !== batchId) return b;
-        return {
-           ...b,
-           rows: b.rows.filter(r => String(r.id) !== String(rowId))
-        };
-     }));
+    setAllBatches(prev => prev.map(b => {
+      if (b.id !== batchId) return b;
+      return {
+        ...b,
+        rows: b.rows.filter(r => String(r.id) !== String(rowId))
+      };
+    }));
   }, []);
 
   // --- WIDGET ACTIONS ---
@@ -282,14 +282,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDashboardWidgets(prev => {
       const widgetIndex = prev.findIndex(w => w.id === widgetId);
       if (widgetIndex === -1) return prev;
-      
+
       const original = prev[widgetIndex];
       const newWidget = {
         ...original,
         id: generateId(),
         title: `${original.title} (Copie)`
       };
-      
+
       // Insert right after original
       const newWidgets = [...prev];
       newWidgets.splice(widgetIndex + 1, 0, newWidget);
@@ -310,10 +310,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const widgets = [...prev];
       const idx = widgets.findIndex(w => w.id === widgetId);
       if (idx === -1) return prev;
-      
+
       const swapIdx = direction === 'left' ? idx - 1 : idx + 1;
       if (swapIdx < 0 || swapIdx >= widgets.length) return prev;
-      
+
       [widgets[idx], widgets[swapIdx]] = [widgets[swapIdx], widgets[idx]];
       return widgets;
     });
@@ -333,11 +333,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setDashboardFilter = useCallback((field: string, value: any) => {
-     setDashboardFilters(prev => ({ ...prev, [field]: value }));
+    setDashboardFilters(prev => ({ ...prev, [field]: value }));
   }, []);
 
   const clearDashboardFilters = useCallback(() => {
-     setDashboardFilters({});
+    setDashboardFilters({});
   }, []);
 
   // --- ANALYTICS ACTIONS ---
@@ -380,22 +380,74 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loadDemoData = useCallback(() => {
+    // Dataset 1: RH
     const id1 = 'demo-rh';
-    const ds1: Dataset = { 
-      id: id1, 
-      name: 'Effectifs RH', 
-      fields: ['Nom', 'Email', 'Organisation', 'DateModif', 'Commentaire', 'Budget', 'Quantité'], 
-      fieldConfigs: { 'Budget': { type: 'number', unit: 'k€' } },
-      createdAt: Date.now() 
+    const ds1: Dataset = {
+      id: id1,
+      name: 'Effectifs RH',
+      fields: ['Nom', 'Email', 'Organisation', 'DateModif', 'Commentaire', 'Budget', 'Quantité'],
+      fieldConfigs: { 'Budget': { type: 'text' } },
+      createdAt: Date.now()
     };
     const batches1 = generateSyntheticData(id1);
-    setDatasets([ds1]);
-    setAllBatches([...batches1]);
+
+    // Dataset 2: Projets
+    const id2 = 'demo-projets';
+    const ds2: Dataset = {
+      id: id2,
+      name: 'Projets IT',
+      fields: ['Projet', 'Organisation', 'Statut', 'DateDébut', 'Budget', 'Responsable'],
+      fieldConfigs: { 'Budget': { type: 'text' } },
+      createdAt: Date.now()
+    };
+    const batches2: ImportBatch[] = [
+      {
+        id: generateId(),
+        datasetId: id2,
+        date: new Date(2024, 5, 1).toISOString(),
+        createdAt: Date.now(),
+        rows: [
+          { id: generateId(), Projet: 'Migration Cloud', Organisation: 'TechCorp', Statut: 'En cours', DateDébut: '2024-01-15', Budget: '250 k€', Responsable: 'Pierre Martin' },
+          { id: generateId(), Projet: 'Refonte CRM', Organisation: 'Innovate SA', Statut: 'Terminé', DateDébut: '2023-09-01', Budget: '180 k€', Responsable: 'Sophie Bernard' },
+          { id: generateId(), Projet: 'Cybersécurité', Organisation: 'CyberDefense Ltd', Statut: 'Planifié', DateDébut: '2024-08-01', Budget: '320 k€', Responsable: 'Thomas Dubois' },
+          { id: generateId(), Projet: 'Dashboard Analytics', Organisation: 'Global Services', Statut: 'En cours', DateDébut: '2024-03-01', Budget: '95 k€', Responsable: 'Marie Laurent' },
+          { id: generateId(), Projet: 'Formation DevOps', Organisation: 'Alpha Solutions', Statut: 'Terminé', DateDébut: '2024-02-01', Budget: '45 k€', Responsable: 'Lucas Moreau' }
+        ]
+      }
+    ];
+
+    // Dataset 3: Budget
+    const id3 = 'demo-budget';
+    const ds3: Dataset = {
+      id: id3,
+      name: 'Budget Annuel',
+      fields: ['Département', 'Organisation', 'Prévisionnel', 'Réalisé', 'Ecart', 'Trimestre'],
+      fieldConfigs: { 'Prévisionnel': { type: 'text' }, 'Réalisé': { type: 'text' }, 'Ecart': { type: 'text' } },
+      createdAt: Date.now()
+    };
+    const batches3: ImportBatch[] = [
+      {
+        id: generateId(),
+        datasetId: id3,
+        date: new Date(2024, 11, 31).toISOString(),
+        createdAt: Date.now(),
+        rows: [
+          { id: generateId(), Département: 'IT', Organisation: 'TechCorp', Prévisionnel: '500 k€', Réalisé: '485 k€', Ecart: '-15 k€', Trimestre: 'Q4 2024' },
+          { id: generateId(), Département: 'RH', Organisation: 'TechCorp', Prévisionnel: '320 k€', Réalisé: '340 k€', Ecart: '+20 k€', Trimestre: 'Q4 2024' },
+          { id: generateId(), Département: 'Marketing', Organisation: 'Innovate SA', Prévisionnel: '280 k€', Réalisé: '275 k€', Ecart: '-5 k€', Trimestre: 'Q4 2024' },
+          { id: generateId(), Département: 'Commercial', Organisation: 'Global Services', Prévisionnel: '420 k€', Réalisé: '450 k€', Ecart: '+30 k€', Trimestre: 'Q4 2024' },
+          { id: generateId(), Département: 'IT', Organisation: 'Innovate SA', Prévisionnel: '380 k€', Réalisé: '390 k€', Ecart: '+10 k€', Trimestre: 'Q4 2024' }
+        ]
+      }
+    ];
+
+    setDatasets([ds1, ds2, ds3]);
+    setAllBatches([...batches1, ...batches2, ...batches3]);
     setCurrentDatasetId(id1);
     setDashboardWidgets([
-       { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } },
-       { id: 'w2', title: 'Budget Global', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'sum', valueField: 'Budget', showTrend: true } },
-       { id: 'w3', title: 'Évolution Effectifs', type: 'chart', size: 'full', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', dimension: 'DateModif', chartType: 'line' } }
+      { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } },
+      { id: 'w2', title: 'Projets Actifs', type: 'kpi', size: 'sm', config: { source: { datasetId: id2, mode: 'latest' }, metric: 'count', showTrend: false } },
+      { id: 'w3', title: 'Évolution Effectifs', type: 'chart', size: 'full', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', dimension: 'DateModif', chartType: 'line' } }
     ]);
   }, []);
 
@@ -404,15 +456,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const updateCompanyLogo = useCallback((logo: string | undefined) => {
-      setCompanyLogo(logo);
+    setCompanyLogo(logo);
   }, []);
 
   const completeOnboarding = useCallback(() => {
-      setHasSeenOnboarding(true);
+    setHasSeenOnboarding(true);
   }, []);
 
   const getBackupJson = useCallback(() => {
-    const state: AppState = { 
+    const state: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
@@ -437,7 +489,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastAnalyticsState(parsed.lastAnalyticsState || null);
       setCompanyLogo(parsed.companyLogo); // NEW
       setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
-      
+
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
       } else if (parsed.datasets.length > 0) {
@@ -454,7 +506,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   if (isLoading) {
-      return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Chargement des données...</div>;
+    return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Chargement des données...</div>;
   }
 
   return (
