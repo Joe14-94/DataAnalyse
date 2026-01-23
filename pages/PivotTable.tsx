@@ -654,12 +654,12 @@ export const PivotTable: React.FC = () => {
                         e.currentTarget.setAttribute('draggable', 'true');
                     }
                 }}
-                className={`group flex items-center justify-between gap-2 px-2 py-1.5 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-xs font-medium select-none
+                className={`group flex items-center justify-between gap-1.5 px-1.5 py-1 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-[10px] font-medium select-none
                 ${baseStyle} ${!disabled ? 'cursor-grab' : ''}
             `}
             >
-                <div className="flex items-center gap-1.5 overflow-hidden">
-                    <GripVertical className={`w-3 h-3 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
+                <div className="flex items-center gap-1 overflow-hidden">
+                    <GripVertical className={`w-2.5 h-2.5 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
                     <span className="truncate" title={field}>{displayLabel}</span>
                 </div>
                 {onDelete && (
@@ -667,7 +667,7 @@ export const PivotTable: React.FC = () => {
                         onClick={(e) => { e.stopPropagation(); onDelete(); }}
                         className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
                     >
-                        <X className="w-3 h-3" />
+                        <X className="w-2.5 h-2.5" />
                     </button>
                 )}
             </div>
@@ -681,15 +681,15 @@ export const PivotTable: React.FC = () => {
 
     return (
         <>
-            <div className="h-full flex flex-col p-4 gap-4 relative">
+            <div className="h-full flex flex-col p-2 gap-2 relative">
 
                 {/* HEADER */}
-                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-2 shrink-0">
                     <div className="flex items-center gap-2">
-                        <Layout className="w-5 h-5 text-blue-600" />
+                        <Layout className="w-3.5 h-3.5 text-blue-600" />
                         <div>
-                            <h2 className="text-base font-bold text-slate-800">Tableau Croisé Dynamique</h2>
-                            <p className="text-[10px] text-slate-500">Glissez les champs pour analyser</p>
+                            <h2 className="text-[11px] font-bold text-slate-800 leading-tight">Tableau Croisé Dynamique</h2>
+                            <p className="text-[9px] text-slate-500">Glissez les champs pour analyser</p>
                         </div>
                     </div>
 
@@ -734,21 +734,21 @@ export const PivotTable: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0">
+                <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
 
                     {/* LEFT PANEL : SOURCES & FIELDS */}
-                    <div className="xl:w-96 flex-shrink-0 flex flex-col gap-4 min-w-0">
+                    <div className="xl:w-72 flex-shrink-0 flex flex-col gap-2 min-w-0">
 
                         {/* 1. DATA SOURCES STACK */}
-                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[250px] max-h-[450px]">
-                            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                    <Database className="w-4 h-4 text-blue-600" />
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[120px] max-h-[220px]">
+                            <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+                                <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2">
+                                    <Database className="w-3.5 h-3.5 text-blue-600" />
                                     Sources de données
                                 </h3>
                             </div>
 
-                            <div className="p-3 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                            <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
 
                                 {/* LISTE DES SOURCES */}
                                 {sources.length === 0 ? (
@@ -766,19 +766,19 @@ export const PivotTable: React.FC = () => {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                         {sources.map((src) => {
                                             const ds = datasets.find(d => d.id === src.datasetId);
                                             if (!ds) return null;
 
                                             const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
                                             return (
-                                                <div key={src.id} className={`relative pl-3 border-l-4 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-3 group`}>
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <div className={`text-sm font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
-                                                            {src.isPrimary ? <Database className="w-4 h-4 flex-shrink-0" /> : <LinkIcon className="w-4 h-4 flex-shrink-0" />}
+                                                <div key={src.id} className={`relative pl-2 border-l-2 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <div className={`text-[11px] font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
+                                                            {src.isPrimary ? <Database className="w-3.5 h-3.5 flex-shrink-0" /> : <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />}
                                                             <span className="truncate" title={ds.name}>{ds.name}</span>
-                                                            {src.isPrimary && <span className="text-[10px] opacity-70 ml-1">(principale)</span>}
+                                                            {src.isPrimary && <span className="text-[9px] opacity-70 ml-1">(P)</span>}
                                                         </div>
                                                         <button
                                                             onClick={() => removeSource(src.id)}
@@ -790,16 +790,16 @@ export const PivotTable: React.FC = () => {
 
                                                     {src.isPrimary ? (
                                                         <select
-                                                            className="mt-1 w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white text-slate-700 font-medium focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                                                            className="mt-0.5 w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
                                                             value={selectedBatchId}
                                                             onChange={(e) => setSelectedBatchId(e.target.value)}
                                                         >
-                                                            {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
+                                                            {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
                                                         </select>
                                                     ) : (
-                                                        <div className="text-xs text-slate-600 mt-1 bg-white/50 rounded px-2 py-1">
-                                                            <div className="font-semibold text-[10px] text-slate-500 uppercase mb-0.5">Jointure sur :</div>
-                                                            <div className="font-mono text-[11px]">
+                                                        <div className="text-[10px] text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
+                                                            <div className="font-semibold text-[9px] text-slate-500 uppercase mb-0">Jointure sur :</div>
+                                                            <div className="font-mono text-[10px]">
                                                                 <span className="font-bold">{src.joinConfig?.primaryKey}</span>
                                                                 <span className="mx-1">=</span>
                                                                 <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
@@ -812,9 +812,9 @@ export const PivotTable: React.FC = () => {
 
                                         <button
                                             onClick={startAddSource}
-                                            className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-xs font-bold flex items-center justify-center gap-2 shadow-sm hover:shadow"
+                                            className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm"
                                         >
-                                            <Plus className="w-4 h-4" /> Gérer les sources
+                                            <Plus className="w-3 h-3" /> Gérer les sources
                                         </button>
                                     </div>
                                 )}
@@ -822,18 +822,18 @@ export const PivotTable: React.FC = () => {
                         </div>
 
                         {/* 2. FIELDS ACCORDION */}
-                        <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[200px] overflow-hidden">
-                            <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
-                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
-                                    <Table2 className="w-4 h-4 text-green-600" />
+                        <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[120px] overflow-hidden">
+                            <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+                                <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2 mb-1.5">
+                                    <Table2 className="w-3 h-3 text-green-600" />
                                     Champs disponibles
                                 </h3>
-                                <input type="text" placeholder="Rechercher un champ..." className="w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white focus:ring-2 focus:ring-green-400 focus:border-green-400" disabled={sources.length === 0} />
+                                <input type="text" placeholder="Rechercher..." className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-green-400" disabled={sources.length === 0} />
                             </div>
 
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                                 {sources.length === 0 && (
-                                    <div className="text-center py-8 text-slate-300 text-xs italic">
+                                    <div className="text-center py-6 text-slate-300 text-[10px] italic">
                                         Ajoutez une source pour voir les champs disponibles.
                                     </div>
                                 )}
@@ -843,9 +843,9 @@ export const PivotTable: React.FC = () => {
                                         <div key={group.id} className="mb-2">
                                             <button
                                                 onClick={() => toggleSection(group.id)}
-                                                className={`w-full flex items-center gap-1 text-xs font-bold px-2 py-1.5 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
+                                                className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
                                             >
-                                                {expandedSections[group.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
+                                                {expandedSections[group.id] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
                                                 {group.name}
                                             </button>
 
@@ -876,17 +876,17 @@ export const PivotTable: React.FC = () => {
                                 <div
                                     onDragOver={handleDragOver}
                                     onDrop={(e) => handleDrop(e, 'filter')}
-                                    className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[100px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    className={`bg-white rounded-lg border-2 border-dashed p-1.5 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
                                 >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Filter className="w-3 h-3" /> Filtres</div>
-                                    <div className="space-y-1.5 flex-1">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2.5 h-2.5" /> Filtres</div>
+                                    <div className="space-y-1 flex-1">
                                         {filters.map((f, idx) => (
                                             <div key={idx} className="relative group">
                                                 <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
                                                 {/* Mini Config Filter */}
-                                                <div className="mt-1 pl-1">
+                                                <div className="mt-0.5 pl-1">
                                                     <select
-                                                        className="w-full text-[9px] border border-slate-200 rounded p-0.5 bg-slate-50"
+                                                        className="w-full text-[10px] border border-slate-200 rounded p-0.5 bg-slate-50"
                                                         value={f.operator || 'in'}
                                                         onChange={(e) => {
                                                             const n = [...filters];
@@ -902,7 +902,7 @@ export const PivotTable: React.FC = () => {
                                                     {/* Simplified Value Input */}
                                                     <input
                                                         type="text"
-                                                        className="w-full text-[9px] border border-slate-200 rounded p-0.5 mt-0.5"
+                                                        className="w-full text-[10px] border border-slate-200 rounded p-0.5 mt-0.5"
                                                         placeholder="Valeur..."
                                                         value={Array.isArray(f.value) ? f.value.join(',') : f.value}
                                                         onChange={(e) => {
@@ -921,21 +921,21 @@ export const PivotTable: React.FC = () => {
                                 <div
                                     onDragOver={handleDragOver}
                                     onDrop={(e) => handleDrop(e, 'col')}
-                                    className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[100px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
                                 >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Table2 className="w-3 h-3" /> Colonnes</div>
-                                    <div className="space-y-1.5 flex-1">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2.5 h-2.5" /> Colonnes</div>
+                                    <div className="space-y-1 flex-1">
                                         {colFields.map((f, idx) => (
                                             <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
                                         ))}
-                                        {colFields.length === 0 ? <span className="text-[9px] text-slate-300 italic">Déposez des colonnes ici</span> : (
+                                        {colFields.length === 0 ? <span className="text-[10px] text-slate-300 italic">Déposez ici</span> : (
                                             isColFieldDate && (
                                                 <select
-                                                    className="w-full mt-1 text-[9px] border-slate-200 rounded bg-slate-50"
+                                                    className="w-full mt-0.5 text-[10px] border-slate-200 rounded bg-slate-50 p-0.5"
                                                     value={colGrouping}
                                                     onChange={(e) => setColGrouping(e.target.value as any)}
                                                 >
-                                                    <option value="none">Date exacte</option>
+                                                    <option value="none">Exacte</option>
                                                     <option value="year">Année</option>
                                                     <option value="quarter">Trimestre</option>
                                                     <option value="month">Mois</option>
@@ -947,19 +947,19 @@ export const PivotTable: React.FC = () => {
                             </div>
 
                             {/* ZONES ROW 2: ROWS & VALUES */}
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-2">
                                 {/* LIGNES */}
                                 <div
                                     onDragOver={handleDragOver}
                                     onDrop={(e) => handleDrop(e, 'row')}
-                                    className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[150px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
                                 >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Layers className="w-3 h-3" /> Lignes</div>
-                                    <div className="space-y-1.5 flex-1">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2.5 h-2.5" /> Lignes</div>
+                                    <div className="space-y-1 flex-1">
                                         {rowFields.map((f, idx) => (
                                             <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
                                         ))}
-                                        {rowFields.length === 0 && <span className="text-[9px] text-slate-300 italic">Déposez des lignes ici</span>}
+                                        {rowFields.length === 0 && <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
                                     </div>
                                 </div>
 
@@ -967,19 +967,19 @@ export const PivotTable: React.FC = () => {
                                 <div
                                     onDragOver={handleDragOver}
                                     onDrop={(e) => handleDrop(e, 'val')}
-                                    className={`bg-white rounded-lg border-2 border-dashed p-2 min-h-[150px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
                                 >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Calculator className="w-3 h-3" /> Valeurs</div>
-                                    <div className="space-y-1.5 flex-1">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2.5 h-2.5" /> Valeurs</div>
+                                    <div className="space-y-1 flex-1">
                                         {valField ? (
                                             <div>
                                                 <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
-                                                <div className="mt-2 grid grid-cols-2 gap-1">
+                                                <div className="mt-1 grid grid-cols-2 gap-1">
                                                     {['count', 'sum', 'avg', 'min', 'max'].map(t => (
                                                         <button
                                                             key={t}
                                                             onClick={() => setAggType(t as AggregationType)}
-                                                            className={`px-1 py-1 text-[9px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                            className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
                                                         >
                                                             {t}
                                                         </button>
@@ -987,38 +987,38 @@ export const PivotTable: React.FC = () => {
                                                 </div>
                                                 {/* Format Override */}
                                                 {aggType !== 'count' && (
-                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    <div className="mt-1 pt-1 border-t border-slate-100">
                                                         <input
                                                             type="number"
-                                                            placeholder="Décimales"
-                                                            className="w-full text-[9px] border-slate-200 rounded p-1 mb-1"
+                                                            placeholder="Déc."
+                                                            className="w-full text-[10px] border-slate-200 rounded p-0.5 mb-0.5"
                                                             value={valFormatting.decimalPlaces ?? ''}
                                                             onChange={e => setValFormatting({ ...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined })}
                                                         />
                                                         <input
                                                             type="text"
-                                                            placeholder="Unité (€)"
-                                                            className="w-full text-[9px] border-slate-200 rounded p-1"
+                                                            placeholder="Unité"
+                                                            className="w-full text-[10px] border-slate-200 rounded p-0.5"
                                                             value={valFormatting.unit ?? ''}
                                                             onChange={e => setValFormatting({ ...valFormatting, unit: e.target.value })}
                                                         />
                                                     </div>
                                                 )}
                                             </div>
-                                        ) : <span className="text-[9px] text-slate-300 italic">Déposez une valeur ici</span>}
+                                        ) : <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* DISPLAY OPTIONS */}
-                        <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                            <div className="flex flex-col gap-2">
+                        <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                            <div className="flex flex-col gap-1">
                                 <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
                                 <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
                                 {colFields.length > 0 && aggType !== 'list' && (aggType !== 'min' && aggType !== 'max') && (
-                                    <div className="mt-2 pt-2 border-t border-slate-100 animate-in fade-in">
-                                        <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Afficher variations (%)" className="text-blue-700 font-bold" />
+                                    <div className="mt-0.5 pt-0.5 border-t border-slate-100 animate-in fade-in">
+                                        <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-blue-700 font-bold" />
                                     </div>
                                 )}
                             </div>
@@ -1043,7 +1043,7 @@ export const PivotTable: React.FC = () => {
                                             <tr>
                                                 {/* Headers Lignes */}
                                                 {rowFields.map((field, idx) => (
-                                                    <th key={field} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '150px' }}>
+                                                    <th key={field} className="px-2 py-1.5 text-left text-[10px] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '120px' }}>
                                                         {field}
                                                     </th>
                                                 ))}
@@ -1055,14 +1055,14 @@ export const PivotTable: React.FC = () => {
                                                     const label = isDiff ? 'Var.' : isPct ? '%' : col;
 
                                                     return (
-                                                        <th key={col} className={`px-4 py-3 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
+                                                        <th key={col} className={`px-2 py-1.5 text-right text-[10px] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
                                                             {label}
                                                         </th>
                                                     );
                                                 })}
 
                                                 {showTotalCol && (
-                                                    <th className="px-4 py-3 text-right text-xs font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
+                                                    <th className="px-2 py-1.5 text-right text-[10px] font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
                                                         Total
                                                     </th>
                                                 )}
@@ -1081,11 +1081,11 @@ export const PivotTable: React.FC = () => {
                                                     >
                                                         {rowFields.map((field, cIdx) => {
                                                             if (row.type === 'subtotal') {
-                                                                if (cIdx < row.level) return <td key={cIdx} className="px-4 py-2 text-sm text-slate-500 border-r border-slate-200 bg-slate-50/30">{row.keys[cIdx]}</td>;
-                                                                if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200 font-bold italic text-right">{row.label}</td>;
+                                                                if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-[10px] text-slate-500 border-r border-slate-200 bg-slate-50/30">{row.keys[cIdx]}</td>;
+                                                                if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-[10px] text-slate-700 border-r border-slate-200 font-bold italic text-right">{row.label}</td>;
                                                                 return null;
                                                             }
-                                                            return <td key={cIdx} className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap">{row.keys[cIdx]}</td>;
+                                                            return <td key={cIdx} className="px-2 py-1 text-[10px] text-slate-700 border-r border-slate-200 whitespace-nowrap">{row.keys[cIdx]}</td>;
                                                         })}
                                                         {pivotData.colHeaders.map(col => {
                                                             const val = row.metrics[col];
@@ -1111,7 +1111,7 @@ export const PivotTable: React.FC = () => {
                                                             return (
                                                                 <td
                                                                     key={col}
-                                                                    className={`px-4 py-2 text-sm text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`}
+                                                                    className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`}
                                                                     onClick={() => handleDrilldown(row.keys, col)}
                                                                     title="Cliquez pour voir les détails"
                                                                 >
@@ -1121,7 +1121,7 @@ export const PivotTable: React.FC = () => {
                                                         })}
                                                         {showTotalCol && (
                                                             <td
-                                                                className="px-4 py-2 text-sm text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                                                                className="px-2 py-1 text-[10px] text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200 cursor-pointer hover:bg-blue-100 transition-colors"
                                                                 onClick={() => handleDrilldown(row.keys, 'Total')}
                                                                 title="Cliquez pour voir les détails"
                                                             >
