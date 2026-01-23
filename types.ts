@@ -228,4 +228,22 @@ export interface AppState {
   lastAnalyticsState?: AnalyticsState | null;
 }
 
-export type ViewMode = 'dashboard' | 'import' | 'history' | 'settings';
+// --- MODULE FINANCE (NOUVEAU) ---
+export interface FinancialCategory {
+  id: string;
+  code: string; // Ex: "70", "60", "1"
+  name: string;
+  type: 'income' | 'expense' | 'asset' | 'liability' | 'equity';
+  parentCode?: string;
+  isTotal?: boolean;
+}
+
+export interface FinancialReportConfig {
+  datasetId: string;
+  periodStart: string;
+  periodEnd: string;
+  compareWith?: 'previous_year' | 'budget';
+  budgetDatasetId?: string;
+}
+
+export type ViewMode = 'dashboard' | 'import' | 'history' | 'settings' | 'finance';

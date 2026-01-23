@@ -10,6 +10,7 @@ import { Customization } from './pages/Customization';
 import { CustomAnalytics } from './pages/CustomAnalytics';
 import { DataExplorer } from './pages/DataExplorer';
 import { PivotTable } from './pages/PivotTable';
+import { Finance } from './pages/Finance';
 import { Help } from './pages/Help';
 
 const App: React.FC = () => {
@@ -24,6 +25,7 @@ const App: React.FC = () => {
             <Route path="/history" element={<History />} />
             <Route path="/analytics" element={<CustomAnalytics />} />
             <Route path="/pivot" element={<PivotTable />} />
+            <Route path="/finance" element={<Finance />} />
             <Route path="/customization" element={<Customization />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
