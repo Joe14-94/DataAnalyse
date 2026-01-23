@@ -648,7 +648,13 @@ export const PivotTable: React.FC = () => {
                     }
                     handleDragStart(e, field, zone);
                 }}
-                className={`group flex items-center justify-between gap-2 px-2 py-1.5 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-xs font-medium select-none animate-in fade-in zoom-in-95 duration-200 
+                onMouseDown={(e) => {
+                    // Pre-initialize drag state to prevent double-click issue
+                    if (!disabled && e.button === 0) {
+                        e.currentTarget.setAttribute('draggable', 'true');
+                    }
+                }}
+                className={`group flex items-center justify-between gap-2 px-2 py-1.5 border rounded shadow-sm hover:shadow-md active:cursor-grabbing text-xs font-medium select-none
                 ${baseStyle} ${!disabled ? 'cursor-grab' : ''}
             `}
             >
@@ -767,26 +773,37 @@ export const PivotTable: React.FC = () => {
 
                                             const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
                                             return (
-                                                <div key={src.id} className={`relative pl-3 border-l-4 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <div className={`text-sm font-bold ${srcColorClasses.text} flex items-center gap-1.5`}>
-                                                            {src.isPrimary ? <Database className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
-                                                            {ds.name}
+                                                <div key={src.id} className={`relative pl-3 border-l-4 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-3 group`}>
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <div className={`text-sm font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
+                                                            {src.isPrimary ? <Database className="w-4 h-4 flex-shrink-0" /> : <LinkIcon className="w-4 h-4 flex-shrink-0" />}
+                                                            <span className="truncate" title={ds.name}>{ds.name}</span>
+                                                            {src.isPrimary && <span className="text-[10px] opacity-70 ml-1">(principale)</span>}
                                                         </div>
-                                                        <button onClick={() => removeSource(src.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
+                                                        <button
+                                                            onClick={() => removeSource(src.id)}
+                                                            className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
 
                                                     {src.isPrimary ? (
                                                         <select
-                                                            className="mt-1.5 w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white text-slate-700 font-medium focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                                                            className="mt-1 w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white text-slate-700 font-medium focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                                                             value={selectedBatchId}
                                                             onChange={(e) => setSelectedBatchId(e.target.value)}
                                                         >
                                                             {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
                                                         </select>
                                                     ) : (
-                                                        <div className="text-[10px] text-slate-500 mt-0.5">
-                                                            Clé: <span className="font-mono font-semibold">{src.joinConfig?.primaryKey}</span> = <span className="font-mono font-semibold">[{ds.name}] {src.joinConfig?.secondaryKey}</span>
+                                                        <div className="text-xs text-slate-600 mt-1 bg-white/50 rounded px-2 py-1">
+                                                            <div className="font-semibold text-[10px] text-slate-500 uppercase mb-0.5">Jointure sur :</div>
+                                                            <div className="font-mono text-[11px]">
+                                                                <span className="font-bold">{src.joinConfig?.primaryKey}</span>
+                                                                <span className="mx-1">=</span>
+                                                                <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -795,9 +812,9 @@ export const PivotTable: React.FC = () => {
 
                                         <button
                                             onClick={startAddSource}
-                                            className="w-full py-2 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1"
+                                            className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-xs font-bold flex items-center justify-center gap-2 shadow-sm hover:shadow"
                                         >
-                                            <Plus className="w-3 h-3" /> Gérer les sources
+                                            <Plus className="w-4 h-4" /> Gérer les sources
                                         </button>
                                     </div>
                                 )}
