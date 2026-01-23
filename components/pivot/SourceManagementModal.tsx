@@ -44,6 +44,9 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
     primaryDataset,
     onSourcesChange
 }) => {
+    // CRITICAL: Early return must be BEFORE all hooks to avoid React error #310
+    if (!isOpen) return null;
+
     const [localSources, setLocalSources] = useState<PivotSourceConfig[]>(sources);
     const [isAddingSource, setIsAddingSource] = useState(false);
     const [newSource, setNewSource] = useState<{
@@ -52,8 +55,6 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
         key2: string;
         joinType: 'left' | 'inner';
     }>({ targetId: '', key1: '', key2: '', joinType: 'left' });
-
-    if (!isOpen) return null;
 
     const handleAddSource = () => {
         const isPrimary = localSources.length === 0;
