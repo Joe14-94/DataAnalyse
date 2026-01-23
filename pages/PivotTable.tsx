@@ -149,9 +149,12 @@ export const PivotTable: React.FC = () => {
 
     // --- INITIALISATION & PERSISTENCE ---
 
-    // Load State
+    // Save State (only after initialization)
     useEffect(() => {
-        // Only load if we have a primary source
+        // Don't save state until we've initialized
+        if (!isInitialized) return;
+
+        // Only save if we have a primary source
         if (primaryDataset) {
             savePivotState({
                 datasetId: primaryDataset.id,
@@ -282,10 +285,17 @@ export const PivotTable: React.FC = () => {
     // Auto-expand sections when sources change
     useEffect(() => {
         const newExpanded = { ...expandedSections };
+        let hasChanges = false;
         sources.forEach(s => {
-            if (newExpanded[s.id] === undefined) newExpanded[s.id] = true;
+            if (newExpanded[s.id] === undefined) {
+                newExpanded[s.id] = true;
+                hasChanges = true;
+            }
         });
-        setExpandedSections(newExpanded);
+        // Only update state if there are actual changes
+        if (hasChanges) {
+            setExpandedSections(newExpanded);
+        }
     }, [sources.length]);
 
     // --- BLENDING LOGIC ---
