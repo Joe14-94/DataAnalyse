@@ -16,6 +16,7 @@ import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
+import { DrilldownModal } from '../components/pivot/DrilldownModal';
 
 // --- DRAG & DROP TYPES ---
 type DropZoneType = 'row' | 'col' | 'val' | 'filter';
@@ -112,6 +113,9 @@ export const PivotTable: React.FC = () => {
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+
+    // DRILLDOWN STATE
+    const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
 
     // D&D STATE
     const [draggedField, setDraggedField] = useState<string | null>(null);
@@ -540,6 +544,74 @@ export const PivotTable: React.FC = () => {
 
     const toggleSection = (id: string) => {
         setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    // DRILLDOWN HANDLER
+    const handleDrilldown = (rowKeys: string[], colLabel: string) => {
+        if (!blendedRows || blendedRows.length === 0) return;
+
+        // Filter rows that match the rowKeys and colLabel
+        const detailRows = blendedRows.filter(row => {
+            // Check if row matches all row dimension values
+            const matchesRow = rowFields.every((field, idx) => {
+                const rowValue = String(row[field] || '').trim();
+                const keyValue = rowKeys[idx] === '(Vide)' ? '' : rowKeys[idx];
+                return rowValue === keyValue || (rowValue === '' && keyValue === '(Vide)');
+            });
+
+            if (!matchesRow) return false;
+
+            // If there's a column field, check if it matches
+            if (colFields.length > 0 && colLabel && colLabel !== 'Total') {
+                // Handle column grouping (dates)
+                const colValue = String(row[colFields[0]] || '');
+                if (colGrouping === 'year') {
+                    return colValue.startsWith(colLabel);
+                } else if (colGrouping === 'month') {
+                    return colValue.startsWith(colLabel);
+                } else if (colGrouping === 'quarter') {
+                    const year = colValue.substring(0, 4);
+                    const month = parseInt(colValue.substring(5, 7));
+                    const quarter = Math.ceil(month / 3);
+                    return colLabel === `${year} T${quarter}`;
+                } else {
+                    return colValue === colLabel;
+                }
+            }
+
+            return true;
+        });
+
+        if (detailRows.length === 0) {
+            alert('Aucune donnée de détail disponible pour cette sélection.');
+            return;
+        }
+
+        // Get all fields from primary dataset + joined datasets
+        const allFields = primaryDataset ? [...primaryDataset.fields] : [];
+        sources.filter(s => !s.isPrimary).forEach(src => {
+            const ds = datasets.find(d => d.id === src.datasetId);
+            if (ds) {
+                ds.fields.forEach(f => {
+                    const prefixedField = `[${ds.name}] ${f}`;
+                    if (!allFields.includes(prefixedField)) {
+                        allFields.push(prefixedField);
+                    }
+                });
+            }
+        });
+
+        // Create title
+        const rowKeyString = rowKeys.join(' > ');
+        const title = colLabel && colLabel !== 'Total'
+            ? `${rowKeyString} × ${colLabel}`
+            : rowKeyString;
+
+        setDrilldownData({
+            rows: detailRows,
+            title: `Détails: ${title}`,
+            fields: allFields
+        });
     };
 
     // VIRTUALIZATION SETUP
@@ -1020,13 +1092,22 @@ export const PivotTable: React.FC = () => {
                                                             }
 
                                                             return (
-                                                                <td key={col} className={`px-4 py-2 text-sm text-right border-r border-slate-100 tabular-nums ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`}>
+                                                                <td
+                                                                    key={col}
+                                                                    className={`px-4 py-2 text-sm text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`}
+                                                                    onClick={() => handleDrilldown(row.keys, col)}
+                                                                    title="Cliquez pour voir les détails"
+                                                                >
                                                                     {formatted}
                                                                 </td>
                                                             );
                                                         })}
                                                         {showTotalCol && (
-                                                            <td className="px-4 py-2 text-sm text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200">
+                                                            <td
+                                                                className="px-4 py-2 text-sm text-right font-bold text-slate-800 bg-slate-50 border-l border-slate-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                                                                onClick={() => handleDrilldown(row.keys, 'Total')}
+                                                                title="Cliquez pour voir les détails"
+                                                            >
                                                                 {formatOutput(row.rowTotal)}
                                                             </td>
                                                         )}
@@ -1126,6 +1207,15 @@ export const PivotTable: React.FC = () => {
                 batches={batches}
                 primaryDataset={primaryDataset}
                 onSourcesChange={handleSourcesChange}
+            />
+
+            {/* Modal de drilldown */}
+            <DrilldownModal
+                isOpen={drilldownData !== null}
+                onClose={() => setDrilldownData(null)}
+                title={drilldownData?.title || ''}
+                rows={drilldownData?.rows || []}
+                fields={drilldownData?.fields || []}
             />
         </>
     );

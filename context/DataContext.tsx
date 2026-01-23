@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
-import { APP_VERSION, generateSyntheticData, db, generateId } from '../utils';
+import { APP_VERSION, generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, db, generateId } from '../utils';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
 import { BatchContext, useBatches } from './BatchContext';
@@ -391,32 +391,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     const batches1 = generateSyntheticData(id1);
 
-    // Dataset 2: Projets
+    // Dataset 2: Projets IT (avec clés communes)
     const id2 = 'demo-projets';
     const ds2: Dataset = {
       id: id2,
       name: 'Projets IT',
-      fields: ['Projet', 'Organisation', 'Statut', 'DateDébut', 'Budget', 'Responsable'],
+      fields: ['Projet', 'Organisation', 'Statut', 'DateDébut', 'Budget', 'Responsable', 'Priorité'],
       fieldConfigs: { 'Budget': { type: 'text' } },
       createdAt: Date.now()
     };
-    const batches2: ImportBatch[] = [
-      {
-        id: generateId(),
-        datasetId: id2,
-        date: new Date(2024, 5, 1).toISOString(),
-        createdAt: Date.now(),
-        rows: [
-          { id: generateId(), Projet: 'Migration Cloud', Organisation: 'TechCorp', Statut: 'En cours', DateDébut: '2024-01-15', Budget: '250 k€', Responsable: 'Pierre Martin' },
-          { id: generateId(), Projet: 'Refonte CRM', Organisation: 'Innovate SA', Statut: 'Terminé', DateDébut: '2023-09-01', Budget: '180 k€', Responsable: 'Sophie Bernard' },
-          { id: generateId(), Projet: 'Cybersécurité', Organisation: 'CyberDefense Ltd', Statut: 'Planifié', DateDébut: '2024-08-01', Budget: '320 k€', Responsable: 'Thomas Dubois' },
-          { id: generateId(), Projet: 'Dashboard Analytics', Organisation: 'Global Services', Statut: 'En cours', DateDébut: '2024-03-01', Budget: '95 k€', Responsable: 'Marie Laurent' },
-          { id: generateId(), Projet: 'Formation DevOps', Organisation: 'Alpha Solutions', Statut: 'Terminé', DateDébut: '2024-02-01', Budget: '45 k€', Responsable: 'Lucas Moreau' }
-        ]
-      }
-    ];
+    const batches2 = generateProjectsData(id2);
 
-    // Dataset 3: Budget
+    // Dataset 3: Budget Annuel (avec clés communes)
     const id3 = 'demo-budget';
     const ds3: Dataset = {
       id: id3,
@@ -425,24 +411,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fieldConfigs: { 'Prévisionnel': { type: 'text' }, 'Réalisé': { type: 'text' }, 'Ecart': { type: 'text' } },
       createdAt: Date.now()
     };
-    const batches3: ImportBatch[] = [
-      {
-        id: generateId(),
-        datasetId: id3,
-        date: new Date(2024, 11, 31).toISOString(),
-        createdAt: Date.now(),
-        rows: [
-          { id: generateId(), Département: 'IT', Organisation: 'TechCorp', Prévisionnel: '500 k€', Réalisé: '485 k€', Ecart: '-15 k€', Trimestre: 'Q4 2024' },
-          { id: generateId(), Département: 'RH', Organisation: 'TechCorp', Prévisionnel: '320 k€', Réalisé: '340 k€', Ecart: '+20 k€', Trimestre: 'Q4 2024' },
-          { id: generateId(), Département: 'Marketing', Organisation: 'Innovate SA', Prévisionnel: '280 k€', Réalisé: '275 k€', Ecart: '-5 k€', Trimestre: 'Q4 2024' },
-          { id: generateId(), Département: 'Commercial', Organisation: 'Global Services', Prévisionnel: '420 k€', Réalisé: '450 k€', Ecart: '+30 k€', Trimestre: 'Q4 2024' },
-          { id: generateId(), Département: 'IT', Organisation: 'Innovate SA', Prévisionnel: '380 k€', Réalisé: '390 k€', Ecart: '+10 k€', Trimestre: 'Q4 2024' }
-        ]
-      }
-    ];
+    const batches3 = generateBudgetData(id3);
 
-    setDatasets([ds1, ds2, ds3]);
-    setAllBatches([...batches1, ...batches2, ...batches3]);
+    // Dataset 4: Ventes (avec clés communes)
+    const id4 = 'demo-ventes';
+    const ds4: Dataset = {
+      id: id4,
+      name: 'Ventes',
+      fields: ['Produit', 'Organisation', 'Région', 'Quantité', 'Prix Unitaire', 'Montant Total', 'Date Vente', 'Commercial'],
+      fieldConfigs: { 'Prix Unitaire': { type: 'text' }, 'Montant Total': { type: 'text' } },
+      createdAt: Date.now()
+    };
+    const batches4 = generateSalesData(id4);
+
+    setDatasets([ds1, ds2, ds3, ds4]);
+    setAllBatches([...batches1, ...batches2, ...batches3, ...batches4]);
     setCurrentDatasetId(id1);
     setDashboardWidgets([
       { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } },
