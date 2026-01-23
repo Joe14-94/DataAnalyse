@@ -737,10 +737,10 @@ export const PivotTable: React.FC = () => {
                 <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0">
 
                     {/* LEFT PANEL : SOURCES & FIELDS */}
-                    <div className="xl:w-80 flex-shrink-0 flex flex-col gap-4 min-w-0">
+                    <div className="xl:w-96 flex-shrink-0 flex flex-col gap-4 min-w-0">
 
                         {/* 1. DATA SOURCES STACK */}
-                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[250px] max-h-[450px]">
                             <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
                                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                                     <Database className="w-4 h-4 text-blue-600" />
@@ -748,7 +748,7 @@ export const PivotTable: React.FC = () => {
                                 </h3>
                             </div>
 
-                            <div className="p-3 space-y-3">
+                            <div className="p-3 space-y-3 overflow-y-auto custom-scrollbar flex-1">
 
                                 {/* LISTE DES SOURCES */}
                                 {sources.length === 0 ? (
