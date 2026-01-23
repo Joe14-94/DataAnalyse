@@ -109,6 +109,9 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
     const primarySource = localSources.find(s => s.isPrimary);
     const secondarySources = localSources.filter(s => !s.isPrimary);
 
+    // Calculate primaryDataset from local sources to support adding secondary sources immediately
+    const localPrimaryDataset = primarySource ? datasets.find(d => d.id === primarySource.datasetId) : primaryDataset;
+
     // --- PREVIEW LOGIC ---
     const previewStats = useMemo(() => {
         if (!newSource.targetId || !newSource.key1 || !newSource.key2 || !primarySource) return null;
@@ -280,7 +283,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                                 onChange={e => setNewSource({ ...newSource, key1: e.target.value })}
                                             >
                                                 <option value="">-- Choisir --</option>
-                                                {primaryDataset?.fields.map((f: string) => (
+                                                {localPrimaryDataset?.fields.map((f: string) => (
                                                     <option key={f} value={f}>{f}</option>
                                                 ))}
                                             </select>
