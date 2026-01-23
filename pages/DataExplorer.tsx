@@ -904,7 +904,7 @@ export const DataExplorer: React.FC = () => {
                                  else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
                                  else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
                                  return (
-                                    <td key={field} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-[10px] text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {displayVal}
                                     </td>
                                  );
@@ -914,7 +914,7 @@ export const DataExplorer: React.FC = () => {
                                  const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
                                  return (
-                                    <td key={cf.id} className={`px-6 py-2 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-[10px] text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {val !== undefined && val !== null ? <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span> : <span className="text-indigo-200">-</span>}
                                     </td>
                                  );
@@ -949,12 +949,12 @@ export const DataExplorer: React.FC = () => {
                   </div>
                   <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Nom de la colonne</label>
-                        <input type="text" className="block w-full rounded-md border-slate-300 text-sm p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Nom de la colonne</label>
+                        <input type="text" className="block w-full rounded-md border-slate-300 text-[10px] p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
                      </div>
                      <div className="flex-1 flex flex-col min-h-[300px]">
-                        <label className="block text-xs font-bold text-slate-600 mb-1 flex justify-between"><span>Formule</span><span className="text-[10px] text-slate-400">Syntaxe Excel simplifiée</span></label>
-                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-sm p-3 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1 flex justify-between"><span>Formule</span><span className="text-[10px] text-slate-400">Syntaxe Excel simplifiée</span></label>
+                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-[10px] p-2 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
                         <div className="border border-t-0 border-slate-300 rounded-b-md bg-white flex flex-col h-64">
                            <div className="flex border-b border-slate-200">
                               <button onClick={() => setCalcTab('fields')} className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'fields' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}>Champs ({currentDataset.fields.length})</button>
@@ -990,8 +990,8 @@ export const DataExplorer: React.FC = () => {
                      </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                           <label className="block text-xs font-bold text-slate-600 mb-1">Type de résultat</label>
-                           <select className="block w-full rounded-md border-slate-300 text-sm p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
+                           <label className="block text-[10px] font-bold text-slate-600 mb-1">Type de résultat</label>
+                           <select className="block w-full rounded-md border-slate-300 text-[10px] p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
                               <option value="number">Nombre</option>
                               <option value="text">Texte</option>
                               <option value="boolean">Vrai/Faux</option>
