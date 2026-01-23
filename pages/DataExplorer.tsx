@@ -67,6 +67,12 @@ export const DataExplorer: React.FC = () => {
    // VIRTUALIZATION REFS
    const tableContainerRef = useRef<HTMLDivElement>(null);
 
+   // COLUMN RESIZING STATE
+   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+   const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+   const [resizeStartX, setResizeStartX] = useState<number>(0);
+   const [resizeStartWidth, setResizeStartWidth] = useState<number>(0);
+
    // --- EFFECT: Handle Drilldown from Navigation ---
    useEffect(() => {
       if (location.state) {
@@ -147,6 +153,37 @@ export const DataExplorer: React.FC = () => {
       setSearchTerm('');
       setSortConfig(null);
    };
+
+   // COLUMN RESIZING HANDLERS
+   const handleResizeStart = (e: React.MouseEvent, columnKey: string, currentWidth: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setResizingColumn(columnKey);
+      setResizeStartX(e.clientX);
+      setResizeStartWidth(currentWidth);
+   };
+
+   useEffect(() => {
+      if (!resizingColumn) return;
+
+      const handleMouseMove = (e: MouseEvent) => {
+         const diff = e.clientX - resizeStartX;
+         const newWidth = Math.max(80, resizeStartWidth + diff);
+         setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
+      };
+
+      const handleMouseUp = () => {
+         setResizingColumn(null);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+         document.removeEventListener('mousemove', handleMouseMove);
+         document.removeEventListener('mouseup', handleMouseUp);
+      };
+   }, [resizingColumn, resizeStartX, resizeStartWidth]);
 
    const handleRowClick = (row: any) => {
       setSelectedRow(row);
@@ -689,7 +726,7 @@ export const DataExplorer: React.FC = () => {
                      )}
 
                      <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
-                        <Button onClick={handleDeleteColumn} size="sm" className="bg-white hover:bg-red-50 text-red-600 border border-red-200 shadow-none text-xs"><Trash2 className="w-3 h-3 mr-1" /> Supprimer</Button>
+                        <Button onClick={handleDeleteColumn} size="sm" className="bg-red-600 hover:bg-red-700 text-white border border-red-700 shadow-sm text-xs font-semibold"><Trash2 className="w-3 h-3 mr-1" /> Supprimer</Button>
                         <Button onClick={() => setSelectedCol(null)} size="sm" className="bg-teal-600 text-white hover:bg-teal-700 shadow-sm text-xs">Terminer</Button>
                      </div>
                   </div>
@@ -727,60 +764,100 @@ export const DataExplorer: React.FC = () => {
                <table className="min-w-full divide-y divide-slate-200 border-collapse text-left" style={{ height: rowVirtualizer.getTotalSize() }}>
                   <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => handleHeaderClick('_importDate')}>
-                           <div className="flex items-center gap-2">
-                              <span>Date d'import</span>
-                              {sortConfig?.key === '_importDate' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative" onClick={() => handleHeaderClick('_importDate')} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140 }}>
+                           <div className="flex items-center gap-2 justify-between">
+                              <div className="flex items-center gap-2">
+                                 <span>Date d'import</span>
+                                 {sortConfig?.key === '_importDate' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                              </div>
+                              <div
+                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                 onMouseDown={(e) => handleResizeStart(e, '_importDate', columnWidths['_importDate'] || 140)}
+                              />
                            </div>
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200">
-                           <span>Id</span>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group" style={{ width: columnWidths['id'] || 120, minWidth: 120 }}>
+                           <div className="flex items-center gap-2 justify-between">
+                              <span>Id</span>
+                              <div
+                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                 onMouseDown={(e) => handleResizeStart(e, 'id', columnWidths['id'] || 120)}
+                              />
+                           </div>
                         </th>
                         {displayFields.map(field => {
                            const isSelected = selectedCol === field;
                            const isBlended = field.startsWith('[');
                            const fieldConfig = currentDataset.fieldConfigs?.[field];
                            const isNumeric = fieldConfig?.type === 'number';
+                           const defaultWidth = isNumeric ? 120 : 180;
+                           const colWidth = columnWidths[field] || defaultWidth;
                            return (
-                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group ${isCalcDrawerOpen ? 'hover:bg-indigo-100 hover:text-indigo-800' : (isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'))}`} onClick={() => handleHeaderClick(field)}>
-                                 <div className="flex items-center gap-2">
-                                    {isCalcDrawerOpen && <MousePointerClick className="w-3 h-3 text-indigo-500" />}
-                                    {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
-                                    <span>{field}</span>
-                                    {!isCalcDrawerOpen && (sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
+                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isCalcDrawerOpen ? 'hover:bg-indigo-100 hover:text-indigo-800' : (isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'))}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80 }}>
+                                 <div className="flex items-center gap-2 justify-between">
+                                    <div className="flex items-center gap-2">
+                                       {isCalcDrawerOpen && <MousePointerClick className="w-3 h-3 text-indigo-500" />}
+                                       {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
+                                       <span>{field}</span>
+                                       {!isCalcDrawerOpen && (sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
+                                    </div>
+                                    <div
+                                       className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                       onMouseDown={(e) => handleResizeStart(e, field, colWidth)}
+                                       onClick={(e) => e.stopPropagation()}
+                                    />
                                  </div>
                               </th>
                            );
                         })}
-                        {calculatedFields.map(cf => (
-                           <th key={cf.id} scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group" onClick={() => handleHeaderClick(cf.name)}>
-                              <div className="flex items-center gap-2">
-                                 <Calculator className="w-3 h-3" />
-                                 <span>{cf.name}</span>
-                                 {!isCalcDrawerOpen && (sortConfig?.key === cf.name ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />) : <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
-                              </div>
-                           </th>
-                        ))}
+                        {calculatedFields.map(cf => {
+                           const colWidth = columnWidths[cf.name] || 150;
+                           return (
+                              <th key={cf.id} scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative" onClick={() => handleHeaderClick(cf.name)} style={{ width: colWidth, minWidth: 80 }}>
+                                 <div className="flex items-center gap-2 justify-between">
+                                    <div className="flex items-center gap-2">
+                                       <Calculator className="w-3 h-3" />
+                                       <span>{cf.name}</span>
+                                       {!isCalcDrawerOpen && (sortConfig?.key === cf.name ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />) : <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
+                                    </div>
+                                    <div
+                                       className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-400 active:bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                       onMouseDown={(e) => handleResizeStart(e, cf.name, colWidth)}
+                                       onClick={(e) => e.stopPropagation()}
+                                    />
+                                 </div>
+                              </th>
+                           );
+                        })}
                         <th scope="col" className="px-3 py-3 w-10 border-b border-slate-200 bg-slate-50"></th>
                      </tr>
                      {showFilters && (
                         <tr className="bg-slate-50">
-                           <th className="px-2 py-2 border-b border-slate-200">
+                           <th className="px-2 py-2 border-b border-slate-200" style={{ width: columnWidths['_importDate'] || 140, minWidth: 140 }}>
                               <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre date..." value={columnFilters['_importDate'] || ''} onChange={(e) => handleColumnFilterChange('_importDate', e.target.value)} />
                            </th>
-                           <th className="px-2 py-2 border-b border-slate-200">
+                           <th className="px-2 py-2 border-b border-slate-200" style={{ width: columnWidths['id'] || 120, minWidth: 120 }}>
                               <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre Id..." value={columnFilters['id'] || ''} onChange={(e) => handleColumnFilterChange('id', e.target.value)} />
                            </th>
-                           {displayFields.map(field => (
-                              <th key={`filter-${field}`} className="px-2 py-2 border-b border-slate-200">
-                                 <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`} value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')} onChange={(e) => handleColumnFilterChange(field, e.target.value)} />
-                              </th>
-                           ))}
-                           {calculatedFields.map(cf => (
-                              <th key={`filter-${cf.id}`} className="px-2 py-2 border-b border-indigo-200 bg-indigo-50">
-                                 <input type="text" className="w-full px-2 py-1 text-xs border border-indigo-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 font-normal" placeholder={`Filtre...`} value={columnFilters[cf.name] || ''} onChange={(e) => handleColumnFilterChange(cf.name, e.target.value)} />
-                              </th>
-                           ))}
+                           {displayFields.map(field => {
+                              const fieldConfig = currentDataset.fieldConfigs?.[field];
+                              const isNumeric = fieldConfig?.type === 'number';
+                              const defaultWidth = isNumeric ? 120 : 180;
+                              const colWidth = columnWidths[field] || defaultWidth;
+                              return (
+                                 <th key={`filter-${field}`} className="px-2 py-2 border-b border-slate-200" style={{ width: colWidth, minWidth: 80 }}>
+                                    <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`} value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')} onChange={(e) => handleColumnFilterChange(field, e.target.value)} />
+                                 </th>
+                              );
+                           })}
+                           {calculatedFields.map(cf => {
+                              const colWidth = columnWidths[cf.name] || 150;
+                              return (
+                                 <th key={`filter-${cf.id}`} className="px-2 py-2 border-b border-indigo-200 bg-indigo-50" style={{ width: colWidth, minWidth: 80 }}>
+                                    <input type="text" className="w-full px-2 py-1 text-xs border border-indigo-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 font-normal" placeholder={`Filtre...`} value={columnFilters[cf.name] || ''} onChange={(e) => handleColumnFilterChange(cf.name, e.target.value)} />
+                                 </th>
+                              );
+                           })}
                            <th className="border-b border-slate-200 bg-slate-50"></th>
                         </tr>
                      )}
@@ -821,10 +898,10 @@ export const DataExplorer: React.FC = () => {
                               className="hover:bg-blue-50 transition-colors cursor-pointer group"
                               onClick={() => handleRowClick(row)}
                            >
-                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600">
+                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600" style={{ width: columnWidths['_importDate'] || 140, minWidth: 140 }}>
                                  {formatDateFr(row._importDate)}
                               </td>
-                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-600 font-mono">
+                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-600 font-mono" style={{ width: columnWidths['id'] || 120, minWidth: 120 }}>
                                  {row.id}
                               </td>
                               {displayFields.map(field => {
@@ -833,11 +910,14 @@ export const DataExplorer: React.FC = () => {
                                  const cellStyle = getCellStyle(field, val);
                                  const config = currentDataset.fieldConfigs?.[field];
                                  const isBlended = field.startsWith('[');
+                                 const isNumeric = config?.type === 'number';
+                                 const defaultWidth = isNumeric ? 120 : 180;
+                                 const colWidth = columnWidths[field] || defaultWidth;
                                  if (config?.type === 'number' && val !== undefined && val !== '') displayVal = formatNumberValue(val, config);
                                  else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
                                  else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
                                  return (
-                                    <td key={field} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-700 max-w-xs truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''}`} title={String(val)}>
+                                    <td key={field} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {displayVal}
                                     </td>
                                  );
@@ -845,8 +925,9 @@ export const DataExplorer: React.FC = () => {
                               {calculatedFields.map(cf => {
                                  const val = row[cf.name];
                                  const cellStyle = getCellStyle(cf.name, val); // Apply conditional formatting to calc fields too
+                                 const colWidth = columnWidths[cf.name] || 150;
                                  return (
-                                    <td key={cf.id} className={`px-6 py-2 whitespace-nowrap text-sm text-indigo-700 font-medium max-w-xs truncate bg-indigo-50/30 text-right font-mono ${cellStyle}`}>
+                                    <td key={cf.id} className={`px-6 py-2 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {val !== undefined && val !== null ? <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span> : <span className="text-indigo-200">-</span>}
                                     </td>
                                  );
