@@ -16,7 +16,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'count',
@@ -41,7 +41,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -65,7 +65,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'avg',
@@ -86,7 +86,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const minResult = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'min',
@@ -99,7 +99,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const maxResult = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'max',
@@ -119,7 +119,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: 'Produit',
+        colFields: ['Produit'],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -143,7 +143,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: 'Date',
+        colFields: ['Date'],
         colGrouping: 'year',
         valField: 'Ventes',
         aggType: 'sum',
@@ -160,7 +160,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: 'Date',
+        colFields: ['Date'],
         colGrouping: 'quarter',
         valField: 'Ventes',
         aggType: 'sum',
@@ -177,7 +177,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: 'Date',
+        colFields: ['Date'],
         colGrouping: 'month',
         valField: 'Ventes',
         aggType: 'sum',
@@ -198,7 +198,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Produit'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'count',
@@ -215,7 +215,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'count',
@@ -234,7 +234,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -252,7 +252,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -277,7 +277,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: dataWithNulls,
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -296,7 +296,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: [],
         rowFields: ['Region'],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -313,7 +313,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: testData,
         rowFields: [],
-        colField: '',
+        colFields: [],
         colGrouping: 'none',
         valField: 'Ventes',
         aggType: 'sum',
@@ -341,7 +341,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       const result = calculatePivotData({
         rows: largeDataset,
         rowFields: ['Region', 'Produit'],
-        colField: 'Date',
+        colFields: ['Date'],
         colGrouping: 'month',
         valField: 'Ventes',
         aggType: 'sum',
