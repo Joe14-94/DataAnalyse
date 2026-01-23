@@ -224,6 +224,7 @@ export interface AppState {
 
   // Finance Referentials (NOUVEAU)
   financeReferentials?: FinanceReferentials;
+  budgetModule?: BudgetModule; // NOUVEAU : Module budgétaire
   uiPrefs?: UIPrefs; // NOUVEAU : Préférences de style globales
 
   // Persistence
@@ -361,4 +362,149 @@ export interface FinanceReferentials {
   fiscalCalendars?: FiscalCalendar[];       // Calendriers fiscaux
   masterData?: MasterDataItem[];            // Référentiels maîtres
   reclassifications?: AccountReclassification[];  // Règles de reclassement
+}
+
+// ============================================================================
+// BUDGET MODULE - F3.1
+// ============================================================================
+
+// Statuts du workflow budgétaire
+export type BudgetStatus = 'draft' | 'submitted' | 'validated' | 'rejected' | 'locked';
+
+// Type de scénario budgétaire
+export type BudgetScenario = 'realistic' | 'optimistic' | 'pessimistic' | 'custom';
+
+// Type de formule pour cellule budgétaire
+export type BudgetFormulaType = 'fixed' | 'growth' | 'index' | 'formula' | 'spread';
+
+// Ligne budgétaire individuelle
+export interface BudgetLine {
+  id: string;
+  accountCode: string;              // Code compte du plan comptable
+  accountLabel?: string;            // Libellé (cache)
+  analyticalBreakdown?: {           // Ventilation analytique
+    [axisCode: string]: string;     // Ex: { CC: "CC-001", PRJ: "PRJ-2025" }
+  };
+  periodValues: {                   // Valeurs par période
+    [periodId: string]: number;     // Ex: { "2025-01": 10000, "2025-02": 12000 }
+  };
+  formulas?: {                      // Formules par période
+    [periodId: string]: {
+      type: BudgetFormulaType;
+      value?: number;               // Pour growth: % / Pour index: coefficient
+      baseValue?: number;           // Valeur de référence
+      expression?: string;          // Pour formules complexes
+    };
+  };
+  comment?: string;                 // Commentaire ligne
+  isLocked: boolean;                // Ligne verrouillée
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Version budgétaire
+export interface BudgetVersion {
+  id: string;
+  budgetId: string;                 // ID du budget parent
+  versionNumber: number;            // V1, V2, V3...
+  name: string;                     // Ex: "V1 - Initial", "V2 - Ajusté Mars"
+  scenario: BudgetScenario;         // Scénario
+  status: BudgetStatus;             // Statut workflow
+  lines: BudgetLine[];              // Lignes budgétaires
+  isActive: boolean;                // Version active
+  submittedBy?: string;             // Email soumissionnaire
+  submittedAt?: number;             // Date soumission
+  validatedBy?: string;             // Email validateur
+  validatedAt?: number;             // Date validation
+  rejectionReason?: string;         // Raison du rejet
+  comment?: string;                 // Commentaire version
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Commentaire sur ligne budgétaire
+export interface BudgetComment {
+  id: string;
+  budgetId: string;
+  versionId: string;
+  lineId?: string;                  // Si commentaire sur ligne spécifique
+  author: string;                   // Email auteur
+  content: string;                  // Contenu commentaire
+  isResolved: boolean;              // Marqué comme résolu
+  createdAt: number;
+}
+
+// Notification/Relance budgétaire
+export interface BudgetNotification {
+  id: string;
+  budgetId: string;
+  type: 'reminder' | 'submission' | 'validation' | 'rejection';
+  recipient: string;                // Email destinataire
+  subject: string;
+  message: string;
+  isRead: boolean;
+  sentAt: number;
+}
+
+// Template budgétaire réutilisable
+export interface BudgetTemplate {
+  id: string;
+  name: string;                     // Ex: "Budget Marketing", "Budget RH"
+  description?: string;
+  category?: string;                // Ex: "Département", "Projet", "Activité"
+  accountCodes: string[];           // Comptes utilisés
+  analyticalAxes?: string[];        // Axes analytiques requis
+  defaultFormulas?: {               // Formules par défaut
+    [accountCode: string]: {
+      type: BudgetFormulaType;
+      value?: number;
+    };
+  };
+  isActive: boolean;
+  createdAt: number;
+}
+
+// Budget principal
+export interface Budget {
+  id: string;
+  name: string;                     // Ex: "Budget 2025", "Budget Marketing Q1"
+  fiscalYear: number;               // Année fiscale
+  fiscalCalendarId?: string;        // Calendrier fiscal utilisé
+  chartOfAccountsId: string;        // Plan comptable
+  analyticalDimensions?: string[];  // Axes analytiques utilisés
+  templateId?: string;              // Template source (si créé depuis template)
+  versions: BudgetVersion[];        // Versions du budget
+  activeVersionId?: string;         // Version active
+  startDate: string;                // Date début (YYYY-MM-DD)
+  endDate: string;                  // Date fin (YYYY-MM-DD)
+  owner: string;                    // Email propriétaire
+  contributors?: string[];          // Emails contributeurs
+  validators?: string[];            // Emails validateurs
+  dueDate?: string;                 // Date limite de soumission
+  isLocked: boolean;                // Budget verrouillé
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Comparaison de versions
+export interface BudgetVersionComparison {
+  version1: BudgetVersion;
+  version2: BudgetVersion;
+  differences: {
+    lineId: string;
+    accountCode: string;
+    periodId: string;
+    value1: number;
+    value2: number;
+    variance: number;
+    variancePercent: number;
+  }[];
+}
+
+// Module budgétaire complet
+export interface BudgetModule {
+  budgets: Budget[];
+  templates: BudgetTemplate[];
+  comments: BudgetComment[];
+  notifications: BudgetNotification[];
 }
