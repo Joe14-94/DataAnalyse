@@ -733,6 +733,9 @@ export const DataExplorer: React.FC = () => {
                               {sortConfig?.key === '_importDate' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                            </div>
                         </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200">
+                           <span>Id</span>
+                        </th>
                         {displayFields.map(field => {
                            const isSelected = selectedCol === field;
                            const isBlended = field.startsWith('[');
@@ -765,6 +768,9 @@ export const DataExplorer: React.FC = () => {
                            <th className="px-2 py-2 border-b border-slate-200">
                               <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre date..." value={columnFilters['_importDate'] || ''} onChange={(e) => handleColumnFilterChange('_importDate', e.target.value)} />
                            </th>
+                           <th className="px-2 py-2 border-b border-slate-200">
+                              <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre Id..." value={columnFilters['id'] || ''} onChange={(e) => handleColumnFilterChange('id', e.target.value)} />
+                           </th>
                            {displayFields.map(field => (
                               <th key={`filter-${field}`} className="px-2 py-2 border-b border-slate-200">
                                  <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`} value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')} onChange={(e) => handleColumnFilterChange(field, e.target.value)} />
@@ -784,7 +790,7 @@ export const DataExplorer: React.FC = () => {
                   <tbody className="bg-white divide-y divide-slate-200 relative">
                      {processedRows.length === 0 && (
                         <tr style={{ height: '300px' }}>
-                           <td colSpan={displayFields.length + 2 + calculatedFields.length} className="px-6 py-16 text-center">
+                           <td colSpan={displayFields.length + 3 + calculatedFields.length} className="px-6 py-16 text-center">
                               <div className="flex flex-col items-center justify-center text-slate-400">
                                  {Object.keys(columnFilters).length > 0 || searchTerm ? (
                                     <>
@@ -817,6 +823,9 @@ export const DataExplorer: React.FC = () => {
                            >
                               <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600">
                                  {formatDateFr(row._importDate)}
+                              </td>
+                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-600 font-mono">
+                                 {row.id}
                               </td>
                               {displayFields.map(field => {
                                  const val = row[field];
