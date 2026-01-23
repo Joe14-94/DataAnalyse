@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -30,6 +30,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Historique imports', icon: History, path: '/history' },
     { name: 'Création de graphiques', icon: PieChart, path: '/analytics', id: 'tour-nav-analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
+    { name: 'Budgets', icon: DollarSign, path: '/budget' },
     { name: 'Personnalisation', icon: Palette, path: '/customization' },
     { name: 'Paramètres', icon: Settings, path: '/settings' },
     { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
