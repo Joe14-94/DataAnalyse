@@ -11,6 +11,7 @@ import {
     FinanceReferentials
 } from '../types';
 import { generateId } from '../utils';
+import { PCG_TEMPLATE, IFRS_TEMPLATE } from '../data/accountTemplates';
 
 interface ReferentialContextType {
     // Chart of Accounts
@@ -387,13 +388,45 @@ export const ReferentialProvider: React.FC<ReferentialProviderProps> = ({
 
     // --- TEMPLATES ---
     const importPCGTemplate = () => {
-        // TODO: Implement PCG template import
-        console.log('Importing PCG template...');
+        // Check if PCG already exists
+        const existingPCG = chartsOfAccounts.find(c => c.standard === 'PCG');
+        if (existingPCG) {
+            alert('Un plan comptable PCG existe déjà. Veuillez le supprimer avant d\'importer un nouveau template.');
+            return;
+        }
+
+        const newChart: ChartOfAccounts = {
+            ...PCG_TEMPLATE,
+            id: generateId(),
+            createdAt: Date.now(),
+            isDefault: chartsOfAccounts.length === 0 // Set as default if it's the first one
+        };
+
+        onUpdate({
+            ...referentials,
+            chartOfAccounts: [...chartsOfAccounts, newChart]
+        });
     };
 
     const importIFRSTemplate = () => {
-        // TODO: Implement IFRS template import
-        console.log('Importing IFRS template...');
+        // Check if IFRS already exists
+        const existingIFRS = chartsOfAccounts.find(c => c.standard === 'IFRS');
+        if (existingIFRS) {
+            alert('Un plan comptable IFRS existe déjà. Veuillez le supprimer avant d\'importer un nouveau template.');
+            return;
+        }
+
+        const newChart: ChartOfAccounts = {
+            ...IFRS_TEMPLATE,
+            id: generateId(),
+            createdAt: Date.now(),
+            isDefault: chartsOfAccounts.length === 0 // Set as default if it's the first one
+        };
+
+        onUpdate({
+            ...referentials,
+            chartOfAccounts: [...chartsOfAccounts, newChart]
+        });
     };
 
     const value: ReferentialContextType = {
