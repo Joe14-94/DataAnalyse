@@ -868,22 +868,13 @@ export const DataExplorer: React.FC = () => {
                   </thead>
 
                   {/* VIRTUAL BODY */}
-                  <tbody className="bg-white divide-y divide-slate-200 relative">
-                     {processedRows.length === 0 && (
-                        <tr style={{ height: '300px' }}>
-                           <td colSpan={displayFields.length + 3 + calculatedFields.length} className="px-6 py-16 text-center">
-                              <div className="flex flex-col items-center justify-center text-slate-400">
-                                 {Object.keys(columnFilters).length > 0 || searchTerm ? (
-                                    <>
-                                       <XCircle className="w-10 h-10 mb-2 opacity-50" />
-                                       <span className="text-sm font-medium">Aucun résultat pour ces filtres.</span>
-                                       <Button variant="secondary" size="sm" className="mt-3" onClick={clearFilters}>Effacer les filtres</Button>
-                                    </>
-                                 ) : (
-                                    <span className="text-sm italic">Aucune donnée enregistrée.</span>
-                                 )}
-                              </div>
-                           </td>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                     {rowVirtualizer.getTotalSize() > 0 && (
+                        <tr>
+                           <td
+                              style={{ height: `${rowVirtualizer.getVirtualItems()[0]?.start || 0}px` }}
+                              colSpan={displayFields.length + 3 + calculatedFields.length}
+                           />
                         </tr>
                      )}
                      {rowVirtualizer.getVirtualItems().map((virtualRow: any) => {
@@ -891,14 +882,6 @@ export const DataExplorer: React.FC = () => {
                         return (
                            <tr
                               key={virtualRow.key}
-                              style={{
-                                 height: `${virtualRow.size}px`,
-                                 transform: `translateY(${virtualRow.start}px)`,
-                                 position: 'absolute',
-                                 top: 0,
-                                 left: 0,
-                                 width: '100%'
-                              }}
                               className="hover:bg-blue-50 transition-colors cursor-pointer group"
                               onClick={() => handleRowClick(row)}
                            >
@@ -928,7 +911,7 @@ export const DataExplorer: React.FC = () => {
                               })}
                               {calculatedFields.map(cf => {
                                  const val = row[cf.name];
-                                 const cellStyle = getCellStyle(cf.name, val); // Apply conditional formatting to calc fields too
+                                 const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
                                  return (
                                     <td key={cf.id} className={`px-6 py-2 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
@@ -942,6 +925,14 @@ export const DataExplorer: React.FC = () => {
                            </tr>
                         );
                      })}
+                     {rowVirtualizer.getTotalSize() > 0 && (
+                        <tr>
+                           <td
+                              style={{ height: `${rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]?.end || 0)}px` }}
+                              colSpan={displayFields.length + 3 + calculatedFields.length}
+                           />
+                        </tr>
+                     )}
                   </tbody>
                </table>
             </div>
