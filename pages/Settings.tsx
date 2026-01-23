@@ -3,16 +3,30 @@ import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X } from 'lucide-react';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText } from 'lucide-react';
 import { APP_VERSION, runSelfDiagnostics } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { DiagnosticSuite, Dataset, UIPrefs } from '../types';
 import { useSettings } from '../context/SettingsContext';
 import { Palette, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
+import { useReferentials } from '../context/ReferentialContext';
 
 export const Settings: React.FC = () => {
    const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
+   const {
+      chartsOfAccounts,
+      addChartOfAccounts,
+      setDefaultChartOfAccounts,
+      analyticalAxes,
+      addAnalyticalAxis,
+      fiscalCalendars,
+      addFiscalCalendar,
+      masterData,
+      addMasterDataItem,
+      importPCGTemplate,
+      importIFRSTemplate
+   } = useReferentials();
    const fileInputRef = useRef<HTMLInputElement>(null);
    const navigate = useNavigate();
 
@@ -23,6 +37,10 @@ export const Settings: React.FC = () => {
    // Renaming State
    const [editingDatasetId, setEditingDatasetId] = useState<string | null>(null);
    const [editName, setEditName] = useState('');
+
+   // Finance Settings State
+   type FinanceTab = 'charts' | 'axes' | 'calendar' | 'masterdata';
+   const [activeFinanceTab, setActiveFinanceTab] = useState<FinanceTab>('charts');
 
    const handleDownloadBackup = () => {
       const json = getBackupJson();
@@ -130,6 +148,251 @@ export const Settings: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                {/* Left Column (Main Content) */}
                <div className="lg:col-span-2 space-y-6">
+
+                  {/* FINANCE REFERENTIALS CONFIGURATION (NOUVEAU) */}
+                  <Card
+                     title="Référentiels Finance & Comptabilité"
+                     icon={<Building2 className="w-5 h-5 text-brand-600" />}
+                  >
+                     <div className="space-y-6">
+                        <p className="text-sm text-slate-600">
+                           Configurez les référentiels comptables et analytiques pour structurer vos analyses financières.
+                           Ces paramètres sont essentiels pour le reporting réglementaire et le pilotage de la performance.
+                        </p>
+
+                        {/* Tabs */}
+                        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+                           {[
+                              { id: 'charts' as const, label: 'Plans comptables', icon: FileText },
+                              { id: 'axes' as const, label: 'Axes analytiques', icon: GitBranch },
+                              { id: 'calendar' as const, label: 'Calendrier fiscal', icon: CalendarDays },
+                              { id: 'masterdata' as const, label: 'Tiers & produits', icon: Users }
+                           ].map(tab => (
+                              <button
+                                 key={tab.id}
+                                 onClick={() => setActiveFinanceTab(tab.id)}
+                                 className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-bold transition-all ${
+                                    activeFinanceTab === tab.id
+                                       ? 'bg-brand-600 text-white'
+                                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                 }`}
+                              >
+                                 <tab.icon className="w-4 h-4" />
+                                 {tab.label}
+                              </button>
+                           ))}
+                        </div>
+
+                        {/* Tab Content */}
+                        <div className="min-h-[200px]">
+                           {activeFinanceTab === 'charts' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Plans comptables configurés</h3>
+                                    <div className="flex gap-2">
+                                       <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => importPCGTemplate()}
+                                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                       >
+                                          <FileText className="w-4 h-4 mr-2" />
+                                          Importer PCG
+                                       </Button>
+                                       <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => importIFRSTemplate()}
+                                          className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                       >
+                                          <FileText className="w-4 h-4 mr-2" />
+                                          Importer IFRS
+                                       </Button>
+                                    </div>
+                                 </div>
+
+                                 {chartsOfAccounts.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucun plan comptable configuré</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Importez un template (PCG ou IFRS) pour démarrer rapidement
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                                       {chartsOfAccounts.map(chart => (
+                                          <div key={chart.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div>
+                                                   <div className="flex items-center gap-3">
+                                                      <h4 className="font-bold text-slate-800">{chart.name}</h4>
+                                                      {chart.isDefault && (
+                                                         <span className="text-xs font-bold px-2 py-1 bg-brand-100 text-brand-700 rounded">
+                                                            Par défaut
+                                                         </span>
+                                                      )}
+                                                   </div>
+                                                   <div className="text-xs text-slate-500 mt-1">
+                                                      {chart.standard} • {chart.accounts.length} comptes
+                                                   </div>
+                                                </div>
+                                                {!chart.isDefault && (
+                                                   <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => setDefaultChartOfAccounts(chart.id)}
+                                                      className="text-slate-500 hover:text-brand-600"
+                                                   >
+                                                      Définir par défaut
+                                                   </Button>
+                                                )}
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Les plans comptables importés pourront être édités, enrichis et associés à vos données dans une interface dédiée (prochaine version).</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           {activeFinanceTab === 'axes' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Axes analytiques configurés</h3>
+                                 </div>
+
+                                 {analyticalAxes.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <GitBranch className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucun axe analytique configuré</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Les axes analytiques permettent d'analyser vos données par centre de coûts, projet, business unit, etc.
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                                       {analyticalAxes.map(axis => (
+                                          <div key={axis.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div>
+                                                   <div className="flex items-center gap-3">
+                                                      <h4 className="font-bold text-slate-800">{axis.name}</h4>
+                                                      <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
+                                                         {axis.code}
+                                                      </span>
+                                                      {axis.isMandatory && (
+                                                         <span className="text-xs font-bold px-2 py-1 bg-red-100 text-red-700 rounded">
+                                                            Obligatoire
+                                                         </span>
+                                                      )}
+                                                   </div>
+                                                   <div className="text-xs text-slate-500 mt-1">
+                                                      Niveau {axis.level} {axis.allowMultiple ? '• Ventilation multiple autorisée' : ''}
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Interface de création et gestion d'axes analytiques (centres de coûts, projets, BU, etc.) à venir.</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           {activeFinanceTab === 'calendar' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Calendriers fiscaux</h3>
+                                 </div>
+
+                                 {fiscalCalendars.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <CalendarDays className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucun calendrier fiscal configuré</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Définissez vos exercices comptables et périodes pour le reporting financier
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                                       {fiscalCalendars.map(cal => (
+                                          <div key={cal.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div>
+                                                   <h4 className="font-bold text-slate-800">Exercice {cal.fiscalYear}</h4>
+                                                   <div className="text-xs text-slate-500 mt-1">
+                                                      {cal.startDate} → {cal.endDate} • {cal.periods.length} périodes
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Interface de gestion des exercices, périodes mensuelles, clôtures périodiques et 13ème période à venir.</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           {activeFinanceTab === 'masterdata' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Données de référence (tiers, produits, salariés)</h3>
+                                 </div>
+
+                                 {masterData.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucune donnée de référence</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Gérez vos clients, fournisseurs, produits et employés pour enrichir vos analyses
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="space-y-3">
+                                       {['customer', 'supplier', 'product', 'employee'].map(type => {
+                                          const items = masterData.filter(md => md.type === type && md.isActive);
+                                          const labels = {
+                                             customer: 'Clients',
+                                             supplier: 'Fournisseurs',
+                                             product: 'Produits',
+                                             employee: 'Salariés'
+                                          };
+                                          return (
+                                             <div key={type} className="border border-slate-200 rounded-lg p-3 bg-white">
+                                                <div className="flex items-center justify-between">
+                                                   <span className="text-sm font-bold text-slate-700">{labels[type as keyof typeof labels]}</span>
+                                                   <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
+                                                      {items.length} enregistrement(s)
+                                                   </span>
+                                                </div>
+                                             </div>
+                                          );
+                                       })}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Interface CRUD complète pour la gestion des tiers, produits et employés à venir.</p>
+                                 </div>
+                              </div>
+                           )}
+                        </div>
+                     </div>
+                  </Card>
 
                   {/* DESIGN SYSTEM CONFIGURATION (NOUVEAU) */}
                   <Card
