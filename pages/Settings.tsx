@@ -3,16 +3,30 @@ import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X } from 'lucide-react';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText } from 'lucide-react';
 import { APP_VERSION, runSelfDiagnostics } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { DiagnosticSuite, Dataset, UIPrefs } from '../types';
 import { useSettings } from '../context/SettingsContext';
 import { Palette, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
+import { useReferentials } from '../context/ReferentialContext';
 
 export const Settings: React.FC = () => {
    const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
+   const {
+      chartsOfAccounts,
+      addChartOfAccounts,
+      setDefaultChartOfAccounts,
+      analyticalAxes,
+      addAnalyticalAxis,
+      fiscalCalendars,
+      addFiscalCalendar,
+      masterData,
+      addMasterDataItem,
+      importPCGTemplate,
+      importIFRSTemplate
+   } = useReferentials();
    const fileInputRef = useRef<HTMLInputElement>(null);
    const navigate = useNavigate();
 
@@ -23,6 +37,21 @@ export const Settings: React.FC = () => {
    // Renaming State
    const [editingDatasetId, setEditingDatasetId] = useState<string | null>(null);
    const [editName, setEditName] = useState('');
+
+   // Finance Settings State
+   type FinanceTab = 'charts' | 'axes' | 'calendar' | 'masterdata';
+   const [activeFinanceTab, setActiveFinanceTab] = useState<FinanceTab>('charts');
+
+   // Modal states for creating referentials
+   const [showAxisModal, setShowAxisModal] = useState(false);
+   const [showCalendarModal, setShowCalendarModal] = useState(false);
+   const [showMasterDataModal, setShowMasterDataModal] = useState(false);
+   const [masterDataType, setMasterDataType] = useState<'customer' | 'supplier' | 'product' | 'employee'>('customer');
+
+   // Form states
+   const [axisForm, setAxisForm] = useState({ code: '', name: '', isMandatory: false, allowMultiple: false });
+   const [calendarForm, setCalendarForm] = useState({ fiscalYear: new Date().getFullYear(), startDate: '', endDate: '' });
+   const [masterDataForm, setMasterDataForm] = useState({ code: '', name: '', category: '', taxId: '' });
 
    const handleDownloadBackup = () => {
       const json = getBackupJson();
@@ -122,6 +151,89 @@ export const Settings: React.FC = () => {
       setEditName('');
    };
 
+   // Finance referentials handlers
+   const handleCreateAxis = () => {
+      if (!axisForm.code || !axisForm.name) {
+         alert('Veuillez remplir le code et le nom de l\'axe');
+         return;
+      }
+      addAnalyticalAxis({
+         code: axisForm.code.toUpperCase(),
+         name: axisForm.name,
+         isMandatory: axisForm.isMandatory,
+         allowMultiple: axisForm.allowMultiple,
+         level: 1,
+         isActive: true
+      });
+      setShowAxisModal(false);
+      setAxisForm({ code: '', name: '', isMandatory: false, allowMultiple: false });
+   };
+
+   const handleCreateCalendar = () => {
+      if (!calendarForm.startDate || !calendarForm.endDate) {
+         alert('Veuillez remplir les dates de début et fin');
+         return;
+      }
+
+      // Generate monthly periods
+      const start = new Date(calendarForm.startDate);
+      const end = new Date(calendarForm.endDate);
+      const periods = [];
+
+      let current = new Date(start);
+      let periodNum = 1;
+
+      while (current < end) {
+         const periodEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+         if (periodEnd > end) break;
+
+         periods.push({
+            id: `period_${periodNum}`,
+            code: `${calendarForm.fiscalYear}-${String(periodNum).padStart(2, '0')}`,
+            name: `Période ${periodNum}`,
+            type: 'month' as const,
+            fiscalYear: calendarForm.fiscalYear,
+            startDate: current.toISOString().split('T')[0],
+            endDate: periodEnd.toISOString().split('T')[0],
+            isClosed: false,
+            createdAt: Date.now()
+         });
+
+         current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+         periodNum++;
+      }
+
+      addFiscalCalendar({
+         name: `Calendrier ${calendarForm.fiscalYear}`,
+         fiscalYear: calendarForm.fiscalYear,
+         startDate: calendarForm.startDate,
+         endDate: calendarForm.endDate,
+         periods
+      });
+
+      setShowCalendarModal(false);
+      setCalendarForm({ fiscalYear: new Date().getFullYear(), startDate: '', endDate: '' });
+   };
+
+   const handleCreateMasterData = () => {
+      if (!masterDataForm.code || !masterDataForm.name) {
+         alert('Veuillez remplir le code et le nom');
+         return;
+      }
+
+      addMasterDataItem({
+         type: masterDataType,
+         code: masterDataForm.code,
+         name: masterDataForm.name,
+         category: masterDataForm.category || undefined,
+         taxId: masterDataForm.taxId || undefined,
+         isActive: true
+      });
+
+      setShowMasterDataModal(false);
+      setMasterDataForm({ code: '', name: '', category: '', taxId: '' });
+   };
+
    return (
       <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
          <div className="pb-10 space-y-6">
@@ -130,6 +242,273 @@ export const Settings: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                {/* Left Column (Main Content) */}
                <div className="lg:col-span-2 space-y-6">
+
+                  {/* FINANCE REFERENTIALS CONFIGURATION (NOUVEAU) */}
+                  <Card
+                     title="Référentiels Finance & Comptabilité"
+                     icon={<Building2 className="w-5 h-5 text-brand-600" />}
+                  >
+                     <div className="space-y-6">
+                        <p className="text-sm text-slate-600">
+                           Configurez les référentiels comptables et analytiques pour structurer vos analyses financières.
+                           Ces paramètres sont essentiels pour le reporting réglementaire et le pilotage de la performance.
+                        </p>
+
+                        {/* Tabs */}
+                        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+                           {[
+                              { id: 'charts' as const, label: 'Plans comptables', icon: FileText },
+                              { id: 'axes' as const, label: 'Axes analytiques', icon: GitBranch },
+                              { id: 'calendar' as const, label: 'Calendrier fiscal', icon: CalendarDays },
+                              { id: 'masterdata' as const, label: 'Tiers & produits', icon: Users }
+                           ].map(tab => (
+                              <button
+                                 key={tab.id}
+                                 onClick={() => setActiveFinanceTab(tab.id)}
+                                 className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-bold transition-all ${
+                                    activeFinanceTab === tab.id
+                                       ? 'bg-brand-600 text-white'
+                                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                 }`}
+                              >
+                                 <tab.icon className="w-4 h-4" />
+                                 {tab.label}
+                              </button>
+                           ))}
+                        </div>
+
+                        {/* Tab Content */}
+                        <div className="min-h-[200px]">
+                           {activeFinanceTab === 'charts' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Plans comptables configurés</h3>
+                                    <div className="flex gap-2">
+                                       <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => importPCGTemplate()}
+                                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                       >
+                                          <FileText className="w-4 h-4 mr-2" />
+                                          Importer PCG
+                                       </Button>
+                                       <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => importIFRSTemplate()}
+                                          className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                       >
+                                          <FileText className="w-4 h-4 mr-2" />
+                                          Importer IFRS
+                                       </Button>
+                                    </div>
+                                 </div>
+
+                                 {chartsOfAccounts.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucun plan comptable configuré</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Importez un template (PCG ou IFRS) pour démarrer rapidement
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                                       {chartsOfAccounts.map(chart => (
+                                          <div key={chart.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div>
+                                                   <div className="flex items-center gap-3">
+                                                      <h4 className="font-bold text-slate-800">{chart.name}</h4>
+                                                      {chart.isDefault && (
+                                                         <span className="text-xs font-bold px-2 py-1 bg-brand-100 text-brand-700 rounded">
+                                                            Par défaut
+                                                         </span>
+                                                      )}
+                                                   </div>
+                                                   <div className="text-xs text-slate-500 mt-1">
+                                                      {chart.standard} • {chart.accounts.length} comptes
+                                                   </div>
+                                                </div>
+                                                {!chart.isDefault && (
+                                                   <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => setDefaultChartOfAccounts(chart.id)}
+                                                      className="text-slate-500 hover:text-brand-600"
+                                                   >
+                                                      Définir par défaut
+                                                   </Button>
+                                                )}
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Les plans comptables importés pourront être édités, enrichis et associés à vos données dans une interface dédiée (prochaine version).</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           {activeFinanceTab === 'axes' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Axes analytiques configurés</h3>
+                                    <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => setShowAxisModal(true)}
+                                       className="text-green-600 border-green-200 hover:bg-green-50"
+                                    >
+                                       <Plus className="w-4 h-4 mr-2" />
+                                       Nouvel axe
+                                    </Button>
+                                 </div>
+
+                                 {analyticalAxes.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <GitBranch className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucun axe analytique configuré</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Les axes analytiques permettent d'analyser vos données par centre de coûts, projet, business unit, etc.
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                                       {analyticalAxes.map(axis => (
+                                          <div key={axis.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div>
+                                                   <div className="flex items-center gap-3">
+                                                      <h4 className="font-bold text-slate-800">{axis.name}</h4>
+                                                      <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
+                                                         {axis.code}
+                                                      </span>
+                                                      {axis.isMandatory && (
+                                                         <span className="text-xs font-bold px-2 py-1 bg-red-100 text-red-700 rounded">
+                                                            Obligatoire
+                                                         </span>
+                                                      )}
+                                                   </div>
+                                                   <div className="text-xs text-slate-500 mt-1">
+                                                      Niveau {axis.level} {axis.allowMultiple ? '• Ventilation multiple autorisée' : ''}
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Interface de création et gestion d'axes analytiques (centres de coûts, projets, BU, etc.) à venir.</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           {activeFinanceTab === 'calendar' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Calendriers fiscaux</h3>
+                                    <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => setShowCalendarModal(true)}
+                                       className="text-green-600 border-green-200 hover:bg-green-50"
+                                    >
+                                       <Plus className="w-4 h-4 mr-2" />
+                                       Nouvel exercice
+                                    </Button>
+                                 </div>
+
+                                 {fiscalCalendars.length === 0 ? (
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                                       <CalendarDays className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                       <p className="text-slate-500 font-medium mb-2">Aucun calendrier fiscal configuré</p>
+                                       <p className="text-sm text-slate-400 mb-4">
+                                          Définissez vos exercices comptables et périodes pour le reporting financier
+                                       </p>
+                                    </div>
+                                 ) : (
+                                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                                       {fiscalCalendars.map(cal => (
+                                          <div key={cal.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div>
+                                                   <h4 className="font-bold text-slate-800">Exercice {cal.fiscalYear}</h4>
+                                                   <div className="text-xs text-slate-500 mt-1">
+                                                      {cal.startDate} → {cal.endDate} • {cal.periods.length} périodes
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Interface de gestion des exercices, périodes mensuelles, clôtures périodiques et 13ème période à venir.</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           {activeFinanceTab === 'masterdata' && (
+                              <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-800">Données de référence (tiers, produits, salariés)</h3>
+                                 </div>
+
+                                 <div className="space-y-3">
+                                    {['customer', 'supplier', 'product', 'employee'].map(type => {
+                                       const items = masterData.filter(md => md.type === type && md.isActive);
+                                       const labels = {
+                                          customer: 'Clients',
+                                          supplier: 'Fournisseurs',
+                                          product: 'Produits',
+                                          employee: 'Salariés'
+                                       };
+                                       return (
+                                          <div key={type} className="border border-slate-200 rounded-lg p-3 bg-white hover:border-slate-300 transition-colors">
+                                             <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                   <span className="text-sm font-bold text-slate-700">{labels[type as keyof typeof labels]}</span>
+                                                   <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">
+                                                      {items.length} enregistrement(s)
+                                                   </span>
+                                                </div>
+                                                <Button
+                                                   variant="ghost"
+                                                   size="sm"
+                                                   onClick={() => {
+                                                      setMasterDataType(type as any);
+                                                      setShowMasterDataModal(true);
+                                                   }}
+                                                   className="text-green-600 hover:bg-green-50"
+                                                >
+                                                   <Plus className="w-4 h-4 mr-1" />
+                                                   Ajouter
+                                                </Button>
+                                             </div>
+                                          </div>
+                                       );
+                                    })}
+                                 </div>
+
+                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
+                                    <p>Interface CRUD complète pour la gestion des tiers, produits et employés à venir.</p>
+                                 </div>
+                              </div>
+                           )}
+                        </div>
+                     </div>
+                  </Card>
 
                   {/* DESIGN SYSTEM CONFIGURATION (NOUVEAU) */}
                   <Card
@@ -496,6 +875,194 @@ export const Settings: React.FC = () => {
                <p>© 2025 - Application interne</p>
             </div>
          </div>
+
+         {/* Modal: Créer un axe analytique */}
+         {showAxisModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAxisModal(false)}>
+               <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold text-slate-800 mb-4">Créer un axe analytique</h3>
+                  <div className="space-y-4">
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Code de l'axe *</label>
+                        <input
+                           type="text"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           placeholder="Ex: CC, PRJ, BU"
+                           value={axisForm.code}
+                           onChange={(e) => setAxisForm({ ...axisForm, code: e.target.value.toUpperCase() })}
+                           maxLength={10}
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Nom de l'axe *</label>
+                        <input
+                           type="text"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           placeholder="Ex: Centre de coûts, Projet, Business Unit"
+                           value={axisForm.name}
+                           onChange={(e) => setAxisForm({ ...axisForm, name: e.target.value })}
+                        />
+                     </div>
+                     <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                           <input
+                              type="checkbox"
+                              checked={axisForm.isMandatory}
+                              onChange={(e) => setAxisForm({ ...axisForm, isMandatory: e.target.checked })}
+                              className="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500"
+                           />
+                           <span className="text-sm text-slate-700">Axe obligatoire</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                           <input
+                              type="checkbox"
+                              checked={axisForm.allowMultiple}
+                              onChange={(e) => setAxisForm({ ...axisForm, allowMultiple: e.target.checked })}
+                              className="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500"
+                           />
+                           <span className="text-sm text-slate-700">Ventilation multiple autorisée</span>
+                        </label>
+                     </div>
+                     <div className="flex gap-3 pt-4">
+                        <Button onClick={handleCreateAxis} className="flex-1">
+                           <Check className="w-4 h-4 mr-2" />
+                           Créer
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowAxisModal(false)} className="flex-1">
+                           <X className="w-4 h-4 mr-2" />
+                           Annuler
+                        </Button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* Modal: Créer un calendrier fiscal */}
+         {showCalendarModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowCalendarModal(false)}>
+               <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold text-slate-800 mb-4">Créer un exercice fiscal</h3>
+                  <div className="space-y-4">
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Année fiscale *</label>
+                        <input
+                           type="number"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           value={calendarForm.fiscalYear}
+                           onChange={(e) => setCalendarForm({ ...calendarForm, fiscalYear: parseInt(e.target.value) })}
+                           min="2000"
+                           max="2100"
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Date de début *</label>
+                        <input
+                           type="date"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           value={calendarForm.startDate}
+                           onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })}
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Date de fin *</label>
+                        <input
+                           type="date"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           value={calendarForm.endDate}
+                           onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })}
+                        />
+                     </div>
+                     <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-800">
+                        <p className="font-bold">💡 Info</p>
+                        <p>Les périodes mensuelles seront générées automatiquement entre les dates sélectionnées.</p>
+                     </div>
+                     <div className="flex gap-3 pt-4">
+                        <Button onClick={handleCreateCalendar} className="flex-1">
+                           <Check className="w-4 h-4 mr-2" />
+                           Créer
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowCalendarModal(false)} className="flex-1">
+                           <X className="w-4 h-4 mr-2" />
+                           Annuler
+                        </Button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* Modal: Créer une donnée de référence */}
+         {showMasterDataModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowMasterDataModal(false)}>
+               <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold text-slate-800 mb-4">
+                     Ajouter {
+                        masterDataType === 'customer' ? 'un client' :
+                        masterDataType === 'supplier' ? 'un fournisseur' :
+                        masterDataType === 'product' ? 'un produit' :
+                        'un salarié'
+                     }
+                  </h3>
+                  <div className="space-y-4">
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Code *</label>
+                        <input
+                           type="text"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           placeholder="Ex: CLI001, FOUR001"
+                           value={masterDataForm.code}
+                           onChange={(e) => setMasterDataForm({ ...masterDataForm, code: e.target.value.toUpperCase() })}
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Nom *</label>
+                        <input
+                           type="text"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           placeholder="Ex: ACME Corp"
+                           value={masterDataForm.name}
+                           onChange={(e) => setMasterDataForm({ ...masterDataForm, name: e.target.value })}
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Catégorie</label>
+                        <input
+                           type="text"
+                           className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                           placeholder="Ex: VIP, National, International"
+                           value={masterDataForm.category}
+                           onChange={(e) => setMasterDataForm({ ...masterDataForm, category: e.target.value })}
+                        />
+                     </div>
+                     {(masterDataType === 'customer' || masterDataType === 'supplier') && (
+                        <div>
+                           <label className="block text-sm font-bold text-slate-700 mb-1">
+                              {masterDataType === 'customer' ? 'N° TVA / SIREN' : 'N° SIRET'}
+                           </label>
+                           <input
+                              type="text"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              placeholder="Ex: FR12345678901"
+                              value={masterDataForm.taxId}
+                              onChange={(e) => setMasterDataForm({ ...masterDataForm, taxId: e.target.value })}
+                           />
+                        </div>
+                     )}
+                     <div className="flex gap-3 pt-4">
+                        <Button onClick={handleCreateMasterData} className="flex-1">
+                           <Check className="w-4 h-4 mr-2" />
+                           Créer
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowMasterDataModal(false)} className="flex-1">
+                           <X className="w-4 h-4 mr-2" />
+                           Annuler
+                        </Button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 };
