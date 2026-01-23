@@ -8,9 +8,10 @@ import { BatchContext, useBatches } from './BatchContext';
 import { WidgetContext, useWidgets } from './WidgetContext';
 import { AnalyticsContext, useAnalytics } from './AnalyticsContext';
 import { PersistenceContext, usePersistence } from './PersistenceContext';
+import { SettingsProvider, useSettings } from './SettingsContext';
 
 // Explicitly export hooks to avoid re-export issues
-export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence };
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useSettings };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';
@@ -28,6 +29,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
+  const [uiPrefs, setUiPrefs] = useState<any>(undefined); // NEW
 
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,6 +56,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
           setCompanyLogo(dbData.companyLogo); // NEW
           setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
+          if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs); // NEW
 
           if (dbData.currentDatasetId) {
             setCurrentDatasetId(dbData.currentDatasetId);
@@ -73,6 +76,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLastAnalyticsState(parsed.lastAnalyticsState || null);
             setCompanyLogo(parsed.companyLogo); // NEW
             setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+            if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
 
             await db.save(parsed);
@@ -108,7 +112,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastPivotState,
         lastAnalyticsState,
         companyLogo,
-        hasSeenOnboarding
+        hasSeenOnboarding,
+        uiPrefs
       };
 
       db.save(state).catch(e => console.error("Failed to save to DB", e));
@@ -117,7 +122,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, uiPrefs, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -494,15 +499,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding }}>
-      <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-        <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
-          <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-            <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
-              {children}
-            </AnalyticsContext.Provider>
-          </WidgetContext.Provider>
-        </BatchContext.Provider>
-      </DatasetContext.Provider>
+      <SettingsProvider initialPrefs={uiPrefs} onPrefsChange={setUiPrefs}>
+        <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
+          <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
+            <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
+              <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
+                {children}
+              </AnalyticsContext.Provider>
+            </WidgetContext.Provider>
+          </BatchContext.Provider>
+        </DatasetContext.Provider>
+      </SettingsProvider>
     </PersistenceContext.Provider>
   );
 };
