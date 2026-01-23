@@ -388,15 +388,13 @@ export const ReferentialProvider: React.FC<ReferentialProviderProps> = ({
 
     // --- TEMPLATES ---
     const importPCGTemplate = () => {
-        // Check if PCG already exists
-        const existingPCG = chartsOfAccounts.find(c => c.standard === 'PCG');
-        if (existingPCG) {
-            alert('Un plan comptable PCG existe déjà. Veuillez le supprimer avant d\'importer un nouveau template.');
-            return;
-        }
+        // Check if PCG already exists and generate a unique name
+        const existingPCGCount = chartsOfAccounts.filter(c => c.standard === 'PCG').length;
+        const suffix = existingPCGCount > 0 ? ` (${existingPCGCount + 1})` : '';
 
         const newChart: ChartOfAccounts = {
             ...PCG_TEMPLATE,
+            name: `${PCG_TEMPLATE.name}${suffix}`,
             id: generateId(),
             createdAt: Date.now(),
             isDefault: chartsOfAccounts.length === 0 // Set as default if it's the first one
@@ -409,15 +407,13 @@ export const ReferentialProvider: React.FC<ReferentialProviderProps> = ({
     };
 
     const importIFRSTemplate = () => {
-        // Check if IFRS already exists
-        const existingIFRS = chartsOfAccounts.find(c => c.standard === 'IFRS');
-        if (existingIFRS) {
-            alert('Un plan comptable IFRS existe déjà. Veuillez le supprimer avant d\'importer un nouveau template.');
-            return;
-        }
+        // Check if IFRS already exists and generate a unique name
+        const existingIFRSCount = chartsOfAccounts.filter(c => c.standard === 'IFRS').length;
+        const suffix = existingIFRSCount > 0 ? ` (${existingIFRSCount + 1})` : '';
 
         const newChart: ChartOfAccounts = {
             ...IFRS_TEMPLATE,
+            name: `${IFRS_TEMPLATE.name}${suffix}`,
             id: generateId(),
             createdAt: Date.now(),
             isDefault: chartsOfAccounts.length === 0 // Set as default if it's the first one
