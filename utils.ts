@@ -1015,6 +1015,167 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
   return batches;
 };
 
+/**
+ * Génère des données de projets IT avec des clés communes (Organisation)
+ */
+export const generateProjectsData = (datasetId: string): ImportBatch[] => {
+  const projectNames = [
+    'Migration Cloud', 'Refonte CRM', 'Cybersécurité', 'Dashboard Analytics',
+    'Formation DevOps', 'API Gateway', 'Application Mobile', 'Infrastructure Azure',
+    'Data Lake', 'Automatisation RH', 'Plateforme E-commerce', 'Business Intelligence'
+  ];
+  const statuses = ['Planifié', 'En cours', 'En pause', 'Terminé', 'Annulé'];
+  const responsables = ['Pierre Martin', 'Sophie Bernard', 'Thomas Dubois', 'Marie Laurent', 'Lucas Moreau', 'Antoine Simon', 'Sarah Michel'];
+
+  const batches: ImportBatch[] = [];
+
+  // Génération de 3 batches (snapshots)
+  for (let i = 2; i >= 0; i--) {
+    const date = new Date();
+    date.setMonth(date.getMonth() - i * 2);
+    const dateStr = date.toISOString().split('T')[0];
+
+    const rows: DataRow[] = [];
+    const projectCount = 8 + Math.floor(Math.random() * 5);
+
+    for (let j = 0; j < projectCount; j++) {
+      const org = ORGS_LIST[Math.floor(Math.random() * ORGS_LIST.length)];
+      const projectName = projectNames[j % projectNames.length];
+      const status = statuses[Math.floor(Math.random() * statuses.length)];
+      const budget = (50 + Math.floor(Math.random() * 450)) + ' k€';
+      const responsable = responsables[Math.floor(Math.random() * responsables.length)];
+
+      const startDate = new Date(date);
+      startDate.setMonth(startDate.getMonth() - Math.floor(Math.random() * 12));
+
+      rows.push({
+        id: generateId(),
+        'Projet': projectName,
+        'Organisation': org,
+        'Statut': status,
+        'DateDébut': startDate.toISOString().split('T')[0],
+        'Budget': budget,
+        'Responsable': responsable,
+        'Priorité': ['Haute', 'Moyenne', 'Basse'][Math.floor(Math.random() * 3)]
+      });
+    }
+
+    batches.push({
+      id: generateId(),
+      datasetId,
+      date: dateStr,
+      createdAt: Date.now() - (i * 60 * 24 * 60 * 60 * 1000),
+      rows
+    });
+  }
+
+  return batches;
+};
+
+/**
+ * Génère des données budgétaires avec clés communes (Organisation)
+ */
+export const generateBudgetData = (datasetId: string): ImportBatch[] => {
+  const departments = ['IT', 'RH', 'Marketing', 'Commercial', 'Finance', 'Juridique', 'R&D'];
+  const batches: ImportBatch[] = [];
+
+  // Génération de 4 batches (trimestres)
+  for (let quarter = 0; quarter < 4; quarter++) {
+    const date = new Date(2024, quarter * 3, 1);
+    const dateStr = date.toISOString().split('T')[0];
+    const quarterLabel = `Q${quarter + 1} 2024`;
+
+    const rows: DataRow[] = [];
+
+    // Pour chaque organisation, créer plusieurs départements
+    for (let i = 0; i < 6; i++) {
+      const org = ORGS_LIST[i];
+      const deptsCount = 3 + Math.floor(Math.random() * 3);
+
+      for (let j = 0; j < deptsCount; j++) {
+        const dept = departments[j % departments.length];
+        const previsionnel = 100 + Math.floor(Math.random() * 500);
+        const realise = previsionnel + Math.floor((Math.random() - 0.5) * 60);
+        const ecart = realise - previsionnel;
+
+        rows.push({
+          id: generateId(),
+          'Département': dept,
+          'Organisation': org,
+          'Prévisionnel': `${previsionnel} k€`,
+          'Réalisé': `${realise} k€`,
+          'Ecart': `${ecart >= 0 ? '+' : ''}${ecart} k€`,
+          'Trimestre': quarterLabel
+        });
+      }
+    }
+
+    batches.push({
+      id: generateId(),
+      datasetId,
+      date: dateStr,
+      createdAt: Date.now() - ((3 - quarter) * 90 * 24 * 60 * 60 * 1000),
+      rows
+    });
+  }
+
+  return batches;
+};
+
+/**
+ * Génère des données de ventes avec produits et organisations
+ */
+export const generateSalesData = (datasetId: string): ImportBatch[] => {
+  const products = ['Licence Pro', 'Licence Standard', 'Support Premium', 'Support Basic', 'Formation', 'Consulting'];
+  const regions = ['Nord', 'Sud', 'Est', 'Ouest', 'Centre'];
+
+  const batches: ImportBatch[] = [];
+
+  // Génération de 6 batches (mois)
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date();
+    date.setMonth(date.getMonth() - i);
+    const dateStr = date.toISOString().split('T')[0];
+
+    const rows: DataRow[] = [];
+    const salesCount = 20 + Math.floor(Math.random() * 30);
+
+    for (let j = 0; j < salesCount; j++) {
+      const org = ORGS_LIST[Math.floor(Math.random() * ORGS_LIST.length)];
+      const product = products[Math.floor(Math.random() * products.length)];
+      const quantity = 1 + Math.floor(Math.random() * 50);
+      const unitPrice = product.includes('Premium') ? 500 : (product.includes('Licence') ? 200 : 150);
+      const total = quantity * unitPrice;
+      const region = regions[Math.floor(Math.random() * regions.length)];
+
+      const saleDate = new Date(date);
+      saleDate.setDate(Math.floor(Math.random() * 28) + 1);
+
+      rows.push({
+        id: generateId(),
+        'Produit': product,
+        'Organisation': org,
+        'Région': region,
+        'Quantité': quantity,
+        'Prix Unitaire': `${unitPrice} €`,
+        'Montant Total': `${total} €`,
+        'Date Vente': saleDate.toISOString().split('T')[0],
+        'Commercial': ['Alice Dupont', 'Bob Martin', 'Claire Durand', 'David Leroy'][Math.floor(Math.random() * 4)]
+      });
+    }
+
+    batches.push({
+      id: generateId(),
+      datasetId,
+      date: dateStr,
+      createdAt: Date.now() - (i * 30 * 24 * 60 * 60 * 1000),
+      rows
+    });
+  }
+
+  return batches;
+};
+
 // --- AUDIT SYSTEM ---
 export const runSelfDiagnostics = (): DiagnosticSuite[] => {
   const suites: DiagnosticSuite[] = [];
