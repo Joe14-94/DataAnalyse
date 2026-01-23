@@ -54,6 +54,10 @@ export const Settings: React.FC = () => {
    const [viewingChartId, setViewingChartId] = useState<string | null>(null);
    const [searchAccountQuery, setSearchAccountQuery] = useState('');
 
+   // Chart renaming state
+   const [editingChartId, setEditingChartId] = useState<string | null>(null);
+   const [editChartName, setEditChartName] = useState('');
+
    // Form states
    const [axisForm, setAxisForm] = useState({ code: '', name: '', isMandatory: false, allowMultiple: false });
    const [calendarForm, setCalendarForm] = useState({ fiscalYear: new Date().getFullYear(), startDate: '', endDate: '' });
@@ -160,10 +164,13 @@ export const Settings: React.FC = () => {
    // Chart of Accounts handlers
    const handleDeleteChart = (id: string, name: string) => {
       const chart = chartsOfAccounts.find(c => c.id === id);
-      if (chart?.isDefault) {
+
+      // If it's the default chart and there are other charts, prevent deletion
+      if (chart?.isDefault && chartsOfAccounts.length > 1) {
          alert('Impossible de supprimer le plan comptable par défaut. Veuillez d\'abord définir un autre plan comme par défaut.');
          return;
       }
+
       if (window.confirm(`Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`)) {
          deleteChartOfAccounts(id);
       }
@@ -172,6 +179,24 @@ export const Settings: React.FC = () => {
    const handleViewChart = (id: string) => {
       setViewingChartId(id);
       setSearchAccountQuery('');
+   };
+
+   const startEditingChart = (id: string, currentName: string) => {
+      setEditingChartId(id);
+      setEditChartName(currentName);
+   };
+
+   const saveChartEditing = () => {
+      if (editingChartId && editChartName.trim()) {
+         updateChartOfAccounts(editingChartId, { name: editChartName.trim() });
+         setEditingChartId(null);
+         setEditChartName('');
+      }
+   };
+
+   const cancelChartEditing = () => {
+      setEditingChartId(null);
+      setEditChartName('');
    };
 
    // Finance referentials handlers
@@ -338,54 +363,101 @@ export const Settings: React.FC = () => {
                                     </div>
                                  ) : (
                                     <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
-                                       {chartsOfAccounts.map(chart => (
-                                          <div key={chart.id} className="p-4 hover:bg-slate-50 transition-colors">
-                                             <div className="flex items-center justify-between">
-                                                <div className="flex-1">
-                                                   <div className="flex items-center gap-3">
-                                                      <h4 className="font-bold text-slate-800">{chart.name}</h4>
-                                                      {chart.isDefault && (
-                                                         <span className="text-xs font-bold px-2 py-1 bg-brand-100 text-brand-700 rounded">
-                                                            Par défaut
-                                                         </span>
+                                       {chartsOfAccounts.map(chart => {
+                                          const isEditing = editingChartId === chart.id;
+
+                                          return (
+                                             <div key={chart.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                                <div className="flex items-center justify-between gap-4">
+                                                   <div className="flex-1 min-w-0">
+                                                      {isEditing ? (
+                                                         <div className="flex items-center gap-2">
+                                                            <input
+                                                               type="text"
+                                                               className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none flex-1"
+                                                               value={editChartName}
+                                                               onChange={(e) => setEditChartName(e.target.value)}
+                                                               autoFocus
+                                                               onKeyDown={(e) => {
+                                                                  if (e.key === 'Enter') saveChartEditing();
+                                                                  if (e.key === 'Escape') cancelChartEditing();
+                                                               }}
+                                                            />
+                                                            <button
+                                                               onClick={saveChartEditing}
+                                                               className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200 shrink-0"
+                                                               title="Sauvegarder"
+                                                            >
+                                                               <Check className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                               onClick={cancelChartEditing}
+                                                               className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200 shrink-0"
+                                                               title="Annuler"
+                                                            >
+                                                               <X className="w-4 h-4" />
+                                                            </button>
+                                                         </div>
+                                                      ) : (
+                                                         <>
+                                                            <div className="flex items-center gap-3">
+                                                               <h4 className="font-bold text-slate-800">{chart.name}</h4>
+                                                               {chart.isDefault && (
+                                                                  <span className="text-xs font-bold px-2 py-1 bg-brand-100 text-brand-700 rounded">
+                                                                     Par défaut
+                                                                  </span>
+                                                               )}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                               {chart.standard} • {chart.accounts.length} comptes
+                                                            </div>
+                                                         </>
                                                       )}
                                                    </div>
-                                                   <div className="text-xs text-slate-500 mt-1">
-                                                      {chart.standard} • {chart.accounts.length} comptes
-                                                   </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                   <Button
-                                                      variant="outline"
-                                                      size="sm"
-                                                      onClick={() => handleViewChart(chart.id)}
-                                                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                                   >
-                                                      <Edit2 className="w-4 h-4 mr-2" />
-                                                      Voir/Éditer
-                                                   </Button>
-                                                   {!chart.isDefault && (
-                                                      <Button
-                                                         variant="ghost"
-                                                         size="sm"
-                                                         onClick={() => setDefaultChartOfAccounts(chart.id)}
-                                                         className="text-slate-500 hover:text-brand-600"
-                                                      >
-                                                         Définir par défaut
-                                                      </Button>
+                                                   {!isEditing && (
+                                                      <div className="flex items-center gap-2 shrink-0">
+                                                         <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleViewChart(chart.id)}
+                                                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                                         >
+                                                            <Edit2 className="w-4 h-4 mr-2" />
+                                                            Voir
+                                                         </Button>
+                                                         <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => startEditingChart(chart.id, chart.name)}
+                                                            className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                                                         >
+                                                            <Edit2 className="w-4 h-4 mr-2" />
+                                                            Renommer
+                                                         </Button>
+                                                         {!chart.isDefault && (
+                                                            <Button
+                                                               variant="ghost"
+                                                               size="sm"
+                                                               onClick={() => setDefaultChartOfAccounts(chart.id)}
+                                                               className="text-slate-500 hover:text-brand-600"
+                                                            >
+                                                               Définir par défaut
+                                                            </Button>
+                                                         )}
+                                                         <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteChart(chart.id, chart.name)}
+                                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                                         >
+                                                            <Trash2 className="w-4 h-4" />
+                                                         </Button>
+                                                      </div>
                                                    )}
-                                                   <Button
-                                                      variant="outline"
-                                                      size="sm"
-                                                      onClick={() => handleDeleteChart(chart.id, chart.name)}
-                                                      className="text-red-600 border-red-200 hover:bg-red-50"
-                                                   >
-                                                      <Trash2 className="w-4 h-4" />
-                                                   </Button>
                                                 </div>
                                              </div>
-                                          </div>
-                                       ))}
+                                          );
+                                       })}
                                     </div>
                                  )}
                               </div>
