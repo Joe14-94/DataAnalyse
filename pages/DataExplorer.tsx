@@ -73,6 +73,9 @@ export const DataExplorer: React.FC = () => {
    const [resizeStartX, setResizeStartX] = useState<number>(0);
    const [resizeStartWidth, setResizeStartWidth] = useState<number>(0);
 
+   // COLUMN BORDERS STATE
+   const [showColumnBorders, setShowColumnBorders] = useState<boolean>(true);
+
    // --- EFFECT: Handle Drilldown from Navigation ---
    useEffect(() => {
       if (location.state) {
@@ -667,6 +670,7 @@ export const DataExplorer: React.FC = () => {
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
+               <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
                {(Object.keys(columnFilters).length > 0 || searchTerm) && (
                   <Button variant="danger" onClick={clearFilters} className="whitespace-nowrap px-3" title="Effacer tous les filtres"><FilterX className="w-4 h-4" /></Button>
@@ -764,7 +768,7 @@ export const DataExplorer: React.FC = () => {
                <table className="w-full divide-y divide-slate-200 border-collapse text-left" style={{ height: rowVirtualizer.getTotalSize(), tableLayout: 'fixed', minWidth: '100%' }}>
                   <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative" onClick={() => handleHeaderClick('_importDate')} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
+                        <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick('_importDate')} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
                            <div className="flex items-center gap-2 justify-between">
                               <div className="flex items-center gap-2">
                                  <span>Date d'import</span>
@@ -776,7 +780,7 @@ export const DataExplorer: React.FC = () => {
                               />
                            </div>
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group" style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
+                        <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                            <div className="flex items-center gap-2 justify-between">
                               <span>Id</span>
                               <div
@@ -793,7 +797,7 @@ export const DataExplorer: React.FC = () => {
                            const defaultWidth = isNumeric ? 120 : 180;
                            const colWidth = columnWidths[field] || defaultWidth;
                            return (
-                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isCalcDrawerOpen ? 'hover:bg-indigo-100 hover:text-indigo-800' : (isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'))}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isCalcDrawerOpen ? 'hover:bg-indigo-100 hover:text-indigo-800' : (isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'))} ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                  <div className="flex items-center gap-2 justify-between">
                                     <div className="flex items-center gap-2">
                                        {isCalcDrawerOpen && <MousePointerClick className="w-3 h-3 text-indigo-500" />}
@@ -813,7 +817,7 @@ export const DataExplorer: React.FC = () => {
                         {calculatedFields.map(cf => {
                            const colWidth = columnWidths[cf.name] || 150;
                            return (
-                              <th key={cf.id} scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative" onClick={() => handleHeaderClick(cf.name)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                              <th key={cf.id} scope="col" className={`px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(cf.name)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                  <div className="flex items-center gap-2 justify-between">
                                     <div className="flex items-center gap-2">
                                        <Calculator className="w-3 h-3" />
@@ -833,10 +837,10 @@ export const DataExplorer: React.FC = () => {
                      </tr>
                      {showFilters && (
                         <tr className="bg-slate-50">
-                           <th className="px-2 py-2 border-b border-slate-200" style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
+                           <th className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
                               <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre date..." value={columnFilters['_importDate'] || ''} onChange={(e) => handleColumnFilterChange('_importDate', e.target.value)} />
                            </th>
-                           <th className="px-2 py-2 border-b border-slate-200" style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
+                           <th className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                               <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre Id..." value={columnFilters['id'] || ''} onChange={(e) => handleColumnFilterChange('id', e.target.value)} />
                            </th>
                            {displayFields.map(field => {
@@ -845,7 +849,7 @@ export const DataExplorer: React.FC = () => {
                               const defaultWidth = isNumeric ? 120 : 180;
                               const colWidth = columnWidths[field] || defaultWidth;
                               return (
-                                 <th key={`filter-${field}`} className="px-2 py-2 border-b border-slate-200" style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                 <th key={`filter-${field}`} className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                     <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`} value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')} onChange={(e) => handleColumnFilterChange(field, e.target.value)} />
                                  </th>
                               );
@@ -853,7 +857,7 @@ export const DataExplorer: React.FC = () => {
                            {calculatedFields.map(cf => {
                               const colWidth = columnWidths[cf.name] || 150;
                               return (
-                                 <th key={`filter-${cf.id}`} className="px-2 py-2 border-b border-indigo-200 bg-indigo-50" style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                 <th key={`filter-${cf.id}`} className={`px-2 py-2 border-b border-indigo-200 bg-indigo-50 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                     <input type="text" className="w-full px-2 py-1 text-xs border border-indigo-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 font-normal" placeholder={`Filtre...`} value={columnFilters[cf.name] || ''} onChange={(e) => handleColumnFilterChange(cf.name, e.target.value)} />
                                  </th>
                               );
@@ -898,10 +902,10 @@ export const DataExplorer: React.FC = () => {
                               className="hover:bg-blue-50 transition-colors cursor-pointer group"
                               onClick={() => handleRowClick(row)}
                            >
-                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600" style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
+                              <td className={`px-6 py-2 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
                                  {formatDateFr(row._importDate)}
                               </td>
-                              <td className="px-6 py-2 whitespace-nowrap text-xs text-slate-600 font-mono" style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
+                              <td className={`px-6 py-2 whitespace-nowrap text-xs text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                                  {row.id}
                               </td>
                               {displayFields.map(field => {
@@ -917,7 +921,7 @@ export const DataExplorer: React.FC = () => {
                                  else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
                                  else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
                                  return (
-                                    <td key={field} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={field} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {displayVal}
                                     </td>
                                  );
@@ -927,7 +931,7 @@ export const DataExplorer: React.FC = () => {
                                  const cellStyle = getCellStyle(cf.name, val); // Apply conditional formatting to calc fields too
                                  const colWidth = columnWidths[cf.name] || 150;
                                  return (
-                                    <td key={cf.id} className={`px-6 py-2 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={cf.id} className={`px-6 py-2 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {val !== undefined && val !== null ? <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span> : <span className="text-indigo-200">-</span>}
                                     </td>
                                  );
