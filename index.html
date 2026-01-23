@@ -77,14 +77,22 @@
 
     body {
       /* Base size driven by html font-size (rem) */
+      margin: 0;
     }
 
-    .font-outfit {
-      font-family: 'Outfit', sans-serif;
+    html.font-outfit,
+    html.font-outfit * {
+      font-family: 'Outfit', sans-serif !important;
     }
 
-    .font-inter {
-      font-family: 'Inter', sans-serif;
+    html.font-inter,
+    html.font-inter * {
+      font-family: 'Inter', sans-serif !important;
+    }
+
+    html.font-mono,
+    html.font-mono * {
+      font-family: 'Fira Code', 'Consolas', monospace !important;
     }
 
     ::-webkit-scrollbar {
@@ -129,7 +137,7 @@
 </script>
 </head>
 
-<body class="bg-canvas text-txt-main antialiased font-sans">
+<body class="bg-canvas text-txt-main antialiased">
   <div id="root"></div>
   <!-- Point d'entrée pour Vite -->
   <script type="module" src="/index.tsx"></script>

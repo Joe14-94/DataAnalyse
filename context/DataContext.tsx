@@ -456,7 +456,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding,
+      hasSeenOnboarding, uiPrefs,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
@@ -477,6 +477,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastAnalyticsState(parsed.lastAnalyticsState || null);
       setCompanyLogo(parsed.companyLogo); // NEW
       setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+      if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
 
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
