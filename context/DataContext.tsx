@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials } from '../types';
 import { APP_VERSION, generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, db, generateId } from '../utils';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
@@ -8,10 +8,11 @@ import { BatchContext, useBatches } from './BatchContext';
 import { WidgetContext, useWidgets } from './WidgetContext';
 import { AnalyticsContext, useAnalytics } from './AnalyticsContext';
 import { PersistenceContext, usePersistence } from './PersistenceContext';
+import { ReferentialProvider, useReferentials } from './ReferentialContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
 
 // Explicitly export hooks to avoid re-export issues
-export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useSettings };
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useSettings };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';
@@ -29,6 +30,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
+  const [financeReferentials, setFinanceReferentials] = useState<FinanceReferentials>({}); // NEW
   const [uiPrefs, setUiPrefs] = useState<any>(undefined); // NEW
 
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +58,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
           setCompanyLogo(dbData.companyLogo); // NEW
           setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
+          setFinanceReferentials(dbData.financeReferentials || {}); // NEW
           if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs); // NEW
 
           if (dbData.currentDatasetId) {
@@ -76,6 +79,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLastAnalyticsState(parsed.lastAnalyticsState || null);
             setCompanyLogo(parsed.companyLogo); // NEW
             setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+            setFinanceReferentials(parsed.financeReferentials || {}); // NEW
             if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
 
@@ -113,6 +117,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastAnalyticsState,
         companyLogo,
         hasSeenOnboarding,
+        financeReferentials,
         uiPrefs
       };
 
@@ -122,7 +127,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, uiPrefs, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, uiPrefs, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -451,16 +456,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setHasSeenOnboarding(true);
   }, []);
 
+  const updateFinanceReferentials = useCallback((referentials: FinanceReferentials) => {
+    setFinanceReferentials(referentials);
+  }, []);
+
   const getBackupJson = useCallback(() => {
     const state: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding, uiPrefs,
+      hasSeenOnboarding, financeReferentials, uiPrefs,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, uiPrefs]);
 
   const importBackup = useCallback(async (jsonData: string) => {
     try {
@@ -477,6 +486,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastAnalyticsState(parsed.lastAnalyticsState || null);
       setCompanyLogo(parsed.companyLogo); // NEW
       setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+      setFinanceReferentials(parsed.financeReferentials || {}); // NEW
       if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
 
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
@@ -501,15 +511,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding }}>
       <SettingsProvider initialPrefs={uiPrefs} onPrefsChange={setUiPrefs}>
-        <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-          <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
-            <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-              <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
-                {children}
-              </AnalyticsContext.Provider>
-            </WidgetContext.Provider>
-          </BatchContext.Provider>
-        </DatasetContext.Provider>
+        <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
+          <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
+            <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
+              <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
+                <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
+                  {children}
+                </AnalyticsContext.Provider>
+              </WidgetContext.Provider>
+            </BatchContext.Provider>
+          </DatasetContext.Provider>
+        </ReferentialProvider>
       </SettingsProvider>
     </PersistenceContext.Provider>
   );
