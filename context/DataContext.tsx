@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials } from '../types';
 import { APP_VERSION, generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, db, generateId } from '../utils';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
@@ -8,9 +8,10 @@ import { BatchContext, useBatches } from './BatchContext';
 import { WidgetContext, useWidgets } from './WidgetContext';
 import { AnalyticsContext, useAnalytics } from './AnalyticsContext';
 import { PersistenceContext, usePersistence } from './PersistenceContext';
+import { ReferentialProvider, useReferentials } from './ReferentialContext';
 
 // Explicitly export hooks to avoid re-export issues
-export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence };
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';
@@ -28,6 +29,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
+  const [financeReferentials, setFinanceReferentials] = useState<FinanceReferentials>({}); // NEW
 
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,6 +56,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
           setCompanyLogo(dbData.companyLogo); // NEW
           setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
+          setFinanceReferentials(dbData.financeReferentials || {}); // NEW
 
           if (dbData.currentDatasetId) {
             setCurrentDatasetId(dbData.currentDatasetId);
@@ -73,6 +76,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLastAnalyticsState(parsed.lastAnalyticsState || null);
             setCompanyLogo(parsed.companyLogo); // NEW
             setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+            setFinanceReferentials(parsed.financeReferentials || {}); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
 
             await db.save(parsed);
@@ -108,7 +112,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastPivotState,
         lastAnalyticsState,
         companyLogo,
-        hasSeenOnboarding
+        hasSeenOnboarding,
+        financeReferentials
       };
 
       db.save(state).catch(e => console.error("Failed to save to DB", e));
@@ -117,7 +122,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -446,16 +451,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setHasSeenOnboarding(true);
   }, []);
 
+  const updateFinanceReferentials = useCallback((referentials: FinanceReferentials) => {
+    setFinanceReferentials(referentials);
+  }, []);
+
   const getBackupJson = useCallback(() => {
     const state: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding,
+      hasSeenOnboarding, financeReferentials,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials]);
 
   const importBackup = useCallback(async (jsonData: string) => {
     try {
@@ -472,6 +481,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastAnalyticsState(parsed.lastAnalyticsState || null);
       setCompanyLogo(parsed.companyLogo); // NEW
       setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+      setFinanceReferentials(parsed.financeReferentials || {}); // NEW
 
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
         setCurrentDatasetId(parsed.currentDatasetId);
@@ -498,7 +508,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
           <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
             <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
-              {children}
+              <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
+                {children}
+              </ReferentialProvider>
             </AnalyticsContext.Provider>
           </WidgetContext.Provider>
         </BatchContext.Provider>
