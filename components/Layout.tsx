@@ -80,8 +80,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside
+        style={{ width: isCollapsed ? undefined : 'var(--app-sidebar-width)' }}
         className={`bg-surface border-b md:border-b-0 md:border-r border-border-default flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
-          ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-full
+          ${isCollapsed ? 'md:w-16' : ''} w-full
         `}
       >
         <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
@@ -90,23 +91,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <img
                 src={companyLogo}
                 alt="Logo"
-                className={`object-contain max-h-10 ${isCollapsed ? 'w-full' : 'w-auto max-w-[180px]'}`}
+                className={`object-contain max-h-8 ${isCollapsed ? 'w-full' : 'w-auto max-w-[140px]'}`}
               />
             ) : (
               <>
                 <div className="p-1.5 bg-brand-600 rounded-md text-white shrink-0">
-                  <Database size={20} />
+                  <Database size={16} />
                 </div>
-                {!isCollapsed && <span className="whitespace-nowrap tracking-tight">DataScope</span>}
+                {!isCollapsed && <span className="whitespace-nowrap tracking-tight text-lg">DataScope</span>}
               </>
             )}
           </div>
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-1 shadow-sm text-txt-muted hover:text-brand-600 z-30"
+            className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-0.5 shadow-sm text-txt-muted hover:text-brand-600 z-30"
           >
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
           </button>
         </div>
 
@@ -120,7 +121,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 id={item.id}
                 to={item.path}
                 title={isCollapsed ? item.name : ''}
-                className={`flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap
+                className={`flex items-center gap-2 px-2 py-2 rounded-md text-[10px] font-medium transition-colors whitespace-nowrap
                   ${isActive
                     ? 'bg-brand-50 text-brand-700'
                     : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
@@ -128,38 +129,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
               >
-                <Icon size={isCollapsed ? 20 : 18} className="shrink-0" />
+                <Icon size={isCollapsed ? 18 : 15} className="shrink-0" />
                 {!isCollapsed && <span>{item.name}</span>}
               </Link>
             );
           })}
         </nav>
 
-        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-3 ${isCollapsed ? 'items-center' : ''}`}>
+        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
           <button
             onClick={handleQuickSave}
-            className={`flex items-center justify-center gap-2 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-2 rounded transition-colors
-                ${isCollapsed ? 'w-10 h-10 p-0' : 'w-full px-4'}
+            className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-[10px] font-bold py-1.5 rounded transition-colors
+                ${isCollapsed ? 'w-8 h-8 p-0' : 'w-full px-3'}
              `}
             title="Sauvegarde rapide"
           >
-            <Save className={`${isCollapsed ? 'w-4 h-4' : 'w-3 h-3'}`} />
+            <Save className={`${isCollapsed ? 'w-3.5 h-3.5' : 'w-3 h-3'}`} />
             {!isCollapsed && "Sauvegarde"}
           </button>
 
           {!isCollapsed && (
             <div>
-              <div className="flex items-center justify-between text-xs text-txt-muted mb-1">
+              <div className="flex items-center justify-between text-[10px] text-txt-muted mb-1">
                 <div className="flex items-center gap-1">
-                  <HardDrive size={12} />
+                  <HardDrive size={10} />
                   <span>Disque : {storageUsed}</span>
                 </div>
                 {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
               </div>
               {storagePercent > 0 && (
-                <div className="w-full bg-border-default rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-border-default rounded-full h-1 overflow-hidden">
                   <div
-                    className={`h-1.5 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`}
+                    className={`h-1 rounded-full transition-all duration-500 ${getStorageColor(storagePercent)}`}
                     style={{ width: `${Math.max(2, storagePercent)}%` }}
                   ></div>
                 </div>
@@ -167,7 +168,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           )}
 
-          <div className="text-xs text-txt-muted text-center">
+          <div className="text-[10px] text-txt-muted text-center italic">
             {isCollapsed ? `v22` : `v${APP_VERSION}`}
           </div>
         </div>

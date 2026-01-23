@@ -28,7 +28,7 @@ export interface FieldConfig {
   // NOUVEAU : Formatage numérique
   decimalPlaces?: number; // 0, 1, 2...
   displayScale?: 'none' | 'thousands' | 'millions' | 'billions'; // k, M, Md
-  conditionalFormatting?: ConditionalRule[]; 
+  conditionalFormatting?: ConditionalRule[];
 }
 
 // --- CHAMPS CALCULÉS ---
@@ -98,20 +98,20 @@ export interface PivotJoin {
 export interface PivotState {
   datasetId: string;
   config: {
-      rowFields: string[];
-      colFields: string[]; // Changed from colField (single) to colFields (array)
-      valField: string;
-      aggType: string;
-      filters: FilterRule[];
-      // Data Blending (Nouveau support multi-jointures)
-      joins?: PivotJoin[];
-      // Deprecated fields kept for migration compatibility
-      colField?: string; 
-      secondaryDatasetId?: string;
-      joinKeyPrimary?: string;
-      joinKeySecondary?: string;
-      [key: string]: any;
-  }; 
+    rowFields: string[];
+    colFields: string[]; // Changed from colField (single) to colFields (array)
+    valField: string;
+    aggType: string;
+    filters: FilterRule[];
+    // Data Blending (Nouveau support multi-jointures)
+    joins?: PivotJoin[];
+    // Deprecated fields kept for migration compatibility
+    colField?: string;
+    secondaryDatasetId?: string;
+    joinKeyPrimary?: string;
+    joinKeySecondary?: string;
+    [key: string]: any;
+  };
 }
 
 export interface AnalyticsState {
@@ -141,21 +141,21 @@ export interface WidgetSource {
 
 export interface WidgetConfig {
   // Source Config
-  source?: WidgetSource; 
+  source?: WidgetSource;
   secondarySource?: SecondarySourceConfig; // NOUVEAU : Pour le croisement de données
-  
+
   // Data Config
   metric: 'count' | 'sum' | 'avg' | 'distinct';
   dimension?: string; // Champ utilisé pour l'axe X ou le groupement
   valueField?: string; // Champ utilisé pour le calcul (si sum/avg)
   limit?: number; // Top N (5, 10, 20...)
-  
+
   // Visual Config
   chartType?: ChartType;
   kpiStyle?: KpiStyle;
   target?: number; // Objectif (pour les KPI ou Jauges)
   showTrend?: boolean; // Afficher l'évolution vs période précédente
-  
+
   // Text Config (Nouveau pour WidgetType = 'text')
   textContent?: string;
   textStyle?: {
@@ -194,6 +194,14 @@ export interface Dataset {
   createdAt: number;
 }
 
+// --- PREFERENCES UI (NOUVEAU) ---
+export interface UIPrefs {
+  fontSize: number; // Taille de police de base en px (ex: 10, 12, 14, 16)
+  fontFamily: 'sans' | 'serif' | 'mono' | 'outfit' | 'inter';
+  density: 'ultra' | 'compact' | 'comfortable';
+  sidebarWidth: number; // Largeur en px
+}
+
 export interface ImportBatch {
   id: string;
   datasetId: string; // Lien vers le dataset parent
@@ -216,6 +224,7 @@ export interface AppState {
 
   // Finance Referentials (NOUVEAU)
   financeReferentials?: FinanceReferentials;
+  uiPrefs?: UIPrefs; // NOUVEAU : Préférences de style globales
 
   // Persistence
   lastPivotState?: PivotState | null;
