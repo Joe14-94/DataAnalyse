@@ -768,7 +768,7 @@ export const DataExplorer: React.FC = () => {
                <table className="w-full divide-y divide-slate-200 border-collapse text-left" style={{ height: rowVirtualizer.getTotalSize(), tableLayout: 'fixed', minWidth: '100%' }}>
                   <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
                      <tr>
-                        <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick('_importDate')} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
+                        <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r border-slate-200' : ''}`} onClick={() => handleHeaderClick('_importDate')} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
                            <div className="flex items-center gap-2 justify-between">
                               <div className="flex items-center gap-2">
                                  <span>Date d'import</span>
@@ -780,7 +780,7 @@ export const DataExplorer: React.FC = () => {
                               />
                            </div>
                         </th>
-                        <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
+                        <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                            <div className="flex items-center gap-2 justify-between">
                               <span>Id</span>
                               <div
