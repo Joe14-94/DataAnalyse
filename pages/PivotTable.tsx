@@ -703,16 +703,16 @@ export const PivotTable: React.FC = () => {
                             <button
                                 onClick={() => setShowExportMenu(!showExportMenu)}
                                 disabled={!primaryDataset}
-                                className="px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50"
+                                className="px-3 py-1.5 text-app-base text-slate-600 hover:text-blue-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50"
                             >
                                 <FileDown className="w-3 h-3" /> Export
                             </button>
                             {showExportMenu && (
                                 <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
-                                    <button onClick={() => handleExport('pdf', 'adaptive')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
+                                    <button onClick={() => handleExport('pdf', 'adaptive')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
                                         <Printer className="w-3 h-3" /> PDF
                                     </button>
-                                    <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
+                                    <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
                                         <FileType className="w-3 h-3" /> HTML
                                     </button>
                                 </div>
@@ -742,7 +742,7 @@ export const PivotTable: React.FC = () => {
                         {/* 1. DATA SOURCES STACK */}
                         <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[120px] max-h-[220px]">
                             <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-                                <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2">
+                                <h3 className="text-app-base font-bold text-slate-800 flex items-center gap-2">
                                     <Database className="w-3.5 h-3.5 text-blue-600" />
                                     Sources de données
                                 </h3>
@@ -775,10 +775,10 @@ export const PivotTable: React.FC = () => {
                                             return (
                                                 <div key={src.id} className={`relative pl-2 border-l-2 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
                                                     <div className="flex justify-between items-center mb-1">
-                                                        <div className={`text-[11px] font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
+                                                        <div className={`text-app-base font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
                                                             {src.isPrimary ? <Database className="w-3.5 h-3.5 flex-shrink-0" /> : <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />}
                                                             <span className="truncate" title={ds.name}>{ds.name}</span>
-                                                            {src.isPrimary && <span className="text-[9px] opacity-70 ml-1">(P)</span>}
+                                                            {src.isPrimary && <span className="text-[0.8em] opacity-70 ml-1">(P)</span>}
                                                         </div>
                                                         <button
                                                             onClick={() => removeSource(src.id)}
@@ -790,16 +790,16 @@ export const PivotTable: React.FC = () => {
 
                                                     {src.isPrimary ? (
                                                         <select
-                                                            className="mt-0.5 w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
+                                                            className="mt-0.5 w-full text-app-base border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
                                                             value={selectedBatchId}
                                                             onChange={(e) => setSelectedBatchId(e.target.value)}
                                                         >
                                                             {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
                                                         </select>
                                                     ) : (
-                                                        <div className="text-[10px] text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
-                                                            <div className="font-semibold text-[9px] text-slate-500 uppercase mb-0">Jointure sur :</div>
-                                                            <div className="font-mono text-[10px]">
+                                                        <div className="text-app-base text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
+                                                            <div className="font-semibold text-[0.8em] text-slate-500 uppercase mb-0">Jointure sur :</div>
+                                                            <div className="font-mono">
                                                                 <span className="font-bold">{src.joinConfig?.primaryKey}</span>
                                                                 <span className="mx-1">=</span>
                                                                 <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
@@ -1043,7 +1043,7 @@ export const PivotTable: React.FC = () => {
                                             <tr>
                                                 {/* Headers Lignes */}
                                                 {rowFields.map((field, idx) => (
-                                                    <th key={field} className="px-2 py-1.5 text-left text-[10px] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '120px' }}>
+                                                    <th key={field} className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '120px' }}>
                                                         {field}
                                                     </th>
                                                 ))}
@@ -1055,14 +1055,14 @@ export const PivotTable: React.FC = () => {
                                                     const label = isDiff ? 'Var.' : isPct ? '%' : col;
 
                                                     return (
-                                                        <th key={col} className={`px-2 py-1.5 text-right text-[10px] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
+                                                        <th key={col} className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
                                                             {label}
                                                         </th>
                                                     );
                                                 })}
 
                                                 {showTotalCol && (
-                                                    <th className="px-2 py-1.5 text-right text-[10px] font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
+                                                    <th className="px-2 py-1.5 text-right text-[0.9em] font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
                                                         Total
                                                     </th>
                                                 )}
@@ -1081,11 +1081,11 @@ export const PivotTable: React.FC = () => {
                                                     >
                                                         {rowFields.map((field, cIdx) => {
                                                             if (row.type === 'subtotal') {
-                                                                if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-[10px] text-slate-500 border-r border-slate-200 bg-slate-50/30">{row.keys[cIdx]}</td>;
-                                                                if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-[10px] text-slate-700 border-r border-slate-200 font-bold italic text-right">{row.label}</td>;
+                                                                if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-[0.9em] text-slate-500 border-r border-slate-200 bg-slate-50/30">{row.keys[cIdx]}</td>;
+                                                                if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-[0.9em] text-slate-700 border-r border-slate-200 font-bold italic text-right">{row.label}</td>;
                                                                 return null;
                                                             }
-                                                            return <td key={cIdx} className="px-2 py-1 text-[10px] text-slate-700 border-r border-slate-200 whitespace-nowrap">{row.keys[cIdx]}</td>;
+                                                            return <td key={cIdx} className="px-2 py-1 text-[0.9em] text-slate-700 border-r border-slate-200 whitespace-nowrap">{row.keys[cIdx]}</td>;
                                                         })}
                                                         {pivotData.colHeaders.map(col => {
                                                             const val = row.metrics[col];

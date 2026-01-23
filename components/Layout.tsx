@@ -80,8 +80,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside
+        style={{ width: isCollapsed ? undefined : 'var(--app-sidebar-width)' }}
         className={`bg-surface border-b md:border-b-0 md:border-r border-border-default flex-shrink-0 h-auto md:h-full flex flex-col transition-all duration-300 z-20
-          ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-full
+          ${isCollapsed ? 'md:w-16' : ''} w-full
         `}
       >
         <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
@@ -90,14 +91,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <img
                 src={companyLogo}
                 alt="Logo"
-                className={`object-contain max-h-10 ${isCollapsed ? 'w-full' : 'w-auto max-w-[180px]'}`}
+                className={`object-contain max-h-8 ${isCollapsed ? 'w-full' : 'w-auto max-w-[140px]'}`}
               />
             ) : (
               <>
                 <div className="p-1.5 bg-brand-600 rounded-md text-white shrink-0">
-                  <Database size={20} />
+                  <Database size={16} />
                 </div>
-                {!isCollapsed && <span className="whitespace-nowrap tracking-tight">DataScope</span>}
+                {!isCollapsed && <span className="whitespace-nowrap tracking-tight text-lg">DataScope</span>}
               </>
             )}
           </div>
@@ -128,14 +129,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
               >
-                <Icon size={isCollapsed ? 18 : 16} className="shrink-0" />
+                <Icon size={isCollapsed ? 18 : 15} className="shrink-0" />
                 {!isCollapsed && <span>{item.name}</span>}
               </Link>
             );
           })}
         </nav>
 
-        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-3 ${isCollapsed ? 'items-center' : ''}`}>
+        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
           <button
             onClick={handleQuickSave}
             className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-[10px] font-bold py-1.5 rounded transition-colors

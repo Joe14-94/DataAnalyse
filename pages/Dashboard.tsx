@@ -46,7 +46,7 @@ const TreemapContent = (props: any) => {
       <g>
          <rect x={x} y={y} width={width} height={height} fill={COLORS[index % COLORS.length]} stroke="#fff" />
          {width > 40 && height > 20 && (
-            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize={10} dy={4} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize="0.8rem" dy={4} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                {name.substring(0, 10)}
             </text>
          )}
@@ -194,15 +194,16 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
 
 const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widget, data }) => {
    const { setDashboardFilter } = useWidgets();
-   if (!data) return <div className="flex items-center justify-center h-full text-txt-muted text-[10px]">Chargement...</div>;
-   if (data.error) return <div className="flex items-center justify-center h-full text-danger-text text-[10px] text-center p-1">{data.error}</div>;
+   if (!data) return <div className="flex items-center justify-center h-full text-txt-muted text-app-base">Chargement...</div>;
+   if (data.error) return <div className="flex items-center justify-center h-full text-danger-text text-app-base text-center p-1">{data.error}</div>;
 
    if (widget.type === 'text') {
       const style = widget.config.textStyle || {};
       const alignment = style.align || 'left';
-      const size = style.size === 'large' ? 'text-sm' : style.size === 'xl' ? 'text-lg' : 'text-[10px]';
+      const align = style.align || 'left';
+      const size = style.size === 'large' ? 'text-lg' : style.size === 'xl' ? 'text-2xl' : 'text-app-base';
       const color = style.color === 'primary' ? 'text-brand-600' : style.color === 'muted' ? 'text-txt-muted' : 'text-txt-main';
-      return <div className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: alignment }}>{widget.config.textContent || '...'}</div>;
+      return <div className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: align }}>{widget.config.textContent || '...'}</div>;
    }
 
    const { unit } = data;
@@ -221,11 +222,11 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
          <div className="flex flex-col h-full justify-center">
             <div className="flex items-end gap-1.5 mb-1.5">
                <span className="text-2xl font-bold text-txt-main">{current.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-               <span className="text-[10px] text-txt-muted mb-1 font-medium">{unit}</span>
+               <span className="text-app-base text-txt-muted mb-1 font-medium">{unit}</span>
             </div>
             {style === 'progress' && target ? (
                <div className="w-full space-y-1">
-                  <div className="flex justify-between text-[10px] text-txt-muted">
+                  <div className="flex justify-between text-app-base text-txt-muted">
                      <span>Objectif</span>
                      <span>{Math.round(progress)}% / {target.toLocaleString()}</span>
                   </div>
@@ -234,7 +235,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   </div>
                </div>
             ) : (style === 'trend' || showTrend) && (
-               <div className={`flex items-center text-[10px] font-medium ${isPositive ? 'text-success-text' : 'text-danger-text'}`}>
+               <div className={`flex items-center text-app-base font-medium ${isPositive ? 'text-success-text' : 'text-danger-text'}`}>
                   {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingUp className="w-3 h-3 mr-1 transform rotate-180" />}
                   {Math.abs(trend).toFixed(1)}% vs préc.
                </div>
@@ -383,7 +384,7 @@ const WidgetItem: React.FC<WidgetItemProps> = ({
                   <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-danger-bg rounded text-danger-text"><Trash2 className="w-3 h-3" /></button>
                </div>
             )}
-            <h3 className="text-[10px] font-bold text-txt-secondary mb-1.5 uppercase tracking-wider truncate" title={widget.title}>{widget.title}</h3>
+            <h3 className="text-app-base font-bold text-txt-secondary mb-1.5 uppercase tracking-wider truncate" title={widget.title}>{widget.title}</h3>
             <div className="flex-1 min-h-0 pointer-events-none md:pointer-events-auto">
                <WidgetDisplay widget={widget} data={widgetData} />
             </div>
@@ -572,7 +573,7 @@ export const Dashboard: React.FC = () => {
                <div className="relative">
                   <select
                      id="tour-dataset-selector"
-                     className="w-full md:w-56 appearance-none bg-white border border-slate-300 text-slate-700 text-[10px] rounded-md py-1.5 pl-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                     className="w-full md:w-56 appearance-none bg-white border border-slate-300 text-slate-700 text-app-base rounded-md py-1.5 pl-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
                      value={currentDatasetId || ''}
                      onChange={(e) => {
                         if (e.target.value === '__NEW__') navigate('/import');
@@ -611,20 +612,20 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                      <div className="flex flex-col">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Début</label>
+                        <label className="text-[0.9em] font-bold text-slate-400 uppercase">Début</label>
                         <input
                            type="date"
-                           className="text-[10px] border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
+                           className="text-app-base border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
                            value={globalDateRange.start}
                            onChange={(e) => setGlobalDateRange({ ...globalDateRange, start: e.target.value })}
                         />
                      </div>
                      <span className="text-slate-300 mt-3">-</span>
                      <div className="flex flex-col">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase">Fin</label>
+                        <label className="text-[0.9em] font-bold text-slate-400 uppercase">Fin</label>
                         <input
                            type="date"
-                           className="text-[10px] border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
+                           className="text-app-base border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
                            value={globalDateRange.end}
                            onChange={(e) => setGlobalDateRange({ ...globalDateRange, end: e.target.value })}
                         />

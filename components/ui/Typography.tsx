@@ -10,10 +10,10 @@ interface HeadingProps {
 
 export const Heading: React.FC<HeadingProps> = ({ level = 1, children, className = '' }) => {
   const styles = {
-    1: "text-2xl font-bold text-txt-main tracking-tight",
-    2: "text-xl font-bold text-txt-main",
-    3: "text-lg font-semibold text-txt-main",
-    4: "text-base font-bold text-txt-secondary uppercase tracking-wider"
+    1: "text-[1.8em] font-bold text-txt-main tracking-tight",
+    2: "text-[1.5em] font-bold text-txt-main",
+    3: "text-[1.2em] font-semibold text-txt-main",
+    4: "text-[1em] font-bold text-txt-secondary uppercase tracking-wider"
   };
 
   const Tag = `h${level}` as React.ElementType;
@@ -31,13 +31,13 @@ interface TextProps {
   as?: 'p' | 'span' | 'div';
 }
 
-export const Text: React.FC<TextProps> = ({ 
-  size = 'sm', 
-  weight = 'normal', 
-  variant = 'main', 
-  children, 
-  className = '', 
-  as = 'p' 
+export const Text: React.FC<TextProps> = ({
+  size = 'sm',
+  weight = 'normal',
+  variant = 'main',
+  children,
+  className = '',
+  as = 'p'
 }) => {
   const sizes = {
     xs: "text-xs",
@@ -45,7 +45,7 @@ export const Text: React.FC<TextProps> = ({
     base: "text-base",
     lg: "text-lg"
   };
-  
+
   const variants = {
     main: "text-txt-main",
     secondary: "text-txt-secondary",

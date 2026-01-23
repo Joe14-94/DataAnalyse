@@ -314,16 +314,16 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                             </div>
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div className="flex flex-col">
-                                                    <span className="text-slate-500 text-[10px] uppercase font-bold">Correspondance</span>
+                                                    <span className="text-slate-500 text-[0.85em] uppercase font-bold">Correspondance</span>
                                                     <span className="font-bold text-slate-700">{previewStats.matchCount} / {previewStats.totalPrimary} ({previewStats.matchRate.toFixed(1)}%)</span>
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-slate-500 text-[10px] uppercase font-bold">Lignes résultantes</span>
+                                                    <span className="text-slate-500 text-[0.85em] uppercase font-bold">Lignes résultantes</span>
                                                     <span className="font-bold text-slate-700">~{previewStats.estimatedRows} lignes</span>
                                                 </div>
                                             </div>
                                             {previewStats.quality === 'low' && (
-                                                <p className="mt-2 text-[10px] text-red-500 italic flex items-start gap-1">
+                                                <p className="mt-2 text-[0.85em] text-red-500 italic flex items-start gap-1">
                                                     <AlertCircle className="w-3 h-3 shrink-0" />
                                                     Peu de correspondances trouvées. Vérifiez que les clés sélectionnées contiennent des données similaires.
                                                 </p>

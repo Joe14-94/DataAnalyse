@@ -904,7 +904,7 @@ export const DataExplorer: React.FC = () => {
                                  else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
                                  else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
                                  return (
-                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-[10px] text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-[1em] text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {displayVal}
                                     </td>
                                  );
@@ -914,7 +914,7 @@ export const DataExplorer: React.FC = () => {
                                  const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
                                  return (
-                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-[10px] text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-app-base text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {val !== undefined && val !== null ? <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span> : <span className="text-indigo-200">-</span>}
                                     </td>
                                  );
