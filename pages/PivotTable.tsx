@@ -663,8 +663,11 @@ export const PivotTable: React.FC = () => {
 
                         {/* 1. DATA SOURCES STACK */}
                         <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                            <div className="p-3 bg-slate-50 border-b border-slate-200">
-                                <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1"><Database className="w-3 h-3" /> Sources de données</h3>
+                            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <Database className="w-4 h-4 text-blue-600" />
+                                    Sources de données
+                                </h3>
                             </div>
 
                             <div className="p-3 space-y-3">
@@ -692,26 +695,26 @@ export const PivotTable: React.FC = () => {
 
                                             const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
                                             return (
-                                                <div key={src.id} className={`relative pl-3 border-l-2 ${srcColorClasses.border} group`}>
-                                                    <div className="flex justify-between items-center">
-                                                        <div className={`text-xs font-bold ${srcColorClasses.text} flex items-center gap-1`}>
-                                                            {src.isPrimary ? <Database className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
+                                                <div key={src.id} className={`relative pl-3 border-l-4 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <div className={`text-sm font-bold ${srcColorClasses.text} flex items-center gap-1.5`}>
+                                                            {src.isPrimary ? <Database className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
                                                             {ds.name}
                                                         </div>
-                                                        <button onClick={() => removeSource(src.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
+                                                        <button onClick={() => removeSource(src.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
 
                                                     {src.isPrimary ? (
                                                         <select
-                                                            className="mt-1 w-full text-[10px] border border-slate-200 rounded p-1 bg-slate-50 text-slate-600"
+                                                            className="mt-1.5 w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white text-slate-700 font-medium focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                                                             value={selectedBatchId}
                                                             onChange={(e) => setSelectedBatchId(e.target.value)}
                                                         >
                                                             {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
                                                         </select>
                                                     ) : (
-                                                        <div className="text-[9px] text-slate-400 mt-0.5">
-                                                            Clé: <span className="font-mono">{src.joinConfig?.primaryKey}</span> = <span className="font-mono">[{ds.name}] {src.joinConfig?.secondaryKey}</span>
+                                                        <div className="text-[10px] text-slate-500 mt-0.5">
+                                                            Clé: <span className="font-mono font-semibold">{src.joinConfig?.primaryKey}</span> = <span className="font-mono font-semibold">[{ds.name}] {src.joinConfig?.secondaryKey}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -731,8 +734,12 @@ export const PivotTable: React.FC = () => {
 
                         {/* 2. FIELDS ACCORDION */}
                         <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[200px] overflow-hidden">
-                            <div className="p-2 border-b border-slate-100 bg-slate-50">
-                                <input type="text" placeholder="Rechercher un champ..." className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500" disabled={sources.length === 0} />
+                            <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
+                                    <Table2 className="w-4 h-4 text-green-600" />
+                                    Champs disponibles
+                                </h3>
+                                <input type="text" placeholder="Rechercher un champ..." className="w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white focus:ring-2 focus:ring-green-400 focus:border-green-400" disabled={sources.length === 0} />
                             </div>
 
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
