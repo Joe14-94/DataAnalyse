@@ -1,4 +1,5 @@
 import { DataRow, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
+import { parseSmartNumber } from '../utils';
 
 /**
  * Parse une date avec support du format français DD/MM/YYYY
@@ -115,8 +116,26 @@ export const aggregateDataByGroup = (
     const group = groups.get(groupKey)!;
     group.details.push(row);
 
-    // Valeur à agréger
-    const value = typeof row[valueField] === 'number' ? row[valueField] : parseFloat(String(row[valueField] || 0));
+    // Valeur à agréger - utiliser parseSmartNumber pour gérer les formats français
+    const rawValue = row[valueField];
+    let value = 0;
+
+    if (typeof rawValue === 'number') {
+      value = rawValue;
+    } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+      const strValue = String(rawValue);
+      value = parseSmartNumber(strValue);
+
+      // Debug: Log si le parsing a échoué
+      if (isNaN(value) || value === 0) {
+        console.warn(`[Temporal Comparison] Parsing failed for field "${valueField}":`, {
+          rawValue,
+          strValue,
+          parsedValue: value,
+          type: typeof rawValue
+        });
+      }
+    }
 
     // Calcul selon le type d'agrégation
     switch (aggType) {
@@ -159,15 +178,28 @@ export const calculateTemporalComparison = (
 ): TemporalComparisonResult[] => {
   const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
 
+  // Debug: Log configuration
+  console.log('[Temporal Comparison] Starting calculation with config:', {
+    sources: sources.map(s => s.label),
+    groupByFields,
+    valueField,
+    aggType,
+    periodFilter
+  });
+
   // Filtrer et agréger chaque source
   const aggregatedSources = new Map<string, Map<string, { label: string; value: number; details: DataRow[] }>>();
 
   sources.forEach(source => {
     const sourceData = sourceDataMap.get(source.id);
     if (!sourceData || sourceData.length === 0) {
+      console.warn(`[Temporal Comparison] No data for source: ${source.label}`);
       aggregatedSources.set(source.id, new Map());
       return;
     }
+
+    // Debug: Log sample data from this source
+    console.log(`[Temporal Comparison] Source "${source.label}" has ${sourceData.length} rows. Sample row:`, sourceData[0]);
 
     // Filtrer par période
     const filteredData = filterDataByPeriod(
@@ -180,6 +212,17 @@ export const calculateTemporalComparison = (
     // Agréger
     const aggregated = aggregateDataByGroup(filteredData, groupByFields, valueField, aggType);
     aggregatedSources.set(source.id, aggregated);
+
+    // Debug: Log aggregated results for this source
+    console.log(`[Temporal Comparison] Source "${source.label}" aggregated:`, {
+      groupCount: aggregated.size,
+      sampleGroups: Array.from(aggregated.entries()).slice(0, 3).map(([key, group]) => ({
+        key,
+        label: group.label,
+        value: group.value,
+        rowCount: group.details.length
+      }))
+    });
   });
 
   // Collecter toutes les clés de regroupement uniques
@@ -244,6 +287,13 @@ export const calculateTemporalComparison = (
 
   // Trier par label
   results.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
+
+  // Debug: Log final results
+  console.log('[Temporal Comparison] Final results:', {
+    resultCount: results.length,
+    sampleResult: results[0],
+    allValues: results.map(r => ({ label: r.groupLabel, values: r.values }))
+  });
 
   return results;
 };
