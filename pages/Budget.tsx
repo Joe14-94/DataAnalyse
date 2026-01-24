@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import {
     DollarSign, Plus, FileText, TrendingUp, GitBranch,
     Calendar, Users, Lock, Unlock, CheckCircle, XCircle,
     Clock, Edit2, Trash2, Copy, Eye, MessageSquare,
-    Download, Upload, Filter, Search, Save, X, ArrowLeft
+    Download, Upload, Filter, Search, Save, X, ArrowLeft, AlertCircle
 } from 'lucide-react';
 import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { BudgetLine } from '../types';
+import {
+    readBudgetExcelFile,
+    readBudgetCSVFile,
+    convertImportToBudgetLines,
+    exportBudgetToExcel,
+    downloadBudgetTemplate
+} from '../utils/budgetImport';
 
 type BudgetTab = 'list' | 'editor' | 'comparison' | 'workflow' | 'templates';
 
@@ -36,6 +43,12 @@ export const Budget: React.FC = () => {
     const [newLineAccount, setNewLineAccount] = useState('');
     const [showAccountSelector, setShowAccountSelector] = useState(false);
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
+
+    // Import state
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Comparison state
     const [compareVersion1Id, setCompareVersion1Id] = useState<string | null>(null);
@@ -134,6 +147,73 @@ export const Budget: React.FC = () => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?')) {
             deleteLine(selectedBudgetId, selectedVersionId, lineId);
         }
+    };
+
+    // Import/Export handlers
+    const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !selectedBudgetId || !selectedVersionId || !selectedBudget) return;
+
+        setIsImporting(true);
+        setImportError(null);
+
+        try {
+            const fileExt = file.name.split('.').pop()?.toLowerCase();
+            let importData;
+
+            if (fileExt === 'xlsx' || fileExt === 'xls') {
+                importData = await readBudgetExcelFile(file);
+            } else if (fileExt === 'csv') {
+                importData = await readBudgetCSVFile(file);
+            } else {
+                throw new Error('Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv');
+            }
+
+            // Convert import data to budget lines
+            const newLines = convertImportToBudgetLines(importData, selectedBudget.chartOfAccountsId);
+
+            if (newLines.length === 0) {
+                throw new Error('Aucune ligne budgétaire trouvée dans le fichier');
+            }
+
+            // Add all lines to the current version
+            const version = selectedBudget.versions.find(v => v.id === selectedVersionId);
+            if (version) {
+                updateVersion(selectedBudgetId, selectedVersionId, {
+                    lines: [...version.lines, ...newLines]
+                });
+            }
+
+            setShowImportModal(false);
+            alert(`${newLines.length} ligne(s) budgétaire(s) importée(s) avec succès !`);
+        } catch (error) {
+            setImportError(error instanceof Error ? error.message : 'Erreur lors de l\'import');
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    const handleExportBudget = () => {
+        if (!selectedBudget || !selectedVersion || !selectedCalendar) return;
+
+        const periods = selectedCalendar.periods.map(p => ({
+            id: p.id,
+            name: p.name
+        }));
+
+        exportBudgetToExcel(
+            `${selectedBudget.name} - ${selectedVersion.name}`,
+            selectedVersion.lines,
+            periods
+        );
+    };
+
+    const handleDownloadTemplate = () => {
+        const year = selectedBudget?.fiscalYear || new Date().getFullYear();
+        downloadBudgetTemplate(year);
     };
 
     return (
@@ -468,16 +548,48 @@ export const Budget: React.FC = () => {
                                         <Card>
                                             <div className="flex items-center justify-between mb-4">
                                                 <h4 className="font-bold text-slate-800">Lignes budgétaires</h4>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setShowNewLineModal(true)}
-                                                    disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
-                                                    className="text-brand-600 border-brand-200"
-                                                >
-                                                    <Plus className="w-4 h-4 mr-2" />
-                                                    Ajouter une ligne
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={handleDownloadTemplate}
+                                                        className="text-slate-600 border-slate-200"
+                                                        title="Télécharger un template Excel"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Template
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowImportModal(true)}
+                                                        disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
+                                                        className="text-blue-600 border-blue-200"
+                                                    >
+                                                        <Upload className="w-4 h-4 mr-2" />
+                                                        Importer
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={handleExportBudget}
+                                                        disabled={selectedVersion.lines.length === 0}
+                                                        className="text-green-600 border-green-200"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Exporter
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowNewLineModal(true)}
+                                                        disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
+                                                        className="text-brand-600 border-brand-200"
+                                                    >
+                                                        <Plus className="w-4 h-4 mr-2" />
+                                                        Ajouter une ligne
+                                                    </Button>
+                                                </div>
                                             </div>
 
                                             {selectedVersion.lines.length === 0 ? (
@@ -625,6 +737,86 @@ export const Budget: React.FC = () => {
                                                 </div>
                                             )}
                                         </Card>
+                                    )}
+
+                                    {/* Import Modal */}
+                                    {showImportModal && (
+                                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                                                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                                    <h3 className="text-lg font-bold text-slate-800">Importer un budget</h3>
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowImportModal(false);
+                                                            setImportError(null);
+                                                        }}
+                                                        className="text-slate-400 hover:text-slate-600"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                                <div className="p-6">
+                                                    <div className="mb-4">
+                                                        <p className="text-sm text-slate-600 mb-4">
+                                                            Importez un fichier Excel (.xlsx, .xls) ou CSV (.csv) contenant les lignes budgétaires.
+                                                        </p>
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                                                            <h4 className="text-sm font-bold text-blue-900 mb-2">Format attendu :</h4>
+                                                            <ul className="text-xs text-blue-800 space-y-1">
+                                                                <li>• Colonne 1: Code compte (ex: 601000)</li>
+                                                                <li>• Colonne 2: Libellé (ex: Achats de matières premières)</li>
+                                                                <li>• Colonnes suivantes: Périodes (Jan 2025, Fév 2025, etc.)</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+
+                                                    {importError && (
+                                                        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                                                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-red-900">Erreur d'import</h4>
+                                                                <p className="text-xs text-red-800 mt-1">{importError}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="space-y-3">
+                                                        <Button
+                                                            className="w-full bg-brand-600 hover:bg-brand-700"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            disabled={isImporting}
+                                                        >
+                                                            <Upload className="w-4 h-4 mr-2" />
+                                                            {isImporting ? 'Import en cours...' : 'Sélectionner un fichier'}
+                                                        </Button>
+
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            type="file"
+                                                            accept=".xlsx,.xls,.csv"
+                                                            onChange={handleImportFile}
+                                                            className="hidden"
+                                                        />
+
+                                                        <Button
+                                                            variant="outline"
+                                                            className="w-full"
+                                                            onClick={() => {
+                                                                handleDownloadTemplate();
+                                                                setShowImportModal(false);
+                                                            }}
+                                                        >
+                                                            <Download className="w-4 h-4 mr-2" />
+                                                            Télécharger un template
+                                                        </Button>
+                                                    </div>
+
+                                                    <p className="text-xs text-slate-500 mt-4">
+                                                        Les lignes importées seront ajoutées à la version actuelle et pourront être modifiées par la suite.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
 
                                     {/* New Line Modal */}
