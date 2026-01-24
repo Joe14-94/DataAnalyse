@@ -100,7 +100,19 @@ export const aggregateDataByGroup = (
 ): Map<string, { label: string; value: number; details: DataRow[] }> => {
   const groups = new Map<string, { label: string; value: number; details: DataRow[] }>();
 
+  // Debug counters
+  let totalRows = 0;
+  let undefinedValues = 0;
+  let nullValues = 0;
+  let emptyValues = 0;
+  let parsedValues = 0;
+  let zeroValues = 0;
+  let nonZeroValues = 0;
+  const sampleRawValues: any[] = [];
+
   data.forEach(row => {
+    totalRows++;
+
     // Créer la clé de regroupement
     const groupKey = groupByFields.map(field => row[field] || '').join('|');
     const groupLabel = groupByFields.map(field => row[field] || '(vide)').join(' - ');
@@ -120,20 +132,34 @@ export const aggregateDataByGroup = (
     const rawValue = row[valueField];
     let value = 0;
 
+    // Collect sample raw values for debugging
+    if (sampleRawValues.length < 10) {
+      sampleRawValues.push(rawValue);
+    }
+
+    // Track undefined/null/empty
+    if (rawValue === undefined) {
+      undefinedValues++;
+    } else if (rawValue === null) {
+      nullValues++;
+    } else if (rawValue === '') {
+      emptyValues++;
+    }
+
     if (typeof rawValue === 'number') {
       value = rawValue;
+      parsedValues++;
+      if (value === 0) zeroValues++;
+      else nonZeroValues++;
     } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
       const strValue = String(rawValue);
       value = parseSmartNumber(strValue);
+      parsedValues++;
 
-      // Debug: Log si le parsing a échoué
-      if (isNaN(value) || value === 0) {
-        console.warn(`[Temporal Comparison] Parsing failed for field "${valueField}":`, {
-          rawValue,
-          strValue,
-          parsedValue: value,
-          type: typeof rawValue
-        });
+      if (value === 0) {
+        zeroValues++;
+      } else {
+        nonZeroValues++;
       }
     }
 
@@ -164,6 +190,19 @@ export const aggregateDataByGroup = (
       group.value = group.value / group.details.length;
     });
   }
+
+  // Debug: Log statistics
+  console.log(`[Temporal Comparison] Aggregation statistics for field "${valueField}":`, {
+    totalRows,
+    undefinedValues,
+    nullValues,
+    emptyValues,
+    parsedValues,
+    zeroValues,
+    nonZeroValues,
+    sampleRawValues: sampleRawValues.slice(0, 5),
+    aggType
+  });
 
   return groups;
 };
