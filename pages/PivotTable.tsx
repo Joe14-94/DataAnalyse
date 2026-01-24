@@ -144,6 +144,21 @@ export const PivotTable: React.FC = () => {
 
     // VIRTUALIZATION
     const parentRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
+
+    // Synchronize horizontal scroll between table and footer
+    useEffect(() => {
+        const parent = parentRef.current;
+        const footer = footerRef.current;
+        if (!parent || !footer) return;
+
+        const handleScroll = () => {
+            footer.scrollLeft = parent.scrollLeft;
+        };
+
+        parent.addEventListener('scroll', handleScroll);
+        return () => parent.removeEventListener('scroll', handleScroll);
+    }, [pivotData]);
 
     // --- DERIVED STATE ---
 
@@ -189,6 +204,12 @@ export const PivotTable: React.FC = () => {
             });
         }
     }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
+
+    // Load State - Reset on mount
+    useEffect(() => {
+        // Reset initialization flag when component mounts
+        setIsInitialized(false);
+    }, []);
 
     // Load State
     useEffect(() => {
@@ -1757,7 +1778,7 @@ export const PivotTable: React.FC = () => {
 
                         {/* FOOTER TOTALS (FIXED OUTSIDE SCROLL) */}
                         {pivotData && (
-                            <div className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-hidden flex-shrink-0">
+                            <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-auto flex-shrink-0 custom-scrollbar">
                                 <table className="min-w-full divide-y divide-slate-200">
                                     <tbody className="font-bold">
                                         <tr>
