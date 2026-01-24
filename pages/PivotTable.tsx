@@ -8,15 +8,23 @@ import {
     ArrowUp, ArrowDown, Save, Check,
     PieChart, Loader2, ChevronLeft, ChevronRight, FileDown, FileType, Printer,
     GripVertical, MousePointer2, TrendingUp, Link as LinkIcon, Plus, Trash2, Split,
-    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick
+    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick, Calendar
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin } from '../types';
+import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
+import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
+import {
+    calculateTemporalComparison,
+    detectDateColumn,
+    extractYearFromDate,
+    formatCurrency,
+    formatPercentage
+} from '../utils/temporalComparison';
 
 // --- DRAG & DROP TYPES ---
 type DropZoneType = 'row' | 'col' | 'val' | 'filter';
@@ -125,6 +133,12 @@ export const PivotTable: React.FC = () => {
     const [pivotData, setPivotData] = useState<PivotResult | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
 
+    // TEMPORAL COMPARISON STATE
+    const [isTemporalMode, setIsTemporalMode] = useState(false);
+    const [temporalConfig, setTemporalConfig] = useState<TemporalComparisonConfig | null>(null);
+    const [temporalResults, setTemporalResults] = useState<TemporalComparisonResult[]>([]);
+    const [isTemporalSourceModalOpen, setIsTemporalSourceModalOpen] = useState(false);
+
     // VIRTUALIZATION
     const parentRef = useRef<HTMLDivElement>(null);
 
@@ -165,11 +179,13 @@ export const PivotTable: React.FC = () => {
                 config: {
                     sources, // Save the full source stack
                     rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations,
-                    sortBy, sortOrder, styleRules, selectedBatchId
+                    sortBy, sortOrder, styleRules, selectedBatchId,
+                    isTemporalMode,
+                    temporalComparison: temporalConfig || undefined
                 }
             });
         }
-    }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized]);
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
 
     // Load State
     useEffect(() => {
@@ -224,6 +240,10 @@ export const PivotTable: React.FC = () => {
             setSortOrder(c.sortOrder || 'asc');
             setStyleRules(c.styleRules || []);
             if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
+
+            // Restore temporal comparison state
+            setIsTemporalMode(c.isTemporalMode || false);
+            setTemporalConfig(c.temporalComparison || null);
         } else {
             // Default Empty State
             setSources([]);
@@ -231,6 +251,8 @@ export const PivotTable: React.FC = () => {
             setColFields([]);
             setValField('');
             setFilters([]);
+            setIsTemporalMode(false);
+            setTemporalConfig(null);
         }
         setIsInitialized(true);
     }, [currentDataset?.id, lastPivotState]);
@@ -376,6 +398,12 @@ export const PivotTable: React.FC = () => {
 
     // --- ASYNC CALCULATION ---
     useEffect(() => {
+        // Skip regular pivot calculation in temporal mode
+        if (isTemporalMode) {
+            setPivotData(null);
+            return;
+        }
+
         setIsCalculating(true);
         const timer = setTimeout(() => {
             const result = calculatePivotData({
@@ -389,7 +417,59 @@ export const PivotTable: React.FC = () => {
             setIsCalculating(false);
         }, 10);
         return () => clearTimeout(timer);
-    }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets]);
+    }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
+
+    // --- TEMPORAL COMPARISON CALCULATION ---
+    useEffect(() => {
+        if (!isTemporalMode || !temporalConfig || !primaryDataset) {
+            setTemporalResults([]);
+            return;
+        }
+
+        // Need at least grouping fields and value field
+        if (rowFields.length === 0 || !valField) {
+            setTemporalResults([]);
+            return;
+        }
+
+        // Need at least 2 sources
+        if (temporalConfig.sources.length < 2) {
+            setTemporalResults([]);
+            return;
+        }
+
+        setIsCalculating(true);
+        const timer = setTimeout(() => {
+            // Build map of source data
+            const sourceDataMap = new Map<string, DataRow[]>();
+
+            temporalConfig.sources.forEach(source => {
+                const batch = batches.find(b => b.id === source.batchId);
+                if (batch) {
+                    sourceDataMap.set(source.id, batch.rows);
+                }
+            });
+
+            // Detect date column
+            const dateColumn = detectDateColumn(primaryDataset.fields) || 'Date écriture';
+
+            // Build config with current field selections
+            const validAggType = aggType === 'list' ? 'sum' : aggType;
+            const activeConfig: TemporalComparisonConfig = {
+                ...temporalConfig,
+                groupByFields: rowFields,
+                valueField: valField,
+                aggType: validAggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
+            };
+
+            // Calculate temporal comparison
+            const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn);
+            setTemporalResults(results);
+            setIsCalculating(false);
+        }, 10);
+
+        return () => clearTimeout(timer);
+    }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType]);
 
     // --- HANDLERS ---
     const handleValFieldChange = (newField: string) => {
@@ -546,6 +626,22 @@ export const PivotTable: React.FC = () => {
         setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    // TEMPORAL SOURCE MANAGEMENT
+    const handleTemporalSourcesChange = (sources: TemporalComparisonSource[], referenceId: string) => {
+        // Ensure aggType is valid for temporal comparison (exclude 'list')
+        const validAggType = aggType === 'list' ? 'sum' : aggType;
+
+        setTemporalConfig({
+            sources,
+            referenceSourceId: referenceId,
+            periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 },
+            deltaFormat: temporalConfig?.deltaFormat || 'value',
+            groupByFields: rowFields,
+            valueField: valField,
+            aggType: validAggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
+        });
+    };
+
     // DRILLDOWN HANDLER
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
         if (!blendedRows || blendedRows.length === 0) return;
@@ -689,7 +785,25 @@ export const PivotTable: React.FC = () => {
                         <Layout className="w-3.5 h-3.5 text-blue-600" />
                         <div>
                             <h2 className="text-[11px] font-bold text-slate-800 leading-tight">Tableau Croisé Dynamique</h2>
-                            <p className="text-[9px] text-slate-500">Glissez les champs pour analyser</p>
+                            <p className="text-[9px] text-slate-500">{isTemporalMode ? 'Comparaison temporelle' : 'Glissez les champs pour analyser'}</p>
+                        </div>
+
+                        {/* MODE TOGGLE */}
+                        <div className="ml-4 flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                            <button
+                                onClick={() => setIsTemporalMode(false)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${!isTemporalMode ? 'bg-white text-blue-600 shadow' : 'text-slate-500'}`}
+                            >
+                                <Table2 className="w-3 h-3 inline mr-1" />
+                                Standard
+                            </button>
+                            <button
+                                onClick={() => setIsTemporalMode(true)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${isTemporalMode ? 'bg-white text-blue-600 shadow' : 'text-slate-500'}`}
+                            >
+                                <Calendar className="w-3 h-3 inline mr-1" />
+                                Comparaison
+                            </button>
                         </div>
                     </div>
 
@@ -821,7 +935,123 @@ export const PivotTable: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* 2. FIELDS ACCORDION */}
+                        {/* 2. TEMPORAL COMPARISON CONFIG (only shown in temporal mode) */}
+                        {isTemporalMode && (
+                            <div className="bg-white rounded-lg border border-blue-300 shadow-sm flex flex-col overflow-hidden">
+                                <div className="p-2 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
+                                    <h3 className="text-app-base font-bold text-slate-800 flex items-center gap-2">
+                                        <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                                        Configuration Temporelle
+                                    </h3>
+                                </div>
+
+                                <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar">
+                                    {/* SOURCE SELECTION */}
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-600 mb-1 block">Sources à comparer (2-4)</label>
+                                        <button
+                                            onClick={() => setIsTemporalSourceModalOpen(true)}
+                                            className="w-full px-2 py-1 text-[10px] bg-purple-50 text-purple-700 border border-purple-300 rounded hover:bg-purple-100 font-bold"
+                                            disabled={!primaryDataset}
+                                        >
+                                            + Configurer les sources
+                                        </button>
+
+                                        {temporalConfig && temporalConfig.sources.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                {temporalConfig.sources.map((src, idx) => (
+                                                    <div key={src.id} className={`p-1.5 rounded text-[10px] border ${temporalConfig.referenceSourceId === src.id ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                                                        <div className="font-bold">{src.label}</div>
+                                                        <div className="text-slate-500">Import: {formatDateFr(new Date(src.importDate).toISOString().split('T')[0])}</div>
+                                                        {temporalConfig.referenceSourceId === src.id && (
+                                                            <div className="text-blue-600 text-[9px] font-bold">✓ Référence</div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* PERIOD FILTER */}
+                                    {temporalConfig && (
+                                        <>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Période</label>
+                                                <div className="grid grid-cols-2 gap-1">
+                                                    <div>
+                                                        <label className="text-[9px] text-slate-500">Mois début</label>
+                                                        <select
+                                                            className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
+                                                            value={temporalConfig.periodFilter.startMonth}
+                                                            onChange={(e) => setTemporalConfig({
+                                                                ...temporalConfig,
+                                                                periodFilter: { ...temporalConfig.periodFilter, startMonth: Number(e.target.value) }
+                                                            })}
+                                                        >
+                                                            {[...Array(12)].map((_, i) => (
+                                                                <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[9px] text-slate-500">Mois fin</label>
+                                                        <select
+                                                            className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
+                                                            value={temporalConfig.periodFilter.endMonth}
+                                                            onChange={(e) => setTemporalConfig({
+                                                                ...temporalConfig,
+                                                                periodFilter: { ...temporalConfig.periodFilter, endMonth: Number(e.target.value) }
+                                                            })}
+                                                        >
+                                                            {[...Array(12)].map((_, i) => (
+                                                                <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* GROUPING FIELDS */}
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Regrouper par</label>
+                                                <div className="text-[9px] text-slate-500 bg-slate-50 p-1 rounded">
+                                                    {temporalConfig.groupByFields.length === 0 ? 'Glissez des champs dans "Lignes"' : temporalConfig.groupByFields.join(', ')}
+                                                </div>
+                                            </div>
+
+                                            {/* VALUE FIELD */}
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Valeur à agréger</label>
+                                                <div className="text-[9px] text-slate-500 bg-slate-50 p-1 rounded">
+                                                    {temporalConfig.valueField || 'Glissez un champ dans "Valeurs"'}
+                                                </div>
+                                            </div>
+
+                                            {/* DELTA FORMAT */}
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Format des écarts</label>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'value' })}
+                                                        className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'value' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                    >
+                                                        Valeur
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'percentage' })}
+                                                        className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'percentage' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                    >
+                                                        %
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3. FIELDS ACCORDION */}
                         <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[120px] overflow-hidden">
                             <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
                                 <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2 mb-1.5">
@@ -1035,7 +1265,80 @@ export const PivotTable: React.FC = () => {
                             </div>
                         )}
 
-                        {pivotData ? (
+                        {/* TEMPORAL COMPARISON TABLE */}
+                        {isTemporalMode && temporalResults.length > 0 && temporalConfig ? (
+                            <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar w-full relative">
+                                <table className="min-w-full divide-y divide-slate-200 border-collapse">
+                                    <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            {/* Group Headers */}
+                                            {temporalConfig.groupByFields.map((field, idx) => (
+                                                <th key={field} className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap">
+                                                    {field}
+                                                </th>
+                                            ))}
+
+                                            {/* Source Columns */}
+                                            {temporalConfig.sources.map(source => (
+                                                <React.Fragment key={source.id}>
+                                                    <th className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`}>
+                                                        {source.label}
+                                                    </th>
+                                                    {source.id !== temporalConfig.referenceSourceId && (
+                                                        <th className="px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700">
+                                                            Δ {temporalConfig.deltaFormat === 'percentage' ? '%' : ''}
+                                                        </th>
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-200">
+                                        {temporalResults.map((result, idx) => (
+                                            <tr key={result.groupKey} className="hover:bg-blue-50/30">
+                                                {/* Group Labels */}
+                                                {result.groupLabel.split(' - ').map((label, gIdx) => (
+                                                    <td key={gIdx} className="px-2 py-1 text-[0.9em] text-slate-700 border-r border-slate-200 whitespace-nowrap">
+                                                        {label}
+                                                    </td>
+                                                ))}
+
+                                                {/* Values */}
+                                                {temporalConfig.sources.map(source => {
+                                                    const value = result.values[source.id] || 0;
+                                                    const delta = result.deltas[source.id];
+
+                                                    return (
+                                                        <React.Fragment key={source.id}>
+                                                            <td
+                                                                className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30 font-bold' : ''}`}
+                                                                onClick={() => result.details && setDrilldownData({
+                                                                    rows: result.details,
+                                                                    title: `Détails: ${result.groupLabel}`,
+                                                                    fields: primaryDataset?.fields || []
+                                                                })}
+                                                                title="Cliquez pour voir les détails"
+                                                            >
+                                                                {formatCurrency(value)}
+                                                            </td>
+
+                                                            {source.id !== temporalConfig.referenceSourceId && (
+                                                                <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums font-bold ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                                    {temporalConfig.deltaFormat === 'percentage'
+                                                                        ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-')
+                                                                        : (delta.value !== 0 ? (delta.value > 0 ? '+' : '') + formatCurrency(delta.value) : '-')
+                                                                    }
+                                                                </td>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : pivotData ? (
                             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
                                 <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
                                     <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full">
@@ -1233,6 +1536,16 @@ export const PivotTable: React.FC = () => {
                 title={drilldownData?.title || ''}
                 rows={drilldownData?.rows || []}
                 fields={drilldownData?.fields || []}
+            />
+
+            {/* Modal de configuration temporelle */}
+            <TemporalSourceModal
+                isOpen={isTemporalSourceModalOpen}
+                onClose={() => setIsTemporalSourceModalOpen(false)}
+                primaryDataset={primaryDataset || null}
+                batches={batches}
+                currentSources={temporalConfig?.sources || []}
+                onSourcesChange={handleTemporalSourcesChange}
             />
         </>
     );
