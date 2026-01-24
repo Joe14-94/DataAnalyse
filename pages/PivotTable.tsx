@@ -1,14 +1,16 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, detectColumnType, formatDateFr, evaluateFormula, generateId, exportView } from '../utils';
+import { parseSmartNumber, detectColumnType, formatDateFr, evaluateFormula, generateId, exportView, formatDateLabelForDisplay } from '../utils';
+import * as XLSX from 'xlsx';
 import {
     Database, Filter, Calculator, X, Layout,
     Table2, ArrowUpDown, Layers,
     ArrowUp, ArrowDown, Save, Check,
     PieChart, Loader2, ChevronLeft, ChevronRight, FileDown, FileType, Printer,
     GripVertical, MousePointer2, TrendingUp, Link as LinkIcon, Plus, Trash2, Split,
-    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick, Calendar
+    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick, Calendar,
+    FileSpreadsheet, FileText
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
@@ -559,6 +561,83 @@ export const PivotTable: React.FC = () => {
         exportView(format, 'pivot-export-container', title, companyLogo, pdfMode);
     };
 
+    const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
+        setShowExportMenu(false);
+
+        if (isTemporalMode && temporalResults.length > 0 && temporalConfig) {
+            // Export temporal comparison table
+            const headers = [
+                ...temporalConfig.groupByFields,
+                ...temporalConfig.sources.flatMap(source => {
+                    const cols = [source.label];
+                    if (showVariations && source.id !== temporalConfig.referenceSourceId) {
+                        cols.push(`Δ ${source.label}`);
+                    }
+                    return cols;
+                })
+            ];
+            if (showTotalCol) headers.push('Total');
+
+            const data = temporalResults.map(result => {
+                const row: any = {};
+                const groupLabels = result.groupLabel.split(' - ');
+                temporalConfig.groupByFields.forEach((field, idx) => {
+                    row[field] = groupLabels[idx] || '';
+                });
+
+                temporalConfig.sources.forEach(source => {
+                    const value = result.values[source.id] || 0;
+                    row[source.label] = value;
+
+                    if (showVariations && source.id !== temporalConfig.referenceSourceId) {
+                        const delta = result.deltas[source.id];
+                        row[`Δ ${source.label}`] = temporalConfig.deltaFormat === 'percentage'
+                            ? delta.percentage
+                            : delta.value;
+                    }
+                });
+
+                if (showTotalCol) {
+                    row['Total'] = Object.values(result.values).reduce((sum, val) => sum + (val || 0), 0);
+                }
+
+                return row;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Comparaison temporelle');
+            XLSX.writeFile(wb, `TCD_Comparaison_${new Date().toISOString().slice(0, 10)}.${format}`);
+        } else if (pivotData) {
+            // Export standard pivot table
+            const headers = [...rowFields, ...pivotData.colHeaders.map(h => formatDateLabelForDisplay(h))];
+            if (showTotalCol) headers.push('Total');
+
+            const data = pivotData.displayRows.map(row => {
+                const rowData: any = {};
+                rowFields.forEach((field, idx) => {
+                    rowData[field] = row.keys[idx] || '';
+                });
+
+                pivotData.colHeaders.forEach(col => {
+                    const formattedCol = formatDateLabelForDisplay(col);
+                    rowData[formattedCol] = row.metrics[col] ?? 0;
+                });
+
+                if (showTotalCol) {
+                    rowData['Total'] = row.rowTotal;
+                }
+
+                return rowData;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'TCD');
+            XLSX.writeFile(wb, `TCD_${primaryDataset?.name || 'Analyse'}_${new Date().toISOString().slice(0, 10)}.${format}`);
+        }
+    };
+
     const handleToChart = () => {
         if (!primaryDataset) return;
         if (rowFields.length === 0) {
@@ -828,6 +907,12 @@ export const PivotTable: React.FC = () => {
                                     </button>
                                     <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
                                         <FileType className="w-3 h-3" /> HTML
+                                    </button>
+                                    <button onClick={() => handleExportSpreadsheet('xlsx')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
+                                        <FileSpreadsheet className="w-3 h-3" /> Excel (XLSX)
+                                    </button>
+                                    <button onClick={() => handleExportSpreadsheet('csv')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
+                                        <FileText className="w-3 h-3" /> CSV
                                     </button>
                                 </div>
                             )}
@@ -1284,13 +1369,20 @@ export const PivotTable: React.FC = () => {
                                                     <th className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`}>
                                                         {source.label}
                                                     </th>
-                                                    {source.id !== temporalConfig.referenceSourceId && (
+                                                    {showVariations && source.id !== temporalConfig.referenceSourceId && (
                                                         <th className="px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700">
                                                             Δ {temporalConfig.deltaFormat === 'percentage' ? '%' : ''}
                                                         </th>
                                                     )}
                                                 </React.Fragment>
                                             ))}
+
+                                            {/* Total Column */}
+                                            {showTotalCol && (
+                                                <th className="px-2 py-1.5 text-right text-[0.9em] font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
+                                                    Total
+                                                </th>
+                                            )}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-slate-200">
@@ -1322,7 +1414,7 @@ export const PivotTable: React.FC = () => {
                                                                 {formatCurrency(value)}
                                                             </td>
 
-                                                            {source.id !== temporalConfig.referenceSourceId && (
+                                                            {showVariations && source.id !== temporalConfig.referenceSourceId && (
                                                                 <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums font-bold ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`}>
                                                                     {temporalConfig.deltaFormat === 'percentage'
                                                                         ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-')
@@ -1333,6 +1425,13 @@ export const PivotTable: React.FC = () => {
                                                         </React.Fragment>
                                                     );
                                                 })}
+
+                                                {/* Total Row */}
+                                                {showTotalCol && (
+                                                    <td className="px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums font-black bg-slate-50">
+                                                        {formatCurrency(Object.values(result.values).reduce((sum, val) => sum + (val || 0), 0))}
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1355,7 +1454,12 @@ export const PivotTable: React.FC = () => {
                                                 {pivotData.colHeaders.map(col => {
                                                     const isDiff = col.endsWith('_DIFF');
                                                     const isPct = col.endsWith('_PCT');
-                                                    const label = isDiff ? 'Var.' : isPct ? '%' : col;
+                                                    let label = isDiff ? 'Var.' : isPct ? '%' : col;
+
+                                                    // Formater les labels de date en français
+                                                    if (!isDiff && !isPct) {
+                                                        label = formatDateLabelForDisplay(label);
+                                                    }
 
                                                     return (
                                                         <th key={col} className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>

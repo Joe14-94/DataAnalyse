@@ -469,6 +469,42 @@ export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarte
 };
 
 /**
+ * Formate un label de colonne de date pour l'affichage en français
+ * Convertit les formats ISO en formats français lisibles
+ */
+export const formatDateLabelForDisplay = (label: string): string => {
+  if (!label || label === '(Vide)') return label;
+
+  // Format YYYY-MM (mois ISO) -> MM/YYYY (français)
+  if (/^\d{4}-\d{2}$/.test(label)) {
+    const [year, month] = label.split('-');
+    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthIndex = parseInt(month) - 1;
+    return `${monthNames[monthIndex]} ${year}`;
+  }
+
+  // Format YYYY-TQ (trimestre) -> TQ YYYY (français)
+  if (/^\d{4}-T\d$/.test(label)) {
+    const [year, quarter] = label.split('-');
+    return `${quarter} ${year}`;
+  }
+
+  // Format YYYY-MM-DD (ISO date) -> DD/MM/YYYY (français)
+  if (/^\d{4}-\d{2}-\d{2}/.test(label)) {
+    const date = new Date(label);
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  return label;
+};
+
+/**
  * Détecte l'unité la plus probable dans une liste de valeurs
  */
 export const detectUnit = (values: string[]): string => {
