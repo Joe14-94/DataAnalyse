@@ -100,19 +100,7 @@ export const aggregateDataByGroup = (
 ): Map<string, { label: string; value: number; details: DataRow[] }> => {
   const groups = new Map<string, { label: string; value: number; details: DataRow[] }>();
 
-  // Debug counters
-  let totalRows = 0;
-  let undefinedValues = 0;
-  let nullValues = 0;
-  let emptyValues = 0;
-  let parsedValues = 0;
-  let zeroValues = 0;
-  let nonZeroValues = 0;
-  const sampleRawValues: any[] = [];
-
   data.forEach(row => {
-    totalRows++;
-
     // Créer la clé de regroupement
     const groupKey = groupByFields.map(field => row[field] || '').join('|');
     const groupLabel = groupByFields.map(field => row[field] || '(vide)').join(' - ');
@@ -132,35 +120,10 @@ export const aggregateDataByGroup = (
     const rawValue = row[valueField];
     let value = 0;
 
-    // Collect sample raw values for debugging
-    if (sampleRawValues.length < 10) {
-      sampleRawValues.push(rawValue);
-    }
-
-    // Track undefined/null/empty
-    if (rawValue === undefined) {
-      undefinedValues++;
-    } else if (rawValue === null) {
-      nullValues++;
-    } else if (rawValue === '') {
-      emptyValues++;
-    }
-
     if (typeof rawValue === 'number') {
       value = rawValue;
-      parsedValues++;
-      if (value === 0) zeroValues++;
-      else nonZeroValues++;
     } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
-      const strValue = String(rawValue);
-      value = parseSmartNumber(strValue);
-      parsedValues++;
-
-      if (value === 0) {
-        zeroValues++;
-      } else {
-        nonZeroValues++;
-      }
+      value = parseSmartNumber(String(rawValue));
     }
 
     // Calcul selon le type d'agrégation
@@ -191,19 +154,6 @@ export const aggregateDataByGroup = (
     });
   }
 
-  // Debug: Log statistics
-  console.log(`[Temporal Comparison] Aggregation statistics for field "${valueField}":`, {
-    totalRows,
-    undefinedValues,
-    nullValues,
-    emptyValues,
-    parsedValues,
-    zeroValues,
-    nonZeroValues,
-    sampleRawValues: sampleRawValues.slice(0, 5),
-    aggType
-  });
-
   return groups;
 };
 
@@ -217,28 +167,15 @@ export const calculateTemporalComparison = (
 ): TemporalComparisonResult[] => {
   const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
 
-  // Debug: Log configuration
-  console.log('[Temporal Comparison] Starting calculation with config:', {
-    sources: sources.map(s => s.label),
-    groupByFields,
-    valueField,
-    aggType,
-    periodFilter
-  });
-
   // Filtrer et agréger chaque source
   const aggregatedSources = new Map<string, Map<string, { label: string; value: number; details: DataRow[] }>>();
 
   sources.forEach(source => {
     const sourceData = sourceDataMap.get(source.id);
     if (!sourceData || sourceData.length === 0) {
-      console.warn(`[Temporal Comparison] No data for source: ${source.label}`);
       aggregatedSources.set(source.id, new Map());
       return;
     }
-
-    // Debug: Log sample data from this source
-    console.log(`[Temporal Comparison] Source "${source.label}" has ${sourceData.length} rows. Sample row:`, sourceData[0]);
 
     // Filtrer par période
     const filteredData = filterDataByPeriod(
@@ -251,17 +188,6 @@ export const calculateTemporalComparison = (
     // Agréger
     const aggregated = aggregateDataByGroup(filteredData, groupByFields, valueField, aggType);
     aggregatedSources.set(source.id, aggregated);
-
-    // Debug: Log aggregated results for this source
-    console.log(`[Temporal Comparison] Source "${source.label}" aggregated:`, {
-      groupCount: aggregated.size,
-      sampleGroups: Array.from(aggregated.entries()).slice(0, 3).map(([key, group]) => ({
-        key,
-        label: group.label,
-        value: group.value,
-        rowCount: group.details.length
-      }))
-    });
   });
 
   // Collecter toutes les clés de regroupement uniques
@@ -326,13 +252,6 @@ export const calculateTemporalComparison = (
 
   // Trier par label
   results.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
-
-  // Debug: Log final results
-  console.log('[Temporal Comparison] Final results:', {
-    resultCount: results.length,
-    sampleResult: results[0],
-    allValues: results.map(r => ({ label: r.groupLabel, values: r.values }))
-  });
 
   return results;
 };
