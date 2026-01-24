@@ -29,7 +29,8 @@ export const Budget: React.FC = () => {
         addLine, updateLine, deleteLine, updateLineValue,
         submitVersion, validateVersion, rejectVersion,
         lockBudget, unlockBudget,
-        compareVersions
+        compareVersions,
+        addTemplate, deleteTemplate
     } = useBudget();
     const { chartsOfAccounts, fiscalCalendars } = useReferentials();
 
@@ -49,6 +50,12 @@ export const Budget: React.FC = () => {
     const [importError, setImportError] = useState<string | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Template state
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
+    const [templateName, setTemplateName] = useState('');
+    const [templateDescription, setTemplateDescription] = useState('');
+    const [templateCategory, setTemplateCategory] = useState('');
 
     // Comparison state
     const [compareVersion1Id, setCompareVersion1Id] = useState<string | null>(null);
@@ -214,6 +221,42 @@ export const Budget: React.FC = () => {
     const handleDownloadTemplate = () => {
         const year = selectedBudget?.fiscalYear || new Date().getFullYear();
         downloadBudgetTemplate(year);
+    };
+
+    // Template handlers
+    const handleCreateTemplate = () => {
+        if (!templateName.trim()) {
+            alert('Veuillez saisir un nom pour le modèle');
+            return;
+        }
+
+        // Get account codes from current budget version if available
+        let accountCodes: string[] = [];
+        if (selectedBudget && selectedVersion) {
+            accountCodes = selectedVersion.lines.map(line => line.accountCode);
+        }
+
+        addTemplate({
+            name: templateName.trim(),
+            description: templateDescription.trim() || undefined,
+            category: templateCategory.trim() || undefined,
+            accountCodes,
+            isActive: true
+        });
+
+        // Reset form
+        setTemplateName('');
+        setTemplateDescription('');
+        setTemplateCategory('');
+        setShowTemplateModal(false);
+
+        alert('Modèle créé avec succès !');
+    };
+
+    const handleDeleteTemplate = (templateId: string, templateName: string) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`)) {
+            deleteTemplate(templateId);
+        }
     };
 
     return (
@@ -1406,7 +1449,11 @@ export const Budget: React.FC = () => {
                                     <p className="text-sm text-slate-600">
                                         Créez des modèles réutilisables pour accélérer la création de budgets
                                     </p>
-                                    <Button variant="outline" className="text-brand-600 border-brand-200">
+                                    <Button
+                                        variant="outline"
+                                        className="text-brand-600 border-brand-200"
+                                        onClick={() => setShowTemplateModal(true)}
+                                    >
                                         <Plus className="w-4 h-4 mr-2" />
                                         Nouveau modèle
                                     </Button>
@@ -1440,15 +1487,131 @@ export const Budget: React.FC = () => {
                                                         </>
                                                     )}
                                                 </div>
-                                                <Button variant="outline" size="sm" className="w-full text-brand-600 border-brand-200">
-                                                    Utiliser ce modèle
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1 text-brand-600 border-brand-200"
+                                                    >
+                                                        Utiliser ce modèle
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-red-600 border-red-200"
+                                                        onClick={() => handleDeleteTemplate(template.id, template.name)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         </Card>
+                    )}
+
+                    {/* Template Creation Modal */}
+                    {showTemplateModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-slate-800">Créer un modèle budgétaire</h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowTemplateModal(false);
+                                            setTemplateName('');
+                                            setTemplateDescription('');
+                                            setTemplateCategory('');
+                                        }}
+                                        className="text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Nom du modèle *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateName}
+                                                onChange={(e) => setTemplateName(e.target.value)}
+                                                placeholder="Ex: Budget Marketing, Budget RH"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Description
+                                            </label>
+                                            <textarea
+                                                value={templateDescription}
+                                                onChange={(e) => setTemplateDescription(e.target.value)}
+                                                placeholder="Décrivez l'utilité de ce modèle..."
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Catégorie
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateCategory}
+                                                onChange={(e) => setTemplateCategory(e.target.value)}
+                                                placeholder="Ex: Département, Projet, Activité"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        {selectedBudget && selectedVersion && selectedVersion.lines.length > 0 && (
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                <p className="text-sm text-blue-800">
+                                                    ℹ️ Ce modèle inclura les {selectedVersion.lines.length} comptes du budget actuel
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {(!selectedBudget || !selectedVersion || selectedVersion.lines.length === 0) && (
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                                <p className="text-sm text-yellow-800">
+                                                    ⚠️ Aucun budget sélectionné. Le modèle sera créé vide.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-3 mt-6">
+                                        <Button
+                                            className="flex-1 bg-brand-600 hover:bg-brand-700"
+                                            onClick={handleCreateTemplate}
+                                        >
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Créer le modèle
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => {
+                                                setShowTemplateModal(false);
+                                                setTemplateName('');
+                                                setTemplateDescription('');
+                                                setTemplateCategory('');
+                                            }}
+                                        >
+                                            Annuler
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
