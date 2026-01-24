@@ -1362,7 +1362,7 @@ export const PivotTable: React.FC = () => {
                         )}
 
                         {/* 3. FIELDS ACCORDION */}
-                        <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden" style={{ minHeight: isFieldsPanelCollapsed ? '40px' : '120px' }}>
+                        <div className={`bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden ${isFieldsPanelCollapsed ? 'flex-none' : 'flex-1'}`} style={{ minHeight: isFieldsPanelCollapsed ? '40px' : '120px', maxHeight: isFieldsPanelCollapsed ? '40px' : 'none' }}>
                             <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
                                     <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2">
@@ -1421,8 +1421,9 @@ export const PivotTable: React.FC = () => {
                             )}
                         </div>
 
-                        {/* 3. DROP ZONES (Compact Layout) */}
-                        <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                        {/* 3. DROP ZONES (Compact Layout) - Hidden in temporal comparison mode */}
+                        {!isTemporalMode && (
+                            <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                             {/* ZONES ROW 1: FILTERS & COLUMNS */}
                             <div className="grid grid-cols-2 gap-3">
                                 {/* FILTRES */}
@@ -1563,6 +1564,7 @@ export const PivotTable: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                        )}
 
                         {/* DISPLAY OPTIONS */}
                         <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
