@@ -448,8 +448,22 @@ export const PivotTable: React.FC = () => {
 
             temporalConfig.sources.forEach(source => {
                 const batch = batches.find(b => b.id === source.batchId);
-                if (batch) {
-                    sourceDataMap.set(source.id, batch.rows);
+                if (batch && primaryDataset) {
+                    // IMPORTANT: Évaluer les champs calculés avant l'agrégation
+                    const calcFields = primaryDataset.calculatedFields || [];
+                    let rows = batch.rows;
+
+                    if (calcFields.length > 0) {
+                        rows = rows.map(r => {
+                            const enriched = { ...r };
+                            calcFields.forEach(cf => {
+                                enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                            });
+                            return enriched;
+                        });
+                    }
+
+                    sourceDataMap.set(source.id, rows);
                 }
             });
 
