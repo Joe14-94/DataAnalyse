@@ -1,4 +1,5 @@
 import { DataRow, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
+import { parseSmartNumber } from '../utils';
 
 /**
  * Parse une date avec support du format français DD/MM/YYYY
@@ -115,8 +116,14 @@ export const aggregateDataByGroup = (
     const group = groups.get(groupKey)!;
     group.details.push(row);
 
-    // Valeur à agréger
-    const value = typeof row[valueField] === 'number' ? row[valueField] : parseFloat(String(row[valueField] || 0));
+    // Valeur à agréger - utiliser parseSmartNumber pour gérer les formats français
+    const rawValue = row[valueField];
+    let value = 0;
+    if (typeof rawValue === 'number') {
+      value = rawValue;
+    } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+      value = parseSmartNumber(String(rawValue));
+    }
 
     // Calcul selon le type d'agrégation
     switch (aggType) {

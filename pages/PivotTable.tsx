@@ -121,6 +121,7 @@ export const PivotTable: React.FC = () => {
     const [analysisName, setAnalysisName] = useState('');
     const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showLoadMenu, setShowLoadMenu] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
 
@@ -654,11 +655,57 @@ export const PivotTable: React.FC = () => {
             name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
             config: {
                 sources, // Save full stack
-                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId
+                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId,
+                isTemporalMode,
+                temporalComparison: temporalConfig || undefined
             }
         });
         setAnalysisName('');
         setIsSaving(false);
+    };
+
+    const handleLoadAnalysis = (analysisId: string) => {
+        const analysis = savedAnalyses.find(a => a.id === analysisId);
+        if (!analysis || !analysis.config) return;
+
+        const c = analysis.config;
+
+        // Restore Sources
+        if (c.sources) {
+            setSources(c.sources);
+        }
+
+        // Restore configuration
+        setRowFields(c.rowFields || []);
+        setColFields(c.colFields || (c.colField ? [c.colField] : []));
+        setColGrouping(c.colGrouping || 'none');
+        setValField(c.valField || '');
+        setAggType((c.aggType as AggregationType) || 'count');
+        setValFormatting(c.valFormatting || {});
+
+        if (c.filters) {
+            const loadedFilters = c.filters.map((f: any) => {
+                if (f.values) return { field: f.field, operator: 'in', value: f.values };
+                return f;
+            });
+            setFilters(loadedFilters);
+        } else {
+            setFilters([]);
+        }
+
+        setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
+        setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
+        setShowVariations(c.showVariations !== undefined ? c.showVariations : false);
+        setSortBy(c.sortBy || 'label');
+        setSortOrder(c.sortOrder || 'asc');
+        setStyleRules(c.styleRules || []);
+        if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
+
+        // Restore temporal comparison state
+        setIsTemporalMode(c.isTemporalMode || false);
+        setTemporalConfig(c.temporalComparison || null);
+
+        setShowLoadMenu(false);
     };
 
     // --- SOURCE MANAGEMENT ---
@@ -740,17 +787,47 @@ export const PivotTable: React.FC = () => {
             if (colFields.length > 0 && colLabel && colLabel !== 'Total') {
                 // Handle column grouping (dates)
                 const colValue = String(row[colFields[0]] || '');
+
+                // Convert formatted label back to internal format for comparison
+                let internalColLabel = colLabel;
+
+                // Mois: "Janvier 2025" -> "2025-01"
+                if (colGrouping === 'month') {
+                    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+                    const parts = colLabel.split(' ');
+                    if (parts.length === 2) {
+                        const monthIndex = monthNames.indexOf(parts[0]);
+                        if (monthIndex !== -1) {
+                            internalColLabel = `${parts[1]}-${String(monthIndex + 1).padStart(2, '0')}`;
+                        }
+                    }
+                }
+
+                // Trimestre: "T1 2025" -> "2025-T1"
+                if (colGrouping === 'quarter') {
+                    const match = colLabel.match(/T(\d) (\d{4})/);
+                    if (match) {
+                        internalColLabel = `${match[2]}-T${match[1]}`;
+                    }
+                }
+
                 if (colGrouping === 'year') {
-                    return colValue.startsWith(colLabel);
+                    return colValue.startsWith(internalColLabel);
                 } else if (colGrouping === 'month') {
-                    return colValue.startsWith(colLabel);
+                    return colValue.startsWith(internalColLabel);
                 } else if (colGrouping === 'quarter') {
-                    const year = colValue.substring(0, 4);
-                    const month = parseInt(colValue.substring(5, 7));
-                    const quarter = Math.ceil(month / 3);
-                    return colLabel === `${year} T${quarter}`;
+                    return colValue.startsWith(internalColLabel.substring(0, 4)) && colValue.includes(internalColLabel);
                 } else {
-                    return colValue === colLabel;
+                    // Format exact: "15/01/2025" -> comparer directement ou convertir
+                    // Si colLabel est formaté (DD/MM/YYYY), on le compare tel quel
+                    // Sinon on compare avec la valeur ISO
+                    if (colLabel.includes('/')) {
+                        // C'est une date formatée, on la compare directement
+                        return colValue === colLabel || formatDateLabelForDisplay(colValue) === colLabel;
+                    } else {
+                        return colValue === colLabel;
+                    }
                 }
             }
 
@@ -919,6 +996,42 @@ export const PivotTable: React.FC = () => {
                         </div>
 
                         <div className="h-5 w-px bg-slate-200 mx-1"></div>
+
+                        {/* CHARGER */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowLoadMenu(!showLoadMenu)}
+                                disabled={!primaryDataset}
+                                className="p-1.5 text-slate-500 hover:text-green-600 border border-slate-300 rounded bg-white disabled:opacity-50"
+                                title="Charger une analyse"
+                            >
+                                <Database className="w-4 h-4" />
+                            </button>
+                            {showLoadMenu && primaryDataset && (
+                                <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 max-h-80 overflow-y-auto">
+                                    {savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === primaryDataset.id).length === 0 ? (
+                                        <div className="px-3 py-2 text-xs text-slate-500 italic">
+                                            Aucune analyse sauvegardée
+                                        </div>
+                                    ) : (
+                                        savedAnalyses
+                                            .filter(a => a.type === 'pivot' && a.datasetId === primaryDataset.id)
+                                            .map(analysis => (
+                                                <button
+                                                    key={analysis.id}
+                                                    onClick={() => handleLoadAnalysis(analysis.id)}
+                                                    className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center justify-between gap-2"
+                                                >
+                                                    <span className="truncate">{analysis.name}</span>
+                                                    <span className="text-xs text-slate-400 flex-shrink-0">
+                                                        {new Date(analysis.createdAt).toLocaleDateString('fr-FR')}
+                                                    </span>
+                                                </button>
+                                            ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* SAUVEGARDE */}
                         {!isSaving ? (
