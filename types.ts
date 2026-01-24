@@ -95,6 +95,37 @@ export interface PivotJoin {
 }
 
 // --- ETATS PERSISTANTS (PERSISTENCE) ---
+// --- COMPARAISON TEMPORELLE TCD (NOUVEAU) ---
+export interface TemporalComparisonSource {
+  id: string;
+  datasetId: string;
+  batchId: string;
+  label: string;  // Ex: "2024", "2025", "Budget 2026"
+  importDate: number;
+  year?: number;
+}
+
+export interface TemporalComparisonConfig {
+  sources: TemporalComparisonSource[];  // 2-4 sources
+  referenceSourceId: string;  // ID de la source de référence pour les deltas
+  periodFilter: {
+    startMonth: number;  // 1-12
+    endMonth: number;    // 1-12
+  };
+  deltaFormat: 'value' | 'percentage';  // Format des colonnes delta
+  groupByFields: string[];  // Champs de regroupement (Compte, Axes analytiques, etc.)
+  valueField: string;  // Champ à agréger (ex: Montant, Débit, Crédit)
+  aggType: 'sum' | 'count' | 'avg' | 'min' | 'max';
+}
+
+export interface TemporalComparisonResult {
+  groupKey: string;  // Clé de regroupement (ex: "601000")
+  groupLabel: string;  // Label (ex: "Achats de matières premières")
+  values: { [sourceId: string]: number };  // Valeurs par source
+  deltas: { [sourceId: string]: { value: number; percentage: number } };  // Deltas vs référence
+  details?: DataRow[];  // Détails pour drilldown
+}
+
 export interface PivotState {
   datasetId: string;
   config: {
@@ -105,6 +136,8 @@ export interface PivotState {
     filters: FilterRule[];
     // Data Blending (Nouveau support multi-jointures)
     joins?: PivotJoin[];
+    // Comparaison temporelle (Nouveau)
+    temporalComparison?: TemporalComparisonConfig;
     // Deprecated fields kept for migration compatibility
     colField?: string;
     secondaryDatasetId?: string;
