@@ -226,6 +226,7 @@ export interface AppState {
   financeReferentials?: FinanceReferentials;
   budgetModule?: BudgetModule; // NOUVEAU : Module budgétaire
   forecastModule?: ForecastModule; // NOUVEAU : Module forecast & rolling forecast
+  pipelineModule?: PipelineModule; // NOUVEAU : Module pipeline ETL
   uiPrefs?: UIPrefs; // NOUVEAU : Préférences de style globales
 
   // Persistence
@@ -687,4 +688,210 @@ export interface ForecastReconciliationReport {
 export interface ForecastModule {
   forecasts: Forecast[];
   reconciliationReports: ForecastReconciliationReport[];
+}
+
+// ============================================================================
+// ETL PIPELINE MODULE - F6.1
+// ============================================================================
+
+// Types de transformations disponibles
+export type TransformationType =
+  | 'source'           // Nœud source (dataset)
+  | 'filter'           // Filtre WHERE
+  | 'join'             // Jointure
+  | 'aggregate'        // Agrégation GROUP BY
+  | 'union'            // Union de datasets
+  | 'pivot'            // Pivot
+  | 'unpivot'          // Unpivot
+  | 'split'            // Split colonnes
+  | 'merge'            // Merge colonnes
+  | 'calculate'        // Colonne calculée
+  | 'sort'             // Tri
+  | 'distinct'         // Dédoublonnage
+  | 'rename'           // Renommer colonnes
+  | 'select';          // Sélectionner colonnes
+
+// Type de jointure
+export type JoinType = 'inner' | 'left' | 'right' | 'full';
+
+// Type d'agrégation
+export type AggregationType = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'first' | 'last';
+
+// Opérateur de filtre
+export type FilterOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'greater_than'
+  | 'less_than'
+  | 'greater_or_equal'
+  | 'less_or_equal'
+  | 'is_empty'
+  | 'is_not_empty';
+
+// Configuration de filtre
+export interface FilterCondition {
+  field: string;
+  operator: FilterOperator;
+  value?: any;
+  caseSensitive?: boolean;
+}
+
+// Configuration de jointure
+export interface JoinConfig {
+  type: JoinType;
+  leftKey: string;
+  rightKey: string;
+  rightNodeId: string;  // ID du nœud à joindre
+  suffix?: string;      // Suffixe pour les colonnes dupliquées
+}
+
+// Configuration d'agrégation
+export interface AggregateConfig {
+  groupBy: string[];
+  aggregations: {
+    field: string;
+    operation: AggregationType;
+    alias?: string;
+  }[];
+}
+
+// Configuration de pivot
+export interface PivotConfig {
+  index: string;        // Colonne qui devient les lignes
+  columns: string;      // Colonne qui devient les colonnes
+  values: string;       // Colonne qui devient les valeurs
+  aggFunc: AggregationType;
+}
+
+// Configuration d'unpivot
+export interface UnpivotConfig {
+  idVars: string[];     // Colonnes à garder fixes
+  valueVars: string[];  // Colonnes à unpivot
+  varName: string;      // Nom de la colonne variable
+  valueName: string;    // Nom de la colonne valeur
+}
+
+// Configuration de split
+export interface SplitConfig {
+  column: string;
+  separator: string;
+  newColumns: string[];
+  limit?: number;       // Nombre max de splits
+}
+
+// Configuration de merge
+export interface MergeConfig {
+  columns: string[];
+  newColumn: string;
+  separator: string;
+}
+
+// Configuration de calcul
+export interface CalculateConfig {
+  newColumn: string;
+  formula: string;      // Ex: "[Prix] * [Quantité]"
+  type: 'number' | 'text' | 'boolean';
+}
+
+// Configuration de tri
+export interface SortConfig {
+  fields: {
+    field: string;
+    direction: 'asc' | 'desc';
+  }[];
+}
+
+// Configuration de sélection de colonnes
+export interface SelectConfig {
+  columns: string[];    // Colonnes à garder
+  exclude?: boolean;    // Si true, exclure ces colonnes au lieu de les inclure
+}
+
+// Configuration de renommage
+export interface RenameConfig {
+  mappings: {
+    oldName: string;
+    newName: string;
+  }[];
+}
+
+// Union de toutes les configurations
+export type TransformationConfig =
+  | { type: 'source'; datasetId: string }
+  | { type: 'filter'; conditions: FilterCondition[]; combineWith: 'AND' | 'OR' }
+  | { type: 'join'; config: JoinConfig }
+  | { type: 'aggregate'; config: AggregateConfig }
+  | { type: 'union'; rightNodeId: string }
+  | { type: 'pivot'; config: PivotConfig }
+  | { type: 'unpivot'; config: UnpivotConfig }
+  | { type: 'split'; config: SplitConfig }
+  | { type: 'merge'; config: MergeConfig }
+  | { type: 'calculate'; config: CalculateConfig }
+  | { type: 'sort'; config: SortConfig }
+  | { type: 'distinct' }
+  | { type: 'select'; config: SelectConfig }
+  | { type: 'rename'; config: RenameConfig };
+
+// Position d'un nœud dans le canvas
+export interface NodePosition {
+  x: number;
+  y: number;
+}
+
+// Nœud de transformation dans le pipeline
+export interface PipelineNode {
+  id: string;
+  type: TransformationType;
+  label: string;
+  position: NodePosition;
+  config: TransformationConfig;
+  isValid: boolean;             // Si la configuration est valide
+  error?: string;               // Message d'erreur si invalide
+}
+
+// Connexion entre deux nœuds
+export interface PipelineConnection {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  fromPort?: string;            // Pour les nœuds avec plusieurs sorties
+  toPort?: string;              // Pour les nœuds avec plusieurs entrées
+}
+
+// Résultat d'exécution d'un nœud
+export interface NodeExecutionResult {
+  nodeId: string;
+  data: DataRow[];
+  rowCount: number;
+  columnCount: number;
+  columns: string[];
+  executionTime: number;        // en ms
+  error?: string;
+}
+
+// Pipeline complet
+export interface Pipeline {
+  id: string;
+  name: string;
+  description?: string;
+  nodes: PipelineNode[];
+  connections: PipelineConnection[];
+  outputNodeId?: string;        // Nœud de sortie principal
+  createdAt: number;
+  updatedAt: number;
+  lastExecuted?: number;
+}
+
+// Module pipeline
+export interface PipelineModule {
+  pipelines: Pipeline[];
+  executionResults: {
+    [pipelineId: string]: {
+      [nodeId: string]: NodeExecutionResult;
+    };
+  };
 }
