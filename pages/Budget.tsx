@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import {
     DollarSign, Plus, FileText, TrendingUp, GitBranch,
     Calendar, Users, Lock, Unlock, CheckCircle, XCircle,
     Clock, Edit2, Trash2, Copy, Eye, MessageSquare,
-    Download, Upload, Filter, Search, Save, X, ArrowLeft
+    Download, Upload, Filter, Search, Save, X, ArrowLeft, AlertCircle
 } from 'lucide-react';
 import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
-import { BudgetLine } from '../types';
+import { BudgetLine, BudgetVersion } from '../types';
+import {
+    readBudgetExcelFile,
+    readBudgetCSVFile,
+    convertImportToBudgetLines,
+    exportBudgetToExcel,
+    downloadBudgetTemplate
+} from '../utils/budgetImport';
 
 type BudgetTab = 'list' | 'editor' | 'comparison' | 'workflow' | 'templates';
 
@@ -22,7 +29,8 @@ export const Budget: React.FC = () => {
         addLine, updateLine, deleteLine, updateLineValue,
         submitVersion, validateVersion, rejectVersion,
         lockBudget, unlockBudget,
-        compareVersions
+        compareVersions,
+        addTemplate, deleteTemplate
     } = useBudget();
     const { chartsOfAccounts, fiscalCalendars } = useReferentials();
 
@@ -36,6 +44,21 @@ export const Budget: React.FC = () => {
     const [newLineAccount, setNewLineAccount] = useState('');
     const [showAccountSelector, setShowAccountSelector] = useState(false);
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
+
+    // Import state
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Template state
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
+    const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
+    const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+    const [templateName, setTemplateName] = useState('');
+    const [templateDescription, setTemplateDescription] = useState('');
+    const [templateCategory, setTemplateCategory] = useState('');
+    const [templateSourceBudgetId, setTemplateSourceBudgetId] = useState<string>('');
 
     // Comparison state
     const [compareVersion1Id, setCompareVersion1Id] = useState<string | null>(null);
@@ -134,6 +157,220 @@ export const Budget: React.FC = () => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?')) {
             deleteLine(selectedBudgetId, selectedVersionId, lineId);
         }
+    };
+
+    // Import/Export handlers
+    const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !selectedBudgetId || !selectedVersionId || !selectedBudget) return;
+
+        setIsImporting(true);
+        setImportError(null);
+
+        try {
+            const fileExt = file.name.split('.').pop()?.toLowerCase();
+            let importData;
+
+            if (fileExt === 'xlsx' || fileExt === 'xls') {
+                importData = await readBudgetExcelFile(file);
+            } else if (fileExt === 'csv') {
+                importData = await readBudgetCSVFile(file);
+            } else {
+                throw new Error('Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv');
+            }
+
+            // Convert import data to budget lines
+            const newLines = convertImportToBudgetLines(importData, selectedBudget.chartOfAccountsId);
+
+            if (newLines.length === 0) {
+                throw new Error('Aucune ligne budgétaire trouvée dans le fichier');
+            }
+
+            // Add all lines to the current version
+            const version = selectedBudget.versions.find(v => v.id === selectedVersionId);
+            if (version) {
+                updateVersion(selectedBudgetId, selectedVersionId, {
+                    lines: [...version.lines, ...newLines]
+                });
+            }
+
+            setShowImportModal(false);
+            alert(`${newLines.length} ligne(s) budgétaire(s) importée(s) avec succès !`);
+        } catch (error) {
+            setImportError(error instanceof Error ? error.message : 'Erreur lors de l\'import');
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    const handleExportBudget = () => {
+        if (!selectedBudget || !selectedVersion || !selectedCalendar) return;
+
+        const periods = selectedCalendar.periods.map(p => ({
+            id: p.id,
+            name: p.name
+        }));
+
+        exportBudgetToExcel(
+            `${selectedBudget.name} - ${selectedVersion.name}`,
+            selectedVersion.lines,
+            periods
+        );
+    };
+
+    const handleDownloadTemplate = () => {
+        const year = selectedBudget?.fiscalYear || new Date().getFullYear();
+        downloadBudgetTemplate(year);
+    };
+
+    // Template handlers
+    const handleCreateTemplate = () => {
+        if (!templateName.trim()) {
+            alert('Veuillez saisir un nom pour le modèle');
+            return;
+        }
+
+        // Get account codes from selected source budget
+        let accountCodes: string[] = [];
+        if (templateSourceBudgetId) {
+            const sourceBudget = budgets.find(b => b.id === templateSourceBudgetId);
+            if (sourceBudget && sourceBudget.versions.length > 0) {
+                const latestVersion = sourceBudget.versions[sourceBudget.versions.length - 1];
+                accountCodes = latestVersion.lines.map(line => line.accountCode);
+            }
+        }
+
+        addTemplate({
+            name: templateName.trim(),
+            description: templateDescription.trim() || undefined,
+            category: templateCategory.trim() || undefined,
+            accountCodes,
+            isActive: true
+        });
+
+        // Reset form
+        setTemplateName('');
+        setTemplateDescription('');
+        setTemplateCategory('');
+        setTemplateSourceBudgetId('');
+        setShowTemplateModal(false);
+
+        alert('Modèle créé avec succès !');
+    };
+
+    const handleDeleteTemplate = (templateId: string, templateName: string) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`)) {
+            deleteTemplate(templateId);
+        }
+    };
+
+    const handleUseTemplate = (templateId: string) => {
+        const template = templates.find(t => t.id === templateId);
+        if (!template) {
+            alert('Modèle non trouvé');
+            return;
+        }
+
+        const newBudgetName = `Budget depuis ${template.name}`;
+        const fiscalYear = new Date().getFullYear();
+
+        // Créer un nouveau budget avec une version initiale
+        const startDate = `${fiscalYear}-01-01`;
+        const endDate = `${fiscalYear}-12-31`;
+
+        const initialVersion: BudgetVersion = {
+            id: `version-${Date.now()}`,
+            budgetId: '', // Will be set by addBudget
+            versionNumber: 1,
+            name: 'V1 - Initial',
+            scenario: 'realistic',
+            status: 'draft',
+            lines: [],
+            isActive: true,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        addBudget({
+            name: newBudgetName,
+            chartOfAccountsId: chartsOfAccounts[0]?.id || '', // Default chart
+            fiscalYear,
+            fiscalCalendarId: fiscalCalendars[0]?.id,
+            versions: [initialVersion],
+            startDate,
+            endDate,
+            owner: 'user@example.com', // TODO: Get from auth context
+            isLocked: false
+        });
+
+        // Attendre un peu pour que le budget soit créé
+        setTimeout(() => {
+            const createdBudget = budgets.find(b => b.name === newBudgetName);
+            if (createdBudget && createdBudget.versions.length > 0) {
+                const version = createdBudget.versions[0];
+
+                // Ajouter les lignes du template
+                template.accountCodes.forEach(accountCode => {
+                    addLine(createdBudget.id, version.id, {
+                        accountCode,
+                        periodValues: {},
+                        isLocked: false
+                    });
+                });
+
+                // Sélectionner le nouveau budget
+                setSelectedBudgetId(createdBudget.id);
+                setSelectedVersionId(version.id);
+                setActiveTab('editor');
+
+                alert(`Budget "${newBudgetName}" créé avec ${template.accountCodes.length} comptes !`);
+            }
+        }, 100);
+    };
+
+    const handleEditTemplate = (templateId: string) => {
+        const template = templates.find(t => t.id === templateId);
+        if (!template) return;
+
+        setEditingTemplateId(templateId);
+        setTemplateName(template.name);
+        setTemplateDescription(template.description || '');
+        setTemplateCategory(template.category || '');
+        setShowEditTemplateModal(true);
+    };
+
+    const handleUpdateTemplate = () => {
+        if (!editingTemplateId) return;
+
+        if (!templateName.trim()) {
+            alert('Veuillez saisir un nom pour le modèle');
+            return;
+        }
+
+        const template = templates.find(t => t.id === editingTemplateId);
+        if (!template) return;
+
+        // Update template (we'll need to add updateTemplate to useBudget)
+        deleteTemplate(editingTemplateId);
+        addTemplate({
+            name: templateName.trim(),
+            description: templateDescription.trim() || undefined,
+            category: templateCategory.trim() || undefined,
+            accountCodes: template.accountCodes, // Keep existing accounts
+            isActive: template.isActive
+        });
+
+        // Reset form
+        setTemplateName('');
+        setTemplateDescription('');
+        setTemplateCategory('');
+        setEditingTemplateId(null);
+        setShowEditTemplateModal(false);
+
+        alert('Modèle modifié avec succès !');
     };
 
     return (
@@ -468,16 +705,48 @@ export const Budget: React.FC = () => {
                                         <Card>
                                             <div className="flex items-center justify-between mb-4">
                                                 <h4 className="font-bold text-slate-800">Lignes budgétaires</h4>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setShowNewLineModal(true)}
-                                                    disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
-                                                    className="text-brand-600 border-brand-200"
-                                                >
-                                                    <Plus className="w-4 h-4 mr-2" />
-                                                    Ajouter une ligne
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={handleDownloadTemplate}
+                                                        className="text-slate-600 border-slate-200"
+                                                        title="Télécharger un template Excel"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Template
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowImportModal(true)}
+                                                        disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
+                                                        className="text-blue-600 border-blue-200"
+                                                    >
+                                                        <Upload className="w-4 h-4 mr-2" />
+                                                        Importer
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={handleExportBudget}
+                                                        disabled={selectedVersion.lines.length === 0}
+                                                        className="text-green-600 border-green-200"
+                                                    >
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Exporter
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowNewLineModal(true)}
+                                                        disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
+                                                        className="text-brand-600 border-brand-200"
+                                                    >
+                                                        <Plus className="w-4 h-4 mr-2" />
+                                                        Ajouter une ligne
+                                                    </Button>
+                                                </div>
                                             </div>
 
                                             {selectedVersion.lines.length === 0 ? (
@@ -625,6 +894,86 @@ export const Budget: React.FC = () => {
                                                 </div>
                                             )}
                                         </Card>
+                                    )}
+
+                                    {/* Import Modal */}
+                                    {showImportModal && (
+                                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                                                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                                    <h3 className="text-lg font-bold text-slate-800">Importer un budget</h3>
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowImportModal(false);
+                                                            setImportError(null);
+                                                        }}
+                                                        className="text-slate-400 hover:text-slate-600"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                                <div className="p-6">
+                                                    <div className="mb-4">
+                                                        <p className="text-sm text-slate-600 mb-4">
+                                                            Importez un fichier Excel (.xlsx, .xls) ou CSV (.csv) contenant les lignes budgétaires.
+                                                        </p>
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                                                            <h4 className="text-sm font-bold text-blue-900 mb-2">Format attendu :</h4>
+                                                            <ul className="text-xs text-blue-800 space-y-1">
+                                                                <li>• Colonne 1: Code compte (ex: 601000)</li>
+                                                                <li>• Colonne 2: Libellé (ex: Achats de matières premières)</li>
+                                                                <li>• Colonnes suivantes: Périodes (Jan 2025, Fév 2025, etc.)</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+
+                                                    {importError && (
+                                                        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                                                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-red-900">Erreur d'import</h4>
+                                                                <p className="text-xs text-red-800 mt-1">{importError}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="space-y-3">
+                                                        <Button
+                                                            className="w-full bg-brand-600 hover:bg-brand-700"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            disabled={isImporting}
+                                                        >
+                                                            <Upload className="w-4 h-4 mr-2" />
+                                                            {isImporting ? 'Import en cours...' : 'Sélectionner un fichier'}
+                                                        </Button>
+
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            type="file"
+                                                            accept=".xlsx,.xls,.csv"
+                                                            onChange={handleImportFile}
+                                                            className="hidden"
+                                                        />
+
+                                                        <Button
+                                                            variant="outline"
+                                                            className="w-full"
+                                                            onClick={() => {
+                                                                handleDownloadTemplate();
+                                                                setShowImportModal(false);
+                                                            }}
+                                                        >
+                                                            <Download className="w-4 h-4 mr-2" />
+                                                            Télécharger un template
+                                                        </Button>
+                                                    </div>
+
+                                                    <p className="text-xs text-slate-500 mt-4">
+                                                        Les lignes importées seront ajoutées à la version actuelle et pourront être modifiées par la suite.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
 
                                     {/* New Line Modal */}
@@ -1214,7 +1563,11 @@ export const Budget: React.FC = () => {
                                     <p className="text-sm text-slate-600">
                                         Créez des modèles réutilisables pour accélérer la création de budgets
                                     </p>
-                                    <Button variant="outline" className="text-brand-600 border-brand-200">
+                                    <Button
+                                        variant="outline"
+                                        className="text-brand-600 border-brand-200"
+                                        onClick={() => setShowTemplateModal(true)}
+                                    >
                                         <Plus className="w-4 h-4 mr-2" />
                                         Nouveau modèle
                                     </Button>
@@ -1248,15 +1601,266 @@ export const Budget: React.FC = () => {
                                                         </>
                                                     )}
                                                 </div>
-                                                <Button variant="outline" size="sm" className="w-full text-brand-600 border-brand-200">
-                                                    Utiliser ce modèle
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1 text-brand-600 border-brand-200"
+                                                        onClick={() => handleUseTemplate(template.id)}
+                                                    >
+                                                        Utiliser ce modèle
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-blue-600 border-blue-200"
+                                                        onClick={() => handleEditTemplate(template.id)}
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-red-600 border-red-200"
+                                                        onClick={() => handleDeleteTemplate(template.id, template.name)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         </Card>
+                    )}
+
+                    {/* Template Creation Modal */}
+                    {showTemplateModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-slate-800">Créer un modèle budgétaire</h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowTemplateModal(false);
+                                            setTemplateName('');
+                                            setTemplateDescription('');
+                                            setTemplateCategory('');
+                                        }}
+                                        className="text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Nom du modèle *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateName}
+                                                onChange={(e) => setTemplateName(e.target.value)}
+                                                placeholder="Ex: Budget Marketing, Budget RH"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Description
+                                            </label>
+                                            <textarea
+                                                value={templateDescription}
+                                                onChange={(e) => setTemplateDescription(e.target.value)}
+                                                placeholder="Décrivez l'utilité de ce modèle..."
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Catégorie
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateCategory}
+                                                onChange={(e) => setTemplateCategory(e.target.value)}
+                                                placeholder="Ex: Département, Projet, Activité"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Budget source
+                                            </label>
+                                            <select
+                                                value={templateSourceBudgetId}
+                                                onChange={(e) => setTemplateSourceBudgetId(e.target.value)}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            >
+                                                <option value="">-- Modèle vide --</option>
+                                                {budgets.map(budget => {
+                                                    const latestVersion = budget.versions[budget.versions.length - 1];
+                                                    const lineCount = latestVersion ? latestVersion.lines.length : 0;
+                                                    return (
+                                                        <option key={budget.id} value={budget.id}>
+                                                            {budget.name} ({lineCount} comptes)
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+
+                                        {templateSourceBudgetId && (() => {
+                                            const sourceBudget = budgets.find(b => b.id === templateSourceBudgetId);
+                                            const latestVersion = sourceBudget?.versions[sourceBudget.versions.length - 1];
+                                            const lineCount = latestVersion?.lines.length || 0;
+                                            return lineCount > 0 && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="text-sm text-blue-800">
+                                                        ℹ️ Ce modèle inclura les {lineCount} comptes du budget sélectionné
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {!templateSourceBudgetId && (
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                                <p className="text-sm text-yellow-800">
+                                                    ⚠️ Aucun budget sélectionné. Le modèle sera créé vide.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-3 mt-6">
+                                        <Button
+                                            className="flex-1 bg-brand-600 hover:bg-brand-700"
+                                            onClick={handleCreateTemplate}
+                                        >
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Créer le modèle
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => {
+                                                setShowTemplateModal(false);
+                                                setTemplateName('');
+                                                setTemplateDescription('');
+                                                setTemplateCategory('');
+                                            }}
+                                        >
+                                            Annuler
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Template Edit Modal */}
+                    {showEditTemplateModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-slate-800">Modifier le modèle budgétaire</h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowEditTemplateModal(false);
+                                            setEditingTemplateId(null);
+                                            setTemplateName('');
+                                            setTemplateDescription('');
+                                            setTemplateCategory('');
+                                        }}
+                                        className="text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Nom du modèle *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateName}
+                                                onChange={(e) => setTemplateName(e.target.value)}
+                                                placeholder="Ex: Budget Marketing, Budget RH"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Description
+                                            </label>
+                                            <textarea
+                                                value={templateDescription}
+                                                onChange={(e) => setTemplateDescription(e.target.value)}
+                                                placeholder="Décrivez l'utilité de ce modèle..."
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Catégorie
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateCategory}
+                                                onChange={(e) => setTemplateCategory(e.target.value)}
+                                                placeholder="Ex: Département, Projet, Activité"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        {editingTemplateId && (() => {
+                                            const template = templates.find(t => t.id === editingTemplateId);
+                                            return template && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="text-sm text-blue-800">
+                                                        ℹ️ Ce modèle contient {template.accountCodes.length} comptes
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    <div className="flex items-center gap-3 mt-6">
+                                        <Button
+                                            className="flex-1 bg-brand-600 hover:bg-brand-700"
+                                            onClick={handleUpdateTemplate}
+                                        >
+                                            <Save className="w-4 h-4 mr-2" />
+                                            Enregistrer
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => {
+                                                setShowEditTemplateModal(false);
+                                                setEditingTemplateId(null);
+                                                setTemplateName('');
+                                                setTemplateDescription('');
+                                                setTemplateCategory('');
+                                            }}
+                                        >
+                                            Annuler
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

@@ -11,6 +11,8 @@ import { CustomAnalytics } from './pages/CustomAnalytics';
 import { DataExplorer } from './pages/DataExplorer';
 import { PivotTable } from './pages/PivotTable';
 import { Budget } from './pages/Budget';
+import { Forecast } from './pages/Forecast';
+import { ETLPipeline } from './pages/ETLPipeline';
 import { Help } from './pages/Help';
 
 const App: React.FC = () => {
@@ -26,6 +28,8 @@ const App: React.FC = () => {
             <Route path="/analytics" element={<CustomAnalytics />} />
             <Route path="/pivot" element={<PivotTable />} />
             <Route path="/budget" element={<Budget />} />
+            <Route path="/forecast" element={<Forecast />} />
+            <Route path="/etl" element={<ETLPipeline />} />
             <Route path="/customization" element={<Customization />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
