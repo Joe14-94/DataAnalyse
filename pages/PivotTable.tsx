@@ -124,6 +124,8 @@ export const PivotTable: React.FC = () => {
     const [showLoadMenu, setShowLoadMenu] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+    const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
+    const [editingColumn, setEditingColumn] = useState<string | null>(null);
 
     // DRILLDOWN STATE
     const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
@@ -165,6 +167,14 @@ export const PivotTable: React.FC = () => {
     // Get the primary dataset from our local sources list, NOT global context
     const primarySourceConfig = sources.find(s => s.isPrimary);
     const primaryDataset = primarySourceConfig ? datasets.find(d => d.id === primarySourceConfig.datasetId) : null;
+
+    // Combined fields list including calculated fields
+    const allAvailableFields = useMemo(() => {
+        if (!primaryDataset) return [];
+        const regularFields = primaryDataset.fields || [];
+        const calculatedFieldNames = (primaryDataset.calculatedFields || []).map(cf => cf.name);
+        return [...regularFields, ...calculatedFieldNames];
+    }, [primaryDataset]);
 
     const datasetBatches = useMemo(() => {
         if (!primaryDataset) return [];
@@ -1257,7 +1267,7 @@ export const PivotTable: React.FC = () => {
                                                     }}
                                                     disabled={!primaryDataset}
                                                 >
-                                                    {primaryDataset?.fields.map(field => (
+                                                    {allAvailableFields.map(field => (
                                                         <option key={field} value={field}>{field}</option>
                                                     ))}
                                                 </select>
@@ -1276,7 +1286,7 @@ export const PivotTable: React.FC = () => {
                                                     disabled={!primaryDataset}
                                                 >
                                                     <option value="">-- Sélectionnez un champ --</option>
-                                                    {primaryDataset?.fields.map(field => (
+                                                    {allAvailableFields.map(field => (
                                                         <option key={field} value={field}>{field}</option>
                                                     ))}
                                                 </select>
