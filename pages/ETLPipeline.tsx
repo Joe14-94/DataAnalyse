@@ -20,6 +20,226 @@ interface TransformationStep {
     isExpanded: boolean;
 }
 
+// ==================== CONFIGURATION COMPONENTS ====================
+// These must be declared BEFORE StepConfiguration to avoid "Cannot access before initialization" errors
+
+// Data preview component
+const DataPreview: React.FC<{ data: DataRow[] }> = ({ data }) => {
+    if (data.length === 0) {
+        return <p className="text-sm text-slate-500">Aucune donnée</p>;
+    }
+
+    const columns = Object.keys(data[0]);
+
+    return (
+        <div className="overflow-x-auto border border-slate-200 rounded">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                        {columns.map(col => (
+                            <th key={col} className="text-left p-2 font-bold text-slate-700">
+                                {col}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {data.map((row, i) => (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                            {columns.map(col => (
+                                <td key={col} className="p-2 text-slate-800">
+                                    {String(row[col] ?? '')}
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+// Filter configuration component
+const FilterConfig: React.FC<{
+    config: { conditions: FilterCondition[]; combineWith: 'AND' | 'OR' };
+    availableColumns: string[];
+    onUpdate: (config: any) => void;
+}> = ({ config, availableColumns, onUpdate }) => {
+    const addCondition = () => {
+        onUpdate({
+            ...config,
+            conditions: [...config.conditions, { field: availableColumns[0] || '', operator: 'equals' as FilterOperator, value: '' }]
+        });
+    };
+
+    const updateCondition = (index: number, updates: Partial<FilterCondition>) => {
+        const newConditions = [...config.conditions];
+        newConditions[index] = { ...newConditions[index], ...updates };
+        onUpdate({ ...config, conditions: newConditions });
+    };
+
+    const removeCondition = (index: number) => {
+        onUpdate({
+            ...config,
+            conditions: config.conditions.filter((_, i) => i !== index)
+        });
+    };
+
+    return (
+        <div className="space-y-3">
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Combiner avec</label>
+                <select
+                    value={config.combineWith}
+                    onChange={(e) => onUpdate({ ...config, combineWith: e.target.value as 'AND' | 'OR' })}
+                    className="px-3 py-2 border border-slate-300 rounded"
+                >
+                    <option value="AND">ET (toutes les conditions)</option>
+                    <option value="OR">OU (au moins une condition)</option>
+                </select>
+            </div>
+
+            <div>
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold text-slate-700">Conditions</label>
+                    <Button variant="outline" size="sm" onClick={addCondition}>
+                        <Plus className="w-3 h-3 mr-1" />
+                        Ajouter
+                    </Button>
+                </div>
+
+                {config.conditions.map((condition, index) => (
+                    <div key={index} className="flex items-center gap-2 mb-2">
+                        <select
+                            value={condition.field}
+                            onChange={(e) => updateCondition(index, { field: e.target.value })}
+                            className="px-2 py-1 border border-slate-300 rounded text-sm"
+                        >
+                            {availableColumns.map(col => (
+                                <option key={col} value={col}>{col}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={condition.operator}
+                            onChange={(e) => updateCondition(index, { operator: e.target.value as FilterOperator })}
+                            className="px-2 py-1 border border-slate-300 rounded text-sm"
+                        >
+                            <option value="equals">=</option>
+                            <option value="not_equals">≠</option>
+                            <option value="contains">contient</option>
+                            <option value="not_contains">ne contient pas</option>
+                            <option value="starts_with">commence par</option>
+                            <option value="ends_with">finit par</option>
+                            <option value="greater_than">&gt;</option>
+                            <option value="less_than">&lt;</option>
+                            <option value="greater_or_equal">≥</option>
+                            <option value="less_or_equal">≤</option>
+                            <option value="is_empty">est vide</option>
+                            <option value="is_not_empty">n'est pas vide</option>
+                        </select>
+
+                        {!['is_empty', 'is_not_empty'].includes(condition.operator) && (
+                            <input
+                                type="text"
+                                value={condition.value || ''}
+                                onChange={(e) => updateCondition(index, { value: e.target.value })}
+                                placeholder="Valeur"
+                                className="px-2 py-1 border border-slate-300 rounded text-sm flex-1"
+                            />
+                        )}
+
+                        <Button variant="outline" size="sm" onClick={() => removeCondition(index)} className="text-red-600">
+                            <X className="w-3 h-3" />
+                        </Button>
+                    </div>
+                ))}
+
+                {config.conditions.length === 0 && (
+                    <p className="text-xs text-slate-500">Aucune condition définie</p>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// Calculate configuration component
+const CalculateConfig: React.FC<{
+    config: { newColumn: string; formula: string };
+    availableColumns: string[];
+    onUpdate: (config: any) => void;
+}> = ({ config, availableColumns, onUpdate }) => {
+    return (
+        <div className="space-y-3">
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Nom de la nouvelle colonne</label>
+                <input
+                    type="text"
+                    value={config.newColumn}
+                    onChange={(e) => onUpdate({ ...config, newColumn: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded"
+                    placeholder="Ex: Total"
+                />
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                    Formule (utilisez [Colonne] pour référencer)
+                </label>
+                <input
+                    type="text"
+                    value={config.formula}
+                    onChange={(e) => onUpdate({ ...config, formula: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded font-mono text-sm"
+                    placeholder="Ex: [Prix] * [Quantité]"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                    Colonnes disponibles: {availableColumns.map(c => `[${c}]`).join(', ')}
+                </p>
+            </div>
+        </div>
+    );
+};
+
+// Placeholder configs for other step types
+const SelectConfig: React.FC<any> = () => <div className="text-sm text-slate-600">Configuration Sélection - Sélectionnez les colonnes à conserver</div>;
+const AggregateConfig: React.FC<any> = () => <div className="text-sm text-slate-600">Configuration Agrégation - Groupez et agrégez vos données</div>;
+const SortConfig: React.FC<any> = () => <div className="text-sm text-slate-600">Configuration Tri - Triez vos données</div>;
+const RenameConfig: React.FC<any> = () => <div className="text-sm text-slate-600">Configuration Renommage - Renommez vos colonnes</div>;
+const SplitConfig: React.FC<any> = () => <div className="text-sm text-slate-600">Configuration Division - Divisez une colonne en plusieurs</div>;
+const MergeConfig: React.FC<any> = () => <div className="text-sm text-slate-600">Configuration Fusion - Fusionnez plusieurs colonnes</div>;
+
+// Component for step configuration
+const StepConfiguration: React.FC<{
+    step: TransformationStep;
+    availableColumns: string[];
+    onUpdate: (config: any) => void;
+}> = ({ step, availableColumns, onUpdate }) => {
+    switch (step.type) {
+        case 'filter':
+            return <FilterConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'select':
+            return <SelectConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'aggregate':
+            return <AggregateConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'calculate':
+            return <CalculateConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'sort':
+            return <SortConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'rename':
+            return <RenameConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'split':
+            return <SplitConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'merge':
+            return <MergeConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
+        case 'distinct':
+            return <div className="text-sm text-slate-600">Supprime les lignes en double</div>;
+        default:
+            return <div className="text-sm text-slate-600">Configuration non disponible</div>;
+    }
+};
+
+// ==================== MAIN COMPONENT ====================
+
 export const ETLPipeline: React.FC = () => {
     const { datasets, batches } = useData();
 
@@ -429,220 +649,3 @@ export const ETLPipeline: React.FC = () => {
         </div>
     );
 };
-
-// Component for step configuration
-const StepConfiguration: React.FC<{
-    step: TransformationStep;
-    availableColumns: string[];
-    onUpdate: (config: any) => void;
-}> = ({ step, availableColumns, onUpdate }) => {
-    switch (step.type) {
-        case 'filter':
-            return <FilterConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'select':
-            return <SelectConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'aggregate':
-            return <AggregateConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'calculate':
-            return <CalculateConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'sort':
-            return <SortConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'rename':
-            return <RenameConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'split':
-            return <SplitConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'merge':
-            return <MergeConfig config={step.config} availableColumns={availableColumns} onUpdate={onUpdate} />;
-        case 'distinct':
-            return <div className="text-sm text-slate-600">Supprime les lignes en double</div>;
-        default:
-            return <div className="text-sm text-slate-600">Configuration non disponible</div>;
-    }
-};
-
-// Filter configuration component
-const FilterConfig: React.FC<{
-    config: { conditions: FilterCondition[]; combineWith: 'AND' | 'OR' };
-    availableColumns: string[];
-    onUpdate: (config: any) => void;
-}> = ({ config, availableColumns, onUpdate }) => {
-    const addCondition = () => {
-        onUpdate({
-            ...config,
-            conditions: [...config.conditions, { field: availableColumns[0] || '', operator: 'equals' as FilterOperator, value: '' }]
-        });
-    };
-
-    const updateCondition = (index: number, updates: Partial<FilterCondition>) => {
-        const newConditions = [...config.conditions];
-        newConditions[index] = { ...newConditions[index], ...updates };
-        onUpdate({ ...config, conditions: newConditions });
-    };
-
-    const removeCondition = (index: number) => {
-        onUpdate({
-            ...config,
-            conditions: config.conditions.filter((_, i) => i !== index)
-        });
-    };
-
-    return (
-        <div className="space-y-3">
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Combiner avec</label>
-                <select
-                    value={config.combineWith}
-                    onChange={(e) => onUpdate({ ...config, combineWith: e.target.value as 'AND' | 'OR' })}
-                    className="px-3 py-2 border border-slate-300 rounded"
-                >
-                    <option value="AND">ET (toutes les conditions)</option>
-                    <option value="OR">OU (au moins une condition)</option>
-                </select>
-            </div>
-
-            <div>
-                <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold text-slate-700">Conditions</label>
-                    <Button variant="outline" size="sm" onClick={addCondition}>
-                        <Plus className="w-3 h-3 mr-1" />
-                        Ajouter
-                    </Button>
-                </div>
-
-                {config.conditions.map((condition, index) => (
-                    <div key={index} className="flex items-center gap-2 mb-2">
-                        <select
-                            value={condition.field}
-                            onChange={(e) => updateCondition(index, { field: e.target.value })}
-                            className="px-2 py-1 border border-slate-300 rounded text-sm"
-                        >
-                            {availableColumns.map(col => (
-                                <option key={col} value={col}>{col}</option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={condition.operator}
-                            onChange={(e) => updateCondition(index, { operator: e.target.value as FilterOperator })}
-                            className="px-2 py-1 border border-slate-300 rounded text-sm"
-                        >
-                            <option value="equals">=</option>
-                            <option value="not_equals">≠</option>
-                            <option value="contains">contient</option>
-                            <option value="not_contains">ne contient pas</option>
-                            <option value="starts_with">commence par</option>
-                            <option value="ends_with">finit par</option>
-                            <option value="greater_than">&gt;</option>
-                            <option value="less_than">&lt;</option>
-                            <option value="greater_or_equal">≥</option>
-                            <option value="less_or_equal">≤</option>
-                            <option value="is_empty">est vide</option>
-                            <option value="is_not_empty">n'est pas vide</option>
-                        </select>
-
-                        {!['is_empty', 'is_not_empty'].includes(condition.operator) && (
-                            <input
-                                type="text"
-                                value={condition.value || ''}
-                                onChange={(e) => updateCondition(index, { value: e.target.value })}
-                                placeholder="Valeur"
-                                className="px-2 py-1 border border-slate-300 rounded text-sm flex-1"
-                            />
-                        )}
-
-                        <Button variant="outline" size="sm" onClick={() => removeCondition(index)} className="text-red-600">
-                            <X className="w-3 h-3" />
-                        </Button>
-                    </div>
-                ))}
-
-                {config.conditions.length === 0 && (
-                    <p className="text-xs text-slate-500">Aucune condition définie</p>
-                )}
-            </div>
-        </div>
-    );
-};
-
-// Other configuration components would go here (SelectConfig, AggregateConfig, etc.)
-// For brevity, I'll include just a few key ones
-
-const CalculateConfig: React.FC<{
-    config: { newColumn: string; formula: string };
-    availableColumns: string[];
-    onUpdate: (config: any) => void;
-}> = ({ config, availableColumns, onUpdate }) => {
-    return (
-        <div className="space-y-3">
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Nom de la nouvelle colonne</label>
-                <input
-                    type="text"
-                    value={config.newColumn}
-                    onChange={(e) => onUpdate({ ...config, newColumn: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded"
-                    placeholder="Ex: Total"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                    Formule (utilisez [Colonne] pour référencer)
-                </label>
-                <input
-                    type="text"
-                    value={config.formula}
-                    onChange={(e) => onUpdate({ ...config, formula: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded font-mono text-sm"
-                    placeholder="Ex: [Prix] * [Quantité]"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                    Colonnes disponibles: {availableColumns.map(c => `[${c}]`).join(', ')}
-                </p>
-            </div>
-        </div>
-    );
-};
-
-// Data preview component
-const DataPreview: React.FC<{ data: DataRow[] }> = ({ data }) => {
-    if (data.length === 0) {
-        return <p className="text-sm text-slate-500">Aucune donnée</p>;
-    }
-
-    const columns = Object.keys(data[0]);
-
-    return (
-        <div className="overflow-x-auto border border-slate-200 rounded">
-            <table className="w-full text-sm">
-                <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                        {columns.map(col => (
-                            <th key={col} className="text-left p-2 font-bold text-slate-700">
-                                {col}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {data.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                            {columns.map(col => (
-                                <td key={col} className="p-2 text-slate-800">
-                                    {String(row[col] ?? '')}
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-// Placeholder configs for other step types
-const SelectConfig: React.FC<any> = () => <div>Configuration Sélection</div>;
-const AggregateConfig: React.FC<any> = () => <div>Configuration Agrégation</div>;
-const SortConfig: React.FC<any> = () => <div>Configuration Tri</div>;
-const RenameConfig: React.FC<any> = () => <div>Configuration Renommage</div>;
-const SplitConfig: React.FC<any> = () => <div>Configuration Division</div>;
-const MergeConfig: React.FC<any> = () => <div>Configuration Fusion</div>;

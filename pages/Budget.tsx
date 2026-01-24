@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
-import { BudgetLine } from '../types';
+import { BudgetLine, BudgetVersion } from '../types';
 import {
     readBudgetExcelFile,
     readBudgetCSVFile,
@@ -53,9 +53,12 @@ export const Budget: React.FC = () => {
 
     // Template state
     const [showTemplateModal, setShowTemplateModal] = useState(false);
+    const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
+    const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
     const [templateName, setTemplateName] = useState('');
     const [templateDescription, setTemplateDescription] = useState('');
     const [templateCategory, setTemplateCategory] = useState('');
+    const [templateSourceBudgetId, setTemplateSourceBudgetId] = useState<string>('');
 
     // Comparison state
     const [compareVersion1Id, setCompareVersion1Id] = useState<string | null>(null);
@@ -230,10 +233,14 @@ export const Budget: React.FC = () => {
             return;
         }
 
-        // Get account codes from current budget version if available
+        // Get account codes from selected source budget
         let accountCodes: string[] = [];
-        if (selectedBudget && selectedVersion) {
-            accountCodes = selectedVersion.lines.map(line => line.accountCode);
+        if (templateSourceBudgetId) {
+            const sourceBudget = budgets.find(b => b.id === templateSourceBudgetId);
+            if (sourceBudget && sourceBudget.versions.length > 0) {
+                const latestVersion = sourceBudget.versions[sourceBudget.versions.length - 1];
+                accountCodes = latestVersion.lines.map(line => line.accountCode);
+            }
         }
 
         addTemplate({
@@ -248,6 +255,7 @@ export const Budget: React.FC = () => {
         setTemplateName('');
         setTemplateDescription('');
         setTemplateCategory('');
+        setTemplateSourceBudgetId('');
         setShowTemplateModal(false);
 
         alert('Modèle créé avec succès !');
@@ -257,6 +265,112 @@ export const Budget: React.FC = () => {
         if (window.confirm(`Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`)) {
             deleteTemplate(templateId);
         }
+    };
+
+    const handleUseTemplate = (templateId: string) => {
+        const template = templates.find(t => t.id === templateId);
+        if (!template) {
+            alert('Modèle non trouvé');
+            return;
+        }
+
+        const newBudgetName = `Budget depuis ${template.name}`;
+        const fiscalYear = new Date().getFullYear();
+
+        // Créer un nouveau budget avec une version initiale
+        const startDate = `${fiscalYear}-01-01`;
+        const endDate = `${fiscalYear}-12-31`;
+
+        const initialVersion: BudgetVersion = {
+            id: `version-${Date.now()}`,
+            budgetId: '', // Will be set by addBudget
+            versionNumber: 1,
+            name: 'V1 - Initial',
+            scenario: 'realistic',
+            status: 'draft',
+            lines: [],
+            isActive: true,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        addBudget({
+            name: newBudgetName,
+            chartOfAccountsId: chartsOfAccounts[0]?.id || '', // Default chart
+            fiscalYear,
+            fiscalCalendarId: fiscalCalendars[0]?.id,
+            versions: [initialVersion],
+            startDate,
+            endDate,
+            owner: 'user@example.com', // TODO: Get from auth context
+            isLocked: false
+        });
+
+        // Attendre un peu pour que le budget soit créé
+        setTimeout(() => {
+            const createdBudget = budgets.find(b => b.name === newBudgetName);
+            if (createdBudget && createdBudget.versions.length > 0) {
+                const version = createdBudget.versions[0];
+
+                // Ajouter les lignes du template
+                template.accountCodes.forEach(accountCode => {
+                    addLine(createdBudget.id, version.id, {
+                        accountCode,
+                        periodValues: {},
+                        isLocked: false
+                    });
+                });
+
+                // Sélectionner le nouveau budget
+                setSelectedBudgetId(createdBudget.id);
+                setSelectedVersionId(version.id);
+                setActiveTab('editor');
+
+                alert(`Budget "${newBudgetName}" créé avec ${template.accountCodes.length} comptes !`);
+            }
+        }, 100);
+    };
+
+    const handleEditTemplate = (templateId: string) => {
+        const template = templates.find(t => t.id === templateId);
+        if (!template) return;
+
+        setEditingTemplateId(templateId);
+        setTemplateName(template.name);
+        setTemplateDescription(template.description || '');
+        setTemplateCategory(template.category || '');
+        setShowEditTemplateModal(true);
+    };
+
+    const handleUpdateTemplate = () => {
+        if (!editingTemplateId) return;
+
+        if (!templateName.trim()) {
+            alert('Veuillez saisir un nom pour le modèle');
+            return;
+        }
+
+        const template = templates.find(t => t.id === editingTemplateId);
+        if (!template) return;
+
+        // Update template (we'll need to add updateTemplate to useBudget)
+        deleteTemplate(editingTemplateId);
+        addTemplate({
+            name: templateName.trim(),
+            description: templateDescription.trim() || undefined,
+            category: templateCategory.trim() || undefined,
+            accountCodes: template.accountCodes, // Keep existing accounts
+            isActive: template.isActive
+        });
+
+        // Reset form
+        setTemplateName('');
+        setTemplateDescription('');
+        setTemplateCategory('');
+        setEditingTemplateId(null);
+        setShowEditTemplateModal(false);
+
+        alert('Modèle modifié avec succès !');
     };
 
     return (
@@ -1492,8 +1606,17 @@ export const Budget: React.FC = () => {
                                                         variant="outline"
                                                         size="sm"
                                                         className="flex-1 text-brand-600 border-brand-200"
+                                                        onClick={() => handleUseTemplate(template.id)}
                                                     >
                                                         Utiliser ce modèle
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-blue-600 border-blue-200"
+                                                        onClick={() => handleEditTemplate(template.id)}
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
                                                     </Button>
                                                     <Button
                                                         variant="outline"
@@ -1571,15 +1694,42 @@ export const Budget: React.FC = () => {
                                             />
                                         </div>
 
-                                        {selectedBudget && selectedVersion && selectedVersion.lines.length > 0 && (
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                <p className="text-sm text-blue-800">
-                                                    ℹ️ Ce modèle inclura les {selectedVersion.lines.length} comptes du budget actuel
-                                                </p>
-                                            </div>
-                                        )}
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Budget source
+                                            </label>
+                                            <select
+                                                value={templateSourceBudgetId}
+                                                onChange={(e) => setTemplateSourceBudgetId(e.target.value)}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            >
+                                                <option value="">-- Modèle vide --</option>
+                                                {budgets.map(budget => {
+                                                    const latestVersion = budget.versions[budget.versions.length - 1];
+                                                    const lineCount = latestVersion ? latestVersion.lines.length : 0;
+                                                    return (
+                                                        <option key={budget.id} value={budget.id}>
+                                                            {budget.name} ({lineCount} comptes)
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
 
-                                        {(!selectedBudget || !selectedVersion || selectedVersion.lines.length === 0) && (
+                                        {templateSourceBudgetId && (() => {
+                                            const sourceBudget = budgets.find(b => b.id === templateSourceBudgetId);
+                                            const latestVersion = sourceBudget?.versions[sourceBudget.versions.length - 1];
+                                            const lineCount = latestVersion?.lines.length || 0;
+                                            return lineCount > 0 && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="text-sm text-blue-800">
+                                                        ℹ️ Ce modèle inclura les {lineCount} comptes du budget sélectionné
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {!templateSourceBudgetId && (
                                             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                                                 <p className="text-sm text-yellow-800">
                                                     ⚠️ Aucun budget sélectionné. Le modèle sera créé vide.
@@ -1601,6 +1751,105 @@ export const Budget: React.FC = () => {
                                             className="flex-1"
                                             onClick={() => {
                                                 setShowTemplateModal(false);
+                                                setTemplateName('');
+                                                setTemplateDescription('');
+                                                setTemplateCategory('');
+                                            }}
+                                        >
+                                            Annuler
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Template Edit Modal */}
+                    {showEditTemplateModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-slate-800">Modifier le modèle budgétaire</h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowEditTemplateModal(false);
+                                            setEditingTemplateId(null);
+                                            setTemplateName('');
+                                            setTemplateDescription('');
+                                            setTemplateCategory('');
+                                        }}
+                                        className="text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Nom du modèle *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateName}
+                                                onChange={(e) => setTemplateName(e.target.value)}
+                                                placeholder="Ex: Budget Marketing, Budget RH"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Description
+                                            </label>
+                                            <textarea
+                                                value={templateDescription}
+                                                onChange={(e) => setTemplateDescription(e.target.value)}
+                                                placeholder="Décrivez l'utilité de ce modèle..."
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                                Catégorie
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={templateCategory}
+                                                onChange={(e) => setTemplateCategory(e.target.value)}
+                                                placeholder="Ex: Département, Projet, Activité"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-400"
+                                            />
+                                        </div>
+
+                                        {editingTemplateId && (() => {
+                                            const template = templates.find(t => t.id === editingTemplateId);
+                                            return template && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="text-sm text-blue-800">
+                                                        ℹ️ Ce modèle contient {template.accountCodes.length} comptes
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    <div className="flex items-center gap-3 mt-6">
+                                        <Button
+                                            className="flex-1 bg-brand-600 hover:bg-brand-700"
+                                            onClick={handleUpdateTemplate}
+                                        >
+                                            <Save className="w-4 h-4 mr-2" />
+                                            Enregistrer
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => {
+                                                setShowEditTemplateModal(false);
+                                                setEditingTemplateId(null);
                                                 setTemplateName('');
                                                 setTemplateDescription('');
                                                 setTemplateCategory('');
