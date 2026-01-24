@@ -1212,18 +1212,58 @@ export const PivotTable: React.FC = () => {
                                             {/* GROUPING FIELDS */}
                                             <div>
                                                 <label className="text-[10px] font-bold text-slate-600 mb-1 block">Regrouper par</label>
-                                                <div className="text-[9px] text-slate-500 bg-slate-50 p-1 rounded">
-                                                    {temporalConfig.groupByFields.length === 0 ? 'Glissez des champs dans "Lignes"' : temporalConfig.groupByFields.join(', ')}
+                                                <select
+                                                    multiple
+                                                    className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white min-h-[60px]"
+                                                    value={rowFields}
+                                                    onChange={(e) => {
+                                                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                                                        setRowFields(selected);
+                                                    }}
+                                                    disabled={!primaryDataset}
+                                                >
+                                                    {primaryDataset?.fields.map(field => (
+                                                        <option key={field} value={field}>{field}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="text-[9px] text-slate-500 mt-1">
+                                                    Maintenez Ctrl/Cmd pour sélectionner plusieurs champs
                                                 </div>
                                             </div>
 
                                             {/* VALUE FIELD */}
                                             <div>
                                                 <label className="text-[10px] font-bold text-slate-600 mb-1 block">Valeur à agréger</label>
-                                                <div className="text-[9px] text-slate-500 bg-slate-50 p-1 rounded">
-                                                    {temporalConfig.valueField || 'Glissez un champ dans "Valeurs"'}
-                                                </div>
+                                                <select
+                                                    className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
+                                                    value={valField}
+                                                    onChange={(e) => handleValFieldChange(e.target.value)}
+                                                    disabled={!primaryDataset}
+                                                >
+                                                    <option value="">-- Sélectionnez un champ --</option>
+                                                    {primaryDataset?.fields.map(field => (
+                                                        <option key={field} value={field}>{field}</option>
+                                                    ))}
+                                                </select>
                                             </div>
+
+                                            {/* AGGREGATION TYPE */}
+                                            {valField && (
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Type d'agrégation</label>
+                                                    <div className="grid grid-cols-2 gap-1">
+                                                        {['count', 'sum', 'avg', 'min', 'max'].map(t => (
+                                                            <button
+                                                                key={t}
+                                                                onClick={() => setAggType(t as AggregationType)}
+                                                                className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                            >
+                                                                {t}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* DELTA FORMAT */}
                                             <div>
