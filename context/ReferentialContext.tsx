@@ -38,6 +38,7 @@ interface ReferentialContextType {
     // Axis Values
     axisValues: AxisValue[];
     addAxisValue: (value: Omit<AxisValue, 'id' | 'createdAt'>) => void;
+    addAxisValues: (values: Omit<AxisValue, 'id' | 'createdAt'>[]) => void; // Bulk import
     updateAxisValue: (id: string, updates: Partial<AxisValue>) => void;
     deleteAxisValue: (id: string) => void;
     getAxisValues: (axisId: string) => AxisValue[];
@@ -243,6 +244,18 @@ export const ReferentialProvider: React.FC<ReferentialProviderProps> = ({
         });
     };
 
+    const addAxisValues = (values: Omit<AxisValue, 'id' | 'createdAt'>[]) => {
+        const newValues: AxisValue[] = values.map(value => ({
+            ...value,
+            id: generateId(),
+            createdAt: Date.now()
+        }));
+        onUpdate({
+            ...referentials,
+            axisValues: [...axisValues, ...newValues]
+        });
+    };
+
     const updateAxisValue = (id: string, updates: Partial<AxisValue>) => {
         onUpdate({
             ...referentials,
@@ -443,6 +456,7 @@ export const ReferentialProvider: React.FC<ReferentialProviderProps> = ({
         deleteAnalyticalAxis,
         axisValues,
         addAxisValue,
+        addAxisValues,
         updateAxisValue,
         deleteAxisValue,
         getAxisValues,
