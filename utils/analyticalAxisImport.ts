@@ -7,6 +7,8 @@ export interface AnalyticalAxisImportData {
   rows: any[][];
   axisCode?: string;
   axisName?: string;
+  categoryColumn?: number;
+  subCategoryColumn?: number;
   valueCodeColumn: number;
   valueLabelColumn: number;
   parentCodeColumn?: number;
@@ -106,6 +108,8 @@ export const readAnalyticalAxisCSVFile = async (file: File, encoding: string = '
  * Détection automatique des colonnes dans le fichier d'import
  */
 const detectAnalyticalAxisColumns = (headers: string[]): {
+  categoryColumn?: number;
+  subCategoryColumn?: number;
   valueCodeColumn: number;
   valueLabelColumn: number;
   parentCodeColumn?: number;
@@ -113,6 +117,19 @@ const detectAnalyticalAxisColumns = (headers: string[]): {
   responsibleEmailColumn?: number;
 } => {
   const lowerHeaders = headers.map(h => h.toLowerCase());
+
+  // Détection de la colonne "Catégorie"
+  const categoryColumn = lowerHeaders.findIndex(h =>
+    (h.includes('catégorie') || h.includes('categorie') || h.includes('category')) &&
+    !h.includes('sous')
+  );
+
+  // Détection de la colonne "Sous-catégorie"
+  const subCategoryColumn = lowerHeaders.findIndex(h =>
+    (h.includes('sous-catégorie') || h.includes('sous-categorie') ||
+     h.includes('sous catégorie') || h.includes('sous categorie') ||
+     h.includes('subcategory') || h.includes('sub-category'))
+  );
 
   // Détection de la colonne "Code"
   let valueCodeColumn = lowerHeaders.findIndex(h =>
@@ -143,6 +160,8 @@ const detectAnalyticalAxisColumns = (headers: string[]): {
   );
 
   return {
+    categoryColumn: categoryColumn >= 0 ? categoryColumn : undefined,
+    subCategoryColumn: subCategoryColumn >= 0 ? subCategoryColumn : undefined,
     valueCodeColumn,
     valueLabelColumn,
     parentCodeColumn: parentCodeColumn >= 0 ? parentCodeColumn : undefined,
@@ -179,6 +198,8 @@ export const convertImportToAxisValues = (
 ): AxisValue[] => {
   const {
     rows,
+    categoryColumn,
+    subCategoryColumn,
     valueCodeColumn,
     valueLabelColumn,
     parentCodeColumn,
@@ -202,6 +223,16 @@ export const convertImportToAxisValues = (
       isActive: true,
       createdAt: Date.now()
     };
+
+    // Ajouter la catégorie si elle existe
+    if (categoryColumn !== undefined && row[categoryColumn]) {
+      axisValue.category = String(row[categoryColumn]).trim();
+    }
+
+    // Ajouter la sous-catégorie si elle existe
+    if (subCategoryColumn !== undefined && row[subCategoryColumn]) {
+      axisValue.subCategory = String(row[subCategoryColumn]).trim();
+    }
 
     // Ajouter les champs optionnels s'ils existent
     if (parentCodeColumn !== undefined && row[parentCodeColumn]) {
@@ -229,6 +260,8 @@ export const exportAxisValuesToExcel = (
 ) => {
   // Préparation des données
   const data = axisValues.map(value => ({
+    'Catégorie': value.category || '',
+    'Sous-catégorie': value.subCategory || '',
     'Code': value.code,
     'Libellé': value.label,
     'Code Parent': value.parentId || '',
@@ -253,25 +286,58 @@ export const exportAxisValuesToExcel = (
 export const downloadAnalyticalAxisTemplate = () => {
   const templateData = [
     {
-      'Code': 'CC-001',
+      'Catégorie': 'Direction',
+      'Sous-catégorie': 'Direction Générale',
+      'Code': 'DG-001',
       'Libellé': 'Direction Générale',
       'Code Parent': '',
       'Responsable': 'John Doe',
       'Email Responsable': 'john.doe@example.com'
     },
     {
-      'Code': 'CC-002',
-      'Libellé': 'Direction Marketing',
-      'Code Parent': 'CC-001',
+      'Catégorie': 'Direction',
+      'Sous-catégorie': 'Marketing',
+      'Code': 'MKT-001',
+      'Libellé': 'Marketing Digital',
+      'Code Parent': '',
       'Responsable': 'Jane Smith',
       'Email Responsable': 'jane.smith@example.com'
     },
     {
-      'Code': 'CC-003',
-      'Libellé': 'Direction Technique',
-      'Code Parent': 'CC-001',
+      'Catégorie': 'Direction',
+      'Sous-catégorie': 'Marketing',
+      'Code': 'MKT-002',
+      'Libellé': 'Marketing Traditionnel',
+      'Code Parent': '',
+      'Responsable': 'Jane Smith',
+      'Email Responsable': 'jane.smith@example.com'
+    },
+    {
+      'Catégorie': 'Support',
+      'Sous-catégorie': 'IT',
+      'Code': 'IT-001',
+      'Libellé': 'Infrastructure',
+      'Code Parent': '',
       'Responsable': 'Bob Wilson',
       'Email Responsable': 'bob.wilson@example.com'
+    },
+    {
+      'Catégorie': 'Support',
+      'Sous-catégorie': 'IT',
+      'Code': 'IT-002',
+      'Libellé': 'Support Utilisateurs',
+      'Code Parent': '',
+      'Responsable': 'Bob Wilson',
+      'Email Responsable': 'bob.wilson@example.com'
+    },
+    {
+      'Catégorie': 'Support',
+      'Sous-catégorie': 'RH',
+      'Code': 'RH-001',
+      'Libellé': 'Recrutement',
+      'Code Parent': '',
+      'Responsable': 'Alice Brown',
+      'Email Responsable': 'alice.brown@example.com'
     }
   ];
 

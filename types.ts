@@ -286,7 +286,9 @@ export interface AxisValue {
   axisId: string;                  // ID de l'axe parent
   code: string;                    // Ex: "CC-001", "PRJ-2025-01"
   label: string;                   // Ex: "Direction Générale", "Projet Alpha"
-  parentId?: string;               // Pour hiérarchies (ex: sous-centre de coûts)
+  category?: string;               // Catégorie (niveau 1 de hiérarchie)
+  subCategory?: string;            // Sous-catégorie (niveau 2 de hiérarchie)
+  parentId?: string;               // Pour hiérarchies alternatives (ex: sous-centre de coûts)
   responsibleName?: string;        // Nom du responsable
   responsibleEmail?: string;       // Email du responsable
   isActive: boolean;

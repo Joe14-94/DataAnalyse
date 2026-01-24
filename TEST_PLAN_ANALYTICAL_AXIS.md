@@ -113,19 +113,20 @@ Valider la fonctionnalité d'import des axes analytiques et de leurs valeurs dep
 
 ---
 
-### Test 3.2: Import Excel avec hiérarchie
+### Test 3.2: Import Excel avec hiérarchie 4 niveaux (Catégorie → Sous-catégorie → Code → Libellé)
 **Pré-requis**: Un axe créé
 **Étapes**:
-1. Créer un fichier Excel avec colonne "Code Parent":
-   - CC-001, DG, (vide)
-   - CC-002, Marketing, CC-001
-   - CC-003, IT, CC-001
+1. Créer un fichier Excel avec colonnes hiérarchiques:
+   - Catégorie: Direction, Sous-catégorie: DG, Code: DG-001, Libellé: Direction Générale
+   - Catégorie: Direction, Sous-catégorie: Marketing, Code: MKT-001, Libellé: Marketing Digital
+   - Catégorie: Support, Sous-catégorie: IT, Code: IT-001, Libellé: Infrastructure
 2. Importer le fichier
 
 **Résultat attendu**:
 - ✅ Import réussi
-- ✅ Les liens de parenté sont enregistrés (vérifiable via export)
-- ✅ Aucune erreur affichée
+- ✅ La hiérarchie est correctement enregistrée
+- ✅ Affichage dans l'interface : "Direction › Marketing" au-dessus de "MKT-001 Marketing Digital"
+- ✅ Vérifiable via export avec toutes les colonnes
 
 **Statut**: ⬜ Non testé | ✅ Réussi | ❌ Échoué
 
@@ -507,14 +508,26 @@ _(À remplir pendant les tests)_
 
 ## Exemple de Fichier Excel de Test
 
+### Structure Hiérarchique : Catégorie → Sous-catégorie → Code → Libellé
+
 ```
-Code        | Libellé                  | Code Parent | Responsable  | Email Responsable
-------------|--------------------------|-------------|--------------|-------------------
-CC-001      | Direction Générale       |             | John Doe     | john@example.com
-CC-002      | Direction Marketing      | CC-001      | Jane Smith   | jane@example.com
-CC-003      | Direction IT             | CC-001      | Bob Wilson   | bob@example.com
-CC-004      | Marketing Digital        | CC-002      | Alice Brown  | alice@example.com
-CC-005      | Infrastructure IT        | CC-003      | Tom Davis    | tom@example.com
+Catégorie   | Sous-catégorie | Code     | Libellé                | Responsable  | Email Responsable
+------------|----------------|----------|------------------------|--------------|-------------------
+Direction   | DG             | DG-001   | Direction Générale     | John Doe     | john@example.com
+Direction   | Marketing      | MKT-001  | Marketing Digital      | Jane Smith   | jane@example.com
+Direction   | Marketing      | MKT-002  | Marketing Traditionnel | Jane Smith   | jane@example.com
+Support     | IT             | IT-001   | Infrastructure         | Bob Wilson   | bob@example.com
+Support     | IT             | IT-002   | Support Utilisateurs   | Bob Wilson   | bob@example.com
+Support     | RH             | RH-001   | Recrutement            | Alice Brown  | alice@example.com
+Support     | RH             | RH-002   | Formation              | Alice Brown  | alice@example.com
+```
+
+### Exemple d'affichage dans l'interface
+
+Pour la valeur `MKT-001`:
+```
+Direction › Marketing
+MKT-001 Marketing Digital
 ```
 
 ---

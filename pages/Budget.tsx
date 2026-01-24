@@ -1859,10 +1859,19 @@ export const Budget: React.FC = () => {
                                                             <div className="text-xs font-bold text-slate-500 mb-2 uppercase">Valeurs ({values.length})</div>
                                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                                                                 {values.slice(0, 20).map(value => (
-                                                                    <div key={value.id} className="flex items-center justify-between text-sm bg-slate-50 px-2 py-1.5 rounded border border-slate-200">
+                                                                    <div key={value.id} className="flex items-start justify-between text-sm bg-slate-50 px-2 py-1.5 rounded border border-slate-200">
                                                                         <div className="flex-1 min-w-0">
-                                                                            <span className="font-mono text-xs text-slate-500 mr-2">{value.code}</span>
-                                                                            <span className="text-slate-800 truncate">{value.label}</span>
+                                                                            {(value.category || value.subCategory) && (
+                                                                                <div className="text-[10px] text-slate-400 mb-0.5">
+                                                                                    {value.category && <span>{value.category}</span>}
+                                                                                    {value.category && value.subCategory && <span className="mx-1">›</span>}
+                                                                                    {value.subCategory && <span>{value.subCategory}</span>}
+                                                                                </div>
+                                                                            )}
+                                                                            <div>
+                                                                                <span className="font-mono text-xs text-slate-500 mr-2">{value.code}</span>
+                                                                                <span className="text-slate-800 truncate">{value.label}</span>
+                                                                            </div>
                                                                         </div>
                                                                         <button
                                                                             onClick={() => handleDeleteAxisValue(value.id, value.label)}
@@ -2002,10 +2011,15 @@ export const Budget: React.FC = () => {
                                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                             <p className="text-xs text-blue-800 font-bold mb-2">Format attendu :</p>
                                             <ul className="text-xs text-blue-700 space-y-1">
-                                                <li>• Colonne "Code" : Code de la valeur</li>
-                                                <li>• Colonne "Libellé" : Nom de la valeur</li>
+                                                <li>• Colonne "Catégorie" : Catégorie (niveau 1)</li>
+                                                <li>• Colonne "Sous-catégorie" : Sous-catégorie (niveau 2)</li>
+                                                <li>• Colonne "Code" : Code de la valeur (requis)</li>
+                                                <li>• Colonne "Libellé" : Nom de la valeur (requis)</li>
                                                 <li>• Colonnes optionnelles : Code Parent, Responsable, Email Responsable</li>
                                             </ul>
+                                            <p className="text-xs text-blue-600 mt-2 italic">
+                                                💡 Structure hiérarchique : Catégorie → Sous-catégorie → Code → Libellé
+                                            </p>
                                         </div>
 
                                         {axisImportError && (
