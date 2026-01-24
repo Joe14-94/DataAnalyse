@@ -1,6 +1,67 @@
 import { DataRow, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
 
 /**
+ * Parse une date avec support du format français DD/MM/YYYY
+ */
+const parseDateValue = (dateValue: any): Date | null => {
+  if (!dateValue) return null;
+
+  let date: Date;
+
+  if (typeof dateValue === 'number') {
+    // Timestamp
+    date = new Date(dateValue);
+  } else if (typeof dateValue === 'string') {
+    // Format string (ISO, DD/MM/YYYY, etc.)
+    if (dateValue.includes('/')) {
+      const parts = dateValue.split('/');
+      if (parts.length === 3) {
+        const part1 = parseInt(parts[0]);
+        const part2 = parseInt(parts[1]);
+        const part3 = parseInt(parts[2]);
+
+        // Détecter le format : si part1 > 12, c'est forcément DD/MM/YYYY
+        if (part1 > 12) {
+          // Format DD/MM/YYYY (jour > 12)
+          const day = part1;
+          const month = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          date = new Date(year, month - 1, day);
+        } else if (part2 > 12) {
+          // Format MM/DD/YYYY (mois > 12, donc c'est le jour)
+          const month = part1;
+          const day = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          date = new Date(year, month - 1, day);
+        } else {
+          // Ambigu : on privilégie le format français DD/MM/YYYY
+          const day = part1;
+          const month = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          date = new Date(year, month - 1, day);
+        }
+
+        // Vérifier que la date est valide
+        if (isNaN(date.getTime())) {
+          date = new Date(dateValue);
+        }
+      } else {
+        date = new Date(dateValue);
+      }
+    } else {
+      date = new Date(dateValue);
+    }
+  } else if (dateValue instanceof Date) {
+    date = dateValue;
+  } else {
+    return null;
+  }
+
+  if (isNaN(date.getTime())) return null;
+  return date;
+};
+
+/**
  * Filtre les données par période (mois de début à mois de fin)
  */
 export const filterDataByPeriod = (
@@ -11,46 +72,8 @@ export const filterDataByPeriod = (
 ): DataRow[] => {
   return data.filter(row => {
     const dateValue = row[dateColumn];
-    if (!dateValue) return false;
-
-    // Conversion de la date en objet Date
-    let date: Date;
-
-    if (typeof dateValue === 'number') {
-      // Timestamp
-      date = new Date(dateValue);
-    } else if (typeof dateValue === 'string') {
-      // Format string (ISO, DD/MM/YYYY, etc.)
-      // Essayer plusieurs formats
-      if (dateValue.includes('/')) {
-        const parts = dateValue.split('/');
-        if (parts.length === 3) {
-          // DD/MM/YYYY ou MM/DD/YYYY
-          const day = parseInt(parts[0]);
-          const month = parseInt(parts[1]);
-          const year = parseInt(parts[2]);
-
-          // Détecter format DD/MM ou MM/DD
-          if (month > 12) {
-            // Format MM/DD/YYYY
-            date = new Date(year, day - 1, month);
-          } else {
-            // Format DD/MM/YYYY
-            date = new Date(year, month - 1, day);
-          }
-        } else {
-          date = new Date(dateValue);
-        }
-      } else {
-        date = new Date(dateValue);
-      }
-    } else if (dateValue instanceof Date) {
-      date = dateValue;
-    } else {
-      return false;
-    }
-
-    if (isNaN(date.getTime())) return false;
+    const date = parseDateValue(dateValue);
+    if (!date) return false;
 
     const month = date.getMonth() + 1; // 0-indexed to 1-indexed
 
@@ -278,27 +301,7 @@ export const detectDateColumn = (headers: string[]): string | undefined => {
  * Extrait l'année d'une date
  */
 export const extractYearFromDate = (dateValue: any): number | undefined => {
-  if (!dateValue) return undefined;
-
-  let date: Date;
-
-  if (typeof dateValue === 'number') {
-    date = new Date(dateValue);
-  } else if (typeof dateValue === 'string') {
-    if (dateValue.includes('/')) {
-      const parts = dateValue.split('/');
-      if (parts.length === 3) {
-        return parseInt(parts[2]);
-      }
-    }
-    date = new Date(dateValue);
-  } else if (dateValue instanceof Date) {
-    date = dateValue;
-  } else {
-    return undefined;
-  }
-
-  if (isNaN(date.getTime())) return undefined;
-
+  const date = parseDateValue(dateValue);
+  if (!date) return undefined;
   return date.getFullYear();
 };

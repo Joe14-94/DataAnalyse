@@ -404,8 +404,52 @@ export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarte
   if (!val || val === '(Vide)' || grouping === 'none') return val;
 
   try {
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return val;
+    let d: Date;
+
+    // Détecter et parser le format français DD/MM/YYYY ou DD/MM/YY
+    if (typeof val === 'string' && val.includes('/')) {
+      const parts = val.split('/');
+      if (parts.length === 3) {
+        const part1 = parseInt(parts[0]);
+        const part2 = parseInt(parts[1]);
+        const part3 = parseInt(parts[2]);
+
+        // Détecter le format : si part1 > 12, c'est forcément DD/MM/YYYY
+        // Si part2 > 12, c'est forcément MM/DD/YYYY (mais on privilégie DD/MM/YYYY)
+        if (part1 > 12) {
+          // Format DD/MM/YYYY (jour > 12)
+          const day = part1;
+          const month = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          d = new Date(year, month - 1, day);
+        } else if (part2 > 12) {
+          // Format MM/DD/YYYY (mois > 12, donc c'est le jour)
+          const month = part1;
+          const day = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          d = new Date(year, month - 1, day);
+        } else {
+          // Ambigu : on privilégie le format français DD/MM/YYYY
+          const day = part1;
+          const month = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          d = new Date(year, month - 1, day);
+        }
+
+        // Vérifier que la date est valide
+        if (isNaN(d.getTime())) {
+          // Réessayer avec new Date() natif
+          d = new Date(val);
+          if (isNaN(d.getTime())) return val;
+        }
+      } else {
+        d = new Date(val);
+        if (isNaN(d.getTime())) return val;
+      }
+    } else {
+      d = new Date(val);
+      if (isNaN(d.getTime())) return val;
+    }
 
     if (grouping === 'year') {
       return d.getFullYear().toString();
