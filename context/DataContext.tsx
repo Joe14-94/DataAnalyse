@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
 import { APP_VERSION, generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, db, generateId } from '../utils';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
@@ -10,10 +10,11 @@ import { AnalyticsContext, useAnalytics } from './AnalyticsContext';
 import { PersistenceContext, usePersistence } from './PersistenceContext';
 import { ReferentialProvider, useReferentials } from './ReferentialContext';
 import { BudgetProvider, useBudget } from './BudgetContext';
+import { ForecastProvider, useForecast } from './ForecastContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
 
 // Explicitly export hooks to avoid re-export issues
-export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useBudget, useSettings };
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useBudget, useForecast, useSettings };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';
@@ -33,6 +34,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
   const [financeReferentials, setFinanceReferentials] = useState<FinanceReferentials>({}); // NEW
   const [budgetModule, setBudgetModule] = useState<BudgetModule>({ budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
+  const [forecastModule, setForecastModule] = useState<ForecastModule>({ forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
   const [uiPrefs, setUiPrefs] = useState<any>(undefined); // NEW
 
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +64,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
           setFinanceReferentials(dbData.financeReferentials || {}); // NEW
           setBudgetModule(dbData.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
+          setForecastModule(dbData.forecastModule || { forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
           if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs); // NEW
 
           if (dbData.currentDatasetId) {
@@ -123,6 +126,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasSeenOnboarding,
         financeReferentials,
         budgetModule,
+        forecastModule,
         uiPrefs
       };
 
@@ -132,7 +136,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, uiPrefs, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -469,16 +473,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBudgetModule(module);
   }, []);
 
+  const updateForecastModule = useCallback((module: ForecastModule) => {
+    setForecastModule(module);
+  }, []);
+
   const getBackupJson = useCallback(() => {
     const state: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding, financeReferentials, budgetModule, uiPrefs,
+      hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, uiPrefs]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs]);
 
   const importBackup = useCallback(async (jsonData: string) => {
     try {
@@ -523,15 +531,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <SettingsProvider initialPrefs={uiPrefs} onPrefsChange={setUiPrefs}>
         <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
-            <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-              <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
-                <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-                  <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
-                    {children}
-                  </AnalyticsContext.Provider>
-                </WidgetContext.Provider>
-              </BatchContext.Provider>
-            </DatasetContext.Provider>
+            <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
+              <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
+                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
+                  <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
+                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
+                      {children}
+                    </AnalyticsContext.Provider>
+                  </WidgetContext.Provider>
+                </BatchContext.Provider>
+              </DatasetContext.Provider>
+            </ForecastProvider>
           </BudgetProvider>
         </ReferentialProvider>
       </SettingsProvider>

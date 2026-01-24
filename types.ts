@@ -225,6 +225,7 @@ export interface AppState {
   // Finance Referentials (NOUVEAU)
   financeReferentials?: FinanceReferentials;
   budgetModule?: BudgetModule; // NOUVEAU : Module budgétaire
+  forecastModule?: ForecastModule; // NOUVEAU : Module forecast & rolling forecast
   uiPrefs?: UIPrefs; // NOUVEAU : Préférences de style globales
 
   // Persistence
@@ -507,4 +508,183 @@ export interface BudgetModule {
   templates: BudgetTemplate[];
   comments: BudgetComment[];
   notifications: BudgetNotification[];
+}
+
+// ============================================================================
+// FORECAST & ROLLING FORECAST MODULE - F3.2
+// ============================================================================
+
+// Type de forecast
+export type ForecastType = 'monthly' | 'quarterly' | 'yearly';
+
+// Type de méthode de prévision
+export type ForecastMethod = 'manual' | 'copy_actual' | 'driver_based' | 'ml_prediction' | 'trend' | 'seasonal';
+
+// Statut du forecast
+export type ForecastStatus = 'draft' | 'submitted' | 'validated' | 'locked';
+
+// Inducteur (driver) pour forecast driver-based
+export interface ForecastDriver {
+  id: string;
+  name: string;                      // Ex: "Volume de ventes", "Prix unitaire"
+  unit?: string;                     // Ex: "unités", "€/unité"
+  historicalValues: {                // Valeurs historiques
+    [periodId: string]: number;
+  };
+  forecastValues: {                  // Valeurs prévisionnelles
+    [periodId: string]: number;
+  };
+}
+
+// Ligne de forecast individuelle
+export interface ForecastLine {
+  id: string;
+  accountCode: string;               // Code compte
+  accountLabel?: string;             // Libellé (cache)
+  method: ForecastMethod;            // Méthode utilisée
+
+  // Valeurs prévisionnelles par période
+  forecastValues: {
+    [periodId: string]: number;      // Ex: { "2025-01": 10000, "2025-02": 12000 }
+  };
+
+  // Valeurs réelles (pour comparaison)
+  actualValues?: {
+    [periodId: string]: number;
+  };
+
+  // Pour forecast driver-based
+  drivers?: {
+    driverId: string;
+    formula: string;                 // Ex: "[volume] * [price]"
+  }[];
+
+  // Pour forecast ML
+  mlPrediction?: {
+    confidence: number;              // 0-100%
+    lowerBound: {                    // Intervalle de confiance inférieur
+      [periodId: string]: number;
+    };
+    upperBound: {                    // Intervalle de confiance supérieur
+      [periodId: string]: number;
+    };
+    seasonalityDetected?: boolean;
+    trend?: 'increasing' | 'decreasing' | 'stable';
+  };
+
+  comment?: string;                  // Commentaire
+  isLocked: boolean;                 // Ligne verrouillée
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Version de forecast
+export interface ForecastVersion {
+  id: string;
+  forecastId: string;                // ID du forecast parent
+  versionNumber: number;             // V1, V2, V3...
+  name: string;                      // Ex: "V1 - Janvier 2025"
+  referenceDate: string;             // Date de référence (YYYY-MM-DD)
+  status: ForecastStatus;
+  lines: ForecastLine[];
+  isActive: boolean;                 // Version active
+  submittedBy?: string;
+  submittedAt?: number;
+  validatedBy?: string;
+  validatedAt?: number;
+  comment?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Rolling Forecast - historique des snapshots
+export interface RollingForecastSnapshot {
+  id: string;
+  forecastId: string;
+  snapshotDate: string;              // Date du snapshot (YYYY-MM-DD)
+  periodStart: string;               // Début de la fenêtre (YYYY-MM-DD)
+  periodEnd: string;                 // Fin de la fenêtre (YYYY-MM-DD)
+  data: ForecastLine[];              // Données du snapshot
+  createdAt: number;
+}
+
+// Analyse de variance Forecast vs Réalisé
+export interface ForecastVarianceAnalysis {
+  accountCode: string;
+  accountLabel?: string;
+  period: string;                    // YYYY-MM
+  forecastValue: number;
+  actualValue: number;
+  variance: number;                  // actual - forecast
+  variancePercent: number;           // (variance / forecast) * 100
+  reason?: string;                   // Raison de l'écart
+}
+
+// Forecast principal
+export interface Forecast {
+  id: string;
+  name: string;                      // Ex: "Forecast 2025", "Rolling Forecast Q1"
+  type: ForecastType;                // monthly, quarterly, yearly
+  fiscalYear: number;
+  chartOfAccountsId: string;         // Plan comptable
+  fiscalCalendarId?: string;         // Calendrier fiscal
+
+  // Pour rolling forecast
+  isRolling: boolean;                // Si c'est un rolling forecast
+  rollingHorizonMonths?: number;     // Ex: 12 mois (toujours 12 mois devant)
+  autoUpdateEnabled?: boolean;       // Actualisation automatique
+  lastUpdateDate?: string;           // Dernière actualisation
+
+  // Drivers pour forecast driver-based
+  drivers: ForecastDriver[];
+
+  // Versions
+  versions: ForecastVersion[];
+  activeVersionId?: string;
+
+  // Snapshots pour rolling forecast
+  rollingSnapshots?: RollingForecastSnapshot[];
+
+  // Configuration ML
+  mlConfig?: {
+    enabled: boolean;
+    method: 'arima' | 'trend' | 'seasonal' | 'hybrid';
+    lookbackMonths: number;          // Historique à considérer
+    confidenceLevel: number;         // Ex: 95
+  };
+
+  owner: string;
+  validators?: string[];
+  isLocked: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Rapport de réconciliation Forecast vs Réalisé
+export interface ForecastReconciliationReport {
+  id: string;
+  forecastId: string;
+  forecastVersionId: string;
+  periodStart: string;               // YYYY-MM-DD
+  periodEnd: string;                 // YYYY-MM-DD
+  variances: ForecastVarianceAnalysis[];
+
+  // Métriques globales
+  totalForecast: number;
+  totalActual: number;
+  totalVariance: number;
+  totalVariancePercent: number;
+
+  // Précision du modèle
+  mape?: number;                     // Mean Absolute Percentage Error
+  rmse?: number;                     // Root Mean Square Error
+
+  recommendations?: string[];        // Recommandations d'amélioration
+  createdAt: number;
+}
+
+// Module forecast complet
+export interface ForecastModule {
+  forecasts: Forecast[];
+  reconciliationReports: ForecastReconciliationReport[];
 }
