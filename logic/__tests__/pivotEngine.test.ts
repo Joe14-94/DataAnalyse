@@ -356,4 +356,155 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(end - start).toBeLessThan(1000); // < 1s pour 10k lignes
     });
   });
+
+  describe('Formats de Dates Français (DD/MM/YYYY)', () => {
+    const dataFrenchDates = [
+      { id: '1', Compte: '411000', Montant: '1000', Date: '15/01/2025' },
+      { id: '2', Compte: '411000', Montant: '500', Date: '20/01/2025' },
+      { id: '3', Compte: '411000', Montant: '300', Date: '10/02/2025' },
+      { id: '4', Compte: '411000', Montant: '200', Date: '05/03/2025' },
+      { id: '5', Compte: '512000', Montant: '2000', Date: '15/01/2025' },
+      { id: '6', Compte: '512000', Montant: '1500', Date: '10/02/2025' },
+      { id: '7', Compte: '512000', Montant: '1800', Date: '15/03/2025' },
+    ];
+
+    it('devrait regrouper correctement par MOIS avec dates françaises', () => {
+      const result = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'month',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      expect(result).not.toBeNull();
+      expect(result!.colHeaders).toEqual(['2025-01', '2025-02', '2025-03']);
+      expect(result!.grandTotal).toBe(7300);
+
+      const compte411 = result!.displayRows.find(r => r.keys[0] === '411000');
+      expect(compte411!.metrics['2025-01']).toBe(1500);
+      expect(compte411!.metrics['2025-02']).toBe(300);
+      expect(compte411!.metrics['2025-03']).toBe(200);
+    });
+
+    it('devrait regrouper correctement par TRIMESTRE avec dates françaises', () => {
+      const result = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'quarter',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      expect(result).not.toBeNull();
+      expect(result!.colHeaders).toEqual(['2025-T1']);
+      expect(result!.grandTotal).toBe(7300);
+
+      const compte411 = result!.displayRows.find(r => r.keys[0] === '411000');
+      expect(compte411!.metrics['2025-T1']).toBe(2000);
+    });
+
+    it('devrait regrouper correctement par ANNÉE avec dates françaises', () => {
+      const result = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'year',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      expect(result).not.toBeNull();
+      expect(result!.colHeaders).toEqual(['2025']);
+      expect(result!.grandTotal).toBe(7300);
+
+      const compte411 = result!.displayRows.find(r => r.keys[0] === '411000');
+      expect(compte411!.metrics['2025']).toBe(2000);
+    });
+
+    it('les totaux doivent être identiques quel que soit le groupement', () => {
+      const resultExact = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'none',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      const resultMonth = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'month',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      const resultQuarter = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'quarter',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      const resultYear = calculatePivotData({
+        rows: dataFrenchDates,
+        rowFields: ['Compte'],
+        colFields: ['Date'],
+        colGrouping: 'year',
+        valField: 'Montant',
+        aggType: 'sum',
+        filters: [],
+        sortBy: 'label',
+        sortOrder: 'asc',
+        showSubtotals: false
+      });
+
+      // Tous les totaux doivent être identiques
+      expect(resultExact!.grandTotal).toBe(7300);
+      expect(resultMonth!.grandTotal).toBe(7300);
+      expect(resultQuarter!.grandTotal).toBe(7300);
+      expect(resultYear!.grandTotal).toBe(7300);
+
+      // Les totaux de ligne doivent aussi être identiques
+      const compte411Exact = resultExact!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411Month = resultMonth!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411Quarter = resultQuarter!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411Year = resultYear!.displayRows.find(r => r.keys[0] === '411000');
+
+      expect(compte411Exact!.rowTotal).toBe(2000);
+      expect(compte411Month!.rowTotal).toBe(2000);
+      expect(compte411Quarter!.rowTotal).toBe(2000);
+      expect(compte411Year!.rowTotal).toBe(2000);
+    });
+  });
 });
