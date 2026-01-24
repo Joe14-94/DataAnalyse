@@ -127,6 +127,11 @@ export const PivotTable: React.FC = () => {
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
     const [editingColumn, setEditingColumn] = useState<string | null>(null);
 
+    // PANEL COLLAPSE STATE
+    const [isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed] = useState(false);
+    const [isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed] = useState(false);
+    const [isFieldsPanelCollapsed, setIsFieldsPanelCollapsed] = useState(false);
+
     // DRILLDOWN STATE
     const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
 
@@ -1097,15 +1102,25 @@ export const PivotTable: React.FC = () => {
                     <div className="xl:w-72 flex-shrink-0 flex flex-col gap-2 min-w-0">
 
                         {/* 1. DATA SOURCES STACK */}
-                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[120px] max-h-[220px]">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
                             <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-                                <h3 className="text-app-base font-bold text-slate-800 flex items-center gap-2">
-                                    <Database className="w-3.5 h-3.5 text-blue-600" />
-                                    Sources de données
+                                <h3 className="text-app-base font-bold text-slate-800 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Database className="w-3.5 h-3.5 text-blue-600" />
+                                        Sources de données
+                                    </div>
+                                    <button
+                                        onClick={() => setIsDataSourcesPanelCollapsed(!isDataSourcesPanelCollapsed)}
+                                        className="text-slate-500 hover:text-slate-700 transition-colors"
+                                        title={isDataSourcesPanelCollapsed ? "Agrandir" : "Réduire"}
+                                    >
+                                        {isDataSourcesPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
+                                    </button>
                                 </h3>
                             </div>
 
-                            <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
+                            {!isDataSourcesPanelCollapsed && (
+                                <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
 
                                 {/* LISTE DES SOURCES */}
                                 {sources.length === 0 ? (
@@ -1175,20 +1190,31 @@ export const PivotTable: React.FC = () => {
                                         </button>
                                     </div>
                                 )}
-                            </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* 2. TEMPORAL COMPARISON CONFIG (only shown in temporal mode) */}
                         {isTemporalMode && (
-                            <div className="bg-white rounded-lg border border-blue-300 shadow-sm flex flex-col overflow-hidden">
+                            <div className="bg-white rounded-lg border border-blue-300 shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: isTemporalConfigPanelCollapsed ? '40px' : 'none' }}>
                                 <div className="p-2 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
-                                    <h3 className="text-app-base font-bold text-slate-800 flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-purple-600" />
-                                        Configuration Temporelle
+                                    <h3 className="text-app-base font-bold text-slate-800 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                                            Configuration Temporelle
+                                        </div>
+                                        <button
+                                            onClick={() => setIsTemporalConfigPanelCollapsed(!isTemporalConfigPanelCollapsed)}
+                                            className="text-slate-500 hover:text-slate-700 transition-colors"
+                                            title={isTemporalConfigPanelCollapsed ? "Agrandir" : "Réduire"}
+                                        >
+                                            {isTemporalConfigPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
+                                        </button>
                                     </h3>
                                 </div>
 
-                                <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar">
+                                {!isTemporalConfigPanelCollapsed && (
+                                    <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar">
                                     {/* SOURCE SELECTION */}
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-600 mb-1 block">Sources à comparer (2-4)</label>
@@ -1330,21 +1356,34 @@ export const PivotTable: React.FC = () => {
                                             </div>
                                         </>
                                     )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {/* 3. FIELDS ACCORDION */}
-                        <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[120px] overflow-hidden">
+                        <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden" style={{ minHeight: isFieldsPanelCollapsed ? '40px' : '120px' }}>
                             <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
-                                <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2 mb-1.5">
-                                    <Table2 className="w-3 h-3 text-green-600" />
-                                    Champs disponibles
-                                </h3>
-                                <input type="text" placeholder="Rechercher..." className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-green-400" disabled={sources.length === 0} />
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2">
+                                        <Table2 className="w-3 h-3 text-green-600" />
+                                        Champs disponibles
+                                    </h3>
+                                    <button
+                                        onClick={() => setIsFieldsPanelCollapsed(!isFieldsPanelCollapsed)}
+                                        className="text-slate-500 hover:text-slate-700 transition-colors"
+                                        title={isFieldsPanelCollapsed ? "Agrandir" : "Réduire"}
+                                    >
+                                        {isFieldsPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
+                                    </button>
+                                </div>
+                                {!isFieldsPanelCollapsed && (
+                                    <input type="text" placeholder="Rechercher..." className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-green-400" disabled={sources.length === 0} />
+                                )}
                             </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                            {!isFieldsPanelCollapsed && (
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                                 {sources.length === 0 && (
                                     <div className="text-center py-6 text-slate-300 text-[10px] italic">
                                         Ajoutez une source pour voir les champs disponibles.
@@ -1378,7 +1417,8 @@ export const PivotTable: React.FC = () => {
                                         </div>
                                     );
                                 })}
-                            </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* 3. DROP ZONES (Compact Layout) */}
