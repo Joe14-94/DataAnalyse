@@ -1866,6 +1866,41 @@ export const PivotTable: React.FC = () => {
                                             );
                                         })}
                                     </tbody>
+                                    {showTotalCol && (
+                                        <tfoot className="bg-slate-200 border-t-2 border-slate-400">
+                                            <tr>
+                                                {/* Label "Total Général" */}
+                                                <td
+                                                    colSpan={temporalConfig.groupByFields.length}
+                                                    className="px-2 py-2 text-sm font-black text-slate-900 border-r border-slate-300 uppercase"
+                                                >
+                                                    Total Général
+                                                </td>
+
+                                                {/* Column Totals */}
+                                                {temporalConfig.sources.map(source => {
+                                                    // Calculate total for this source (only non-subtotal rows)
+                                                    const total = temporalResults
+                                                        .filter(result => !result.isSubtotal)
+                                                        .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
+
+                                                    return (
+                                                        <React.Fragment key={source.id}>
+                                                            <td className={`px-2 py-2 text-xs text-right border-r border-slate-300 tabular-nums font-black ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-200 text-blue-900' : 'text-slate-900'}`}>
+                                                                {formatCurrency(total)}
+                                                            </td>
+                                                            {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                                                <td className="px-2 py-2 text-xs text-right border-r border-slate-300 tabular-nums">
+                                                                    {/* No delta for grand total */}
+                                                                    -
+                                                                </td>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </tr>
+                                        </tfoot>
+                                    )}
                                 </table>
                             </div>
                         ) : pivotData ? (
