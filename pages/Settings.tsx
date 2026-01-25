@@ -18,6 +18,8 @@ export const Settings: React.FC = () => {
       chartsOfAccounts,
       addChartOfAccounts,
       setDefaultChartOfAccounts,
+      deleteChartOfAccounts,
+      updateChartOfAccounts,
       analyticalAxes,
       addAnalyticalAxis,
       fiscalCalendars,
@@ -47,6 +49,14 @@ export const Settings: React.FC = () => {
    const [showCalendarModal, setShowCalendarModal] = useState(false);
    const [showMasterDataModal, setShowMasterDataModal] = useState(false);
    const [masterDataType, setMasterDataType] = useState<'customer' | 'supplier' | 'product' | 'employee'>('customer');
+
+   // Chart of accounts viewer/editor modal
+   const [viewingChartId, setViewingChartId] = useState<string | null>(null);
+   const [searchAccountQuery, setSearchAccountQuery] = useState('');
+
+   // Chart renaming state
+   const [editingChartId, setEditingChartId] = useState<string | null>(null);
+   const [editChartName, setEditChartName] = useState('');
 
    // Form states
    const [axisForm, setAxisForm] = useState({ code: '', name: '', isMandatory: false, allowMultiple: false });
@@ -149,6 +159,44 @@ export const Settings: React.FC = () => {
    const cancelEditing = () => {
       setEditingDatasetId(null);
       setEditName('');
+   };
+
+   // Chart of Accounts handlers
+   const handleDeleteChart = (id: string, name: string) => {
+      const chart = chartsOfAccounts.find(c => c.id === id);
+
+      // If it's the default chart and there are other charts, prevent deletion
+      if (chart?.isDefault && chartsOfAccounts.length > 1) {
+         alert('Impossible de supprimer le plan comptable par défaut. Veuillez d\'abord définir un autre plan comme par défaut.');
+         return;
+      }
+
+      if (window.confirm(`Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`)) {
+         deleteChartOfAccounts(id);
+      }
+   };
+
+   const handleViewChart = (id: string) => {
+      setViewingChartId(id);
+      setSearchAccountQuery('');
+   };
+
+   const startEditingChart = (id: string, currentName: string) => {
+      setEditingChartId(id);
+      setEditChartName(currentName);
+   };
+
+   const saveChartEditing = () => {
+      if (editingChartId && editChartName.trim()) {
+         updateChartOfAccounts(editingChartId, { name: editChartName.trim() });
+         setEditingChartId(null);
+         setEditChartName('');
+      }
+   };
+
+   const cancelChartEditing = () => {
+      setEditingChartId(null);
+      setEditChartName('');
    };
 
    // Finance referentials handlers
@@ -315,42 +363,103 @@ export const Settings: React.FC = () => {
                                     </div>
                                  ) : (
                                     <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
-                                       {chartsOfAccounts.map(chart => (
-                                          <div key={chart.id} className="p-4 hover:bg-slate-50 transition-colors">
-                                             <div className="flex items-center justify-between">
-                                                <div>
-                                                   <div className="flex items-center gap-3">
-                                                      <h4 className="font-bold text-slate-800">{chart.name}</h4>
-                                                      {chart.isDefault && (
-                                                         <span className="text-xs font-bold px-2 py-1 bg-brand-100 text-brand-700 rounded">
-                                                            Par défaut
-                                                         </span>
+                                       {chartsOfAccounts.map(chart => {
+                                          const isEditing = editingChartId === chart.id;
+
+                                          return (
+                                             <div key={chart.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                                <div className="flex items-center justify-between gap-4">
+                                                   <div className="flex-1 min-w-0">
+                                                      {isEditing ? (
+                                                         <div className="flex items-center gap-2">
+                                                            <input
+                                                               type="text"
+                                                               className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none flex-1"
+                                                               value={editChartName}
+                                                               onChange={(e) => setEditChartName(e.target.value)}
+                                                               autoFocus
+                                                               onKeyDown={(e) => {
+                                                                  if (e.key === 'Enter') saveChartEditing();
+                                                                  if (e.key === 'Escape') cancelChartEditing();
+                                                               }}
+                                                            />
+                                                            <button
+                                                               onClick={saveChartEditing}
+                                                               className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200 shrink-0"
+                                                               title="Sauvegarder"
+                                                            >
+                                                               <Check className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                               onClick={cancelChartEditing}
+                                                               className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200 shrink-0"
+                                                               title="Annuler"
+                                                            >
+                                                               <X className="w-4 h-4" />
+                                                            </button>
+                                                         </div>
+                                                      ) : (
+                                                         <>
+                                                            <div className="flex items-center gap-3">
+                                                               <h4 className="font-bold text-slate-800">{chart.name}</h4>
+                                                               {chart.isDefault && (
+                                                                  <span className="text-xs font-bold px-2 py-1 bg-brand-100 text-brand-700 rounded">
+                                                                     Par défaut
+                                                                  </span>
+                                                               )}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                               {chart.standard} • {chart.accounts.length} comptes
+                                                            </div>
+                                                         </>
                                                       )}
                                                    </div>
-                                                   <div className="text-xs text-slate-500 mt-1">
-                                                      {chart.standard} • {chart.accounts.length} comptes
-                                                   </div>
+                                                   {!isEditing && (
+                                                      <div className="flex items-center gap-2 shrink-0">
+                                                         <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleViewChart(chart.id)}
+                                                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                                         >
+                                                            <Edit2 className="w-4 h-4 mr-2" />
+                                                            Voir
+                                                         </Button>
+                                                         <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => startEditingChart(chart.id, chart.name)}
+                                                            className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                                                         >
+                                                            <Edit2 className="w-4 h-4 mr-2" />
+                                                            Renommer
+                                                         </Button>
+                                                         {!chart.isDefault && (
+                                                            <Button
+                                                               variant="ghost"
+                                                               size="sm"
+                                                               onClick={() => setDefaultChartOfAccounts(chart.id)}
+                                                               className="text-slate-500 hover:text-brand-600"
+                                                            >
+                                                               Définir par défaut
+                                                            </Button>
+                                                         )}
+                                                         <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteChart(chart.id, chart.name)}
+                                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                                         >
+                                                            <Trash2 className="w-4 h-4" />
+                                                         </Button>
+                                                      </div>
+                                                   )}
                                                 </div>
-                                                {!chart.isDefault && (
-                                                   <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      onClick={() => setDefaultChartOfAccounts(chart.id)}
-                                                      className="text-slate-500 hover:text-brand-600"
-                                                   >
-                                                      Définir par défaut
-                                                   </Button>
-                                                )}
                                              </div>
-                                          </div>
-                                       ))}
+                                          );
+                                       })}
                                     </div>
                                  )}
-
-                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                                    <p className="font-bold mb-1">💡 Prochaine étape</p>
-                                    <p>Les plans comptables importés pourront être édités, enrichis et associés à vos données dans une interface dédiée (prochaine version).</p>
-                                 </div>
                               </div>
                            )}
 
@@ -991,6 +1100,123 @@ export const Settings: React.FC = () => {
                </div>
             </div>
          )}
+
+         {/* Modal: Voir/Éditer un plan comptable */}
+         {viewingChartId && (() => {
+            const chart = chartsOfAccounts.find(c => c.id === viewingChartId);
+            if (!chart) return null;
+
+            const filteredAccounts = chart.accounts.filter(acc =>
+               searchAccountQuery === '' ||
+               acc.code.toLowerCase().includes(searchAccountQuery.toLowerCase()) ||
+               acc.label.toLowerCase().includes(searchAccountQuery.toLowerCase())
+            ).sort((a, b) => a.code.localeCompare(b.code));
+
+            return (
+               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewingChartId(null)}>
+                  <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+                     {/* Header */}
+                     <div className="p-6 border-b border-slate-200 flex-shrink-0">
+                        <div className="flex items-center justify-between">
+                           <div>
+                              <h3 className="text-xl font-bold text-slate-800">{chart.name}</h3>
+                              <p className="text-sm text-slate-500 mt-1">
+                                 {chart.standard} • {chart.accounts.length} comptes au total
+                                 {chart.isDefault && ' • Plan par défaut'}
+                              </p>
+                           </div>
+                           <button
+                              onClick={() => setViewingChartId(null)}
+                              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                           >
+                              <X className="w-5 h-5 text-slate-500" />
+                           </button>
+                        </div>
+
+                        {/* Search bar */}
+                        <div className="mt-4">
+                           <input
+                              type="text"
+                              placeholder="Rechercher un compte (code ou libellé)..."
+                              className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              value={searchAccountQuery}
+                              onChange={(e) => setSearchAccountQuery(e.target.value)}
+                           />
+                        </div>
+                     </div>
+
+                     {/* Account list */}
+                     <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        {filteredAccounts.length === 0 ? (
+                           <div className="text-center text-slate-400 py-12">
+                              <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                              <p>Aucun compte ne correspond à votre recherche</p>
+                           </div>
+                        ) : (
+                           <div className="space-y-1">
+                              {/* Table header */}
+                              <div className="grid grid-cols-12 gap-4 pb-2 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase sticky top-0 bg-white">
+                                 <div className="col-span-2">Code</div>
+                                 <div className="col-span-5">Libellé</div>
+                                 <div className="col-span-2">Nature</div>
+                                 <div className="col-span-1">Niveau</div>
+                                 <div className="col-span-2">Imputable</div>
+                              </div>
+
+                              {/* Account rows */}
+                              {filteredAccounts.map(account => (
+                                 <div
+                                    key={account.id}
+                                    className={`grid grid-cols-12 gap-4 py-2 px-3 rounded hover:bg-slate-50 transition-colors text-sm ${
+                                       account.level === 1 ? 'bg-slate-100 font-bold' : ''
+                                    }`}
+                                 >
+                                    <div className="col-span-2 font-mono text-slate-700">
+                                       {account.code}
+                                    </div>
+                                    <div className={`col-span-5 ${account.level === 1 ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
+                                       {'  '.repeat(Math.max(0, account.level - 1))}{account.label}
+                                    </div>
+                                    <div className="col-span-2 text-slate-600 capitalize">
+                                       {account.nature === 'asset' && '🟢 Actif'}
+                                       {account.nature === 'liability' && '🔵 Passif'}
+                                       {account.nature === 'equity' && '🟣 Capitaux'}
+                                       {account.nature === 'revenue' && '🟡 Produits'}
+                                       {account.nature === 'expense' && '🔴 Charges'}
+                                    </div>
+                                    <div className="col-span-1 text-slate-500 text-center">
+                                       {account.level}
+                                    </div>
+                                    <div className="col-span-2">
+                                       {account.canReceiveEntries ? (
+                                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded font-bold">Oui</span>
+                                       ) : (
+                                          <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">Non</span>
+                                       )}
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
+
+                        {searchAccountQuery && filteredAccounts.length > 0 && (
+                           <div className="mt-4 text-sm text-slate-500 text-center">
+                              {filteredAccounts.length} compte(s) trouvé(s) sur {chart.accounts.length}
+                           </div>
+                        )}
+                     </div>
+
+                     {/* Footer */}
+                     <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                           <p className="font-bold mb-1">💡 Fonctionnalités à venir</p>
+                           <p>L'édition individuelle des comptes, l'ajout/suppression de comptes, et l'association aux données importées seront disponibles prochainement.</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            );
+         })()}
 
          {/* Modal: Créer une donnée de référence */}
          {showMasterDataModal && (

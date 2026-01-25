@@ -404,8 +404,52 @@ export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarte
   if (!val || val === '(Vide)' || grouping === 'none') return val;
 
   try {
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return val;
+    let d: Date;
+
+    // Détecter et parser le format français DD/MM/YYYY ou DD/MM/YY
+    if (typeof val === 'string' && val.includes('/')) {
+      const parts = val.split('/');
+      if (parts.length === 3) {
+        const part1 = parseInt(parts[0]);
+        const part2 = parseInt(parts[1]);
+        const part3 = parseInt(parts[2]);
+
+        // Détecter le format : si part1 > 12, c'est forcément DD/MM/YYYY
+        // Si part2 > 12, c'est forcément MM/DD/YYYY (mais on privilégie DD/MM/YYYY)
+        if (part1 > 12) {
+          // Format DD/MM/YYYY (jour > 12)
+          const day = part1;
+          const month = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          d = new Date(year, month - 1, day);
+        } else if (part2 > 12) {
+          // Format MM/DD/YYYY (mois > 12, donc c'est le jour)
+          const month = part1;
+          const day = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          d = new Date(year, month - 1, day);
+        } else {
+          // Ambigu : on privilégie le format français DD/MM/YYYY
+          const day = part1;
+          const month = part2;
+          const year = part3 < 100 ? 2000 + part3 : part3;
+          d = new Date(year, month - 1, day);
+        }
+
+        // Vérifier que la date est valide
+        if (isNaN(d.getTime())) {
+          // Réessayer avec new Date() natif
+          d = new Date(val);
+          if (isNaN(d.getTime())) return val;
+        }
+      } else {
+        d = new Date(val);
+        if (isNaN(d.getTime())) return val;
+      }
+    } else {
+      d = new Date(val);
+      if (isNaN(d.getTime())) return val;
+    }
 
     if (grouping === 'year') {
       return d.getFullYear().toString();
@@ -422,6 +466,42 @@ export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarte
     return val;
   }
   return val;
+};
+
+/**
+ * Formate un label de colonne de date pour l'affichage en français
+ * Convertit les formats ISO en formats français lisibles
+ */
+export const formatDateLabelForDisplay = (label: string): string => {
+  if (!label || label === '(Vide)') return label;
+
+  // Format YYYY-MM (mois ISO) -> MM/YYYY (français)
+  if (/^\d{4}-\d{2}$/.test(label)) {
+    const [year, month] = label.split('-');
+    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthIndex = parseInt(month) - 1;
+    return `${monthNames[monthIndex]} ${year}`;
+  }
+
+  // Format YYYY-TQ (trimestre) -> TQ YYYY (français)
+  if (/^\d{4}-T\d$/.test(label)) {
+    const [year, quarter] = label.split('-');
+    return `${quarter} ${year}`;
+  }
+
+  // Format YYYY-MM-DD (ISO date) -> DD/MM/YYYY (français)
+  if (/^\d{4}-\d{2}-\d{2}/.test(label)) {
+    const date = new Date(label);
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  return label;
 };
 
 /**
@@ -458,36 +538,70 @@ export const detectUnit = (values: string[]): string => {
 
 /**
  * Détecte le type de colonne le plus probable
+ * Amélioration : échantillonnage sur 100 lignes et meilleure détection des booléens
  */
 export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean' | 'date' => {
-  const sample = values.slice(0, 20).filter(v => v && v.trim() !== '');
+  const sample = values.slice(0, 100).filter(v => v && v.trim() !== '');
   if (sample.length === 0) return 'text';
 
   let numberCount = 0;
-  let boolCount = 0;
+  let trueBoolCount = 0; // Vrais booléens (oui, non, true, false, etc.)
+  let zeroOneCount = 0; // Compteur pour 0 et 1
   let dateCount = 0;
+  let otherNumericCount = 0; // Autres nombres (2, 3, 4, -5, 10.5, etc.)
 
   const dateRegex = /^(\d{4}-\d{2}-\d{2})|(\d{2}\/\d{2}\/\d{4})|(\d{2}-\d{2}-\d{4})$/;
 
   sample.forEach(val => {
     const cleanVal = val.trim();
     const lower = cleanVal.toLowerCase();
-    if (['oui', 'non', 'yes', 'no', 'true', 'false', 'vrai', 'faux', '0', '1'].includes(lower)) boolCount++;
-    if (dateRegex.test(cleanVal) && !isNaN(Date.parse(cleanVal.split('/').reverse().join('-')))) dateCount++;
 
+    // Détection des vrais booléens (sans 0 et 1)
+    if (['oui', 'non', 'yes', 'no', 'true', 'false', 'vrai', 'faux'].includes(lower)) {
+      trueBoolCount++;
+    } else if (['0', '1'].includes(lower)) {
+      // 0 et 1 sont comptés séparément
+      zeroOneCount++;
+    }
+
+    // Détection des dates
+    if (dateRegex.test(cleanVal) && !isNaN(Date.parse(cleanVal.split('/').reverse().join('-')))) {
+      dateCount++;
+    }
+
+    // Détection des nombres
     const startsWithValidNumChar = /^[-+0-9.,]/.test(cleanVal);
     const startsWithCurrency = /^[$€£]/.test(cleanVal);
     if (startsWithValidNumChar || startsWithCurrency) {
       const withoutUnit = cleanVal.replace(/[\s]?[a-zA-Z%€$£%°]+$/, '');
       const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, '');
-      if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) numberCount++;
+      if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) {
+        numberCount++;
+        // Compter les nombres autres que 0 et 1
+        const numValue = parseFloat(cleanNum.replace(',', '.'));
+        if (numValue !== 0 && numValue !== 1) {
+          otherNumericCount++;
+        }
+      }
     }
   });
 
   const threshold = sample.length * 0.8;
+
+  // Dates en priorité
   if (dateCount >= threshold) return 'date';
-  if (boolCount >= threshold) return 'boolean';
-  if (numberCount >= threshold) return 'number';
+
+  // Booléens : SEULEMENT si on a des vrais mots booléens ET PAS d'autres nombres
+  // Si on a seulement des 0 et 1 SANS vrais booléens, c'est probablement numérique
+  if (trueBoolCount > 0 && (trueBoolCount + zeroOneCount) >= threshold && otherNumericCount === 0) {
+    return 'boolean';
+  }
+
+  // Nombres : si on a beaucoup de valeurs numériques OU si on a des nombres autres que 0/1
+  if (numberCount >= threshold || otherNumericCount > sample.length * 0.2) {
+    return 'number';
+  }
+
   return 'text';
 };
 

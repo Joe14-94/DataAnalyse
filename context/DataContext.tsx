@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
 import { APP_VERSION, generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, db, generateId } from '../utils';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
@@ -9,10 +9,12 @@ import { WidgetContext, useWidgets } from './WidgetContext';
 import { AnalyticsContext, useAnalytics } from './AnalyticsContext';
 import { PersistenceContext, usePersistence } from './PersistenceContext';
 import { ReferentialProvider, useReferentials } from './ReferentialContext';
+import { BudgetProvider, useBudget } from './BudgetContext';
+import { ForecastProvider, useForecast } from './ForecastContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
 
 // Explicitly export hooks to avoid re-export issues
-export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useSettings };
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useBudget, useForecast, useSettings };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';
@@ -31,6 +33,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
   const [financeReferentials, setFinanceReferentials] = useState<FinanceReferentials>({}); // NEW
+  const [budgetModule, setBudgetModule] = useState<BudgetModule>({ budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
+  const [forecastModule, setForecastModule] = useState<ForecastModule>({ forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
   const [uiPrefs, setUiPrefs] = useState<any>(undefined); // NEW
 
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +63,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setCompanyLogo(dbData.companyLogo); // NEW
           setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
           setFinanceReferentials(dbData.financeReferentials || {}); // NEW
+          setBudgetModule(dbData.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
+          setForecastModule(dbData.forecastModule || { forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
           if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs); // NEW
 
           if (dbData.currentDatasetId) {
@@ -80,6 +86,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCompanyLogo(parsed.companyLogo); // NEW
             setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
             setFinanceReferentials(parsed.financeReferentials || {}); // NEW
+            setBudgetModule(parsed.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
             if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
             setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
 
@@ -118,6 +125,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         companyLogo,
         hasSeenOnboarding,
         financeReferentials,
+        budgetModule,
+        forecastModule,
         uiPrefs
       };
 
@@ -127,7 +136,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, uiPrefs, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -281,6 +290,60 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }));
   }, []);
+
+  const enrichBatchesWithLookup = useCallback((datasetId: string, targetDatasetId: string, primaryKey: string, secondaryKey: string, columnsToAdd: string[], newColumnName: string) => {
+    // Get target dataset's latest batch
+    const targetBatches = batches.filter(b => b.datasetId === targetDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    if (targetBatches.length === 0) return false;
+
+    const targetBatch = targetBatches[targetBatches.length - 1];
+
+    // Create lookup map
+    const lookupMap = new Map<string, any>();
+    targetBatch.rows.forEach(row => {
+      const key = String(row[secondaryKey]).trim();
+      if (key) {
+        lookupMap.set(key, row);
+      }
+    });
+
+    // Update all batches of the specified dataset
+    setAllBatches(prev => prev.map(b => {
+      if (b.datasetId !== datasetId) return b;
+
+      const enrichedRows = b.rows.map(row => {
+        const key = String(row[primaryKey]).trim();
+        const matchedRow = lookupMap.get(key);
+
+        if (matchedRow && columnsToAdd.length === 1) {
+          // Single column: store value directly
+          return {
+            ...row,
+            [newColumnName]: matchedRow[columnsToAdd[0]]
+          };
+        } else if (matchedRow) {
+          // Multiple columns: concatenate with separator
+          const values = columnsToAdd.map(col => matchedRow[col]);
+          return {
+            ...row,
+            [newColumnName]: values.join(' | ')
+          };
+        }
+
+        return {
+          ...row,
+          [newColumnName]: null
+        };
+      });
+
+      return {
+        ...b,
+        rows: enrichedRows
+      };
+    }));
+
+    return true;
+  }, [batches]);
 
   // --- WIDGET ACTIONS ---
   const addDashboardWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
@@ -460,16 +523,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFinanceReferentials(referentials);
   }, []);
 
+  const updateBudgetModule = useCallback((module: BudgetModule) => {
+    setBudgetModule(module);
+  }, []);
+
+  const updateForecastModule = useCallback((module: ForecastModule) => {
+    setForecastModule(module);
+  }, []);
+
   const getBackupJson = useCallback(() => {
     const state: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding, financeReferentials, uiPrefs,
+      hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs,
       exportDate: new Date().toISOString()
     };
     return JSON.stringify(state, null, 2);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, uiPrefs]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs]);
 
   const importBackup = useCallback(async (jsonData: string) => {
     try {
@@ -487,6 +558,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCompanyLogo(parsed.companyLogo); // NEW
       setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
       setFinanceReferentials(parsed.financeReferentials || {}); // NEW
+      setBudgetModule(parsed.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
       if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
 
       if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
@@ -512,15 +584,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding }}>
       <SettingsProvider initialPrefs={uiPrefs} onPrefsChange={setUiPrefs}>
         <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
-          <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-            <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
-              <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-                <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
-                  {children}
-                </AnalyticsContext.Provider>
-              </WidgetContext.Provider>
-            </BatchContext.Provider>
-          </DatasetContext.Provider>
+          <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
+            <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
+              <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
+                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, enrichBatchesWithLookup }}>
+                  <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
+                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
+                      {children}
+                    </AnalyticsContext.Provider>
+                  </WidgetContext.Provider>
+                </BatchContext.Provider>
+              </DatasetContext.Provider>
+            </ForecastProvider>
+          </BudgetProvider>
         </ReferentialProvider>
       </SettingsProvider>
     </PersistenceContext.Provider>

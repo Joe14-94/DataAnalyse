@@ -1,22 +1,33 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { parseSmartNumber, detectColumnType, formatDateFr, evaluateFormula, generateId, exportView } from '../utils';
+import { parseSmartNumber, detectColumnType, formatDateFr, evaluateFormula, generateId, exportView, formatDateLabelForDisplay } from '../utils';
+import * as XLSX from 'xlsx';
 import {
     Database, Filter, Calculator, X, Layout,
     Table2, ArrowUpDown, Layers,
     ArrowUp, ArrowDown, Save, Check,
     PieChart, Loader2, ChevronLeft, ChevronRight, FileDown, FileType, Printer,
     GripVertical, MousePointer2, TrendingUp, Link as LinkIcon, Plus, Trash2, Split,
-    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick
+    ChevronDown, ChevronRight as ChevronRightIcon, Plug, AlertCircle, MousePointerClick, Calendar,
+    FileSpreadsheet, FileText
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/Checkbox';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin } from '../types';
+import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow } from '../types';
 import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrder, DateGrouping, PivotResult } from '../logic/pivotEngine';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
+import { PivotChartModal } from '../components/pivot/PivotChartModal';
+import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
+import {
+    calculateTemporalComparison,
+    detectDateColumn,
+    extractYearFromDate,
+    formatCurrency,
+    formatPercentage
+} from '../utils/temporalComparison';
 
 // --- DRAG & DROP TYPES ---
 type DropZoneType = 'row' | 'col' | 'val' | 'filter';
@@ -78,7 +89,8 @@ const SOURCE_COLOR_CLASSES: Record<string, { border: string, text: string, bg: s
 export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
-        lastPivotState, savePivotState, isLoading, companyLogo
+        lastPivotState, savePivotState, isLoading, companyLogo,
+        addDashboardWidget
     } = useData();
     const navigate = useNavigate();
 
@@ -111,8 +123,16 @@ export const PivotTable: React.FC = () => {
     const [analysisName, setAnalysisName] = useState('');
     const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showLoadMenu, setShowLoadMenu] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+    const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
+    const [editingColumn, setEditingColumn] = useState<string | null>(null);
+
+    // PANEL COLLAPSE STATE
+    const [isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed] = useState(false);
+    const [isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed] = useState(false);
+    const [isFieldsPanelCollapsed, setIsFieldsPanelCollapsed] = useState(false);
 
     // DRILLDOWN STATE
     const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
@@ -125,14 +145,46 @@ export const PivotTable: React.FC = () => {
     const [pivotData, setPivotData] = useState<PivotResult | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
 
+    // TEMPORAL COMPARISON STATE
+    const [isTemporalMode, setIsTemporalMode] = useState(false);
+    const [temporalConfig, setTemporalConfig] = useState<TemporalComparisonConfig | null>(null);
+    const [temporalResults, setTemporalResults] = useState<TemporalComparisonResult[]>([]);
+    const [isTemporalSourceModalOpen, setIsTemporalSourceModalOpen] = useState(false);
+
+    // CHART MODAL STATE
+    const [isChartModalOpen, setIsChartModalOpen] = useState(false);
+
     // VIRTUALIZATION
     const parentRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
+
+    // Synchronize horizontal scroll between table and footer
+    useEffect(() => {
+        const parent = parentRef.current;
+        const footer = footerRef.current;
+        if (!parent || !footer) return;
+
+        const handleScroll = () => {
+            footer.scrollLeft = parent.scrollLeft;
+        };
+
+        parent.addEventListener('scroll', handleScroll);
+        return () => parent.removeEventListener('scroll', handleScroll);
+    }, [pivotData]);
 
     // --- DERIVED STATE ---
 
     // Get the primary dataset from our local sources list, NOT global context
     const primarySourceConfig = sources.find(s => s.isPrimary);
     const primaryDataset = primarySourceConfig ? datasets.find(d => d.id === primarySourceConfig.datasetId) : null;
+
+    // Combined fields list including calculated fields
+    const allAvailableFields = useMemo(() => {
+        if (!primaryDataset) return [];
+        const regularFields = primaryDataset.fields || [];
+        const calculatedFieldNames = (primaryDataset.calculatedFields || []).map(cf => cf.name);
+        return [...regularFields, ...calculatedFieldNames];
+    }, [primaryDataset]);
 
     const datasetBatches = useMemo(() => {
         if (!primaryDataset) return [];
@@ -165,11 +217,19 @@ export const PivotTable: React.FC = () => {
                 config: {
                     sources, // Save the full source stack
                     rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations,
-                    sortBy, sortOrder, styleRules, selectedBatchId
+                    sortBy, sortOrder, styleRules, selectedBatchId,
+                    isTemporalMode,
+                    temporalComparison: temporalConfig || undefined
                 }
             });
         }
-    }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized]);
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
+
+    // Load State - Reset on mount
+    useEffect(() => {
+        // Reset initialization flag when component mounts
+        setIsInitialized(false);
+    }, []);
 
     // Load State
     useEffect(() => {
@@ -224,6 +284,10 @@ export const PivotTable: React.FC = () => {
             setSortOrder(c.sortOrder || 'asc');
             setStyleRules(c.styleRules || []);
             if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
+
+            // Restore temporal comparison state
+            setIsTemporalMode(c.isTemporalMode || false);
+            setTemporalConfig(c.temporalComparison || null);
         } else {
             // Default Empty State
             setSources([]);
@@ -231,6 +295,8 @@ export const PivotTable: React.FC = () => {
             setColFields([]);
             setValField('');
             setFilters([]);
+            setIsTemporalMode(false);
+            setTemporalConfig(null);
         }
         setIsInitialized(true);
     }, [currentDataset?.id, lastPivotState]);
@@ -376,6 +442,12 @@ export const PivotTable: React.FC = () => {
 
     // --- ASYNC CALCULATION ---
     useEffect(() => {
+        // Skip regular pivot calculation in temporal mode
+        if (isTemporalMode) {
+            setPivotData(null);
+            return;
+        }
+
         setIsCalculating(true);
         const timer = setTimeout(() => {
             const result = calculatePivotData({
@@ -389,7 +461,73 @@ export const PivotTable: React.FC = () => {
             setIsCalculating(false);
         }, 10);
         return () => clearTimeout(timer);
-    }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets]);
+    }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
+
+    // --- TEMPORAL COMPARISON CALCULATION ---
+    useEffect(() => {
+        if (!isTemporalMode || !temporalConfig || !primaryDataset) {
+            setTemporalResults([]);
+            return;
+        }
+
+        // Need at least grouping fields and value field
+        if (rowFields.length === 0 || !valField) {
+            setTemporalResults([]);
+            return;
+        }
+
+        // Need at least 2 sources
+        if (temporalConfig.sources.length < 2) {
+            setTemporalResults([]);
+            return;
+        }
+
+        setIsCalculating(true);
+        const timer = setTimeout(() => {
+            // Build map of source data
+            const sourceDataMap = new Map<string, DataRow[]>();
+
+            temporalConfig.sources.forEach(source => {
+                const batch = batches.find(b => b.id === source.batchId);
+                if (batch && primaryDataset) {
+                    // IMPORTANT: Évaluer les champs calculés avant l'agrégation
+                    const calcFields = primaryDataset.calculatedFields || [];
+                    let rows = batch.rows;
+
+                    if (calcFields.length > 0) {
+                        rows = rows.map(r => {
+                            const enriched = { ...r };
+                            calcFields.forEach(cf => {
+                                enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                            });
+                            return enriched;
+                        });
+                    }
+
+                    sourceDataMap.set(source.id, rows);
+                }
+            });
+
+            // Detect date column
+            const dateColumn = detectDateColumn(primaryDataset.fields) || 'Date écriture';
+
+            // Build config with current field selections
+            const validAggType = aggType === 'list' ? 'sum' : aggType;
+            const activeConfig: TemporalComparisonConfig = {
+                ...temporalConfig,
+                groupByFields: rowFields,
+                valueField: valField,
+                aggType: validAggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
+            };
+
+            // Calculate temporal comparison
+            const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn);
+            setTemporalResults(results);
+            setIsCalculating(false);
+        }, 10);
+
+        return () => clearTimeout(timer);
+    }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType]);
 
     // --- HANDLERS ---
     const handleValFieldChange = (newField: string) => {
@@ -479,14 +617,100 @@ export const PivotTable: React.FC = () => {
         exportView(format, 'pivot-export-container', title, companyLogo, pdfMode);
     };
 
+    const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
+        setShowExportMenu(false);
+
+        if (isTemporalMode && temporalResults.length > 0 && temporalConfig) {
+            // Export temporal comparison table
+            const headers = [
+                ...temporalConfig.groupByFields,
+                ...temporalConfig.sources.flatMap(source => {
+                    const cols = [source.label];
+                    if (showVariations && source.id !== temporalConfig.referenceSourceId) {
+                        cols.push(`Δ ${source.label}`);
+                    }
+                    return cols;
+                })
+            ];
+            if (showTotalCol) headers.push('Total');
+
+            const data = temporalResults.map(result => {
+                const row: any = {};
+                const groupLabels = result.groupLabel.split('\x1F');
+                temporalConfig.groupByFields.forEach((field, idx) => {
+                    row[field] = groupLabels[idx] || '';
+                });
+
+                temporalConfig.sources.forEach(source => {
+                    const value = result.values[source.id] || 0;
+                    row[source.label] = value;
+
+                    if (showVariations && source.id !== temporalConfig.referenceSourceId) {
+                        const delta = result.deltas[source.id];
+                        row[`Δ ${source.label}`] = temporalConfig.deltaFormat === 'percentage'
+                            ? delta.percentage
+                            : delta.value;
+                    }
+                });
+
+                if (showTotalCol) {
+                    row['Total'] = Object.values(result.values).reduce((sum, val) => sum + (val || 0), 0);
+                }
+
+                return row;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Comparaison temporelle');
+            XLSX.writeFile(wb, `TCD_Comparaison_${new Date().toISOString().slice(0, 10)}.${format}`);
+        } else if (pivotData) {
+            // Export standard pivot table
+            const headers = [...rowFields, ...pivotData.colHeaders.map(h => formatDateLabelForDisplay(h))];
+            if (showTotalCol) headers.push('Total');
+
+            const data = pivotData.displayRows.map(row => {
+                const rowData: any = {};
+                rowFields.forEach((field, idx) => {
+                    rowData[field] = row.keys[idx] || '';
+                });
+
+                pivotData.colHeaders.forEach(col => {
+                    const formattedCol = formatDateLabelForDisplay(col);
+                    rowData[formattedCol] = row.metrics[col] ?? 0;
+                });
+
+                if (showTotalCol) {
+                    rowData['Total'] = row.rowTotal;
+                }
+
+                return rowData;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'TCD');
+            XLSX.writeFile(wb, `TCD_${primaryDataset?.name || 'Analyse'}_${new Date().toISOString().slice(0, 10)}.${format}`);
+        }
+    };
+
     const handleToChart = () => {
         if (!primaryDataset) return;
         if (rowFields.length === 0) {
             alert("Veuillez configurer au moins une ligne pour générer un graphique.");
             return;
         }
-        const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
-        navigate('/analytics', { state: { fromPivot: pivotConfig } });
+        setIsChartModalOpen(true);
+    };
+
+    const handleQuickChartAddToDashboard = (widgetConfig: any) => {
+        addDashboardWidget({
+            ...widgetConfig,
+            id: generateId(),
+            size: 'md',
+            style: { borderColor: 'border-slate-200', borderWidth: '1' }
+        });
+        alert("Graphique ajouté au Dashboard !");
     };
 
     const handleSaveAnalysis = () => {
@@ -495,11 +719,57 @@ export const PivotTable: React.FC = () => {
             name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
             config: {
                 sources, // Save full stack
-                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId
+                rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, styleRules, selectedBatchId,
+                isTemporalMode,
+                temporalComparison: temporalConfig || undefined
             }
         });
         setAnalysisName('');
         setIsSaving(false);
+    };
+
+    const handleLoadAnalysis = (analysisId: string) => {
+        const analysis = savedAnalyses.find(a => a.id === analysisId);
+        if (!analysis || !analysis.config) return;
+
+        const c = analysis.config;
+
+        // Restore Sources
+        if (c.sources) {
+            setSources(c.sources);
+        }
+
+        // Restore configuration
+        setRowFields(c.rowFields || []);
+        setColFields(c.colFields || (c.colField ? [c.colField] : []));
+        setColGrouping(c.colGrouping || 'none');
+        setValField(c.valField || '');
+        setAggType((c.aggType as AggregationType) || 'count');
+        setValFormatting(c.valFormatting || {});
+
+        if (c.filters) {
+            const loadedFilters = c.filters.map((f: any) => {
+                if (f.values) return { field: f.field, operator: 'in', value: f.values };
+                return f;
+            });
+            setFilters(loadedFilters);
+        } else {
+            setFilters([]);
+        }
+
+        setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
+        setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
+        setShowVariations(c.showVariations !== undefined ? c.showVariations : false);
+        setSortBy(c.sortBy || 'label');
+        setSortOrder(c.sortOrder || 'asc');
+        setStyleRules(c.styleRules || []);
+        if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
+
+        // Restore temporal comparison state
+        setIsTemporalMode(c.isTemporalMode || false);
+        setTemporalConfig(c.temporalComparison || null);
+
+        setShowLoadMenu(false);
     };
 
     // --- SOURCE MANAGEMENT ---
@@ -546,6 +816,22 @@ export const PivotTable: React.FC = () => {
         setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    // TEMPORAL SOURCE MANAGEMENT
+    const handleTemporalSourcesChange = (sources: TemporalComparisonSource[], referenceId: string) => {
+        // Ensure aggType is valid for temporal comparison (exclude 'list')
+        const validAggType = aggType === 'list' ? 'sum' : aggType;
+
+        setTemporalConfig({
+            sources,
+            referenceSourceId: referenceId,
+            periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 },
+            deltaFormat: temporalConfig?.deltaFormat || 'value',
+            groupByFields: rowFields,
+            valueField: valField,
+            aggType: validAggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
+        });
+    };
+
     // DRILLDOWN HANDLER
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
         if (!blendedRows || blendedRows.length === 0) return;
@@ -565,17 +851,47 @@ export const PivotTable: React.FC = () => {
             if (colFields.length > 0 && colLabel && colLabel !== 'Total') {
                 // Handle column grouping (dates)
                 const colValue = String(row[colFields[0]] || '');
+
+                // Convert formatted label back to internal format for comparison
+                let internalColLabel = colLabel;
+
+                // Mois: "Janvier 2025" -> "2025-01"
+                if (colGrouping === 'month') {
+                    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+                    const parts = colLabel.split(' ');
+                    if (parts.length === 2) {
+                        const monthIndex = monthNames.indexOf(parts[0]);
+                        if (monthIndex !== -1) {
+                            internalColLabel = `${parts[1]}-${String(monthIndex + 1).padStart(2, '0')}`;
+                        }
+                    }
+                }
+
+                // Trimestre: "T1 2025" -> "2025-T1"
+                if (colGrouping === 'quarter') {
+                    const match = colLabel.match(/T(\d) (\d{4})/);
+                    if (match) {
+                        internalColLabel = `${match[2]}-T${match[1]}`;
+                    }
+                }
+
                 if (colGrouping === 'year') {
-                    return colValue.startsWith(colLabel);
+                    return colValue.startsWith(internalColLabel);
                 } else if (colGrouping === 'month') {
-                    return colValue.startsWith(colLabel);
+                    return colValue.startsWith(internalColLabel);
                 } else if (colGrouping === 'quarter') {
-                    const year = colValue.substring(0, 4);
-                    const month = parseInt(colValue.substring(5, 7));
-                    const quarter = Math.ceil(month / 3);
-                    return colLabel === `${year} T${quarter}`;
+                    return colValue.startsWith(internalColLabel.substring(0, 4)) && colValue.includes(internalColLabel);
                 } else {
-                    return colValue === colLabel;
+                    // Format exact: "15/01/2025" -> comparer directement ou convertir
+                    // Si colLabel est formaté (DD/MM/YYYY), on le compare tel quel
+                    // Sinon on compare avec la valeur ISO
+                    if (colLabel.includes('/')) {
+                        // C'est une date formatée, on la compare directement
+                        return colValue === colLabel || formatDateLabelForDisplay(colValue) === colLabel;
+                    } else {
+                        return colValue === colLabel;
+                    }
                 }
             }
 
@@ -689,7 +1005,25 @@ export const PivotTable: React.FC = () => {
                         <Layout className="w-3.5 h-3.5 text-blue-600" />
                         <div>
                             <h2 className="text-[11px] font-bold text-slate-800 leading-tight">Tableau Croisé Dynamique</h2>
-                            <p className="text-[9px] text-slate-500">Glissez les champs pour analyser</p>
+                            <p className="text-[9px] text-slate-500">{isTemporalMode ? 'Comparaison temporelle' : 'Glissez les champs pour analyser'}</p>
+                        </div>
+
+                        {/* MODE TOGGLE */}
+                        <div className="ml-4 flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                            <button
+                                onClick={() => setIsTemporalMode(false)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${!isTemporalMode ? 'bg-white text-blue-600 shadow' : 'text-slate-500'}`}
+                            >
+                                <Table2 className="w-3 h-3 inline mr-1" />
+                                Standard
+                            </button>
+                            <button
+                                onClick={() => setIsTemporalMode(true)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${isTemporalMode ? 'bg-white text-blue-600 shadow' : 'text-slate-500'}`}
+                            >
+                                <Calendar className="w-3 h-3 inline mr-1" />
+                                Comparaison
+                            </button>
                         </div>
                     </div>
 
@@ -715,11 +1049,53 @@ export const PivotTable: React.FC = () => {
                                     <button onClick={() => handleExport('html')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
                                         <FileType className="w-3 h-3" /> HTML
                                     </button>
+                                    <button onClick={() => handleExportSpreadsheet('xlsx')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
+                                        <FileSpreadsheet className="w-3 h-3" /> Excel (XLSX)
+                                    </button>
+                                    <button onClick={() => handleExportSpreadsheet('csv')} className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center gap-2">
+                                        <FileText className="w-3 h-3" /> CSV
+                                    </button>
                                 </div>
                             )}
                         </div>
 
                         <div className="h-5 w-px bg-slate-200 mx-1"></div>
+
+                        {/* CHARGER */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowLoadMenu(!showLoadMenu)}
+                                disabled={!primaryDataset}
+                                className="p-1.5 text-slate-500 hover:text-green-600 border border-slate-300 rounded bg-white disabled:opacity-50"
+                                title="Charger une analyse"
+                            >
+                                <Database className="w-4 h-4" />
+                            </button>
+                            {showLoadMenu && primaryDataset && (
+                                <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 max-h-80 overflow-y-auto">
+                                    {savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === primaryDataset.id).length === 0 ? (
+                                        <div className="px-3 py-2 text-xs text-slate-500 italic">
+                                            Aucune analyse sauvegardée
+                                        </div>
+                                    ) : (
+                                        savedAnalyses
+                                            .filter(a => a.type === 'pivot' && a.datasetId === primaryDataset.id)
+                                            .map(analysis => (
+                                                <button
+                                                    key={analysis.id}
+                                                    onClick={() => handleLoadAnalysis(analysis.id)}
+                                                    className="w-full text-left px-3 py-2 text-app-base hover:bg-slate-50 flex items-center justify-between gap-2"
+                                                >
+                                                    <span className="truncate">{analysis.name}</span>
+                                                    <span className="text-xs text-slate-400 flex-shrink-0">
+                                                        {new Date(analysis.createdAt).toLocaleDateString('fr-FR')}
+                                                    </span>
+                                                </button>
+                                            ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* SAUVEGARDE */}
                         {!isSaving ? (
@@ -740,276 +1116,526 @@ export const PivotTable: React.FC = () => {
                     <div className="xl:w-72 flex-shrink-0 flex flex-col gap-2 min-w-0">
 
                         {/* 1. DATA SOURCES STACK */}
-                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[120px] max-h-[220px]">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
                             <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-                                <h3 className="text-app-base font-bold text-slate-800 flex items-center gap-2">
-                                    <Database className="w-3.5 h-3.5 text-blue-600" />
-                                    Sources de données
+                                <h3 className="text-app-base font-bold text-slate-800 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Database className="w-3.5 h-3.5 text-blue-600" />
+                                        Sources de données
+                                    </div>
+                                    <button
+                                        onClick={() => setIsDataSourcesPanelCollapsed(!isDataSourcesPanelCollapsed)}
+                                        className="text-slate-500 hover:text-slate-700 transition-colors"
+                                        title={isDataSourcesPanelCollapsed ? "Agrandir" : "Réduire"}
+                                    >
+                                        {isDataSourcesPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
+                                    </button>
                                 </h3>
                             </div>
 
-                            <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
+                            {!isDataSourcesPanelCollapsed && (
+                                <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
 
-                                {/* LISTE DES SOURCES */}
-                                {sources.length === 0 ? (
-                                    <div className="text-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
-                                        <div className="mb-3">
-                                            <Database className="w-10 h-10 mx-auto text-blue-400 mb-2" />
-                                            <p className="text-sm font-semibold text-slate-700 mb-1">Commencez votre analyse</p>
-                                            <p className="text-xs text-slate-500">Sélectionnez une source de données</p>
+                                    {/* LISTE DES SOURCES */}
+                                    {sources.length === 0 ? (
+                                        <div className="text-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
+                                            <div className="mb-3">
+                                                <Database className="w-10 h-10 mx-auto text-blue-400 mb-2" />
+                                                <p className="text-sm font-semibold text-slate-700 mb-1">Commencez votre analyse</p>
+                                                <p className="text-xs text-slate-500">Sélectionnez une source de données</p>
+                                            </div>
+                                            <button
+                                                onClick={startAddSource}
+                                                className="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" /> Définir source principale
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={startAddSource}
-                                            className="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                                        >
-                                            <Plus className="w-4 h-4" /> Définir source principale
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {sources.map((src) => {
-                                            const ds = datasets.find(d => d.id === src.datasetId);
-                                            if (!ds) return null;
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {sources.map((src) => {
+                                                const ds = datasets.find(d => d.id === src.datasetId);
+                                                if (!ds) return null;
 
-                                            const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
-                                            return (
-                                                <div key={src.id} className={`relative pl-2 border-l-2 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <div className={`text-app-base font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
-                                                            {src.isPrimary ? <Database className="w-3.5 h-3.5 flex-shrink-0" /> : <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />}
-                                                            <span className="truncate" title={ds.name}>{ds.name}</span>
-                                                            {src.isPrimary && <span className="text-[0.8em] opacity-70 ml-1">(P)</span>}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => removeSource(src.id)}
-                                                            className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-
-                                                    {src.isPrimary ? (
-                                                        <select
-                                                            className="mt-0.5 w-full text-app-base border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
-                                                            value={selectedBatchId}
-                                                            onChange={(e) => setSelectedBatchId(e.target.value)}
-                                                        >
-                                                            {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
-                                                        </select>
-                                                    ) : (
-                                                        <div className="text-app-base text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
-                                                            <div className="font-semibold text-[0.8em] text-slate-500 uppercase mb-0">Jointure sur :</div>
-                                                            <div className="font-mono">
-                                                                <span className="font-bold">{src.joinConfig?.primaryKey}</span>
-                                                                <span className="mx-1">=</span>
-                                                                <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
+                                                const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
+                                                return (
+                                                    <div key={src.id} className={`relative pl-2 border-l-2 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <div className={`text-app-base font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
+                                                                {src.isPrimary ? <Database className="w-3.5 h-3.5 flex-shrink-0" /> : <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />}
+                                                                <span className="truncate" title={ds.name}>{ds.name}</span>
+                                                                {src.isPrimary && <span className="text-[0.8em] opacity-70 ml-1">(P)</span>}
                                                             </div>
+                                                            <button
+                                                                onClick={() => removeSource(src.id)}
+                                                                className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
 
-                                        <button
-                                            onClick={startAddSource}
-                                            className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm"
-                                        >
-                                            <Plus className="w-3 h-3" /> Gérer les sources
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                                                        {src.isPrimary ? (
+                                                            <select
+                                                                className="mt-0.5 w-full text-app-base border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
+                                                                value={selectedBatchId}
+                                                                onChange={(e) => setSelectedBatchId(e.target.value)}
+                                                            >
+                                                                {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
+                                                            </select>
+                                                        ) : (
+                                                            <div className="text-app-base text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
+                                                                <div className="font-semibold text-[0.8em] text-slate-500 uppercase mb-0">Jointure sur :</div>
+                                                                <div className="font-mono">
+                                                                    <span className="font-bold">{src.joinConfig?.primaryKey}</span>
+                                                                    <span className="mx-1">=</span>
+                                                                    <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+
+                                            <button
+                                                onClick={startAddSource}
+                                                className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Plus className="w-3 h-3" /> Gérer les sources
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
-                        {/* 2. FIELDS ACCORDION */}
-                        <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-[120px] overflow-hidden">
-                            <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
-                                <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2 mb-1.5">
-                                    <Table2 className="w-3 h-3 text-green-600" />
-                                    Champs disponibles
-                                </h3>
-                                <input type="text" placeholder="Rechercher..." className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-green-400" disabled={sources.length === 0} />
-                            </div>
+                        {/* 2. TEMPORAL COMPARISON CONFIG (only shown in temporal mode) */}
+                        {isTemporalMode && (
+                            <div className="bg-white rounded-lg border border-blue-300 shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: isTemporalConfigPanelCollapsed ? '40px' : 'none' }}>
+                                <div className="p-2 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
+                                    <h3 className="text-app-base font-bold text-slate-800 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                                            Configuration Temporelle
+                                        </div>
+                                        <button
+                                            onClick={() => setIsTemporalConfigPanelCollapsed(!isTemporalConfigPanelCollapsed)}
+                                            className="text-slate-500 hover:text-slate-700 transition-colors"
+                                            title={isTemporalConfigPanelCollapsed ? "Agrandir" : "Réduire"}
+                                        >
+                                            {isTemporalConfigPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
+                                        </button>
+                                    </h3>
+                                </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                                {sources.length === 0 && (
-                                    <div className="text-center py-6 text-slate-300 text-[10px] italic">
-                                        Ajoutez une source pour voir les champs disponibles.
-                                    </div>
-                                )}
-                                {groupedFields.map(group => {
-                                    const groupColorClasses = SOURCE_COLOR_CLASSES[group.color] || SOURCE_COLOR_CLASSES.blue;
-                                    return (
-                                        <div key={group.id} className="mb-2">
+                                {!isTemporalConfigPanelCollapsed && (
+                                    <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar">
+                                        {/* SOURCE SELECTION */}
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-600 mb-1 block">Sources à comparer (2-4)</label>
                                             <button
-                                                onClick={() => toggleSection(group.id)}
-                                                className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
+                                                onClick={() => setIsTemporalSourceModalOpen(true)}
+                                                className="w-full px-2 py-1 text-[10px] bg-purple-50 text-purple-700 border border-purple-300 rounded hover:bg-purple-100 font-bold"
+                                                disabled={!primaryDataset}
                                             >
-                                                {expandedSections[group.id] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
-                                                {group.name}
+                                                + Configurer les sources
                                             </button>
 
-                                            {expandedSections[group.id] && (
-                                                <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
-                                                    {group.fields.map((f: string) => (
-                                                        <FieldChip
-                                                            key={f}
-                                                            field={f}
-                                                            zone="list"
-                                                            disabled={usedFields.has(f)}
-                                                            color={group.color}
-                                                        />
+                                            {temporalConfig && temporalConfig.sources.length > 0 && (
+                                                <div className="mt-2 space-y-1">
+                                                    {temporalConfig.sources.map((src, idx) => (
+                                                        <div key={src.id} className={`p-1.5 rounded text-[10px] border ${temporalConfig.referenceSourceId === src.id ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                                                            <div className="font-bold">{src.label}</div>
+                                                            <div className="text-slate-500">Import: {formatDateFr(new Date(src.importDate).toISOString().split('T')[0])}</div>
+                                                            {temporalConfig.referenceSourceId === src.id && (
+                                                                <div className="text-blue-600 text-[9px] font-bold">✓ Référence</div>
+                                                            )}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
 
-                        {/* 3. DROP ZONES (Compact Layout) */}
-                        <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                            {/* ZONES ROW 1: FILTERS & COLUMNS */}
-                            <div className="grid grid-cols-2 gap-3">
-                                {/* FILTRES */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'filter')}
-                                    className={`bg-white rounded-lg border-2 border-dashed p-1.5 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2.5 h-2.5" /> Filtres</div>
-                                    <div className="space-y-1 flex-1">
-                                        {filters.map((f, idx) => (
-                                            <div key={idx} className="relative group">
-                                                <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
-                                                {/* Mini Config Filter */}
-                                                <div className="mt-0.5 pl-1">
-                                                    <select
-                                                        className="w-full text-[10px] border border-slate-200 rounded p-0.5 bg-slate-50"
-                                                        value={f.operator || 'in'}
-                                                        onChange={(e) => {
-                                                            const n = [...filters];
-                                                            n[idx] = { ...n[idx], operator: e.target.value as any };
-                                                            setFilters(n);
-                                                        }}
-                                                    >
-                                                        <option value="in">Est égal à</option>
-                                                        <option value="contains">Contient</option>
-                                                        <option value="gt">&gt;</option>
-                                                        <option value="lt">&lt;</option>
-                                                    </select>
-                                                    {/* Simplified Value Input */}
-                                                    <input
-                                                        type="text"
-                                                        className="w-full text-[10px] border border-slate-200 rounded p-0.5 mt-0.5"
-                                                        placeholder="Valeur..."
-                                                        value={Array.isArray(f.value) ? f.value.join(',') : f.value}
-                                                        onChange={(e) => {
-                                                            const n = [...filters];
-                                                            n[idx] = { ...n[idx], value: f.operator === 'in' ? e.target.value.split(',') : e.target.value };
-                                                            setFilters(n);
-                                                        }}
-                                                    />
+                                        {/* PERIOD FILTER */}
+                                        {temporalConfig && (
+                                            <>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Période</label>
+                                                    <div className="grid grid-cols-2 gap-1">
+                                                        <div>
+                                                            <label className="text-[9px] text-slate-500">Mois début</label>
+                                                            <select
+                                                                className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
+                                                                value={temporalConfig.periodFilter.startMonth}
+                                                                onChange={(e) => setTemporalConfig({
+                                                                    ...temporalConfig,
+                                                                    periodFilter: { ...temporalConfig.periodFilter, startMonth: Number(e.target.value) }
+                                                                })}
+                                                            >
+                                                                {[...Array(12)].map((_, i) => (
+                                                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[9px] text-slate-500">Mois fin</label>
+                                                            <select
+                                                                className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
+                                                                value={temporalConfig.periodFilter.endMonth}
+                                                                onChange={(e) => setTemporalConfig({
+                                                                    ...temporalConfig,
+                                                                    periodFilter: { ...temporalConfig.periodFilter, endMonth: Number(e.target.value) }
+                                                                })}
+                                                            >
+                                                                {[...Array(12)].map((_, i) => (
+                                                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
 
-                                {/* COLONNES */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'col')}
-                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2.5 h-2.5" /> Colonnes</div>
-                                    <div className="space-y-1 flex-1">
-                                        {colFields.map((f, idx) => (
-                                            <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
-                                        ))}
-                                        {colFields.length === 0 ? <span className="text-[10px] text-slate-300 italic">Déposez ici</span> : (
-                                            isColFieldDate && (
-                                                <select
-                                                    className="w-full mt-0.5 text-[10px] border-slate-200 rounded bg-slate-50 p-0.5"
-                                                    value={colGrouping}
-                                                    onChange={(e) => setColGrouping(e.target.value as any)}
-                                                >
-                                                    <option value="none">Exacte</option>
-                                                    <option value="year">Année</option>
-                                                    <option value="quarter">Trimestre</option>
-                                                    <option value="month">Mois</option>
-                                                </select>
-                                            )
+                                                {/* GROUPING FIELDS */}
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Regrouper par</label>
+
+                                                    {/* Selected fields with reorder controls */}
+                                                    <div className="space-y-1 mb-2">
+                                                        {rowFields.map((field, idx) => (
+                                                            <div key={field} className="flex items-center gap-1 bg-blue-50 border border-blue-300 rounded px-1.5 py-0.5">
+                                                                <span className="text-[10px] font-medium text-blue-700 flex-1">{field}</span>
+                                                                <div className="flex items-center gap-0.5">
+                                                                    {/* Move up */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (idx > 0) {
+                                                                                const newFields = [...rowFields];
+                                                                                [newFields[idx - 1], newFields[idx]] = [newFields[idx], newFields[idx - 1]];
+                                                                                setRowFields(newFields);
+                                                                            }
+                                                                        }}
+                                                                        disabled={idx === 0}
+                                                                        className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                        title="Monter"
+                                                                    >
+                                                                        <ArrowUp className="w-3 h-3" />
+                                                                    </button>
+                                                                    {/* Move down */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (idx < rowFields.length - 1) {
+                                                                                const newFields = [...rowFields];
+                                                                                [newFields[idx + 1], newFields[idx]] = [newFields[idx], newFields[idx + 1]];
+                                                                                setRowFields(newFields);
+                                                                            }
+                                                                        }}
+                                                                        disabled={idx === rowFields.length - 1}
+                                                                        className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                        title="Descendre"
+                                                                    >
+                                                                        <ArrowDown className="w-3 h-3" />
+                                                                    </button>
+                                                                    {/* Remove */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setRowFields(rowFields.filter(f => f !== field));
+                                                                        }}
+                                                                        className="p-0.5 text-red-500 hover:bg-red-100 rounded"
+                                                                        title="Supprimer"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Add field dropdown */}
+                                                    <select
+                                                        className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
+                                                        value=""
+                                                        onChange={(e) => {
+                                                            const field = e.target.value;
+                                                            if (field && !rowFields.includes(field)) {
+                                                                setRowFields([...rowFields, field]);
+                                                            }
+                                                        }}
+                                                        disabled={!primaryDataset}
+                                                    >
+                                                        <option value="">+ Ajouter un champ...</option>
+                                                        {allAvailableFields
+                                                            .filter(field => !rowFields.includes(field))
+                                                            .map(field => (
+                                                                <option key={field} value={field}>{field}</option>
+                                                            ))}
+                                                    </select>
+                                                    <div className="text-[9px] text-slate-500 mt-1">
+                                                        Utilisez ↑ ↓ pour réordonner les champs
+                                                    </div>
+                                                </div>
+
+                                                {/* VALUE FIELD */}
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Valeur à agréger</label>
+                                                    <select
+                                                        className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
+                                                        value={valField}
+                                                        onChange={(e) => handleValFieldChange(e.target.value)}
+                                                        disabled={!primaryDataset}
+                                                    >
+                                                        <option value="">-- Sélectionnez un champ --</option>
+                                                        {allAvailableFields.map(field => (
+                                                            <option key={field} value={field}>{field}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* AGGREGATION TYPE */}
+                                                {valField && (
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-slate-600 mb-1 block">Type d'agrégation</label>
+                                                        <div className="grid grid-cols-2 gap-1">
+                                                            {['count', 'sum', 'avg', 'min', 'max'].map(t => (
+                                                                <button
+                                                                    key={t}
+                                                                    onClick={() => setAggType(t as AggregationType)}
+                                                                    className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                                >
+                                                                    {t}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* DELTA FORMAT */}
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Format des écarts</label>
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'value' })}
+                                                            className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'value' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                        >
+                                                            Valeur
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'percentage' })}
+                                                            className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'percentage' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                        >
+                                                            %
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 3. FIELDS ACCORDION */}
+                        <div className={`bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden ${isFieldsPanelCollapsed ? 'flex-none' : 'flex-1'}`} style={{ minHeight: isFieldsPanelCollapsed ? '40px' : '120px', maxHeight: isFieldsPanelCollapsed ? '40px' : 'none' }}>
+                            <div className="p-2 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <h3 className="text-[11px] font-bold text-slate-800 flex items-center gap-2">
+                                        <Table2 className="w-3 h-3 text-green-600" />
+                                        Champs disponibles
+                                    </h3>
+                                    <button
+                                        onClick={() => setIsFieldsPanelCollapsed(!isFieldsPanelCollapsed)}
+                                        className="text-slate-500 hover:text-slate-700 transition-colors"
+                                        title={isFieldsPanelCollapsed ? "Agrandir" : "Réduire"}
+                                    >
+                                        {isFieldsPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
+                                    </button>
                                 </div>
+                                {!isFieldsPanelCollapsed && (
+                                    <input type="text" placeholder="Rechercher..." className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-green-400" disabled={sources.length === 0} />
+                                )}
                             </div>
 
-                            {/* ZONES ROW 2: ROWS & VALUES */}
-                            <div className="grid grid-cols-2 gap-2">
-                                {/* LIGNES */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'row')}
-                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2.5 h-2.5" /> Lignes</div>
-                                    <div className="space-y-1 flex-1">
-                                        {rowFields.map((f, idx) => (
-                                            <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
-                                        ))}
-                                        {rowFields.length === 0 && <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
-                                    </div>
-                                </div>
+                            {!isFieldsPanelCollapsed && (
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                                    {sources.length === 0 && (
+                                        <div className="text-center py-6 text-slate-300 text-[10px] italic">
+                                            Ajoutez une source pour voir les champs disponibles.
+                                        </div>
+                                    )}
+                                    {groupedFields.map(group => {
+                                        const groupColorClasses = SOURCE_COLOR_CLASSES[group.color] || SOURCE_COLOR_CLASSES.blue;
+                                        return (
+                                            <div key={group.id} className="mb-2">
+                                                <button
+                                                    onClick={() => toggleSection(group.id)}
+                                                    className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
+                                                >
+                                                    {expandedSections[group.id] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
+                                                    {group.name}
+                                                </button>
 
-                                {/* VALEURS */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'val')}
-                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2.5 h-2.5" /> Valeurs</div>
-                                    <div className="space-y-1 flex-1">
-                                        {valField ? (
-                                            <div>
-                                                <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
-                                                <div className="mt-1 grid grid-cols-2 gap-1">
-                                                    {['count', 'sum', 'avg', 'min', 'max'].map(t => (
-                                                        <button
-                                                            key={t}
-                                                            onClick={() => setAggType(t as AggregationType)}
-                                                            className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                                                        >
-                                                            {t}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                {/* Format Override */}
-                                                {aggType !== 'count' && (
-                                                    <div className="mt-1 pt-1 border-t border-slate-100">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Déc."
-                                                            className="w-full text-[10px] border-slate-200 rounded p-0.5 mb-0.5"
-                                                            value={valFormatting.decimalPlaces ?? ''}
-                                                            onChange={e => setValFormatting({ ...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined })}
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Unité"
-                                                            className="w-full text-[10px] border-slate-200 rounded p-0.5"
-                                                            value={valFormatting.unit ?? ''}
-                                                            onChange={e => setValFormatting({ ...valFormatting, unit: e.target.value })}
-                                                        />
+                                                {expandedSections[group.id] && (
+                                                    <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                                        {group.fields.map((f: string) => (
+                                                            <FieldChip
+                                                                key={f}
+                                                                field={f}
+                                                                zone="list"
+                                                                disabled={usedFields.has(f)}
+                                                                color={group.color}
+                                                            />
+                                                        ))}
                                                     </div>
                                                 )}
                                             </div>
-                                        ) : <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 3. DROP ZONES (Compact Layout) - Hidden in temporal comparison mode */}
+                        {!isTemporalMode && (
+                            <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                                {/* ZONES ROW 1: FILTERS & COLUMNS */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* FILTRES */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'filter')}
+                                        className={`bg-white rounded-lg border-2 border-dashed p-1.5 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2.5 h-2.5" /> Filtres</div>
+                                        <div className="space-y-1 flex-1">
+                                            {filters.map((f, idx) => (
+                                                <div key={idx} className="relative group">
+                                                    <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
+                                                    {/* Mini Config Filter */}
+                                                    <div className="mt-0.5 pl-1">
+                                                        <select
+                                                            className="w-full text-[10px] border border-slate-200 rounded p-0.5 bg-slate-50"
+                                                            value={f.operator || 'in'}
+                                                            onChange={(e) => {
+                                                                const n = [...filters];
+                                                                n[idx] = { ...n[idx], operator: e.target.value as any };
+                                                                setFilters(n);
+                                                            }}
+                                                        >
+                                                            <option value="in">Est égal à</option>
+                                                            <option value="contains">Contient</option>
+                                                            <option value="gt">&gt;</option>
+                                                            <option value="lt">&lt;</option>
+                                                        </select>
+                                                        {/* Simplified Value Input */}
+                                                        <input
+                                                            type="text"
+                                                            className="w-full text-[10px] border border-slate-200 rounded p-0.5 mt-0.5"
+                                                            placeholder="Valeur..."
+                                                            value={Array.isArray(f.value) ? f.value.join(',') : f.value}
+                                                            onChange={(e) => {
+                                                                const n = [...filters];
+                                                                n[idx] = { ...n[idx], value: f.operator === 'in' ? e.target.value.split(',') : e.target.value };
+                                                                setFilters(n);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* COLONNES */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'col')}
+                                        className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2.5 h-2.5" /> Colonnes</div>
+                                        <div className="space-y-1 flex-1">
+                                            {colFields.map((f, idx) => (
+                                                <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
+                                            ))}
+                                            {colFields.length === 0 ? <span className="text-[10px] text-slate-300 italic">Déposez ici</span> : (
+                                                isColFieldDate && (
+                                                    <select
+                                                        className="w-full mt-0.5 text-[10px] border-slate-200 rounded bg-slate-50 p-0.5"
+                                                        value={colGrouping}
+                                                        onChange={(e) => setColGrouping(e.target.value as any)}
+                                                    >
+                                                        <option value="none">Exacte</option>
+                                                        <option value="year">Année</option>
+                                                        <option value="quarter">Trimestre</option>
+                                                        <option value="month">Mois</option>
+                                                    </select>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ZONES ROW 2: ROWS & VALUES */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    {/* LIGNES */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'row')}
+                                        className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2.5 h-2.5" /> Lignes</div>
+                                        <div className="space-y-1 flex-1">
+                                            {rowFields.map((f, idx) => (
+                                                <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
+                                            ))}
+                                            {rowFields.length === 0 && <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
+                                        </div>
+                                    </div>
+
+                                    {/* VALEURS */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'val')}
+                                        className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2.5 h-2.5" /> Valeurs</div>
+                                        <div className="space-y-1 flex-1">
+                                            {valField ? (
+                                                <div>
+                                                    <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
+                                                    <div className="mt-1 grid grid-cols-2 gap-1">
+                                                        {['count', 'sum', 'avg', 'min', 'max'].map(t => (
+                                                            <button
+                                                                key={t}
+                                                                onClick={() => setAggType(t as AggregationType)}
+                                                                className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                            >
+                                                                {t}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    {/* Format Override */}
+                                                    {aggType !== 'count' && (
+                                                        <div className="mt-1 pt-1 border-t border-slate-100">
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Déc."
+                                                                className="w-full text-[10px] border-slate-200 rounded p-0.5 mb-0.5"
+                                                                value={valFormatting.decimalPlaces ?? ''}
+                                                                onChange={e => setValFormatting({ ...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined })}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Unité"
+                                                                className="w-full text-[10px] border-slate-200 rounded p-0.5"
+                                                                value={valFormatting.unit ?? ''}
+                                                                onChange={e => setValFormatting({ ...valFormatting, unit: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* DISPLAY OPTIONS */}
                         <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
@@ -1035,7 +1661,94 @@ export const PivotTable: React.FC = () => {
                             </div>
                         )}
 
-                        {pivotData ? (
+                        {/* TEMPORAL COMPARISON TABLE */}
+                        {isTemporalMode && temporalResults.length > 0 && temporalConfig ? (
+                            <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar w-full relative">
+                                <table className="min-w-full divide-y divide-slate-200 border-collapse">
+                                    <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            {/* Group Headers */}
+                                            {temporalConfig.groupByFields.map((field, idx) => (
+                                                <th key={field} className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap">
+                                                    {field}
+                                                </th>
+                                            ))}
+
+                                            {/* Source Columns */}
+                                            {temporalConfig.sources.map(source => (
+                                                <React.Fragment key={source.id}>
+                                                    <th className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`}>
+                                                        {source.label}
+                                                    </th>
+                                                    {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                                        <th className="px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700">
+                                                            Δ {temporalConfig.deltaFormat === 'percentage' ? '%' : ''}
+                                                        </th>
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+
+                                            {/* Total Column */}
+                                            {showTotalCol && (
+                                                <th className="px-2 py-1.5 text-right text-[0.9em] font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
+                                                    Total
+                                                </th>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-200">
+                                        {temporalResults.map((result, idx) => (
+                                            <tr key={result.groupKey} className="hover:bg-blue-50/30">
+                                                {/* Group Labels */}
+                                                {result.groupLabel.split('\x1F').map((label, gIdx) => (
+                                                    <td key={gIdx} className="px-2 py-1 text-[0.9em] text-slate-700 border-r border-slate-200 whitespace-nowrap">
+                                                        {label}
+                                                    </td>
+                                                ))}
+
+                                                {/* Values */}
+                                                {temporalConfig.sources.map(source => {
+                                                    const value = result.values[source.id] || 0;
+                                                    const delta = result.deltas[source.id];
+
+                                                    return (
+                                                        <React.Fragment key={source.id}>
+                                                            <td
+                                                                className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30 font-bold' : ''}`}
+                                                                onClick={() => result.details && setDrilldownData({
+                                                                    rows: result.details,
+                                                                    title: `Détails: ${result.groupLabel}`,
+                                                                    fields: primaryDataset?.fields || []
+                                                                })}
+                                                                title="Cliquez pour voir les détails"
+                                                            >
+                                                                {formatCurrency(value)}
+                                                            </td>
+
+                                                            {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                                                <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums font-bold ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                                    {temporalConfig.deltaFormat === 'percentage'
+                                                                        ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-')
+                                                                        : (delta.value !== 0 ? (delta.value > 0 ? '+' : '') + formatCurrency(delta.value) : '-')
+                                                                    }
+                                                                </td>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+
+                                                {/* Total Row */}
+                                                {showTotalCol && (
+                                                    <td className="px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums font-black bg-slate-50">
+                                                        {formatCurrency(Object.values(result.values).reduce((sum, val) => sum + (val || 0), 0))}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : pivotData ? (
                             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
                                 <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
                                     <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full">
@@ -1052,7 +1765,12 @@ export const PivotTable: React.FC = () => {
                                                 {pivotData.colHeaders.map(col => {
                                                     const isDiff = col.endsWith('_DIFF');
                                                     const isPct = col.endsWith('_PCT');
-                                                    const label = isDiff ? 'Var.' : isPct ? '%' : col;
+                                                    let label = isDiff ? 'Var.' : isPct ? '%' : col;
+
+                                                    // Formater les labels de date en français
+                                                    if (!isDiff && !isPct) {
+                                                        label = formatDateLabelForDisplay(label);
+                                                    }
 
                                                     return (
                                                         <th key={col} className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
@@ -1183,7 +1901,7 @@ export const PivotTable: React.FC = () => {
 
                         {/* FOOTER TOTALS (FIXED OUTSIDE SCROLL) */}
                         {pivotData && (
-                            <div className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-hidden flex-shrink-0">
+                            <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-auto flex-shrink-0 custom-scrollbar">
                                 <table className="min-w-full divide-y divide-slate-200">
                                     <tbody className="font-bold">
                                         <tr>
@@ -1233,6 +1951,30 @@ export const PivotTable: React.FC = () => {
                 title={drilldownData?.title || ''}
                 rows={drilldownData?.rows || []}
                 fields={drilldownData?.fields || []}
+            />
+
+            {/* Modal de configuration temporelle */}
+            <TemporalSourceModal
+                isOpen={isTemporalSourceModalOpen}
+                onClose={() => setIsTemporalSourceModalOpen(false)}
+                primaryDataset={primaryDataset || null}
+                batches={batches}
+                currentSources={temporalConfig?.sources || []}
+                onSourcesChange={handleTemporalSourcesChange}
+            />
+
+            {/* Quick Chart Modal */}
+            <PivotChartModal
+                isOpen={isChartModalOpen}
+                onClose={() => setIsChartModalOpen(false)}
+                pivotData={pivotData}
+                config={{
+                    rowFields,
+                    colFields,
+                    valField,
+                    aggType
+                }}
+                onAddToDashboard={handleQuickChartAddToDashboard}
             />
         </>
     );
