@@ -518,13 +518,13 @@ export const PivotTable: React.FC = () => {
             };
 
             // Calculate temporal comparison
-            const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn);
+            const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals);
             setTemporalResults(results);
             setIsCalculating(false);
         }, 150); // Increased from 10ms to 150ms
 
         return () => clearTimeout(timer);
-    }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType]);
+    }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals]);
 
     // --- HANDLERS ---
     const handleValFieldChange = (newField: string) => {
@@ -1164,14 +1164,14 @@ export const PivotTable: React.FC = () => {
 
                                                     {src.isPrimary ? (
                                                         <select
-                                                            className="mt-0.5 w-full text-app-base border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
+                                                            className="mt-0.5 w-full text-xs border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
                                                             value={selectedBatchId}
                                                             onChange={(e) => setSelectedBatchId(e.target.value)}
                                                         >
                                                             {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
                                                         </select>
                                                     ) : (
-                                                        <div className="text-app-base text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
+                                                        <div className="text-xs text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
                                                             <div className="font-semibold text-xs text-slate-500 uppercase mb-0">Jointure sur :</div>
                                                             <div className="font-mono">
                                                                 <span className="font-bold">{src.joinConfig?.primaryKey}</span>
@@ -1747,36 +1747,54 @@ export const PivotTable: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-slate-200">
-                                        {temporalResults.map((result, idx) => (
-                                            <tr key={result.groupKey} className="hover:bg-blue-50/30">
+                                        {temporalResults.map((result, idx) => {
+                                            const isSubtotal = result.isSubtotal || false;
+                                            const subtotalLevel = result.subtotalLevel || 0;
+                                            const rowClass = isSubtotal
+                                                ? `bg-slate-100 font-bold border-t-2 border-slate-300 ${subtotalLevel === 0 ? 'text-slate-800' : 'text-slate-700'}`
+                                                : 'hover:bg-blue-50/30';
+
+                                            return (
+                                            <tr key={result.groupKey} className={rowClass}>
                                                 {/* Group Labels */}
-                                                {result.groupLabel.split('\x1F').map((label, gIdx) => (
-                                                    <td key={gIdx} className="px-2 py-1 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap">
-                                                        {label}
+                                                {result.groupLabel.split('\x1F').map((label, gIdx) => {
+                                                    // Pour les sous-totaux, n'afficher que les premières colonnes pertinentes
+                                                    const shouldDisplay = !isSubtotal || gIdx <= subtotalLevel;
+                                                    const cellClass = isSubtotal
+                                                        ? `px-2 py-2 text-sm font-bold border-r border-slate-300 whitespace-nowrap ${gIdx === subtotalLevel ? 'text-slate-900' : 'text-slate-600'}`
+                                                        : "px-2 py-1 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap";
+
+                                                    return (
+                                                    <td key={gIdx} className={cellClass} colSpan={isSubtotal && gIdx === subtotalLevel ? temporalConfig.groupByFields.length - subtotalLevel : 1}>
+                                                        {shouldDisplay ? (gIdx === subtotalLevel && isSubtotal ? `Total ${label}` : label) : ''}
                                                     </td>
-                                                ))}
+                                                    );
+                                                })}
 
                                                 {/* Values */}
                                                 {temporalConfig.sources.map(source => {
                                                     const value = result.values[source.id] || 0;
                                                     const delta = result.deltas[source.id];
+                                                    const valueCellClass = isSubtotal
+                                                        ? `px-2 py-2 text-xs text-right border-r border-slate-300 tabular-nums font-black ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-900' : 'bg-slate-100 text-slate-900'}`
+                                                        : `px-2 py-1 text-xs text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30 font-bold' : ''}`;
 
                                                     return (
                                                         <React.Fragment key={source.id}>
                                                             <td
-                                                                className={`px-2 py-1 text-xs text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30 font-bold' : ''}`}
-                                                                onClick={() => result.details && setDrilldownData({
+                                                                className={valueCellClass}
+                                                                onClick={() => !isSubtotal && result.details && setDrilldownData({
                                                                     rows: result.details,
-                                                                    title: `Détails: ${result.groupLabel}`,
+                                                                    title: `Détails: ${result.groupLabel.split('\x1F').join(' - ')}`,
                                                                     fields: primaryDataset?.fields || []
                                                                 })}
-                                                                title="Cliquez pour voir les détails"
+                                                                title={isSubtotal ? undefined : "Cliquez pour voir les détails"}
                                                             >
                                                                 {formatCurrency(value)}
                                                             </td>
 
                                                             {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                                                <td className={`px-2 py-1 text-xs text-right border-r border-slate-100 tabular-nums font-bold ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                                <td className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold ${isSubtotal ? 'bg-slate-100 border-slate-300' : 'border-slate-100'} ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`}>
                                                                     {temporalConfig.deltaFormat === 'percentage'
                                                                         ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-')
                                                                         : (delta.value !== 0 ? (delta.value > 0 ? '+' : '') + formatCurrency(delta.value) : '-')
@@ -1789,12 +1807,13 @@ export const PivotTable: React.FC = () => {
 
                                                 {/* Total Row */}
                                                 {showTotalCol && (
-                                                    <td className="px-2 py-1 text-xs text-right border-r border-slate-100 tabular-nums font-black bg-slate-50">
+                                                    <td className={`px-2 py-1 text-xs text-right border-r tabular-nums ${isSubtotal ? 'font-black bg-slate-200 border-slate-300' : 'font-black bg-slate-50 border-slate-100'}`}>
                                                         {formatCurrency(Object.values(result.values).reduce((sum, val) => sum + (val || 0), 0))}
                                                     </td>
                                                 )}
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

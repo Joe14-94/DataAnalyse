@@ -124,6 +124,8 @@ export interface TemporalComparisonResult {
   values: { [sourceId: string]: number };  // Valeurs par source
   deltas: { [sourceId: string]: { value: number; percentage: number } };  // Deltas vs référence
   details?: DataRow[];  // Détails pour drilldown
+  isSubtotal?: boolean;  // Indique si c'est une ligne de sous-total
+  subtotalLevel?: number;  // Niveau de sous-total (0 = premier niveau, 1 = deuxième niveau, etc.)
 }
 
 export interface PivotState {

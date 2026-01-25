@@ -65,11 +65,11 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                 return;
             }
 
-            // Auto-generate label
+            // Auto-generate label with import date for uniqueness
             const batch = datasetBatches.find(b => b.id === batchId);
             if (batch) {
                 const year = detectYearForBatch(batch);
-                const autoLabel = year ? `${year}` : formatDateFr(batch.date);
+                const autoLabel = `Import: ${formatDateFr(batch.date)}`;
                 setLabels(prev => ({ ...prev, [batchId]: autoLabel }));
             }
 
