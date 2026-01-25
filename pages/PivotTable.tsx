@@ -340,6 +340,22 @@ export const PivotTable: React.FC = () => {
         if (!exists) setSelectedBatchId(datasetBatches[0].id);
     }, [datasetBatches, selectedBatchId, isLoading, isInitialized]);
 
+    // Sync temporalConfig.groupByFields with rowFields when in temporal mode
+    useEffect(() => {
+        if (isTemporalMode && temporalConfig) {
+            setTemporalConfig(prev => {
+                if (!prev) return prev;
+                // Only update if groupByFields has actually changed
+                const currentFields = prev.groupByFields.join(',');
+                const newFields = rowFields.join(',');
+                if (currentFields !== newFields) {
+                    return { ...prev, groupByFields: rowFields };
+                }
+                return prev;
+            });
+        }
+    }, [rowFields, isTemporalMode]);
+
     // --- HELPERS ---
     const currentBatch = useMemo(() =>
         datasetBatches.find(b => b.id === selectedBatchId) || datasetBatches[0],
