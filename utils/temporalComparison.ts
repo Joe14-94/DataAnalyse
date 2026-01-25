@@ -103,7 +103,8 @@ export const aggregateDataByGroup = (
   data.forEach(row => {
     // Créer la clé de regroupement
     const groupKey = groupByFields.map(field => row[field] || '').join('|');
-    const groupLabel = groupByFields.map(field => row[field] || '(vide)').join(' - ');
+    // Utiliser un séparateur de contrôle spécial qui ne sera jamais dans les données utilisateur
+    const groupLabel = groupByFields.map(field => row[field] || '(vide)').join('\x1F');
 
     if (!groups.has(groupKey)) {
       groups.set(groupKey, {
