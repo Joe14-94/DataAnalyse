@@ -2037,7 +2037,16 @@ export const PivotTable: React.FC = () => {
                                 <table className="min-w-full divide-y divide-slate-200">
                                     <tbody className="font-bold">
                                         <tr>
-                                            <td className="px-4 py-3 text-right text-sm uppercase text-slate-600" style={{ width: '200px' }}>Total Général</td>
+                                            {/* Row headers - one cell per rowField to match table structure */}
+                                            {rowFields.map((field, idx) => (
+                                                <td
+                                                    key={field}
+                                                    className="px-2 py-3 text-right text-sm uppercase text-slate-600 border-r border-slate-200 bg-slate-50 sticky left-0 z-10"
+                                                    style={{ minWidth: '120px' }}
+                                                >
+                                                    {idx === rowFields.length - 1 ? 'Total Général' : ''}
+                                                </td>
+                                            ))}
                                             {pivotData.colHeaders.map(col => {
                                                 const isPct = col.endsWith('_PCT');
                                                 const val = pivotData.colTotals[col];
@@ -2045,13 +2054,13 @@ export const PivotTable: React.FC = () => {
                                                 if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
 
                                                 return (
-                                                    <td key={col} className="px-4 py-3 text-right text-sm text-slate-900 border-r border-slate-200">
+                                                    <td key={col} className="px-2 py-3 text-right text-sm text-slate-900 border-r border-slate-200">
                                                         {formatted}
                                                     </td>
                                                 );
                                             })}
                                             {showTotalCol && (
-                                                <td className="px-4 py-3 text-right text-sm text-black bg-slate-200 border-l border-slate-300">
+                                                <td className="px-2 py-3 text-right text-sm text-black bg-slate-200 border-l border-slate-300">
                                                     {formatOutput(pivotData.grandTotal)}
                                                 </td>
                                             )}

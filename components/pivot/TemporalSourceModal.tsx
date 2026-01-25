@@ -27,9 +27,22 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
     const [referenceId, setReferenceId] = useState<string>(
         currentSources.find(s => s.label.includes('2024'))?.id || ''
     );
-    const [labels, setLabels] = useState<{ [batchId: string]: string }>(
-        Object.fromEntries(currentSources.map(s => [s.batchId, s.label]))
-    );
+
+    // Initialize labels with proper format for existing sources
+    const [labels, setLabels] = useState<{ [batchId: string]: string }>(() => {
+        const initialLabels: { [batchId: string]: string } = {};
+        currentSources.forEach(s => {
+            const batch = batches.find(b => b.id === s.batchId);
+            if (batch) {
+                // Force the new format for all labels
+                initialLabels[s.batchId] = `Import: ${formatDateFr(batch.date)}`;
+            } else {
+                // Fallback to existing label if batch not found
+                initialLabels[s.batchId] = s.label;
+            }
+        });
+        return initialLabels;
+    });
 
     // Get batches for primary dataset
     const datasetBatches = useMemo(() => {
