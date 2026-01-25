@@ -1808,7 +1808,12 @@ export const PivotTable: React.FC = () => {
 
                                                     return Array.from({ length: numFields }, (_, gIdx) => {
                                                         const label = labels[gIdx] || '';
-                                                        // Pour les sous-totaux, n'afficher que les premières colonnes pertinentes
+
+                                                        // Pour les sous-totaux, ne pas rendre les cellules après le niveau du sous-total
+                                                        if (isSubtotal && gIdx > subtotalLevel) {
+                                                            return null;
+                                                        }
+
                                                         const shouldDisplay = !isSubtotal || gIdx <= subtotalLevel;
                                                         const cellClass = isSubtotal
                                                             ? `px-2 py-2 text-sm font-bold border-r border-slate-300 whitespace-nowrap ${gIdx === subtotalLevel ? 'text-slate-900' : 'text-slate-600'}`
