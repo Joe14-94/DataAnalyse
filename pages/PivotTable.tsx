@@ -19,6 +19,7 @@ import { calculatePivotData, formatPivotOutput, AggregationType, SortBy, SortOrd
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
+import { PivotChartModal } from '../components/pivot/PivotChartModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import {
     calculateTemporalComparison,
@@ -88,7 +89,8 @@ const SOURCE_COLOR_CLASSES: Record<string, { border: string, text: string, bg: s
 export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
-        lastPivotState, savePivotState, isLoading, companyLogo
+        lastPivotState, savePivotState, isLoading, companyLogo,
+        addDashboardWidget
     } = useData();
     const navigate = useNavigate();
 
@@ -148,6 +150,9 @@ export const PivotTable: React.FC = () => {
     const [temporalConfig, setTemporalConfig] = useState<TemporalComparisonConfig | null>(null);
     const [temporalResults, setTemporalResults] = useState<TemporalComparisonResult[]>([]);
     const [isTemporalSourceModalOpen, setIsTemporalSourceModalOpen] = useState(false);
+
+    // CHART MODAL STATE
+    const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
     // VIRTUALIZATION
     const parentRef = useRef<HTMLDivElement>(null);
@@ -695,8 +700,17 @@ export const PivotTable: React.FC = () => {
             alert("Veuillez configurer au moins une ligne pour générer un graphique.");
             return;
         }
-        const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
-        navigate('/analytics', { state: { fromPivot: pivotConfig } });
+        setIsChartModalOpen(true);
+    };
+
+    const handleQuickChartAddToDashboard = (widgetConfig: any) => {
+        addDashboardWidget({
+            ...widgetConfig,
+            id: generateId(),
+            size: 'md',
+            style: { borderColor: 'border-slate-200', borderWidth: '1' }
+        });
+        alert("Graphique ajouté au Dashboard !");
     };
 
     const handleSaveAnalysis = () => {
@@ -844,7 +858,7 @@ export const PivotTable: React.FC = () => {
                 // Mois: "Janvier 2025" -> "2025-01"
                 if (colGrouping === 'month') {
                     const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
                     const parts = colLabel.split(' ');
                     if (parts.length === 2) {
                         const monthIndex = monthNames.indexOf(parts[0]);
@@ -1122,74 +1136,74 @@ export const PivotTable: React.FC = () => {
                             {!isDataSourcesPanelCollapsed && (
                                 <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
 
-                                {/* LISTE DES SOURCES */}
-                                {sources.length === 0 ? (
-                                    <div className="text-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
-                                        <div className="mb-3">
-                                            <Database className="w-10 h-10 mx-auto text-blue-400 mb-2" />
-                                            <p className="text-sm font-semibold text-slate-700 mb-1">Commencez votre analyse</p>
-                                            <p className="text-xs text-slate-500">Sélectionnez une source de données</p>
+                                    {/* LISTE DES SOURCES */}
+                                    {sources.length === 0 ? (
+                                        <div className="text-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
+                                            <div className="mb-3">
+                                                <Database className="w-10 h-10 mx-auto text-blue-400 mb-2" />
+                                                <p className="text-sm font-semibold text-slate-700 mb-1">Commencez votre analyse</p>
+                                                <p className="text-xs text-slate-500">Sélectionnez une source de données</p>
+                                            </div>
+                                            <button
+                                                onClick={startAddSource}
+                                                className="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" /> Définir source principale
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={startAddSource}
-                                            className="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                                        >
-                                            <Plus className="w-4 h-4" /> Définir source principale
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {sources.map((src) => {
-                                            const ds = datasets.find(d => d.id === src.datasetId);
-                                            if (!ds) return null;
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {sources.map((src) => {
+                                                const ds = datasets.find(d => d.id === src.datasetId);
+                                                if (!ds) return null;
 
-                                            const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
-                                            return (
-                                                <div key={src.id} className={`relative pl-2 border-l-2 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <div className={`text-app-base font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
-                                                            {src.isPrimary ? <Database className="w-3.5 h-3.5 flex-shrink-0" /> : <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />}
-                                                            <span className="truncate" title={ds.name}>{ds.name}</span>
-                                                            {src.isPrimary && <span className="text-[0.8em] opacity-70 ml-1">(P)</span>}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => removeSource(src.id)}
-                                                            className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-
-                                                    {src.isPrimary ? (
-                                                        <select
-                                                            className="mt-0.5 w-full text-app-base border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
-                                                            value={selectedBatchId}
-                                                            onChange={(e) => setSelectedBatchId(e.target.value)}
-                                                        >
-                                                            {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
-                                                        </select>
-                                                    ) : (
-                                                        <div className="text-app-base text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
-                                                            <div className="font-semibold text-[0.8em] text-slate-500 uppercase mb-0">Jointure sur :</div>
-                                                            <div className="font-mono">
-                                                                <span className="font-bold">{src.joinConfig?.primaryKey}</span>
-                                                                <span className="mx-1">=</span>
-                                                                <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
+                                                const srcColorClasses = SOURCE_COLOR_CLASSES[src.color] || SOURCE_COLOR_CLASSES.blue;
+                                                return (
+                                                    <div key={src.id} className={`relative pl-2 border-l-2 ${srcColorClasses.border} ${srcColorClasses.bg} rounded-r-lg p-2 group`}>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <div className={`text-app-base font-bold ${srcColorClasses.text} flex items-center gap-1.5 overflow-hidden`}>
+                                                                {src.isPrimary ? <Database className="w-3.5 h-3.5 flex-shrink-0" /> : <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />}
+                                                                <span className="truncate" title={ds.name}>{ds.name}</span>
+                                                                {src.isPrimary && <span className="text-[0.8em] opacity-70 ml-1">(P)</span>}
                                                             </div>
+                                                            <button
+                                                                onClick={() => removeSource(src.id)}
+                                                                className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
 
-                                        <button
-                                            onClick={startAddSource}
-                                            className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm"
-                                        >
-                                            <Plus className="w-3 h-3" /> Gérer les sources
-                                        </button>
-                                    </div>
-                                )}
+                                                        {src.isPrimary ? (
+                                                            <select
+                                                                className="mt-0.5 w-full text-app-base border border-slate-300 rounded px-1 py-0.5 bg-white text-slate-700 font-medium focus:ring-1 focus:ring-blue-400"
+                                                                value={selectedBatchId}
+                                                                onChange={(e) => setSelectedBatchId(e.target.value)}
+                                                            >
+                                                                {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} l.)</option>)}
+                                                            </select>
+                                                        ) : (
+                                                            <div className="text-app-base text-slate-600 mt-0.5 bg-white/50 rounded px-1.5 py-0.5">
+                                                                <div className="font-semibold text-[0.8em] text-slate-500 uppercase mb-0">Jointure sur :</div>
+                                                                <div className="font-mono">
+                                                                    <span className="font-bold">{src.joinConfig?.primaryKey}</span>
+                                                                    <span className="mx-1">=</span>
+                                                                    <span className="font-bold">[{ds.name}].{src.joinConfig?.secondaryKey}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+
+                                            <button
+                                                onClick={startAddSource}
+                                                className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Plus className="w-3 h-3" /> Gérer les sources
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1215,204 +1229,204 @@ export const PivotTable: React.FC = () => {
 
                                 {!isTemporalConfigPanelCollapsed && (
                                     <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar">
-                                    {/* SOURCE SELECTION */}
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-600 mb-1 block">Sources à comparer (2-4)</label>
-                                        <button
-                                            onClick={() => setIsTemporalSourceModalOpen(true)}
-                                            className="w-full px-2 py-1 text-[10px] bg-purple-50 text-purple-700 border border-purple-300 rounded hover:bg-purple-100 font-bold"
-                                            disabled={!primaryDataset}
-                                        >
-                                            + Configurer les sources
-                                        </button>
+                                        {/* SOURCE SELECTION */}
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-600 mb-1 block">Sources à comparer (2-4)</label>
+                                            <button
+                                                onClick={() => setIsTemporalSourceModalOpen(true)}
+                                                className="w-full px-2 py-1 text-[10px] bg-purple-50 text-purple-700 border border-purple-300 rounded hover:bg-purple-100 font-bold"
+                                                disabled={!primaryDataset}
+                                            >
+                                                + Configurer les sources
+                                            </button>
 
-                                        {temporalConfig && temporalConfig.sources.length > 0 && (
-                                            <div className="mt-2 space-y-1">
-                                                {temporalConfig.sources.map((src, idx) => (
-                                                    <div key={src.id} className={`p-1.5 rounded text-[10px] border ${temporalConfig.referenceSourceId === src.id ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
-                                                        <div className="font-bold">{src.label}</div>
-                                                        <div className="text-slate-500">Import: {formatDateFr(new Date(src.importDate).toISOString().split('T')[0])}</div>
-                                                        {temporalConfig.referenceSourceId === src.id && (
-                                                            <div className="text-blue-600 text-[9px] font-bold">✓ Référence</div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* PERIOD FILTER */}
-                                    {temporalConfig && (
-                                        <>
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Période</label>
-                                                <div className="grid grid-cols-2 gap-1">
-                                                    <div>
-                                                        <label className="text-[9px] text-slate-500">Mois début</label>
-                                                        <select
-                                                            className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
-                                                            value={temporalConfig.periodFilter.startMonth}
-                                                            onChange={(e) => setTemporalConfig({
-                                                                ...temporalConfig,
-                                                                periodFilter: { ...temporalConfig.periodFilter, startMonth: Number(e.target.value) }
-                                                            })}
-                                                        >
-                                                            {[...Array(12)].map((_, i) => (
-                                                                <option key={i + 1} value={i + 1}>{i + 1}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[9px] text-slate-500">Mois fin</label>
-                                                        <select
-                                                            className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
-                                                            value={temporalConfig.periodFilter.endMonth}
-                                                            onChange={(e) => setTemporalConfig({
-                                                                ...temporalConfig,
-                                                                periodFilter: { ...temporalConfig.periodFilter, endMonth: Number(e.target.value) }
-                                                            })}
-                                                        >
-                                                            {[...Array(12)].map((_, i) => (
-                                                                <option key={i + 1} value={i + 1}>{i + 1}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* GROUPING FIELDS */}
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Regrouper par</label>
-
-                                                {/* Selected fields with reorder controls */}
-                                                <div className="space-y-1 mb-2">
-                                                    {rowFields.map((field, idx) => (
-                                                        <div key={field} className="flex items-center gap-1 bg-blue-50 border border-blue-300 rounded px-1.5 py-0.5">
-                                                            <span className="text-[10px] font-medium text-blue-700 flex-1">{field}</span>
-                                                            <div className="flex items-center gap-0.5">
-                                                                {/* Move up */}
-                                                                <button
-                                                                    onClick={() => {
-                                                                        if (idx > 0) {
-                                                                            const newFields = [...rowFields];
-                                                                            [newFields[idx - 1], newFields[idx]] = [newFields[idx], newFields[idx - 1]];
-                                                                            setRowFields(newFields);
-                                                                        }
-                                                                    }}
-                                                                    disabled={idx === 0}
-                                                                    className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                    title="Monter"
-                                                                >
-                                                                    <ArrowUp className="w-3 h-3" />
-                                                                </button>
-                                                                {/* Move down */}
-                                                                <button
-                                                                    onClick={() => {
-                                                                        if (idx < rowFields.length - 1) {
-                                                                            const newFields = [...rowFields];
-                                                                            [newFields[idx + 1], newFields[idx]] = [newFields[idx], newFields[idx + 1]];
-                                                                            setRowFields(newFields);
-                                                                        }
-                                                                    }}
-                                                                    disabled={idx === rowFields.length - 1}
-                                                                    className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                    title="Descendre"
-                                                                >
-                                                                    <ArrowDown className="w-3 h-3" />
-                                                                </button>
-                                                                {/* Remove */}
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setRowFields(rowFields.filter(f => f !== field));
-                                                                    }}
-                                                                    className="p-0.5 text-red-500 hover:bg-red-100 rounded"
-                                                                    title="Supprimer"
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </button>
-                                                            </div>
+                                            {temporalConfig && temporalConfig.sources.length > 0 && (
+                                                <div className="mt-2 space-y-1">
+                                                    {temporalConfig.sources.map((src, idx) => (
+                                                        <div key={src.id} className={`p-1.5 rounded text-[10px] border ${temporalConfig.referenceSourceId === src.id ? 'bg-blue-50 border-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                                                            <div className="font-bold">{src.label}</div>
+                                                            <div className="text-slate-500">Import: {formatDateFr(new Date(src.importDate).toISOString().split('T')[0])}</div>
+                                                            {temporalConfig.referenceSourceId === src.id && (
+                                                                <div className="text-blue-600 text-[9px] font-bold">✓ Référence</div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
+                                            )}
+                                        </div>
 
-                                                {/* Add field dropdown */}
-                                                <select
-                                                    className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
-                                                    value=""
-                                                    onChange={(e) => {
-                                                        const field = e.target.value;
-                                                        if (field && !rowFields.includes(field)) {
-                                                            setRowFields([...rowFields, field]);
-                                                        }
-                                                    }}
-                                                    disabled={!primaryDataset}
-                                                >
-                                                    <option value="">+ Ajouter un champ...</option>
-                                                    {allAvailableFields
-                                                        .filter(field => !rowFields.includes(field))
-                                                        .map(field => (
-                                                            <option key={field} value={field}>{field}</option>
-                                                        ))}
-                                                </select>
-                                                <div className="text-[9px] text-slate-500 mt-1">
-                                                    Utilisez ↑ ↓ pour réordonner les champs
-                                                </div>
-                                            </div>
-
-                                            {/* VALUE FIELD */}
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Valeur à agréger</label>
-                                                <select
-                                                    className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
-                                                    value={valField}
-                                                    onChange={(e) => handleValFieldChange(e.target.value)}
-                                                    disabled={!primaryDataset}
-                                                >
-                                                    <option value="">-- Sélectionnez un champ --</option>
-                                                    {allAvailableFields.map(field => (
-                                                        <option key={field} value={field}>{field}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {/* AGGREGATION TYPE */}
-                                            {valField && (
+                                        {/* PERIOD FILTER */}
+                                        {temporalConfig && (
+                                            <>
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Type d'agrégation</label>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Période</label>
                                                     <div className="grid grid-cols-2 gap-1">
-                                                        {['count', 'sum', 'avg', 'min', 'max'].map(t => (
-                                                            <button
-                                                                key={t}
-                                                                onClick={() => setAggType(t as AggregationType)}
-                                                                className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                        <div>
+                                                            <label className="text-[9px] text-slate-500">Mois début</label>
+                                                            <select
+                                                                className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
+                                                                value={temporalConfig.periodFilter.startMonth}
+                                                                onChange={(e) => setTemporalConfig({
+                                                                    ...temporalConfig,
+                                                                    periodFilter: { ...temporalConfig.periodFilter, startMonth: Number(e.target.value) }
+                                                                })}
                                                             >
-                                                                {t}
-                                                            </button>
-                                                        ))}
+                                                                {[...Array(12)].map((_, i) => (
+                                                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[9px] text-slate-500">Mois fin</label>
+                                                            <select
+                                                                className="w-full text-[10px] border border-slate-300 rounded px-1 py-0.5"
+                                                                value={temporalConfig.periodFilter.endMonth}
+                                                                onChange={(e) => setTemporalConfig({
+                                                                    ...temporalConfig,
+                                                                    periodFilter: { ...temporalConfig.periodFilter, endMonth: Number(e.target.value) }
+                                                                })}
+                                                            >
+                                                                {[...Array(12)].map((_, i) => (
+                                                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            )}
 
-                                            {/* DELTA FORMAT */}
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-600 mb-1 block">Format des écarts</label>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'value' })}
-                                                        className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'value' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                {/* GROUPING FIELDS */}
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Regrouper par</label>
+
+                                                    {/* Selected fields with reorder controls */}
+                                                    <div className="space-y-1 mb-2">
+                                                        {rowFields.map((field, idx) => (
+                                                            <div key={field} className="flex items-center gap-1 bg-blue-50 border border-blue-300 rounded px-1.5 py-0.5">
+                                                                <span className="text-[10px] font-medium text-blue-700 flex-1">{field}</span>
+                                                                <div className="flex items-center gap-0.5">
+                                                                    {/* Move up */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (idx > 0) {
+                                                                                const newFields = [...rowFields];
+                                                                                [newFields[idx - 1], newFields[idx]] = [newFields[idx], newFields[idx - 1]];
+                                                                                setRowFields(newFields);
+                                                                            }
+                                                                        }}
+                                                                        disabled={idx === 0}
+                                                                        className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                        title="Monter"
+                                                                    >
+                                                                        <ArrowUp className="w-3 h-3" />
+                                                                    </button>
+                                                                    {/* Move down */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (idx < rowFields.length - 1) {
+                                                                                const newFields = [...rowFields];
+                                                                                [newFields[idx + 1], newFields[idx]] = [newFields[idx], newFields[idx + 1]];
+                                                                                setRowFields(newFields);
+                                                                            }
+                                                                        }}
+                                                                        disabled={idx === rowFields.length - 1}
+                                                                        className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                        title="Descendre"
+                                                                    >
+                                                                        <ArrowDown className="w-3 h-3" />
+                                                                    </button>
+                                                                    {/* Remove */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setRowFields(rowFields.filter(f => f !== field));
+                                                                        }}
+                                                                        className="p-0.5 text-red-500 hover:bg-red-100 rounded"
+                                                                        title="Supprimer"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Add field dropdown */}
+                                                    <select
+                                                        className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
+                                                        value=""
+                                                        onChange={(e) => {
+                                                            const field = e.target.value;
+                                                            if (field && !rowFields.includes(field)) {
+                                                                setRowFields([...rowFields, field]);
+                                                            }
+                                                        }}
+                                                        disabled={!primaryDataset}
                                                     >
-                                                        Valeur
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'percentage' })}
-                                                        className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'percentage' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
-                                                    >
-                                                        %
-                                                    </button>
+                                                        <option value="">+ Ajouter un champ...</option>
+                                                        {allAvailableFields
+                                                            .filter(field => !rowFields.includes(field))
+                                                            .map(field => (
+                                                                <option key={field} value={field}>{field}</option>
+                                                            ))}
+                                                    </select>
+                                                    <div className="text-[9px] text-slate-500 mt-1">
+                                                        Utilisez ↑ ↓ pour réordonner les champs
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </>
-                                    )}
+
+                                                {/* VALUE FIELD */}
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Valeur à agréger</label>
+                                                    <select
+                                                        className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
+                                                        value={valField}
+                                                        onChange={(e) => handleValFieldChange(e.target.value)}
+                                                        disabled={!primaryDataset}
+                                                    >
+                                                        <option value="">-- Sélectionnez un champ --</option>
+                                                        {allAvailableFields.map(field => (
+                                                            <option key={field} value={field}>{field}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* AGGREGATION TYPE */}
+                                                {valField && (
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-slate-600 mb-1 block">Type d'agrégation</label>
+                                                        <div className="grid grid-cols-2 gap-1">
+                                                            {['count', 'sum', 'avg', 'min', 'max'].map(t => (
+                                                                <button
+                                                                    key={t}
+                                                                    onClick={() => setAggType(t as AggregationType)}
+                                                                    className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                                >
+                                                                    {t}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* DELTA FORMAT */}
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-600 mb-1 block">Format des écarts</label>
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'value' })}
+                                                            className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'value' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                        >
+                                                            Valeur
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setTemporalConfig({ ...temporalConfig, deltaFormat: 'percentage' })}
+                                                            className={`flex-1 px-2 py-1 text-[10px] rounded border ${temporalConfig.deltaFormat === 'percentage' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                                                        >
+                                                            %
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1441,39 +1455,39 @@ export const PivotTable: React.FC = () => {
 
                             {!isFieldsPanelCollapsed && (
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                                {sources.length === 0 && (
-                                    <div className="text-center py-6 text-slate-300 text-[10px] italic">
-                                        Ajoutez une source pour voir les champs disponibles.
-                                    </div>
-                                )}
-                                {groupedFields.map(group => {
-                                    const groupColorClasses = SOURCE_COLOR_CLASSES[group.color] || SOURCE_COLOR_CLASSES.blue;
-                                    return (
-                                        <div key={group.id} className="mb-2">
-                                            <button
-                                                onClick={() => toggleSection(group.id)}
-                                                className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
-                                            >
-                                                {expandedSections[group.id] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
-                                                {group.name}
-                                            </button>
-
-                                            {expandedSections[group.id] && (
-                                                <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
-                                                    {group.fields.map((f: string) => (
-                                                        <FieldChip
-                                                            key={f}
-                                                            field={f}
-                                                            zone="list"
-                                                            disabled={usedFields.has(f)}
-                                                            color={group.color}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
+                                    {sources.length === 0 && (
+                                        <div className="text-center py-6 text-slate-300 text-[10px] italic">
+                                            Ajoutez une source pour voir les champs disponibles.
                                         </div>
-                                    );
-                                })}
+                                    )}
+                                    {groupedFields.map(group => {
+                                        const groupColorClasses = SOURCE_COLOR_CLASSES[group.color] || SOURCE_COLOR_CLASSES.blue;
+                                        return (
+                                            <div key={group.id} className="mb-2">
+                                                <button
+                                                    onClick={() => toggleSection(group.id)}
+                                                    className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${groupColorClasses.text} ${groupColorClasses.bg}`}
+                                                >
+                                                    {expandedSections[group.id] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
+                                                    {group.name}
+                                                </button>
+
+                                                {expandedSections[group.id] && (
+                                                    <div className="mt-1 pl-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                                        {group.fields.map((f: string) => (
+                                                            <FieldChip
+                                                                key={f}
+                                                                field={f}
+                                                                zone="list"
+                                                                disabled={usedFields.has(f)}
+                                                                color={group.color}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -1481,146 +1495,146 @@ export const PivotTable: React.FC = () => {
                         {/* 3. DROP ZONES (Compact Layout) - Hidden in temporal comparison mode */}
                         {!isTemporalMode && (
                             <div className={`flex flex-col gap-3 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                            {/* ZONES ROW 1: FILTERS & COLUMNS */}
-                            <div className="grid grid-cols-2 gap-3">
-                                {/* FILTRES */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'filter')}
-                                    className={`bg-white rounded-lg border-2 border-dashed p-1.5 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2.5 h-2.5" /> Filtres</div>
-                                    <div className="space-y-1 flex-1">
-                                        {filters.map((f, idx) => (
-                                            <div key={idx} className="relative group">
-                                                <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
-                                                {/* Mini Config Filter */}
-                                                <div className="mt-0.5 pl-1">
-                                                    <select
-                                                        className="w-full text-[10px] border border-slate-200 rounded p-0.5 bg-slate-50"
-                                                        value={f.operator || 'in'}
-                                                        onChange={(e) => {
-                                                            const n = [...filters];
-                                                            n[idx] = { ...n[idx], operator: e.target.value as any };
-                                                            setFilters(n);
-                                                        }}
-                                                    >
-                                                        <option value="in">Est égal à</option>
-                                                        <option value="contains">Contient</option>
-                                                        <option value="gt">&gt;</option>
-                                                        <option value="lt">&lt;</option>
-                                                    </select>
-                                                    {/* Simplified Value Input */}
-                                                    <input
-                                                        type="text"
-                                                        className="w-full text-[10px] border border-slate-200 rounded p-0.5 mt-0.5"
-                                                        placeholder="Valeur..."
-                                                        value={Array.isArray(f.value) ? f.value.join(',') : f.value}
-                                                        onChange={(e) => {
-                                                            const n = [...filters];
-                                                            n[idx] = { ...n[idx], value: f.operator === 'in' ? e.target.value.split(',') : e.target.value };
-                                                            setFilters(n);
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* COLONNES */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'col')}
-                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2.5 h-2.5" /> Colonnes</div>
-                                    <div className="space-y-1 flex-1">
-                                        {colFields.map((f, idx) => (
-                                            <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
-                                        ))}
-                                        {colFields.length === 0 ? <span className="text-[10px] text-slate-300 italic">Déposez ici</span> : (
-                                            isColFieldDate && (
-                                                <select
-                                                    className="w-full mt-0.5 text-[10px] border-slate-200 rounded bg-slate-50 p-0.5"
-                                                    value={colGrouping}
-                                                    onChange={(e) => setColGrouping(e.target.value as any)}
-                                                >
-                                                    <option value="none">Exacte</option>
-                                                    <option value="year">Année</option>
-                                                    <option value="quarter">Trimestre</option>
-                                                    <option value="month">Mois</option>
-                                                </select>
-                                            )
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* ZONES ROW 2: ROWS & VALUES */}
-                            <div className="grid grid-cols-2 gap-2">
-                                {/* LIGNES */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'row')}
-                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2.5 h-2.5" /> Lignes</div>
-                                    <div className="space-y-1 flex-1">
-                                        {rowFields.map((f, idx) => (
-                                            <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
-                                        ))}
-                                        {rowFields.length === 0 && <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
-                                    </div>
-                                </div>
-
-                                {/* VALEURS */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, 'val')}
-                                    className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
-                                >
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2.5 h-2.5" /> Valeurs</div>
-                                    <div className="space-y-1 flex-1">
-                                        {valField ? (
-                                            <div>
-                                                <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
-                                                <div className="mt-1 grid grid-cols-2 gap-1">
-                                                    {['count', 'sum', 'avg', 'min', 'max'].map(t => (
-                                                        <button
-                                                            key={t}
-                                                            onClick={() => setAggType(t as AggregationType)}
-                                                            className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                {/* ZONES ROW 1: FILTERS & COLUMNS */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* FILTRES */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'filter')}
+                                        className={`bg-white rounded-lg border-2 border-dashed p-1.5 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2.5 h-2.5" /> Filtres</div>
+                                        <div className="space-y-1 flex-1">
+                                            {filters.map((f, idx) => (
+                                                <div key={idx} className="relative group">
+                                                    <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} />
+                                                    {/* Mini Config Filter */}
+                                                    <div className="mt-0.5 pl-1">
+                                                        <select
+                                                            className="w-full text-[10px] border border-slate-200 rounded p-0.5 bg-slate-50"
+                                                            value={f.operator || 'in'}
+                                                            onChange={(e) => {
+                                                                const n = [...filters];
+                                                                n[idx] = { ...n[idx], operator: e.target.value as any };
+                                                                setFilters(n);
+                                                            }}
                                                         >
-                                                            {t}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                {/* Format Override */}
-                                                {aggType !== 'count' && (
-                                                    <div className="mt-1 pt-1 border-t border-slate-100">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Déc."
-                                                            className="w-full text-[10px] border-slate-200 rounded p-0.5 mb-0.5"
-                                                            value={valFormatting.decimalPlaces ?? ''}
-                                                            onChange={e => setValFormatting({ ...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined })}
-                                                        />
+                                                            <option value="in">Est égal à</option>
+                                                            <option value="contains">Contient</option>
+                                                            <option value="gt">&gt;</option>
+                                                            <option value="lt">&lt;</option>
+                                                        </select>
+                                                        {/* Simplified Value Input */}
                                                         <input
                                                             type="text"
-                                                            placeholder="Unité"
-                                                            className="w-full text-[10px] border-slate-200 rounded p-0.5"
-                                                            value={valFormatting.unit ?? ''}
-                                                            onChange={e => setValFormatting({ ...valFormatting, unit: e.target.value })}
+                                                            className="w-full text-[10px] border border-slate-200 rounded p-0.5 mt-0.5"
+                                                            placeholder="Valeur..."
+                                                            value={Array.isArray(f.value) ? f.value.join(',') : f.value}
+                                                            onChange={(e) => {
+                                                                const n = [...filters];
+                                                                n[idx] = { ...n[idx], value: f.operator === 'in' ? e.target.value.split(',') : e.target.value };
+                                                                setFilters(n);
+                                                            }}
                                                         />
                                                     </div>
-                                                )}
-                                            </div>
-                                        ) : <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* COLONNES */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'col')}
+                                        className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2.5 h-2.5" /> Colonnes</div>
+                                        <div className="space-y-1 flex-1">
+                                            {colFields.map((f, idx) => (
+                                                <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} />
+                                            ))}
+                                            {colFields.length === 0 ? <span className="text-[10px] text-slate-300 italic">Déposez ici</span> : (
+                                                isColFieldDate && (
+                                                    <select
+                                                        className="w-full mt-0.5 text-[10px] border-slate-200 rounded bg-slate-50 p-0.5"
+                                                        value={colGrouping}
+                                                        onChange={(e) => setColGrouping(e.target.value as any)}
+                                                    >
+                                                        <option value="none">Exacte</option>
+                                                        <option value="year">Année</option>
+                                                        <option value="quarter">Trimestre</option>
+                                                        <option value="month">Mois</option>
+                                                    </select>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ZONES ROW 2: ROWS & VALUES */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    {/* LIGNES */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'row')}
+                                        className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2.5 h-2.5" /> Lignes</div>
+                                        <div className="space-y-1 flex-1">
+                                            {rowFields.map((f, idx) => (
+                                                <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} />
+                                            ))}
+                                            {rowFields.length === 0 && <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
+                                        </div>
+                                    </div>
+
+                                    {/* VALEURS */}
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'val')}
+                                        className={`bg-white rounded border-2 border-dashed p-1 min-h-[60px] flex flex-col transition-colors ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}
+                                    >
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2.5 h-2.5" /> Valeurs</div>
+                                        <div className="space-y-1 flex-1">
+                                            {valField ? (
+                                                <div>
+                                                    <FieldChip field={valField} zone="val" onDelete={() => setValField('')} />
+                                                    <div className="mt-1 grid grid-cols-2 gap-1">
+                                                        {['count', 'sum', 'avg', 'min', 'max'].map(t => (
+                                                            <button
+                                                                key={t}
+                                                                onClick={() => setAggType(t as AggregationType)}
+                                                                className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                            >
+                                                                {t}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    {/* Format Override */}
+                                                    {aggType !== 'count' && (
+                                                        <div className="mt-1 pt-1 border-t border-slate-100">
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Déc."
+                                                                className="w-full text-[10px] border-slate-200 rounded p-0.5 mb-0.5"
+                                                                value={valFormatting.decimalPlaces ?? ''}
+                                                                onChange={e => setValFormatting({ ...valFormatting, decimalPlaces: e.target.value ? Number(e.target.value) : undefined })}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Unité"
+                                                                className="w-full text-[10px] border-slate-200 rounded p-0.5"
+                                                                value={valFormatting.unit ?? ''}
+                                                                onChange={e => setValFormatting({ ...valFormatting, unit: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : <span className="text-[10px] text-slate-300 italic">Déposez ici</span>}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
                         )}
 
                         {/* DISPLAY OPTIONS */}
@@ -1947,6 +1961,20 @@ export const PivotTable: React.FC = () => {
                 batches={batches}
                 currentSources={temporalConfig?.sources || []}
                 onSourcesChange={handleTemporalSourcesChange}
+            />
+
+            {/* Quick Chart Modal */}
+            <PivotChartModal
+                isOpen={isChartModalOpen}
+                onClose={() => setIsChartModalOpen(false)}
+                pivotData={pivotData}
+                config={{
+                    rowFields,
+                    colFields,
+                    valField,
+                    aggType
+                }}
+                onAddToDashboard={handleQuickChartAddToDashboard}
             />
         </>
     );
