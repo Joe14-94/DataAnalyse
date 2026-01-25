@@ -20,6 +20,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
+import { ChartModal } from '../components/pivot/ChartModal';
 import {
     calculateTemporalComparison,
     detectDateColumn,
@@ -134,6 +135,9 @@ export const PivotTable: React.FC = () => {
 
     // DRILLDOWN STATE
     const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
+
+    // CHART MODAL STATE
+    const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
     // D&D STATE
     const [draggedField, setDraggedField] = useState<string | null>(null);
@@ -746,8 +750,11 @@ export const PivotTable: React.FC = () => {
             alert("Veuillez configurer au moins une ligne pour générer un graphique.");
             return;
         }
-        const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
-        navigate('/analytics', { state: { fromPivot: pivotConfig } });
+        if (!pivotData && !isTemporalMode) {
+            alert("Aucune donnée à afficher. Veuillez configurer votre TCD.");
+            return;
+        }
+        setIsChartModalOpen(true);
     };
 
     const handleSaveAnalysis = () => {
@@ -2179,6 +2186,31 @@ export const PivotTable: React.FC = () => {
                 rows={drilldownData?.rows || []}
                 fields={drilldownData?.fields || []}
             />
+
+            {/* Modal de graphique */}
+            {isChartModalOpen && pivotData && (
+                <ChartModal
+                    isOpen={isChartModalOpen}
+                    onClose={() => setIsChartModalOpen(false)}
+                    pivotData={pivotData}
+                    pivotConfig={{
+                        rows: blendedRows,
+                        rowFields,
+                        colFields,
+                        colGrouping,
+                        valField,
+                        aggType,
+                        filters,
+                        sortBy,
+                        sortOrder,
+                        showSubtotals,
+                        showVariations,
+                        currentDataset: primaryDataset,
+                        datasets,
+                        valFormatting
+                    }}
+                />
+            )}
 
             {/* Modal de configuration temporelle */}
             <TemporalSourceModal
