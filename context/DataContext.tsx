@@ -291,6 +291,60 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const enrichBatchesWithLookup = useCallback((datasetId: string, targetDatasetId: string, primaryKey: string, secondaryKey: string, columnsToAdd: string[], newColumnName: string) => {
+    // Get target dataset's latest batch
+    const targetBatches = batches.filter(b => b.datasetId === targetDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    if (targetBatches.length === 0) return false;
+
+    const targetBatch = targetBatches[targetBatches.length - 1];
+
+    // Create lookup map
+    const lookupMap = new Map<string, any>();
+    targetBatch.rows.forEach(row => {
+      const key = String(row[secondaryKey]).trim();
+      if (key) {
+        lookupMap.set(key, row);
+      }
+    });
+
+    // Update all batches of the specified dataset
+    setAllBatches(prev => prev.map(b => {
+      if (b.datasetId !== datasetId) return b;
+
+      const enrichedRows = b.rows.map(row => {
+        const key = String(row[primaryKey]).trim();
+        const matchedRow = lookupMap.get(key);
+
+        if (matchedRow && columnsToAdd.length === 1) {
+          // Single column: store value directly
+          return {
+            ...row,
+            [newColumnName]: matchedRow[columnsToAdd[0]]
+          };
+        } else if (matchedRow) {
+          // Multiple columns: concatenate with separator
+          const values = columnsToAdd.map(col => matchedRow[col]);
+          return {
+            ...row,
+            [newColumnName]: values.join(' | ')
+          };
+        }
+
+        return {
+          ...row,
+          [newColumnName]: null
+        };
+      });
+
+      return {
+        ...b,
+        rows: enrichedRows
+      };
+    }));
+
+    return true;
+  }, [batches]);
+
   // --- WIDGET ACTIONS ---
   const addDashboardWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
     const newWidget = { ...widget, id: generateId() };
@@ -533,7 +587,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow }}>
+                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
                       {children}

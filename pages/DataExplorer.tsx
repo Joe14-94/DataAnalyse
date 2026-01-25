@@ -15,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, renameDatasetField } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -75,6 +75,22 @@ export const DataExplorer: React.FC = () => {
 
    // COLUMN BORDERS STATE
    const [showColumnBorders, setShowColumnBorders] = useState<boolean>(true);
+
+   // VLOOKUP / ENRICHMENT STATE
+   const [isVlookupDrawerOpen, setIsVlookupDrawerOpen] = useState(false);
+   const [vlookupConfig, setVlookupConfig] = useState<{
+      targetDatasetId: string;
+      primaryKey: string;
+      secondaryKey: string;
+      columnsToAdd: string[];
+      newColumnName: string;
+   }>({
+      targetDatasetId: '',
+      primaryKey: '',
+      secondaryKey: '',
+      columnsToAdd: [],
+      newColumnName: ''
+   });
 
    // --- EFFECT: Handle Drilldown from Navigation ---
    useEffect(() => {
@@ -259,6 +275,43 @@ export const DataExplorer: React.FC = () => {
             setSelectedCol(null);
          }
       }
+   };
+
+   const handleApplyVlookup = () => {
+      if (!currentDataset || !vlookupConfig.targetDatasetId || !vlookupConfig.primaryKey || !vlookupConfig.secondaryKey || vlookupConfig.columnsToAdd.length === 0 || !vlookupConfig.newColumnName.trim()) {
+         alert("Veuillez remplir tous les champs requis");
+         return;
+      }
+
+      // Enrich batches using the context function
+      const success = enrichBatchesWithLookup(
+         currentDataset.id,
+         vlookupConfig.targetDatasetId,
+         vlookupConfig.primaryKey,
+         vlookupConfig.secondaryKey,
+         vlookupConfig.columnsToAdd,
+         vlookupConfig.newColumnName
+      );
+
+      if (!success) {
+         alert("Le dataset cible n'a pas de données");
+         return;
+      }
+
+      // Add new field to dataset
+      addFieldToDataset(currentDataset.id, vlookupConfig.newColumnName, { type: 'text' });
+
+      // Reset config and close drawer
+      setVlookupConfig({
+         targetDatasetId: '',
+         primaryKey: '',
+         secondaryKey: '',
+         columnsToAdd: [],
+         newColumnName: ''
+      });
+      setIsVlookupDrawerOpen(false);
+
+      alert(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
    };
 
    const handleDeleteRow = (row: any, e: React.MouseEvent) => {
@@ -669,6 +722,7 @@ export const DataExplorer: React.FC = () => {
                <Button variant={showOutliers ? "primary" : "secondary"} onClick={() => setShowOutliers(!showOutliers)} className={`whitespace-nowrap ${showOutliers ? 'bg-red-600 text-white' : ''}`}><Siren className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Anomalies (Z-Score)</span></Button>
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
+               <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
                <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
@@ -1075,6 +1129,158 @@ export const DataExplorer: React.FC = () => {
                            </div>
                            <button onClick={handleAddConditionalRule} className="w-full py-2 bg-purple-600 text-white text-sm font-bold rounded shadow-sm hover:bg-purple-700 transition-colors">Ajouter cette règle</button>
                         </div>
+                     </div>
+                  </div>
+               </>
+            )}
+
+            {/* VLOOKUP / ENRICHMENT DRAWER */}
+            {isVlookupDrawerOpen && (
+               <>
+                  <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsVlookupDrawerOpen(false)} />
+                  <div className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-slate-200">
+                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-teal-50/50">
+                        <div>
+                           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                              <LinkIcon className="w-5 h-5 text-teal-600" /> RECHERCHEV (VLOOKUP)
+                           </h3>
+                           <p className="text-sm text-slate-500">Enrichir avec des données d'une autre source</p>
+                        </div>
+                        <button onClick={() => setIsVlookupDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-white rounded-full transition-colors">
+                           <X className="w-5 h-5" />
+                        </button>
+                     </div>
+
+                     <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                        {/* Target Dataset */}
+                        <div>
+                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                              1. Dataset source (où chercher les données)
+                           </label>
+                           <select
+                              className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                              value={vlookupConfig.targetDatasetId}
+                              onChange={(e) => setVlookupConfig({ ...vlookupConfig, targetDatasetId: e.target.value, secondaryKey: '', columnsToAdd: [] })}
+                           >
+                              <option value="">-- Sélectionner un dataset --</option>
+                              {datasets.filter(d => d.id !== currentDataset?.id).map(ds => (
+                                 <option key={ds.id} value={ds.id}>{ds.name}</option>
+                              ))}
+                           </select>
+                        </div>
+
+                        {/* Join Keys */}
+                        {vlookupConfig.targetDatasetId && (
+                           <>
+                              <div>
+                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                                    2. Clé de jointure dans {currentDataset?.name}
+                                 </label>
+                                 <select
+                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                                    value={vlookupConfig.primaryKey}
+                                    onChange={(e) => setVlookupConfig({ ...vlookupConfig, primaryKey: e.target.value })}
+                                 >
+                                    <option value="">-- Sélectionner un champ --</option>
+                                    {currentDataset?.fields.map(f => (
+                                       <option key={f} value={f}>{f}</option>
+                                    ))}
+                                 </select>
+                              </div>
+
+                              <div>
+                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                                    3. Clé de jointure dans {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.name}
+                                 </label>
+                                 <select
+                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                                    value={vlookupConfig.secondaryKey}
+                                    onChange={(e) => setVlookupConfig({ ...vlookupConfig, secondaryKey: e.target.value })}
+                                 >
+                                    <option value="">-- Sélectionner un champ --</option>
+                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map(f => (
+                                       <option key={f} value={f}>{f}</option>
+                                    ))}
+                                 </select>
+                              </div>
+                           </>
+                        )}
+
+                        {/* Columns to add */}
+                        {vlookupConfig.secondaryKey && (
+                           <>
+                              <div>
+                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                                    4. Colonnes à récupérer
+                                 </label>
+                                 <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 p-3 rounded border border-slate-200">
+                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map(f => (
+                                       <label key={f} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
+                                          <input
+                                             type="checkbox"
+                                             checked={vlookupConfig.columnsToAdd.includes(f)}
+                                             onChange={(e) => {
+                                                if (e.target.checked) {
+                                                   setVlookupConfig({ ...vlookupConfig, columnsToAdd: [...vlookupConfig.columnsToAdd, f] });
+                                                } else {
+                                                   setVlookupConfig({ ...vlookupConfig, columnsToAdd: vlookupConfig.columnsToAdd.filter(c => c !== f) });
+                                                }
+                                             }}
+                                             className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                          />
+                                          <span className="text-sm text-slate-700">{f}</span>
+                                       </label>
+                                    ))}
+                                 </div>
+                                 {vlookupConfig.columnsToAdd.length > 0 && (
+                                    <div className="mt-2 text-xs text-teal-600 font-medium">
+                                       {vlookupConfig.columnsToAdd.length} colonne(s) sélectionnée(s)
+                                    </div>
+                                 )}
+                              </div>
+
+                              <div>
+                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                                    5. Nom de la nouvelle colonne
+                                 </label>
+                                 <input
+                                    type="text"
+                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                                    placeholder="Ex: Informations Client"
+                                    value={vlookupConfig.newColumnName}
+                                    onChange={(e) => setVlookupConfig({ ...vlookupConfig, newColumnName: e.target.value })}
+                                 />
+                                 <p className="mt-2 text-xs text-slate-500">
+                                    {vlookupConfig.columnsToAdd.length > 1
+                                       ? "Les valeurs des colonnes seront concaténées avec ' | '"
+                                       : "La valeur de la colonne sera copiée directement"}
+                                 </p>
+                              </div>
+                           </>
+                        )}
+
+                        {/* Info box */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                           <div className="flex gap-3">
+                              <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-xs text-blue-800 space-y-1">
+                                 <p className="font-bold">Comment ça fonctionne ?</p>
+                                 <p>Cette fonction va chercher les valeurs dans le dataset source en utilisant les clés de jointure, et ajouter une nouvelle colonne à vos données actuelles.</p>
+                                 <p className="font-semibold mt-2">⚠️ Cette opération modifie définitivement votre dataset.</p>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setIsVlookupDrawerOpen(false)}>Annuler</Button>
+                        <Button
+                           onClick={handleApplyVlookup}
+                           disabled={!vlookupConfig.targetDatasetId || !vlookupConfig.primaryKey || !vlookupConfig.secondaryKey || vlookupConfig.columnsToAdd.length === 0 || !vlookupConfig.newColumnName.trim()}
+                           className="bg-teal-600 hover:bg-teal-700"
+                        >
+                           Enrichir les données
+                        </Button>
                      </div>
                   </div>
                </>
