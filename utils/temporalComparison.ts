@@ -164,7 +164,8 @@ export const aggregateDataByGroup = (
 export const calculateTemporalComparison = (
   sourceDataMap: Map<string, DataRow[]>,
   config: TemporalComparisonConfig,
-  dateColumn: string = 'Date écriture'
+  dateColumn: string = 'Date écriture',
+  showSubtotals: boolean = false
 ): TemporalComparisonResult[] => {
   const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
 
@@ -253,6 +254,96 @@ export const calculateTemporalComparison = (
 
   // Trier par label
   results.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
+
+  // Générer les sous-totaux si on a plusieurs champs de regroupement ET que showSubtotals est activé
+  if (showSubtotals && groupByFields.length > 1) {
+    const resultsWithSubtotals: TemporalComparisonResult[] = [];
+    const subtotalMap = new Map<string, Map<string, number[]>>();
+
+    // Calculer les sous-totaux pour chaque niveau de groupement
+    results.forEach(result => {
+      const groupValues = result.groupLabel.split('\x1F');
+
+      // Pour chaque niveau de hiérarchie (sauf le dernier qui est le détail)
+      for (let level = 0; level < groupByFields.length - 1; level++) {
+        const subtotalKey = groupValues.slice(0, level + 1).join('\x1F');
+
+        if (!subtotalMap.has(subtotalKey)) {
+          subtotalMap.set(subtotalKey, new Map());
+        }
+
+        const subtotalData = subtotalMap.get(subtotalKey)!;
+
+        // Accumuler les valeurs pour chaque source
+        sources.forEach(source => {
+          if (!subtotalData.has(source.id)) {
+            subtotalData.set(source.id, []);
+          }
+          subtotalData.get(source.id)!.push(result.values[source.id] || 0);
+        });
+      }
+    });
+
+    // Insérer les résultats avec sous-totaux
+    const processed = new Set<string>();
+
+    results.forEach(result => {
+      const groupValues = result.groupLabel.split('\x1F');
+
+      // Insérer les sous-totaux des niveaux supérieurs si pas déjà fait
+      for (let level = 0; level < groupByFields.length - 1; level++) {
+        const subtotalKey = groupValues.slice(0, level + 1).join('\x1F');
+
+        if (!processed.has(subtotalKey)) {
+          processed.add(subtotalKey);
+
+          const subtotalData = subtotalMap.get(subtotalKey)!;
+          const subtotalValues: { [sourceId: string]: number } = {};
+          const subtotalDeltas: { [sourceId: string]: { value: number; percentage: number } } = {};
+
+          // Calculer la somme pour chaque source
+          sources.forEach(source => {
+            const values = subtotalData.get(source.id) || [];
+            subtotalValues[source.id] = values.reduce((sum, val) => sum + val, 0);
+          });
+
+          // Calculer les deltas
+          const referenceValue = subtotalValues[referenceSourceId] || 0;
+          sources.forEach(source => {
+            if (source.id === referenceSourceId) {
+              subtotalDeltas[source.id] = { value: 0, percentage: 0 };
+            } else {
+              const sourceValue = subtotalValues[source.id] || 0;
+              const deltaValue = sourceValue - referenceValue;
+              const deltaPercentage = referenceValue !== 0
+                ? (deltaValue / referenceValue) * 100
+                : (sourceValue !== 0 ? 100 : 0);
+
+              subtotalDeltas[source.id] = {
+                value: deltaValue,
+                percentage: deltaPercentage
+              };
+            }
+          });
+
+          // Ajouter le sous-total
+          resultsWithSubtotals.push({
+            groupKey: `subtotal_${subtotalKey}`,
+            groupLabel: subtotalKey,
+            values: subtotalValues,
+            deltas: subtotalDeltas,
+            isSubtotal: true,
+            subtotalLevel: level
+          });
+        }
+      }
+
+      // Ajouter la ligne de détail
+      resultsWithSubtotals.push(result);
+    });
+
+    return resultsWithSubtotals;
+  }
 
   return results;
 };
