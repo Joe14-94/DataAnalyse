@@ -1283,22 +1283,79 @@ export const PivotTable: React.FC = () => {
                                             {/* GROUPING FIELDS */}
                                             <div>
                                                 <label className="text-[10px] font-bold text-slate-600 mb-1 block">Regrouper par</label>
+
+                                                {/* Selected fields with reorder controls */}
+                                                <div className="space-y-1 mb-2">
+                                                    {rowFields.map((field, idx) => (
+                                                        <div key={field} className="flex items-center gap-1 bg-blue-50 border border-blue-300 rounded px-1.5 py-0.5">
+                                                            <span className="text-[10px] font-medium text-blue-700 flex-1">{field}</span>
+                                                            <div className="flex items-center gap-0.5">
+                                                                {/* Move up */}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (idx > 0) {
+                                                                            const newFields = [...rowFields];
+                                                                            [newFields[idx - 1], newFields[idx]] = [newFields[idx], newFields[idx - 1]];
+                                                                            setRowFields(newFields);
+                                                                        }
+                                                                    }}
+                                                                    disabled={idx === 0}
+                                                                    className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                    title="Monter"
+                                                                >
+                                                                    <ArrowUp className="w-3 h-3" />
+                                                                </button>
+                                                                {/* Move down */}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (idx < rowFields.length - 1) {
+                                                                            const newFields = [...rowFields];
+                                                                            [newFields[idx + 1], newFields[idx]] = [newFields[idx], newFields[idx + 1]];
+                                                                            setRowFields(newFields);
+                                                                        }
+                                                                    }}
+                                                                    disabled={idx === rowFields.length - 1}
+                                                                    className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                    title="Descendre"
+                                                                >
+                                                                    <ArrowDown className="w-3 h-3" />
+                                                                </button>
+                                                                {/* Remove */}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setRowFields(rowFields.filter(f => f !== field));
+                                                                    }}
+                                                                    className="p-0.5 text-red-500 hover:bg-red-100 rounded"
+                                                                    title="Supprimer"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Add field dropdown */}
                                                 <select
-                                                    multiple
-                                                    className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white min-h-[60px]"
-                                                    value={rowFields}
+                                                    className="w-full text-[10px] border border-slate-300 rounded px-1 py-1 bg-white"
+                                                    value=""
                                                     onChange={(e) => {
-                                                        const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                                        setRowFields(selected);
+                                                        const field = e.target.value;
+                                                        if (field && !rowFields.includes(field)) {
+                                                            setRowFields([...rowFields, field]);
+                                                        }
                                                     }}
                                                     disabled={!primaryDataset}
                                                 >
-                                                    {allAvailableFields.map(field => (
-                                                        <option key={field} value={field}>{field}</option>
-                                                    ))}
+                                                    <option value="">+ Ajouter un champ...</option>
+                                                    {allAvailableFields
+                                                        .filter(field => !rowFields.includes(field))
+                                                        .map(field => (
+                                                            <option key={field} value={field}>{field}</option>
+                                                        ))}
                                                 </select>
                                                 <div className="text-[9px] text-slate-500 mt-1">
-                                                    Maintenez Ctrl/Cmd pour sélectionner plusieurs champs
+                                                    Utilisez ↑ ↓ pour réordonner les champs
                                                 </div>
                                             </div>
 
