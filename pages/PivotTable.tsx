@@ -631,7 +631,7 @@ export const PivotTable: React.FC = () => {
 
             const data = temporalResults.map(result => {
                 const row: any = {};
-                const groupLabels = result.groupLabel.split(' - ');
+                const groupLabels = result.groupLabel.split('\x1F');
                 temporalConfig.groupByFields.forEach((field, idx) => {
                     row[field] = groupLabels[idx] || '';
                 });
@@ -1686,7 +1686,7 @@ export const PivotTable: React.FC = () => {
                                         {temporalResults.map((result, idx) => (
                                             <tr key={result.groupKey} className="hover:bg-blue-50/30">
                                                 {/* Group Labels */}
-                                                {result.groupLabel.split(' - ').map((label, gIdx) => (
+                                                {result.groupLabel.split('\x1F').map((label, gIdx) => (
                                                     <td key={gIdx} className="px-2 py-1 text-[0.9em] text-slate-700 border-r border-slate-200 whitespace-nowrap">
                                                         {label}
                                                     </td>
