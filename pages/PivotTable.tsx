@@ -167,6 +167,39 @@ export const PivotTable: React.FC = () => {
         return () => parent.removeEventListener('scroll', handleScroll);
     }, [pivotData]);
 
+    // Synchronize column widths between table and footer for perfect alignment
+    useEffect(() => {
+        if (!pivotData || isTemporalMode) return;
+
+        const parent = parentRef.current;
+        const footer = footerRef.current;
+        if (!parent || !footer) return;
+
+        // Wait for next frame to ensure tables are rendered
+        requestAnimationFrame(() => {
+            const mainTable = parent.querySelector('table');
+            const footerTable = footer.querySelector('table');
+            if (!mainTable || !footerTable) return;
+
+            const mainHeaderRow = mainTable.querySelector('thead tr');
+            const footerRow = footerTable.querySelector('tbody tr');
+            if (!mainHeaderRow || !footerRow) return;
+
+            const mainCells = Array.from(mainHeaderRow.querySelectorAll('th'));
+            const footerCells = Array.from(footerRow.querySelectorAll('td'));
+
+            // Sync widths
+            mainCells.forEach((cell, index) => {
+                if (footerCells[index]) {
+                    const width = cell.getBoundingClientRect().width;
+                    footerCells[index].style.width = `${width}px`;
+                    footerCells[index].style.minWidth = `${width}px`;
+                    footerCells[index].style.maxWidth = `${width}px`;
+                }
+            });
+        });
+    }, [pivotData, isTemporalMode, rowFields, columnLabels]);
+
     // --- DERIVED STATE ---
 
     // Get the primary dataset from our local sources list, NOT global context
@@ -2033,8 +2066,8 @@ export const PivotTable: React.FC = () => {
 
                         {/* FOOTER TOTALS (FIXED OUTSIDE SCROLL) */}
                         {pivotData && (
-                            <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-auto flex-shrink-0 custom-scrollbar">
-                                <table className="min-w-full divide-y divide-slate-200">
+                            <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
+                                <table className="min-w-full divide-y divide-slate-200 border-collapse w-full">
                                     <tbody className="font-bold">
                                         <tr>
                                             {/* Row headers - one cell per rowField to match table structure */}
