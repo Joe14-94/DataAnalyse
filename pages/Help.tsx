@@ -156,11 +156,11 @@ export const Help: React.FC = () => {
                       <div className="grid grid-cols-2 gap-2 mt-2">
                          <div className="bg-slate-50 p-2 rounded border border-slate-100">
                             <span className="text-xs font-bold text-green-700 block mb-1">Fusionner</span>
-                            <span className="text-[10px] text-slate-500">Ajoute les colonnes sans toucher aux existantes.</span>
+                            <span className="text-xs text-slate-500">Ajoute les colonnes sans toucher aux existantes.</span>
                          </div>
                          <div className="bg-slate-50 p-2 rounded border border-slate-100">
                             <span className="text-xs font-bold text-red-700 block mb-1">Écraser</span>
-                            <span className="text-[10px] text-slate-500">Remplace totalement la structure du tableau.</span>
+                            <span className="text-xs text-slate-500">Remplace totalement la structure du tableau.</span>
                          </div>
                       </div>
                    </div>
@@ -201,8 +201,8 @@ export const Help: React.FC = () => {
                          Définissez des règles visuelles pour mettre en évidence les valeurs critiques dans l'explorateur de données.
                       </p>
                       <div className="flex gap-2 mt-2">
-                         <span className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200">Si Marge &lt; 0</span>
-                         <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200">Si Statut = "Validé"</span>
+                         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200">Si Marge &lt; 0</span>
+                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200">Si Statut = "Validé"</span>
                       </div>
                    </div>
                 </div>

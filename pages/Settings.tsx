@@ -647,7 +647,7 @@ export const Settings: React.FC = () => {
                                  onChange={(e) => updateUIPrefs({ fontSize: parseInt(e.target.value) })}
                                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
                               />
-                              <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase">
+                              <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
                                  <span>Ultra (8px)</span>
                                  <span>Large (18px)</span>
                               </div>
@@ -670,7 +670,7 @@ export const Settings: React.FC = () => {
                                  onChange={(e) => updateUIPrefs({ sidebarWidth: parseInt(e.target.value) })}
                                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
                               />
-                              <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase">
+                              <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
                                  <span>Étroit</span>
                                  <span>Large</span>
                               </div>
@@ -694,7 +694,7 @@ export const Settings: React.FC = () => {
                                        className={`p-3 text-left border rounded-lg transition-all ${uiPrefs.fontFamily === f.id ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
                                     >
                                        <div className={`text-sm font-bold ${f.fontClass} truncate`}>{f.name}</div>
-                                       <div className="text-[10px] text-slate-400 mt-1">L'application complète</div>
+                                       <div className="text-xs text-slate-400 mt-1">L'application complète</div>
                                     </button>
                                  ))}
                               </div>
@@ -719,7 +719,7 @@ export const Settings: React.FC = () => {
                                        </div>
                                        <div className="flex-1">
                                           <div className="text-xs font-bold text-slate-800">{p.name}</div>
-                                          <div className="text-[9px] text-slate-400 uppercase font-bold tracking-tight">{p.desc}</div>
+                                          <div className="text-xs text-slate-400 uppercase font-bold tracking-tight">{p.desc}</div>
                                        </div>
                                        {uiPrefs.density === p.id && <Check className="w-4 h-4 text-brand-600" />}
                                     </button>

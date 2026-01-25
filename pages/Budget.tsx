@@ -1862,7 +1862,7 @@ export const Budget: React.FC = () => {
                                                                     <div key={value.id} className="flex items-start justify-between text-sm bg-slate-50 px-2 py-1.5 rounded border border-slate-200">
                                                                         <div className="flex-1 min-w-0">
                                                                             {(value.category || value.subCategory) && (
-                                                                                <div className="text-[10px] text-slate-400 mb-0.5">
+                                                                                <div className="text-xs text-slate-400 mb-0.5">
                                                                                     {value.category && <span>{value.category}</span>}
                                                                                     {value.category && value.subCategory && <span className="mx-1">›</span>}
                                                                                     {value.subCategory && <span>{value.subCategory}</span>}

@@ -59,8 +59,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onC
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
           <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
-             <span className="text-[10px] font-bold text-slate-500 uppercase">Options</span>
-             <button onClick={handleSelectAll} className="text-[10px] text-blue-600 hover:underline">
+             <span className="text-xs font-bold text-slate-500 uppercase">Options</span>
+             <button onClick={handleSelectAll} className="text-xs text-blue-600 hover:underline">
                 {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
              </button>
           </div>

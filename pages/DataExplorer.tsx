@@ -749,7 +749,7 @@ export const DataExplorer: React.FC = () => {
                      <div className="relative group">
                         <input type="text" className="text-sm font-bold text-teal-800 bg-transparent border-b border-teal-300 focus:outline-none focus:border-teal-600 w-48" value={renamingValue} onChange={e => setRenamingValue(e.target.value)} placeholder={selectedCol || ''} />
                         {renamingValue !== selectedCol && (
-                           <button onClick={handleRenameColumn} className="absolute -right-16 top-0 text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded hover:bg-teal-700 shadow-sm">Renommer</button>
+                           <button onClick={handleRenameColumn} className="absolute -right-16 top-0 text-xs bg-teal-600 text-white px-2 py-0.5 rounded hover:bg-teal-700 shadow-sm">Renommer</button>
                         )}
                      </div>
                   </div>
@@ -792,7 +792,7 @@ export const DataExplorer: React.FC = () => {
 
                {/* RIGHT: Distribution Chart */}
                <div className="w-64 h-32 bg-white rounded border border-slate-100 p-2 flex flex-col">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase mb-1">
                      <BarChart2 className="w-3 h-3" /> Distribution (Top 15)
                   </div>
                   <div className="flex-1 min-h-0">
@@ -958,7 +958,7 @@ export const DataExplorer: React.FC = () => {
                                  else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
                                  else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
                                  return (
-                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-[1em] text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-base text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {displayVal}
                                     </td>
                                  );
@@ -997,18 +997,18 @@ export const DataExplorer: React.FC = () => {
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                      <div>
                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><FunctionSquare className="w-4 h-4 text-indigo-600" /> Éditeur de Formule</h3>
-                        <p className="text-[10px] text-slate-500 mt-1">Créez une nouvelle colonne calculée</p>
+                        <p className="text-xs text-slate-500 mt-1">Créez une nouvelle colonne calculée</p>
                      </div>
                      <button onClick={() => setIsCalcDrawerOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
                   </div>
                   <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                      <div>
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Nom de la colonne</label>
-                        <input type="text" className="block w-full rounded-md border-slate-300 text-[10px] p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Nom de la colonne</label>
+                        <input type="text" className="block w-full rounded-md border-slate-300 text-xs p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
                      </div>
                      <div className="flex-1 flex flex-col min-h-[300px]">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1 flex justify-between"><span>Formule</span><span className="text-[10px] text-slate-400">Syntaxe Excel simplifiée</span></label>
-                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-[10px] p-2 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
+                        <label className="block text-xs font-bold text-slate-600 mb-1 flex justify-between"><span>Formule</span><span className="text-xs text-slate-400">Syntaxe Excel simplifiée</span></label>
+                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-xs p-2 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
                         <div className="border border-t-0 border-slate-300 rounded-b-md bg-white flex flex-col h-64">
                            <div className="flex border-b border-slate-200">
                               <button onClick={() => setCalcTab('fields')} className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'fields' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}>Champs ({currentDataset.fields.length})</button>
@@ -1033,8 +1033,8 @@ export const DataExplorer: React.FC = () => {
                                        { name: 'ABS', syntax: 'ABS(nombre)', desc: 'Valeur absolue' },
                                     ].map(fn => (
                                        <button key={fn.name} onClick={() => insertIntoFormula(`${fn.name}(`)} className="w-full text-left px-2 py-1.5 bg-white border border-slate-200 rounded hover:border-indigo-300 group">
-                                          <div className="flex justify-between items-center"><span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span><span className="text-[10px] text-slate-400 font-mono">{fn.syntax}</span></div>
-                                          <div className="text-[10px] text-slate-500 mt-0.5">{fn.desc}</div>
+                                          <div className="flex justify-between items-center"><span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span><span className="text-xs text-slate-400 font-mono">{fn.syntax}</span></div>
+                                          <div className="text-xs text-slate-500 mt-0.5">{fn.desc}</div>
                                        </button>
                                     ))}
                                  </div>
@@ -1044,8 +1044,8 @@ export const DataExplorer: React.FC = () => {
                      </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                           <label className="block text-[10px] font-bold text-slate-600 mb-1">Type de résultat</label>
-                           <select className="block w-full rounded-md border-slate-300 text-[10px] p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
+                           <label className="block text-xs font-bold text-slate-600 mb-1">Type de résultat</label>
+                           <select className="block w-full rounded-md border-slate-300 text-xs p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
                               <option value="number">Nombre</option>
                               <option value="text">Texte</option>
                               <option value="boolean">Vrai/Faux</option>
@@ -1057,7 +1057,7 @@ export const DataExplorer: React.FC = () => {
                         </div>
                      </div>
                      <div className={`p-3 rounded border ${previewResult?.error ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} transition-colors`}>
-                        <div className="text-[10px] font-bold uppercase mb-1 flex justify-between"><span className={previewResult?.error ? 'text-red-700' : 'text-green-700'}>{previewResult?.error ? 'Erreur' : 'Aperçu (1ère ligne)'}</span></div>
+                        <div className="text-xs font-bold uppercase mb-1 flex justify-between"><span className={previewResult?.error ? 'text-red-700' : 'text-green-700'}>{previewResult?.error ? 'Erreur' : 'Aperçu (1ère ligne)'}</span></div>
                         <div className={`text-sm font-mono ${previewResult?.error ? 'text-red-800' : 'text-green-900 font-bold'}`}>{previewResult ? (previewResult.error || String(previewResult.value)) : '...'}</div>
                      </div>
                   </div>
@@ -1297,10 +1297,10 @@ export const DataExplorer: React.FC = () => {
                <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-blue-500 focus:border-blue-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/50 space-y-8">
                   <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                     <div className="bg-blue-50/50 px-4 py-2 border-b border-blue-100 flex justify-between items-center"><span className="text-xs font-bold text-blue-800 uppercase tracking-wider">État Actuel</span><span className="text-[10px] bg-white px-2 py-0.5 rounded-full border border-blue-200 text-blue-600 font-mono">{formatDateFr(selectedRow._importDate)}</span></div>
+                     <div className="bg-blue-50/50 px-4 py-2 border-b border-blue-100 flex justify-between items-center"><span className="text-xs font-bold text-blue-800 uppercase tracking-wider">État Actuel</span><span className="text-xs bg-white px-2 py-0.5 rounded-full border border-blue-200 text-blue-600 font-mono">{formatDateFr(selectedRow._importDate)}</span></div>
                      <div className="p-4 grid grid-cols-2 gap-4">
                         {Object.entries(selectedRow).filter(([k]) => !k.startsWith('_') && k !== 'id').map(([key, val]) => (
-                           <div key={key} className="space-y-1"><dt className="text-[10px] font-medium text-slate-400 uppercase">{key}</dt><dd className="text-sm font-medium text-slate-800 break-words bg-slate-50 p-2 rounded border border-slate-100">{val !== undefined && val !== null && val !== '' ? String(val) : <span className="text-slate-300 italic">Vide</span>}</dd></div>
+                           <div key={key} className="space-y-1"><dt className="text-xs font-medium text-slate-400 uppercase">{key}</dt><dd className="text-sm font-medium text-slate-800 break-words bg-slate-50 p-2 rounded border border-slate-100">{val !== undefined && val !== null && val !== '' ? String(val) : <span className="text-slate-300 italic">Vide</span>}</dd></div>
                         ))}
                      </div>
                   </div>
@@ -1317,8 +1317,8 @@ export const DataExplorer: React.FC = () => {
                                  <div className={`absolute left-[13px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm z-10 ${isCreation ? 'bg-green-500' : (changes.length > 0 ? 'bg-amber-500' : 'bg-slate-300')}`}></div>
                                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
                                     <div className="flex justify-between items-start mb-3">
-                                       <div><div className="text-xs font-bold text-slate-500">{formatDateFr(histRow._importDate)}</div><div className="text-[10px] text-slate-400 font-mono mt-0.5">Batch: {histRow._batchId}</div></div>
-                                       {isCreation ? <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase">Création</span> : changes.length > 0 ? <span className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase">{changes.length} Modif(s)</span> : <span className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full uppercase">Inchangé</span>}
+                                       <div><div className="text-xs font-bold text-slate-500">{formatDateFr(histRow._importDate)}</div><div className="text-xs text-slate-400 font-mono mt-0.5">Batch: {histRow._batchId}</div></div>
+                                       {isCreation ? <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">Création</span> : changes.length > 0 ? <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full uppercase">{changes.length} Modif(s)</span> : <span className="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full uppercase">Inchangé</span>}
                                     </div>
                                     {changes.length > 0 && prevRow && (
                                        <div className="space-y-2 bg-amber-50/50 p-3 rounded border border-amber-100/50">
@@ -1327,7 +1327,7 @@ export const DataExplorer: React.FC = () => {
                                                 <div className="text-right text-slate-500 line-through decoration-red-400 decoration-2">{String(prevRow[field] || 'Vide')}</div>
                                                 <div className="text-center text-slate-300"><ArrowRight className="w-3 h-3 inline" /></div>
                                                 <div className="font-bold text-slate-800">{String(histRow[field] || 'Vide')}</div>
-                                                <div className="col-span-3 text-[10px] text-slate-400 uppercase tracking-wider text-center mt-0.5">{field}</div>
+                                                <div className="col-span-3 text-xs text-slate-400 uppercase tracking-wider text-center mt-0.5">{field}</div>
                                              </div>
                                           ))}
                                        </div>
