@@ -1771,12 +1771,7 @@ export const PivotTable: React.FC = () => {
                                             );
                                             })}
 
-                                            {/* Total Column */}
-                                            {showTotalCol && (
-                                                <th className="px-2 py-1.5 text-right text-sm font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap">
-                                                    Total
-                                                </th>
-                                            )}
+                                            {/* Total Column - Hidden in comparison mode as summing periods doesn't make sense */}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-slate-200">
@@ -1790,19 +1785,26 @@ export const PivotTable: React.FC = () => {
                                             return (
                                             <tr key={result.groupKey} className={rowClass}>
                                                 {/* Group Labels */}
-                                                {result.groupLabel.split('\x1F').map((label, gIdx) => {
-                                                    // Pour les sous-totaux, n'afficher que les premières colonnes pertinentes
-                                                    const shouldDisplay = !isSubtotal || gIdx <= subtotalLevel;
-                                                    const cellClass = isSubtotal
-                                                        ? `px-2 py-2 text-sm font-bold border-r border-slate-300 whitespace-nowrap ${gIdx === subtotalLevel ? 'text-slate-900' : 'text-slate-600'}`
-                                                        : "px-2 py-1 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap";
+                                                {(() => {
+                                                    const labels = result.groupLabel.split('\x1F');
+                                                    // Ensure we render exactly as many cells as there are groupByFields
+                                                    const numFields = temporalConfig.groupByFields.length;
 
-                                                    return (
-                                                    <td key={gIdx} className={cellClass} colSpan={isSubtotal && gIdx === subtotalLevel ? temporalConfig.groupByFields.length - subtotalLevel : 1}>
-                                                        {shouldDisplay ? (gIdx === subtotalLevel && isSubtotal ? `Total ${label}` : label) : ''}
-                                                    </td>
-                                                    );
-                                                })}
+                                                    return Array.from({ length: numFields }, (_, gIdx) => {
+                                                        const label = labels[gIdx] || '';
+                                                        // Pour les sous-totaux, n'afficher que les premières colonnes pertinentes
+                                                        const shouldDisplay = !isSubtotal || gIdx <= subtotalLevel;
+                                                        const cellClass = isSubtotal
+                                                            ? `px-2 py-2 text-sm font-bold border-r border-slate-300 whitespace-nowrap ${gIdx === subtotalLevel ? 'text-slate-900' : 'text-slate-600'}`
+                                                            : "px-2 py-1 text-sm text-slate-700 border-r border-slate-200 whitespace-nowrap";
+
+                                                        return (
+                                                        <td key={gIdx} className={cellClass} colSpan={isSubtotal && gIdx === subtotalLevel ? numFields - subtotalLevel : 1}>
+                                                            {shouldDisplay ? (gIdx === subtotalLevel && isSubtotal ? `Total ${label}` : label) : ''}
+                                                        </td>
+                                                        );
+                                                    });
+                                                })()}
 
                                                 {/* Values */}
                                                 {temporalConfig.sources.map(source => {
@@ -1838,12 +1840,7 @@ export const PivotTable: React.FC = () => {
                                                     );
                                                 })}
 
-                                                {/* Total Row */}
-                                                {showTotalCol && (
-                                                    <td className={`px-2 py-1 text-xs text-right border-r tabular-nums ${isSubtotal ? 'font-black bg-slate-200 border-slate-300' : 'font-black bg-slate-50 border-slate-100'}`}>
-                                                        {formatCurrency(Object.values(result.values).reduce((sum, val) => sum + (val || 0), 0))}
-                                                    </td>
-                                                )}
+                                                {/* Total Row - Hidden in comparison mode as summing periods doesn't make sense */}
                                             </tr>
                                             );
                                         })}
