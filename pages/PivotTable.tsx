@@ -444,6 +444,7 @@ export const PivotTable: React.FC = () => {
         }
 
         setIsCalculating(true);
+        // Increased debounce to 150ms for better performance with large datasets
         const timer = setTimeout(() => {
             const result = calculatePivotData({
                 rows: blendedRows,
@@ -454,7 +455,7 @@ export const PivotTable: React.FC = () => {
             });
             setPivotData(result);
             setIsCalculating(false);
-        }, 10);
+        }, 150); // Increased from 10ms to 150ms
         return () => clearTimeout(timer);
     }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
 
@@ -478,6 +479,7 @@ export const PivotTable: React.FC = () => {
         }
 
         setIsCalculating(true);
+        // Increased debounce to 150ms for better performance with large datasets
         const timer = setTimeout(() => {
             // Build map of source data
             const sourceDataMap = new Map<string, DataRow[]>();
@@ -519,7 +521,7 @@ export const PivotTable: React.FC = () => {
             const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn);
             setTemporalResults(results);
             setIsCalculating(false);
-        }, 10);
+        }, 150); // Increased from 10ms to 150ms
 
         return () => clearTimeout(timer);
     }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType]);
@@ -1628,7 +1630,8 @@ export const PivotTable: React.FC = () => {
                             <div className="flex flex-col gap-1">
                                 <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
                                 <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
-                                {colFields.length > 0 && aggType !== 'list' && (aggType !== 'min' && aggType !== 'max') && (
+                                {/* Show Variations checkbox in temporal mode OR when valid in standard mode */}
+                                {(isTemporalMode || (colFields.length > 0 && aggType !== 'list' && aggType !== 'min' && aggType !== 'max')) && (
                                     <div className="mt-0.5 pt-0.5 border-t border-slate-100 animate-in fade-in">
                                         <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-blue-700 font-bold" />
                                     </div>
@@ -1654,17 +1657,77 @@ export const PivotTable: React.FC = () => {
                                     <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                                         <tr>
                                             {/* Group Headers */}
-                                            {temporalConfig.groupByFields.map((field, idx) => (
-                                                <th key={field} className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap">
-                                                    {field}
+                                            {temporalConfig.groupByFields.map((field, idx) => {
+                                                const displayLabel = columnLabels[`group_${field}`] || field;
+                                                const isEditing = editingColumn === `group_${field}`;
+                                                return (
+                                                <th
+                                                    key={field}
+                                                    className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap cursor-pointer hover:bg-slate-100"
+                                                    onDoubleClick={() => setEditingColumn(`group_${field}`)}
+                                                    title="Double-cliquez pour renommer"
+                                                >
+                                                    {isEditing ? (
+                                                        <input
+                                                            type="text"
+                                                            defaultValue={displayLabel}
+                                                            autoFocus
+                                                            className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded"
+                                                            onBlur={(e) => {
+                                                                setColumnLabels(prev => ({ ...prev, [`group_${field}`]: e.target.value }));
+                                                                setEditingColumn(null);
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    setColumnLabels(prev => ({ ...prev, [`group_${field}`]: e.currentTarget.value }));
+                                                                    setEditingColumn(null);
+                                                                } else if (e.key === 'Escape') {
+                                                                    setEditingColumn(null);
+                                                                }
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    ) : (
+                                                        displayLabel
+                                                    )}
                                                 </th>
-                                            ))}
+                                                );
+                                            })}
 
                                             {/* Source Columns */}
-                                            {temporalConfig.sources.map(source => (
+                                            {temporalConfig.sources.map(source => {
+                                                const displayLabel = columnLabels[source.id] || source.label;
+                                                const isEditing = editingColumn === source.id;
+                                                return (
                                                 <React.Fragment key={source.id}>
-                                                    <th className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`}>
-                                                        {source.label}
+                                                    <th
+                                                        className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 cursor-pointer hover:bg-slate-100 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`}
+                                                        onDoubleClick={() => setEditingColumn(source.id)}
+                                                        title="Double-cliquez pour renommer"
+                                                    >
+                                                        {isEditing ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={displayLabel}
+                                                                autoFocus
+                                                                className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded"
+                                                                onBlur={(e) => {
+                                                                    setColumnLabels(prev => ({ ...prev, [source.id]: e.target.value }));
+                                                                    setEditingColumn(null);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        setColumnLabels(prev => ({ ...prev, [source.id]: e.currentTarget.value }));
+                                                                        setEditingColumn(null);
+                                                                    } else if (e.key === 'Escape') {
+                                                                        setEditingColumn(null);
+                                                                    }
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        ) : (
+                                                            displayLabel
+                                                        )}
                                                     </th>
                                                     {showVariations && source.id !== temporalConfig.referenceSourceId && (
                                                         <th className="px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700">
@@ -1672,7 +1735,8 @@ export const PivotTable: React.FC = () => {
                                                         </th>
                                                     )}
                                                 </React.Fragment>
-                                            ))}
+                                            );
+                                            })}
 
                                             {/* Total Column */}
                                             {showTotalCol && (
@@ -1741,11 +1805,43 @@ export const PivotTable: React.FC = () => {
                                         <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                                             <tr>
                                                 {/* Headers Lignes */}
-                                                {rowFields.map((field, idx) => (
-                                                    <th key={field} className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20" style={{ minWidth: '120px' }}>
-                                                        {field}
+                                                {rowFields.map((field, idx) => {
+                                                    const displayLabel = columnLabels[`row_${field}`] || field;
+                                                    const isEditing = editingColumn === `row_${field}`;
+                                                    return (
+                                                    <th
+                                                        key={field}
+                                                        className="px-2 py-1.5 text-left text-[0.9em] font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20 cursor-pointer hover:bg-slate-100"
+                                                        style={{ minWidth: '120px' }}
+                                                        onDoubleClick={() => setEditingColumn(`row_${field}`)}
+                                                        title="Double-cliquez pour renommer"
+                                                    >
+                                                        {isEditing ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={displayLabel}
+                                                                autoFocus
+                                                                className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded"
+                                                                onBlur={(e) => {
+                                                                    setColumnLabels(prev => ({ ...prev, [`row_${field}`]: e.target.value }));
+                                                                    setEditingColumn(null);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        setColumnLabels(prev => ({ ...prev, [`row_${field}`]: e.currentTarget.value }));
+                                                                        setEditingColumn(null);
+                                                                    } else if (e.key === 'Escape') {
+                                                                        setEditingColumn(null);
+                                                                    }
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        ) : (
+                                                            displayLabel
+                                                        )}
                                                     </th>
-                                                ))}
+                                                    );
+                                                })}
 
                                                 {/* Headers Colonnes Dynamiques */}
                                                 {pivotData.colHeaders.map(col => {
@@ -1758,9 +1854,40 @@ export const PivotTable: React.FC = () => {
                                                         label = formatDateLabelForDisplay(label);
                                                     }
 
+                                                    // Apply custom label if exists
+                                                    const displayLabel = columnLabels[col] || label;
+                                                    const isEditing = editingColumn === col;
+
                                                     return (
-                                                        <th key={col} className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}>
-                                                            {label}
+                                                        <th
+                                                            key={col}
+                                                            className={`px-2 py-1.5 text-right text-[0.9em] font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-slate-100 ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
+                                                            onDoubleClick={() => setEditingColumn(col)}
+                                                            title="Double-cliquez pour renommer"
+                                                        >
+                                                            {isEditing ? (
+                                                                <input
+                                                                    type="text"
+                                                                    defaultValue={displayLabel}
+                                                                    autoFocus
+                                                                    className="w-full px-1 py-0.5 text-xs border border-blue-300 rounded"
+                                                                    onBlur={(e) => {
+                                                                        setColumnLabels(prev => ({ ...prev, [col]: e.target.value }));
+                                                                        setEditingColumn(null);
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            setColumnLabels(prev => ({ ...prev, [col]: e.currentTarget.value }));
+                                                                            setEditingColumn(null);
+                                                                        } else if (e.key === 'Escape') {
+                                                                            setEditingColumn(null);
+                                                                        }
+                                                                    }}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                />
+                                                            ) : (
+                                                                displayLabel
+                                                            )}
                                                         </th>
                                                     );
                                                 })}
