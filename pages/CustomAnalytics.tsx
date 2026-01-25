@@ -96,8 +96,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
           <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
-             <span className="text-[10px] font-bold text-slate-500 uppercase">Options</span>
-             <button onClick={handleSelectAll} className="text-[10px] text-blue-600 hover:underline">
+             <span className="text-xs font-bold text-slate-500 uppercase">Options</span>
+             <button onClick={handleSelectAll} className="text-xs text-blue-600 hover:underline">
                 {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
              </button>
           </div>
@@ -858,7 +858,7 @@ export const CustomAnalytics: React.FC = () => {
                 </button>
                 {showExportMenu && (
                    <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
-                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format PDF</div>
+                      <div className="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Format PDF</div>
                       <button 
                          onClick={() => handleExport('pdf', 'A4')}
                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
@@ -874,7 +874,7 @@ export const CustomAnalytics: React.FC = () => {
                          <Printer className="w-4 h-4 text-red-500" /> PDF (Hauteur adaptative)
                       </button>
                       <div className="border-t border-slate-100 my-1"></div>
-                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Format Web</div>
+                      <div className="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Format Web</div>
                       <button 
                          onClick={() => handleExport('html')}
                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
@@ -1087,7 +1087,7 @@ export const CustomAnalytics: React.FC = () => {
                                    className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${chartType === type.id ? 'bg-slate-100 border-slate-400 text-slate-800 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
                                 >
                                    <Icon className={`w-5 h-5 mb-1 ${type.rotate ? 'transform rotate-90' : ''}`} />
-                                   <span className="text-[10px] font-medium">{type.label}</span>
+                                   <span className="text-xs font-medium">{type.label}</span>
                                 </button>
                              )
                           })}
@@ -1099,14 +1099,14 @@ export const CustomAnalytics: React.FC = () => {
                               className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${chartType === 'line' ? 'bg-slate-100 border-slate-400 text-slate-800 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
                            >
                               <Activity className="w-5 h-5 mb-1" />
-                              <span className="text-[10px] font-medium">Lignes</span>
+                              <span className="text-xs font-medium">Lignes</span>
                            </button>
                            <button
                               onClick={() => setChartType('area')}
                               className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${chartType === 'area' ? 'bg-slate-100 border-slate-400 text-slate-800 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
                            >
                               <TrendingUp className="w-5 h-5 mb-1" />
-                              <span className="text-[10px] font-medium">Aires</span>
+                              <span className="text-xs font-medium">Aires</span>
                            </button>
                        </>
                     )}

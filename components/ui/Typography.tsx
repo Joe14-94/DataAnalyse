@@ -13,7 +13,7 @@ export const Heading: React.FC<HeadingProps> = ({ level = 1, children, className
     1: "text-[1.8em] font-bold text-txt-main tracking-tight",
     2: "text-[1.5em] font-bold text-txt-main",
     3: "text-[1.2em] font-semibold text-txt-main",
-    4: "text-[1em] font-bold text-txt-secondary uppercase tracking-wider"
+    4: "text-base font-bold text-txt-secondary uppercase tracking-wider"
   };
 
   const Tag = `h${level}` as React.ElementType;

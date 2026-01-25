@@ -238,7 +238,7 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                                     return (
                                         <div key={batchId} className="flex items-center gap-2">
                                             <span className="font-bold">{label}</span>
-                                            {isRef && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold">RÉFÉRENCE</span>}
+                                            {isRef && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-bold">RÉFÉRENCE</span>}
                                         </div>
                                     );
                                 })}

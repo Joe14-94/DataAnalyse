@@ -425,7 +425,7 @@ export const Import: React.FC = () => {
                 <div className="flex items-center gap-2">
                    <Settings2 className="w-3 h-3 text-slate-400" />
                    <select 
-                      className="text-[10px] bg-slate-50 border border-slate-200 rounded py-0.5 px-1 text-slate-600 focus:ring-blue-500"
+                      className="text-xs bg-slate-50 border border-slate-200 rounded py-0.5 px-1 text-slate-600 focus:ring-blue-500"
                       value={fileEncoding}
                       onChange={(e) => setFileEncoding(e.target.value as any)}
                       title="Forcer l'encodage si les accents sont incorrects"
@@ -477,7 +477,7 @@ export const Import: React.FC = () => {
               <label htmlFor="paste-area" className="block text-sm font-bold text-slate-700">
                 3. Ou coller le contenu (Legacy)
               </label>
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Texte brut</span>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Texte brut</span>
            </div>
            <textarea
              id="paste-area"
@@ -763,7 +763,7 @@ export const Import: React.FC = () => {
                               Source
                            </div>
                            {isAutoDetected && isMapped && (
-                            <div className="flex items-center text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                            <div className="flex items-center text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
                               <Zap className="w-3 h-3 mr-1" fill="currentColor" />
                               Auto
                             </div>
@@ -842,7 +842,7 @@ export const Import: React.FC = () => {
                                     </div>
                                     
                                     <select
-                                        className="block w-full text-[10px] border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-blue-500 text-slate-600"
+                                        className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-blue-500 text-slate-600"
                                         value={tempFieldConfigs[mappedVal]?.displayScale || 'none'}
                                         onChange={(e) => handleConfigChange(mappedVal, 'displayScale', e.target.value)}
                                         title="Échelle d'affichage"

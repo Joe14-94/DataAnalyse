@@ -68,7 +68,7 @@ export const Customization: React.FC = () => {
                             </div>
                         )}
                     </div>
-                    <p className="text-[10px] text-slate-400 text-center w-64">
+                    <p className="text-xs text-slate-400 text-center w-64">
                         Ce logo apparaîtra dans le menu latéral et sur les exports PDF.
                     </p>
                 </div>
@@ -100,7 +100,7 @@ export const Customization: React.FC = () => {
                                 cursor-pointer border border-slate-300 rounded-md bg-white shadow-sm"
                             />
                         </label>
-                        <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500">
+                        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
                             <AlertCircle className="w-3 h-3" />
                             <span>Max: 1 Mo. Formats: PNG, JPG, SVG, WEBP.</span>
                         </div>

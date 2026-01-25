@@ -240,7 +240,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                   {Math.abs(trend).toFixed(1)}% vs préc.
                </div>
             )}
-            {widget.config.secondarySource && <div className="text-[10px] text-txt-muted flex items-center gap-1 mt-1"><LinkIcon className="w-3 h-3" /> Données croisées</div>}
+            {widget.config.secondarySource && <div className="text-xs text-txt-muted flex items-center gap-1 mt-1"><LinkIcon className="w-3 h-3" /> Données croisées</div>}
          </div>
       );
    }
@@ -251,7 +251,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
          <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {current.map((item: any, idx: number) => (
                <div key={idx} className="flex flex-col gap-0.5 cursor-pointer group" onClick={() => widget.config.dimension && setDashboardFilter(widget.config.dimension, item.name)}>
-                  <div className="flex justify-between text-[10px] group-hover:text-brand-600 transition-colors">
+                  <div className="flex justify-between text-xs group-hover:text-brand-600 transition-colors">
                      <span className="font-bold text-txt-main truncate pr-2">{idx + 1}. {item.name}</span>
                      <span className="text-txt-secondary font-mono">{item.value.toLocaleString()} {unit}</span>
                   </div>
@@ -351,14 +351,14 @@ const WidgetItem: React.FC<WidgetItemProps> = ({
                      </button>
                      {openMenuWidgetId === widget.id && (
                         <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 animate-in fade-in zoom-in-95 duration-100">
-                           <button onClick={() => setFullscreenWidgetId(widget.id)} className="w-full text-left px-3 py-2 text-[10px] hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                           <button onClick={() => setFullscreenWidgetId(widget.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                               <Maximize2 className="w-3 h-3" /> Agrandir
                            </button>
                            <div className="border-t border-slate-100 my-1"></div>
-                           <button onClick={() => handleExportImage(widget.id, widget.title)} className="w-full text-left px-3 py-2 text-[10px] hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                           <button onClick={() => handleExportImage(widget.id, widget.title)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                               <ImageIcon className="w-3 h-3" /> Image (.png)
                            </button>
-                           <button onClick={() => handleExportCSV(widgetData, widget.title)} className="w-full text-left px-3 py-2 text-[10px] hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                           <button onClick={() => handleExportCSV(widgetData, widget.title)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                               <FileText className="w-3 h-3" /> Données (.csv)
                            </button>
                         </div>
@@ -612,7 +612,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                      <div className="flex flex-col">
-                        <label className="text-[0.9em] font-bold text-slate-400 uppercase">Début</label>
+                        <label className="text-sm font-bold text-slate-400 uppercase">Début</label>
                         <input
                            type="date"
                            className="text-app-base border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
@@ -622,7 +622,7 @@ export const Dashboard: React.FC = () => {
                      </div>
                      <span className="text-slate-300 mt-3">-</span>
                      <div className="flex flex-col">
-                        <label className="text-[0.9em] font-bold text-slate-400 uppercase">Fin</label>
+                        <label className="text-sm font-bold text-slate-400 uppercase">Fin</label>
                         <input
                            type="date"
                            className="text-app-base border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
@@ -660,7 +660,7 @@ export const Dashboard: React.FC = () => {
                      </button>
                   </div>
                ) : (
-                  <div className="text-[10px] text-slate-400 italic flex items-center gap-1.5">
+                  <div className="text-xs text-slate-400 italic flex items-center gap-1.5">
                      <MousePointerClick className="w-3 h-3" /> Cliquez sur un graphique pour filtrer le tableau de bord
                   </div>
                )}
