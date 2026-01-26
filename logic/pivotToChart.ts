@@ -227,6 +227,7 @@ export const transformPivotToChartData = (
 
 /**
  * Transforme les données pour un Treemap (hiérarchie)
+ * Retourne un tableau PLAT de données pour Recharts Treemap
  */
 export const transformPivotToTreemapData = (
   result: PivotResult,
@@ -234,44 +235,34 @@ export const transformPivotToTreemapData = (
 ): any[] => {
   const dataRows = result.displayRows.filter(r => r.type === 'data');
 
-  // Grouper par hiérarchie
-  const tree: any = { name: 'Total', children: [] };
-  const groupMap = new Map<string, any>();
+  console.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
 
-  dataRows.forEach(row => {
+  // Convertir en format plat pour Recharts Treemap
+  const flatData = dataRows.map(row => {
     const keys = row.keys;
     const value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
 
-    if (keys.length === 1) {
-      // Niveau 1
-      tree.children.push({
-        name: keys[0],
-        value: value,
-        size: value
-      });
-    } else {
-      // Niveau 2+
-      const parentKey = keys.slice(0, -1).join(' > ');
-      const currentKey = keys.join(' > ');
+    // Créer un label hiérarchique si plusieurs niveaux
+    const label = keys.length > 1 ? keys.join(' > ') : keys[0];
 
-      if (!groupMap.has(parentKey)) {
-        const parent = {
-          name: parentKey,
-          children: []
-        };
-        groupMap.set(parentKey, parent);
-        tree.children.push(parent);
-      }
-
-      groupMap.get(parentKey).children.push({
-        name: keys[keys.length - 1],
-        value: value,
-        size: value
-      });
-    }
+    return {
+      name: label,
+      size: value,
+      value: value // Pour compatibilité avec le tooltip
+    };
   });
 
-  return tree.children;
+  // Trier par taille décroissante
+  flatData.sort((a, b) => b.size - a.size);
+
+  // Limiter aux top 10 pour la lisibilité
+  const topData = flatData.slice(0, 10);
+
+  console.log('🌳 Données treemap (top 10):', topData);
+  console.log('🌳 Premier élément:', topData[0]);
+  console.log('🌳 Format correct pour Recharts:', topData.every(d => d.name && typeof d.size === 'number'));
+
+  return topData;
 };
 
 // ============================================================================

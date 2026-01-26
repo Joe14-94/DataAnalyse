@@ -20,8 +20,19 @@ import {
 
 // Custom Treemap Content Component
 const TreemapContent = (props: any) => {
-  const { x, y, width, height, name, index } = props;
+  const { x, y, width, height, name, index, value } = props;
   const colors = getChartColors(9);
+
+  // Debug: log les props reçues pour le premier élément
+  if (index === 0) {
+    console.log('🎨 TreemapContent props (premier élément):', { x, y, width, height, name, index, value });
+  }
+
+  // Si pas de dimensions valides, ne rien afficher
+  if (!width || !height || width <= 0 || height <= 0) {
+    console.warn('⚠️ TreemapContent: dimensions invalides', { width, height });
+    return null;
+  }
 
   return (
     <g>
@@ -45,7 +56,7 @@ const TreemapContent = (props: any) => {
           dy={4}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
         >
-          {name.length > 15 ? name.substring(0, 12) + '...' : name}
+          {name && name.length > 15 ? name.substring(0, 12) + '...' : name}
         </text>
       )}
     </g>
@@ -360,6 +371,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'treemap':
+        console.log('📊 Rendu Treemap avec chartData:', chartData);
+        console.log('📊 chartData[0]:', chartData[0]);
+        console.log('📊 Tous les éléments ont size?', chartData.every((d: any) => typeof d.size === 'number'));
+
         return (
           <ResponsiveContainer width="100%" height="100%">
             <Treemap
@@ -531,8 +546,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         </div>
 
         {/* Chart */}
-        <div className="flex-1 p-6 overflow-hidden">
-          <div className="h-full w-full">
+        <div className="flex-1 p-6 overflow-hidden min-h-[400px]">
+          <div className="h-full w-full" style={{ minHeight: '400px' }}>
             {!chartData || chartData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="text-slate-400 text-center">
