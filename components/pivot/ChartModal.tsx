@@ -375,13 +375,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         console.log('📊 chartData[0]:', chartData[0]);
         console.log('📊 Tous les éléments ont size?', chartData.every((d: any) => typeof d.size === 'number'));
 
-        // Essayer avec une hauteur fixe au lieu de ResponsiveContainer
-        // ResponsiveContainer peut avoir des problèmes avec Treemap
         return (
-          <div style={{ width: '100%', height: '500px' }}>
+          <ResponsiveContainer width="100%" height="100%">
             <Treemap
-              width={1000}
-              height={500}
               data={chartData}
               dataKey="size"
               aspectRatio={4 / 3}
@@ -391,7 +387,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             >
               <Tooltip content={<CustomTooltip />} />
             </Treemap>
-          </div>
+          </ResponsiveContainer>
         );
 
       default:
@@ -550,8 +546,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         </div>
 
         {/* Chart */}
-        <div className="flex-1 p-6 overflow-hidden min-h-[400px]">
-          <div className="h-full w-full" style={{ minHeight: '400px' }}>
+        <div className="p-6 overflow-hidden" style={{ height: '600px' }}>
+          <div className="h-full w-full">
             {!chartData || chartData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="text-slate-400 text-center">
