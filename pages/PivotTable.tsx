@@ -801,19 +801,37 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleToChart = () => {
-        if (!primaryDataset) return;
+        console.log('=== handleToChart appelé ===');
+        console.log('primaryDataset:', primaryDataset);
+        console.log('isTemporalMode:', isTemporalMode);
+        console.log('rowFields:', rowFields);
+        console.log('pivotData:', pivotData);
+        console.log('chartPivotData:', chartPivotData);
+
+        if (!primaryDataset) {
+            console.log('❌ Arrêt: pas de primaryDataset');
+            return;
+        }
         if (rowFields.length === 0 && !isTemporalMode) {
+            console.log('❌ Arrêt: pas de rowFields en mode standard');
             alert("Veuillez configurer au moins une ligne pour générer un graphique.");
             return;
         }
         if (!pivotData && !isTemporalMode) {
+            console.log('❌ Arrêt: pas de pivotData en mode standard');
             alert("Aucune donnée à afficher. Veuillez configurer votre TCD.");
             return;
         }
         if (isTemporalMode && (!temporalConfig || temporalResults.length === 0)) {
+            console.log('❌ Arrêt: pas de données temporelles');
+            console.log('temporalConfig:', temporalConfig);
+            console.log('temporalResults:', temporalResults);
             alert("Aucune donnée temporelle à afficher. Veuillez configurer vos sources de comparaison.");
             return;
         }
+
+        console.log('✅ Ouverture du modal graphique');
+        console.log('chartPivotData à utiliser:', chartPivotData);
         setIsChartModalOpen(true);
     };
 

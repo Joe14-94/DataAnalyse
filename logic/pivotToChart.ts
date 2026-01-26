@@ -85,14 +85,16 @@ export const generateChartMetadata = (
 ): ChartMetadata => {
   const { rowFields, colFields, colGrouping, valField, aggType } = config;
 
-  const isMultiSeries = colFields.length > 0;
+  // Utiliser result.colHeaders pour détecter multi-séries (fonctionne en mode temporel)
+  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const isMultiSeries = seriesHeaders.length > 1;
   const hasTemporalData = colGrouping !== 'none';
   const hasHierarchy = rowFields.length > 1;
   const dataRows = result.displayRows.filter(r => r.type === 'data');
 
   // Noms des séries pour graphiques multi-séries
   const seriesNames = isMultiSeries
-    ? result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'))
+    ? seriesHeaders
     : [getAggregationLabel(aggType, valField)];
 
   return {
@@ -135,6 +137,22 @@ export const transformPivotToChartData = (
     return row.type !== 'grandTotal';
   });
 
+  // Détecter si multi-séries en utilisant result.colHeaders (fonctionne en mode temporel)
+  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const isMultiSeries = seriesHeaders.length > 1;
+
+  // DEBUG: Log pour vérifier la détection
+  if (dataRows.length > 0) {
+    console.log('📊 transformPivotToChartData:', {
+      colHeadersCount: result.colHeaders.length,
+      seriesHeadersCount: seriesHeaders.length,
+      seriesHeaders: seriesHeaders,
+      isMultiSeries,
+      firstRowMetrics: dataRows[0]?.metrics,
+      firstRowTotal: dataRows[0]?.rowTotal
+    });
+  }
+
   // Transformer en ChartDataPoint
   let chartData: ChartDataPoint[] = dataRows.map(row => {
     const dataPoint: ChartDataPoint = {
@@ -142,7 +160,7 @@ export const transformPivotToChartData = (
     };
 
     // Pour graphiques multi-séries : ajouter toutes les métriques
-    if (config.colFields.length > 0) {
+    if (isMultiSeries && row.metrics && Object.keys(row.metrics).length > 0) {
       // Exclure les colonnes de variation (_DIFF, _PCT)
       const metricKeys = Object.keys(row.metrics).filter(
         key => !key.endsWith('_DIFF') && !key.endsWith('_PCT')
@@ -169,10 +187,10 @@ export const transformPivotToChartData = (
   } else if (sortBy === 'value') {
     chartData.sort((a, b) => {
       // Pour multi-séries, trier par la somme de toutes les séries
-      const aValue = config.colFields.length > 0
+      const aValue = isMultiSeries
         ? Object.keys(a).filter(k => k !== 'name').reduce((sum, k) => sum + (a[k] || 0), 0)
         : (a.value || 0);
-      const bValue = config.colFields.length > 0
+      const bValue = isMultiSeries
         ? Object.keys(b).filter(k => k !== 'name').reduce((sum, k) => sum + (b[k] || 0), 0)
         : (b.value || 0);
 
@@ -189,7 +207,7 @@ export const transformPivotToChartData = (
       // Agréger les "Autres"
       const othersPoint: ChartDataPoint = { name: 'Autres' };
 
-      if (config.colFields.length > 0) {
+      if (isMultiSeries) {
         const metricKeys = Object.keys(topN[0]).filter(k => k !== 'name');
         metricKeys.forEach(key => {
           othersPoint[key] = others.reduce((sum, item) => sum + (item[key] || 0), 0);
@@ -209,6 +227,7 @@ export const transformPivotToChartData = (
 
 /**
  * Transforme les données pour un Treemap (hiérarchie)
+ * Retourne un tableau PLAT de données pour Recharts Treemap
  */
 export const transformPivotToTreemapData = (
   result: PivotResult,
@@ -216,44 +235,34 @@ export const transformPivotToTreemapData = (
 ): any[] => {
   const dataRows = result.displayRows.filter(r => r.type === 'data');
 
-  // Grouper par hiérarchie
-  const tree: any = { name: 'Total', children: [] };
-  const groupMap = new Map<string, any>();
+  console.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
 
-  dataRows.forEach(row => {
+  // Convertir en format plat pour Recharts Treemap
+  const flatData = dataRows.map(row => {
     const keys = row.keys;
     const value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
 
-    if (keys.length === 1) {
-      // Niveau 1
-      tree.children.push({
-        name: keys[0],
-        value: value,
-        size: value
-      });
-    } else {
-      // Niveau 2+
-      const parentKey = keys.slice(0, -1).join(' > ');
-      const currentKey = keys.join(' > ');
+    // Créer un label hiérarchique si plusieurs niveaux
+    const label = keys.length > 1 ? keys.join(' > ') : keys[0];
 
-      if (!groupMap.has(parentKey)) {
-        const parent = {
-          name: parentKey,
-          children: []
-        };
-        groupMap.set(parentKey, parent);
-        tree.children.push(parent);
-      }
-
-      groupMap.get(parentKey).children.push({
-        name: keys[keys.length - 1],
-        value: value,
-        size: value
-      });
-    }
+    return {
+      name: label,
+      size: value,
+      value: value // Pour compatibilité avec le tooltip
+    };
   });
 
-  return tree.children;
+  // Trier par taille décroissante
+  flatData.sort((a, b) => b.size - a.size);
+
+  // Limiter aux top 10 pour la lisibilité
+  const topData = flatData.slice(0, 10);
+
+  console.log('🌳 Données treemap (top 10):', topData);
+  console.log('🌳 Premier élément:', topData[0]);
+  console.log('🌳 Format correct pour Recharts:', topData.every(d => d.name && typeof d.size === 'number'));
+
+  return topData;
 };
 
 // ============================================================================

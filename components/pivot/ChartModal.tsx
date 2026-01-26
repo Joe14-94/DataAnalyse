@@ -20,8 +20,19 @@ import {
 
 // Custom Treemap Content Component
 const TreemapContent = (props: any) => {
-  const { x, y, width, height, name, index } = props;
+  const { x, y, width, height, name, index, value } = props;
   const colors = getChartColors(9);
+
+  // Debug: log les props reçues pour le premier élément
+  if (index === 0) {
+    console.log('🎨 TreemapContent props (premier élément):', { x, y, width, height, name, index, value });
+  }
+
+  // Si pas de dimensions valides, ne rien afficher
+  if (!width || !height || width <= 0 || height <= 0) {
+    console.warn('⚠️ TreemapContent: dimensions invalides', { width, height });
+    return null;
+  }
 
   return (
     <g>
@@ -45,7 +56,7 @@ const TreemapContent = (props: any) => {
           dy={4}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
         >
-          {name.length > 15 ? name.substring(0, 12) + '...' : name}
+          {name && name.length > 15 ? name.substring(0, 12) + '...' : name}
         </text>
       )}
     </g>
@@ -67,8 +78,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // Logs de debug
+  console.log('=== ChartModal rendu ===');
+  console.log('isOpen:', isOpen);
+  console.log('pivotData:', pivotData);
+  console.log('pivotConfig:', pivotConfig);
+
   // Générer les métadonnées du graphique
-  const metadata = useMemo(() => generateChartMetadata(pivotConfig, pivotData), [pivotConfig, pivotData]);
+  const metadata = useMemo(() => {
+    const meta = generateChartMetadata(pivotConfig, pivotData);
+    console.log('Métadonnées générées:', meta);
+    return meta;
+  }, [pivotConfig, pivotData]);
 
   // State pour les options
   const [selectedChartType, setSelectedChartType] = useState<ChartType>(metadata.suggestedType);
@@ -78,23 +99,39 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
   // Transformer les données
   const chartData = useMemo(() => {
+    console.log('=== Transformation des données pour graphique ===');
+    console.log('selectedChartType:', selectedChartType);
+    console.log('Options:', { limit, sortBy, sortOrder });
+
+    let data;
     if (selectedChartType === 'treemap') {
-      return transformPivotToTreemapData(pivotData, pivotConfig);
+      data = transformPivotToTreemapData(pivotData, pivotConfig);
+      console.log('Données treemap transformées:', data);
+    } else {
+      data = transformPivotToChartData(pivotData, pivotConfig, {
+        chartType: selectedChartType,
+        limit,
+        excludeSubtotals: true,
+        sortBy,
+        sortOrder,
+        showOthers: limit > 0
+      });
+      console.log('Données graphique transformées:', data);
     }
 
-    return transformPivotToChartData(pivotData, pivotConfig, {
-      chartType: selectedChartType,
-      limit,
-      excludeSubtotals: true,
-      sortBy,
-      sortOrder,
-      showOthers: limit > 0
-    });
+    return data;
   }, [pivotData, pivotConfig, selectedChartType, limit, sortBy, sortOrder]);
 
   const colors = getChartColors(metadata.seriesNames.length);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('ChartModal fermé');
+    return null;
+  }
+
+  console.log('ChartModal ouvert - Affichage du contenu');
+  console.log('chartData final avant rendu:', chartData);
+  console.log('chartData est vide?', !chartData || chartData.length === 0);
 
   // Styles pour le tooltip
   const tooltipStyle = {
@@ -124,9 +161,17 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
   // Rendu du graphique selon le type
   const renderChart = () => {
-    const chartMargin = { top: 20, right: 30, left: 20, bottom: 60 };
+    console.log('=== renderChart appelé ===');
+    console.log('selectedChartType:', selectedChartType);
+    console.log('chartData:', chartData);
+    console.log('chartData length:', chartData?.length);
+    console.log('metadata:', metadata);
+    console.log('colors:', colors);
 
-    switch (selectedChartType) {
+    try {
+      const chartMargin = { top: 20, right: 30, left: 20, bottom: 60 };
+
+      switch (selectedChartType) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -326,6 +371,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'treemap':
+        console.log('📊 Rendu Treemap avec chartData:', chartData);
+        console.log('📊 chartData[0]:', chartData[0]);
+        console.log('📊 Tous les éléments ont size?', chartData.every((d: any) => typeof d.size === 'number'));
+
         return (
           <ResponsiveContainer width="100%" height="100%">
             <Treemap
@@ -343,6 +392,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
       default:
         return <div className="flex items-center justify-center h-full text-slate-400">Type de graphique non supporté</div>;
+      }
+    } catch (error) {
+      console.error('❌ Erreur dans renderChart:', error);
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="text-red-500 text-center">
+            <p className="text-lg font-semibold mb-2">Erreur lors du rendu du graphique</p>
+            <p className="text-sm">{error instanceof Error ? error.message : 'Erreur inconnue'}</p>
+            <p className="text-xs mt-2">Consultez la console (F12) pour plus de détails.</p>
+          </div>
+        </div>
+      );
     }
   };
 
@@ -485,9 +546,19 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         </div>
 
         {/* Chart */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div className="p-6 overflow-hidden" style={{ height: '600px' }}>
           <div className="h-full w-full">
-            {renderChart()}
+            {!chartData || chartData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="text-slate-400 text-center">
+                  <p className="text-lg font-semibold mb-2">Aucune donnée à afficher</p>
+                  <p className="text-sm">Les données du pivot sont vides ou invalides.</p>
+                  <p className="text-xs mt-2 text-slate-500">Consultez la console (F12) pour plus de détails.</p>
+                </div>
+              </div>
+            ) : (
+              renderChart()
+            )}
           </div>
         </div>
 
