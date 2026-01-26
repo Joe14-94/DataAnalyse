@@ -579,62 +579,58 @@ export const PivotTable: React.FC = () => {
         return () => clearTimeout(timer);
     }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals]);
 
-    // Fonction pour convertir temporalResults en format PivotResult
-    const convertTemporalToPivotResult = (): PivotResult | null => {
-        if (!temporalConfig || temporalResults.length === 0) return null;
-
-        // Construire les en-têtes de colonnes à partir des sources
-        const colHeaders = temporalConfig.sources.map(source => source.label);
-
-        // Construire les lignes d'affichage
-        const displayRows: any[] = temporalResults
-            .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
-            .map(result => {
-                const row: any = {
-                    type: 'data',
-                    keys: [result.groupKey],
-                    level: 0,
-                    label: result.groupLabel,
-                    metrics: {},
-                    rowTotal: 0
-                };
-
-                // Ajouter les valeurs pour chaque source
-                let total = 0;
-                temporalConfig.sources.forEach(source => {
-                    const value = result.values[source.id] || 0;
-                    row.metrics[source.label] = value;
-                    total += value;
-                });
-                row.rowTotal = total;
-
-                return row;
-            });
-
-        // Calculer les totaux de colonnes
-        const colTotals: Record<string, number> = {};
-        temporalConfig.sources.forEach(source => {
-            const total = temporalResults
-                .filter(result => !result.isSubtotal)
-                .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
-            colTotals[source.label] = total;
-        });
-
-        // Calculer le total général
-        const grandTotal = Object.values(colTotals).reduce((sum, val) => sum + val, 0);
-
-        return {
-            colHeaders,
-            displayRows,
-            colTotals,
-            grandTotal
-        };
-    };
-
     // Mémoriser les données pour le graphique (pivot normal ou temporel converti)
     const chartPivotData = useMemo(() => {
         if (isTemporalMode) {
-            return convertTemporalToPivotResult();
+            // Convertir temporalResults en format PivotResult
+            if (!temporalConfig || temporalResults.length === 0) return null;
+
+            // Construire les en-têtes de colonnes à partir des sources
+            const colHeaders = temporalConfig.sources.map(source => source.label);
+
+            // Construire les lignes d'affichage
+            const displayRows: any[] = temporalResults
+                .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
+                .map(result => {
+                    const row: any = {
+                        type: 'data',
+                        keys: [result.groupKey],
+                        level: 0,
+                        label: result.groupLabel,
+                        metrics: {},
+                        rowTotal: 0
+                    };
+
+                    // Ajouter les valeurs pour chaque source
+                    let total = 0;
+                    temporalConfig.sources.forEach(source => {
+                        const value = result.values[source.id] || 0;
+                        row.metrics[source.label] = value;
+                        total += value;
+                    });
+                    row.rowTotal = total;
+
+                    return row;
+                });
+
+            // Calculer les totaux de colonnes
+            const colTotals: Record<string, number> = {};
+            temporalConfig.sources.forEach(source => {
+                const total = temporalResults
+                    .filter(result => !result.isSubtotal)
+                    .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
+                colTotals[source.label] = total;
+            });
+
+            // Calculer le total général
+            const grandTotal = Object.values(colTotals).reduce((sum, val) => sum + val, 0);
+
+            return {
+                colHeaders,
+                displayRows,
+                colTotals,
+                grandTotal
+            };
         }
         return pivotData;
     }, [isTemporalMode, temporalResults, temporalConfig, pivotData]);
@@ -814,7 +810,7 @@ export const PivotTable: React.FC = () => {
             alert("Aucune donnée à afficher. Veuillez configurer votre TCD.");
             return;
         }
-        if (isTemporalMode && temporalResults.length === 0) {
+        if (isTemporalMode && (!temporalConfig || temporalResults.length === 0)) {
             alert("Aucune donnée temporelle à afficher. Veuillez configurer vos sources de comparaison.");
             return;
         }
