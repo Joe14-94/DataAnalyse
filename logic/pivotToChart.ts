@@ -5,6 +5,8 @@ import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType } fro
 // ============================================================================
 
 export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'stacked-bar' | 'stacked-area' | 'radar' | 'treemap';
+export type ColorPalette = 'default' | 'pastel' | 'vibrant';
+export type ColorMode = 'single' | 'gradient' | 'multi';
 
 export interface ChartDataPoint {
   name: string;
@@ -18,6 +20,12 @@ export interface ChartTransformOptions {
   sortBy?: 'name' | 'value' | 'none'; // Tri des données
   sortOrder?: 'asc' | 'desc';
   showOthers?: boolean; // Regrouper le reste en "Autres"
+  hierarchyLevel?: number; // Filtrer par niveau de hiérarchie (0, 1, 2...)
+  colorPalette?: ColorPalette; // Palette de couleurs (défaut: 'default')
+  colorMode?: ColorMode; // Mode de coloration (défaut: 'multi')
+  singleColor?: string; // Couleur unique pour le mode 'single'
+  gradientStart?: string; // Couleur de début pour le mode 'gradient'
+  gradientEnd?: string; // Couleur de fin pour le mode 'gradient'
 }
 
 export interface ChartMetadata {
@@ -108,6 +116,18 @@ export const generateChartMetadata = (
   };
 };
 
+/**
+ * Détecte les niveaux de hiérarchie disponibles dans les données
+ */
+export const getAvailableHierarchyLevels = (result: PivotResult): number => {
+  const dataRows = result.displayRows.filter(row => row.type === 'data');
+  if (dataRows.length === 0) return 0;
+
+  // Trouver le niveau maximum
+  const maxLevel = Math.max(...dataRows.map(row => row.level), -1);
+  return maxLevel + 1; // Retourner le nombre de niveaux (0-indexed)
+};
+
 // ============================================================================
 // TRANSFORMATION DES DONNEES
 // ============================================================================
@@ -126,11 +146,18 @@ export const transformPivotToChartData = (
     excludeSubtotals = true,
     sortBy = 'value',
     sortOrder = 'desc',
-    showOthers = false
+    showOthers = false,
+    hierarchyLevel = undefined
   } = options;
 
   // Filtrer les lignes de données (exclure sous-totaux et grand total)
   let dataRows = result.displayRows.filter(row => {
+    // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
+    if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
+      return row.type !== 'grandTotal' && row.level === hierarchyLevel;
+    }
+
+    // Sinon, appliquer la logique normale
     if (excludeSubtotals) {
       return row.type === 'data';
     }
@@ -231,9 +258,16 @@ export const transformPivotToChartData = (
  */
 export const transformPivotToTreemapData = (
   result: PivotResult,
-  config: PivotConfig
+  config: PivotConfig,
+  hierarchyLevel?: number
 ): any[] => {
-  const dataRows = result.displayRows.filter(r => r.type === 'data');
+  // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
+  let dataRows: PivotRow[];
+  if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
+    dataRows = result.displayRows.filter(r => r.type !== 'grandTotal' && r.level === hierarchyLevel);
+  } else {
+    dataRows = result.displayRows.filter(r => r.type === 'data');
+  }
 
   console.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
 
@@ -315,10 +349,10 @@ export const isMultiSeriesAppropriate = (
 };
 
 /**
- * Obtient une palette de couleurs pour les graphiques
+ * Palettes de couleurs disponibles
  */
-export const getChartColors = (count: number = 9): string[] => {
-  const baseColors = [
+const PALETTES = {
+  default: [
     '#64748b', // Slate
     '#60a5fa', // Blue
     '#34d399', // Green
@@ -328,7 +362,100 @@ export const getChartColors = (count: number = 9): string[] => {
     '#22d3ee', // Cyan
     '#f472b6', // Pink
     '#a3e635'  // Lime
-  ];
+  ],
+  pastel: [
+    '#d4a5a5', // Rose pastel
+    '#a8d5ba', // Mint pastel
+    '#ffeaa7', // Yellow pastel
+    '#dfe6e9', // Gray pastel
+    '#fab1a0', // Coral pastel
+    '#fd79a8', // Pink pastel
+    '#a29bfe', // Purple pastel
+    '#74b9ff', // Blue pastel
+    '#81ecec'  // Cyan pastel
+  ],
+  vibrant: [
+    '#ff006e', // Vivid Pink
+    '#00d4ff', // Vivid Cyan
+    '#ffbe0b', // Vivid Yellow
+    '#fb5607', // Vivid Orange
+    '#8338ec', // Vivid Purple
+    '#3a86ff', // Vivid Blue
+    '#06ffa5', // Vivid Green
+    '#ff006e', // Vivid Red
+    '#ffbe0b'  // Vivid Yellow (repeat for variety)
+  ]
+};
+
+/**
+ * Palettes de couleurs uniques pour le mode 'single'
+ */
+const SINGLE_COLOR_PALETTES = {
+  blues: ['#0066cc', '#0052a3', '#003d7a', '#0066cc', '#0052a3'],
+  reds: ['#e63946', '#d62828', '#a4161a', '#e63946', '#d62828'],
+  greens: ['#06a77d', '#047857', '#065f46', '#06a77d', '#047857'],
+  purples: ['#7c3aed', '#6d28d9', '#5b21b6', '#7c3aed', '#6d28d9'],
+  oranges: ['#f97316', '#ea580c', '#d97706', '#f97316', '#ea580c'],
+  teals: ['#0891b2', '#0e7490', '#155e75', '#0891b2', '#0e7490'],
+  pinks: ['#ec4899', '#db2777', '#be185d', '#ec4899', '#db2777'],
+  grays: ['#6b7280', '#4b5563', '#374151', '#6b7280', '#4b5563'],
+  ambers: ['#f59e0b', '#d97706', '#b45309', '#f59e0b', '#d97706']
+};
+
+/**
+ * Obtient une palette de couleurs uniques
+ */
+export const getSingleColors = (): Record<string, string> => {
+  const colors: Record<string, string> = {};
+  Object.entries(SINGLE_COLOR_PALETTES).forEach(([name, palette]) => {
+    colors[name] = palette[0]; // Prendre la première couleur comme représentant
+  });
+  return colors;
+};
+
+/**
+ * Génère un gradient de couleurs entre deux couleurs
+ */
+export const generateGradient = (startColor: string, endColor: string, count: number): string[] => {
+  const colors: string[] = [];
+
+  // Convertir les couleurs hex en RGB
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] : [0, 0, 0];
+  };
+
+  // Convertir RGB en hex
+  const rgbToHex = (r: number, g: number, b: number): string => {
+    return '#' + [r, g, b].map(x => {
+      const hex = Math.round(x).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+  };
+
+  const [r1, g1, b1] = hexToRgb(startColor);
+  const [r2, g2, b2] = hexToRgb(endColor);
+
+  for (let i = 0; i < count; i++) {
+    const ratio = count > 1 ? i / (count - 1) : 0;
+    const r = r1 + (r2 - r1) * ratio;
+    const g = g1 + (g2 - g1) * ratio;
+    const b = b1 + (b2 - b1) * ratio;
+    colors.push(rgbToHex(r, g, b));
+  }
+
+  return colors;
+};
+
+/**
+ * Obtient une palette de couleurs pour les graphiques
+ */
+export const getChartColors = (count: number = 9, palette: ColorPalette = 'default'): string[] => {
+  const baseColors = PALETTES[palette] || PALETTES.default;
 
   if (count <= baseColors.length) {
     return baseColors.slice(0, count);

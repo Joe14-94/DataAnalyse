@@ -9,28 +9,26 @@ import {
 import { PivotResult, PivotConfig } from '../../logic/pivotEngine';
 import {
   ChartType,
+  ColorPalette,
+  ColorMode,
   ChartDataPoint,
   transformPivotToChartData,
   transformPivotToTreemapData,
   generateChartMetadata,
   getChartColors,
   formatChartValue,
-  getChartTypeConfig
+  getChartTypeConfig,
+  getAvailableHierarchyLevels,
+  getSingleColors,
+  generateGradient
 } from '../../logic/pivotToChart';
 
 // Custom Treemap Content Component
-const TreemapContent = (props: any) => {
+const TreemapContent = (props: any, chartColors: string[]) => {
   const { x, y, width, height, name, index, value } = props;
-  const colors = getChartColors(9);
-
-  // Debug: log les props reçues pour le premier élément
-  if (index === 0) {
-    console.log('🎨 TreemapContent props (premier élément):', { x, y, width, height, name, index, value });
-  }
 
   // Si pas de dimensions valides, ne rien afficher
   if (!width || !height || width <= 0 || height <= 0) {
-    console.warn('⚠️ TreemapContent: dimensions invalides', { width, height });
     return null;
   }
 
@@ -41,7 +39,7 @@ const TreemapContent = (props: any) => {
         y={y}
         width={width}
         height={height}
-        fill={colors[index % colors.length]}
+        fill={chartColors[index % chartColors.length]}
         stroke="#fff"
         strokeWidth={2}
       />
@@ -91,21 +89,34 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     return meta;
   }, [pivotConfig, pivotData]);
 
+  // Calculer le nombre de niveaux de hiérarchie disponibles
+  const availableLevels = useMemo(() => {
+    return getAvailableHierarchyLevels(pivotData);
+  }, [pivotData]);
+
   // State pour les options
   const [selectedChartType, setSelectedChartType] = useState<ChartType>(metadata.suggestedType);
   const [limit, setLimit] = useState<number>(0); // 0 = pas de limite
   const [sortBy, setSortBy] = useState<'name' | 'value' | 'none'>('value');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [hierarchyLevel, setHierarchyLevel] = useState<number | undefined>(undefined);
+
+  // Nouveaux états pour les modes de coloration
+  const [colorMode, setColorMode] = useState<ColorMode>('multi');
+  const [colorPalette, setColorPalette] = useState<ColorPalette>('default');
+  const [singleColor, setSingleColor] = useState<string>('#0066cc'); // Bleu par défaut
+  const [gradientStart, setGradientStart] = useState<string>('#0066cc'); // Bleu
+  const [gradientEnd, setGradientEnd] = useState<string>('#e63946'); // Rouge
 
   // Transformer les données
   const chartData = useMemo(() => {
     console.log('=== Transformation des données pour graphique ===');
     console.log('selectedChartType:', selectedChartType);
-    console.log('Options:', { limit, sortBy, sortOrder });
+    console.log('Options:', { limit, sortBy, sortOrder, hierarchyLevel });
 
     let data;
     if (selectedChartType === 'treemap') {
-      data = transformPivotToTreemapData(pivotData, pivotConfig);
+      data = transformPivotToTreemapData(pivotData, pivotConfig, hierarchyLevel);
       console.log('Données treemap transformées:', data);
     } else {
       data = transformPivotToChartData(pivotData, pivotConfig, {
@@ -114,15 +125,30 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         excludeSubtotals: true,
         sortBy,
         sortOrder,
-        showOthers: limit > 0
+        showOthers: limit > 0,
+        hierarchyLevel
       });
       console.log('Données graphique transformées:', data);
     }
 
     return data;
-  }, [pivotData, pivotConfig, selectedChartType, limit, sortBy, sortOrder]);
+  }, [pivotData, pivotConfig, selectedChartType, limit, sortBy, sortOrder, hierarchyLevel, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
 
-  const colors = getChartColors(metadata.seriesNames.length);
+  // Calculer les couleurs à utiliser en fonction du mode
+  const colors = useMemo(() => {
+    const count = Math.max(metadata.seriesNames.length, chartData?.length || 0, 1);
+
+    if (colorMode === 'single') {
+      // Mode couleur unique : retourner la même couleur pour tous
+      return Array(count).fill(singleColor);
+    } else if (colorMode === 'gradient') {
+      // Mode gradient : générer un gradient entre les deux couleurs
+      return generateGradient(gradientStart, gradientEnd, count);
+    } else {
+      // Mode multi-couleurs : utiliser la palette sélectionnée
+      return getChartColors(count, colorPalette);
+    }
+  }, [colorMode, colorPalette, singleColor, gradientStart, gradientEnd, metadata.seriesNames.length, chartData?.length]);
 
   if (!isOpen) {
     console.log('ChartModal fermé');
@@ -370,11 +396,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           </ResponsiveContainer>
         );
 
-      case 'treemap':
-        console.log('📊 Rendu Treemap avec chartData:', chartData);
-        console.log('📊 chartData[0]:', chartData[0]);
-        console.log('📊 Tous les éléments ont size?', chartData.every((d: any) => typeof d.size === 'number'));
-
+      case 'treemap': {
+        // Créer un composant wrapper qui capture les couleurs
+        const TreemapContentWrapper: React.FC<any> = (props) => TreemapContent(props, colors);
         return (
           <ResponsiveContainer width="100%" height="100%">
             <Treemap
@@ -383,12 +407,13 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               aspectRatio={4 / 3}
               stroke="#fff"
               fill="#60a5fa"
-              content={<TreemapContent />}
+              content={<TreemapContentWrapper />}
             >
               <Tooltip content={<CustomTooltip />} />
             </Treemap>
           </ResponsiveContainer>
         );
+      }
 
       default:
         return <div className="flex items-center justify-center h-full text-slate-400">Type de graphique non supporté</div>;
@@ -504,6 +529,25 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             </div>
           )}
 
+          {/* Niveau de hiérarchie */}
+          {availableLevels > 1 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-600">Niveau:</label>
+              <select
+                value={hierarchyLevel === undefined ? '' : hierarchyLevel}
+                onChange={(e) => setHierarchyLevel(e.target.value === '' ? undefined : Number(e.target.value))}
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="">Tous les niveaux</option>
+                {Array.from({ length: availableLevels }, (_, i) => (
+                  <option key={i} value={i}>
+                    Niveau {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Tri */}
           {selectedChartType !== 'treemap' && selectedChartType !== 'pie' && selectedChartType !== 'donut' && (
             <>
@@ -533,6 +577,76 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   </select>
                 </div>
               )}
+            </>
+          )}
+
+          {/* Mode de coloration */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-600">Mode couleur:</label>
+            <select
+              value={colorMode}
+              onChange={(e) => setColorMode(e.target.value as ColorMode)}
+              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="multi">Plusieurs couleurs</option>
+              <option value="single">Couleur unique</option>
+              <option value="gradient">Dégradé</option>
+            </select>
+          </div>
+
+          {/* Palette pour mode multi */}
+          {colorMode === 'multi' && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-600">Palette:</label>
+              <select
+                value={colorPalette}
+                onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="default">Défaut</option>
+                <option value="pastel">Pastel</option>
+                <option value="vibrant">Vibrant</option>
+              </select>
+            </div>
+          )}
+
+          {/* Couleur unique pour mode single */}
+          {colorMode === 'single' && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-600">Couleur:</label>
+              <input
+                type="color"
+                value={singleColor}
+                onChange={(e) => setSingleColor(e.target.value)}
+                className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+              />
+              <span className="text-xs text-slate-500">{singleColor}</span>
+            </div>
+          )}
+
+          {/* Gradient pour mode gradient */}
+          {colorMode === 'gradient' && (
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-slate-600">Début:</label>
+                <input
+                  type="color"
+                  value={gradientStart}
+                  onChange={(e) => setGradientStart(e.target.value)}
+                  className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+                />
+                <span className="text-xs text-slate-500">{gradientStart}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-slate-600">Fin:</label>
+                <input
+                  type="color"
+                  value={gradientEnd}
+                  onChange={(e) => setGradientEnd(e.target.value)}
+                  className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+                />
+                <span className="text-xs text-slate-500">{gradientEnd}</span>
+              </div>
             </>
           )}
 
