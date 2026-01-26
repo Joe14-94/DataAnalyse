@@ -20,6 +20,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
+import { ChartModal } from '../components/pivot/ChartModal';
 import {
     calculateTemporalComparison,
     detectDateColumn,
@@ -134,6 +135,9 @@ export const PivotTable: React.FC = () => {
 
     // DRILLDOWN STATE
     const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
+
+    // CHART MODAL STATE
+    const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
     // D&D STATE
     const [draggedField, setDraggedField] = useState<string | null>(null);
@@ -575,6 +579,62 @@ export const PivotTable: React.FC = () => {
         return () => clearTimeout(timer);
     }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals]);
 
+    // Mémoriser les données pour le graphique (pivot normal ou temporel converti)
+    const chartPivotData = useMemo(() => {
+        if (isTemporalMode) {
+            // Convertir temporalResults en format PivotResult
+            if (!temporalConfig || temporalResults.length === 0) return null;
+
+            // Construire les en-têtes de colonnes à partir des sources
+            const colHeaders = temporalConfig.sources.map(source => source.label);
+
+            // Construire les lignes d'affichage
+            const displayRows: any[] = temporalResults
+                .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
+                .map(result => {
+                    const row: any = {
+                        type: 'data',
+                        keys: [result.groupKey],
+                        level: 0,
+                        label: result.groupLabel,
+                        metrics: {},
+                        rowTotal: 0
+                    };
+
+                    // Ajouter les valeurs pour chaque source
+                    let total = 0;
+                    temporalConfig.sources.forEach(source => {
+                        const value = result.values[source.id] || 0;
+                        row.metrics[source.label] = value;
+                        total += value;
+                    });
+                    row.rowTotal = total;
+
+                    return row;
+                });
+
+            // Calculer les totaux de colonnes
+            const colTotals: Record<string, number> = {};
+            temporalConfig.sources.forEach(source => {
+                const total = temporalResults
+                    .filter(result => !result.isSubtotal)
+                    .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
+                colTotals[source.label] = total;
+            });
+
+            // Calculer le total général
+            const grandTotal = Object.values(colTotals).reduce((sum, val) => sum + val, 0);
+
+            return {
+                colHeaders,
+                displayRows,
+                colTotals,
+                grandTotal
+            };
+        }
+        return pivotData;
+    }, [isTemporalMode, temporalResults, temporalConfig, pivotData]);
+
     // --- HANDLERS ---
     const handleValFieldChange = (newField: string) => {
         setValField(newField);
@@ -742,12 +802,19 @@ export const PivotTable: React.FC = () => {
 
     const handleToChart = () => {
         if (!primaryDataset) return;
-        if (rowFields.length === 0) {
+        if (rowFields.length === 0 && !isTemporalMode) {
             alert("Veuillez configurer au moins une ligne pour générer un graphique.");
             return;
         }
-        const pivotConfig = { rowFields, valField, aggType, filters, selectedBatchId };
-        navigate('/analytics', { state: { fromPivot: pivotConfig } });
+        if (!pivotData && !isTemporalMode) {
+            alert("Aucune donnée à afficher. Veuillez configurer votre TCD.");
+            return;
+        }
+        if (isTemporalMode && (!temporalConfig || temporalResults.length === 0)) {
+            alert("Aucune donnée temporelle à afficher. Veuillez configurer vos sources de comparaison.");
+            return;
+        }
+        setIsChartModalOpen(true);
     };
 
     const handleSaveAnalysis = () => {
@@ -2179,6 +2246,31 @@ export const PivotTable: React.FC = () => {
                 rows={drilldownData?.rows || []}
                 fields={drilldownData?.fields || []}
             />
+
+            {/* Modal de graphique */}
+            {isChartModalOpen && chartPivotData && (
+                <ChartModal
+                    isOpen={isChartModalOpen}
+                    onClose={() => setIsChartModalOpen(false)}
+                    pivotData={chartPivotData}
+                    pivotConfig={{
+                        rows: blendedRows,
+                        rowFields: isTemporalMode ? (temporalConfig?.groupByFields || []) : rowFields,
+                        colFields: isTemporalMode ? [] : colFields,
+                        colGrouping,
+                        valField,
+                        aggType,
+                        filters,
+                        sortBy,
+                        sortOrder,
+                        showSubtotals,
+                        showVariations,
+                        currentDataset: primaryDataset,
+                        datasets,
+                        valFormatting
+                    }}
+                />
+            )}
 
             {/* Modal de configuration temporelle */}
             <TemporalSourceModal
