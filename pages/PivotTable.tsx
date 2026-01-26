@@ -591,8 +591,10 @@ export const PivotTable: React.FC = () => {
             .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
             .map(result => {
                 const row: any = {
-                    rowKeys: [result.groupKey],
-                    rowLabels: [result.groupLabel],
+                    type: 'data',
+                    keys: [result.groupKey],
+                    level: 0,
+                    label: result.groupLabel,
                     metrics: {},
                     rowTotal: 0
                 };
