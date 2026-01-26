@@ -579,6 +579,14 @@ export const PivotTable: React.FC = () => {
         return () => clearTimeout(timer);
     }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals]);
 
+    // Mémoriser les données pour le graphique (pivot normal ou temporel converti)
+    const chartPivotData = useMemo(() => {
+        if (isTemporalMode) {
+            return convertTemporalToPivotResult();
+        }
+        return pivotData;
+    }, [isTemporalMode, temporalResults, temporalConfig, pivotData]);
+
     // --- HANDLERS ---
     const handleValFieldChange = (newField: string) => {
         setValField(newField);
@@ -744,14 +752,68 @@ export const PivotTable: React.FC = () => {
         }
     };
 
+    // Fonction pour convertir temporalResults en format PivotResult
+    const convertTemporalToPivotResult = (): PivotResult | null => {
+        if (!temporalConfig || temporalResults.length === 0) return null;
+
+        // Construire les en-têtes de colonnes à partir des sources
+        const colHeaders = temporalConfig.sources.map(source => source.label);
+
+        // Construire les lignes d'affichage
+        const displayRows: any[] = temporalResults
+            .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
+            .map(result => {
+                const row: any = {
+                    rowKeys: [result.groupKey],
+                    rowLabels: [result.groupLabel],
+                    metrics: {},
+                    rowTotal: 0
+                };
+
+                // Ajouter les valeurs pour chaque source
+                let total = 0;
+                temporalConfig.sources.forEach(source => {
+                    const value = result.values[source.id] || 0;
+                    row.metrics[source.label] = value;
+                    total += value;
+                });
+                row.rowTotal = total;
+
+                return row;
+            });
+
+        // Calculer les totaux de colonnes
+        const colTotals: Record<string, number> = {};
+        temporalConfig.sources.forEach(source => {
+            const total = temporalResults
+                .filter(result => !result.isSubtotal)
+                .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
+            colTotals[source.label] = total;
+        });
+
+        // Calculer le total général
+        const grandTotal = Object.values(colTotals).reduce((sum, val) => sum + val, 0);
+
+        return {
+            colHeaders,
+            displayRows,
+            colTotals,
+            grandTotal
+        };
+    };
+
     const handleToChart = () => {
         if (!primaryDataset) return;
-        if (rowFields.length === 0) {
+        if (rowFields.length === 0 && !isTemporalMode) {
             alert("Veuillez configurer au moins une ligne pour générer un graphique.");
             return;
         }
         if (!pivotData && !isTemporalMode) {
             alert("Aucune donnée à afficher. Veuillez configurer votre TCD.");
+            return;
+        }
+        if (isTemporalMode && temporalResults.length === 0) {
+            alert("Aucune donnée temporelle à afficher. Veuillez configurer vos sources de comparaison.");
             return;
         }
         setIsChartModalOpen(true);
@@ -2188,15 +2250,15 @@ export const PivotTable: React.FC = () => {
             />
 
             {/* Modal de graphique */}
-            {isChartModalOpen && pivotData && (
+            {isChartModalOpen && chartPivotData && (
                 <ChartModal
                     isOpen={isChartModalOpen}
                     onClose={() => setIsChartModalOpen(false)}
-                    pivotData={pivotData}
+                    pivotData={chartPivotData}
                     pivotConfig={{
                         rows: blendedRows,
-                        rowFields,
-                        colFields,
+                        rowFields: isTemporalMode ? (temporalConfig?.groupByFields || []) : rowFields,
+                        colFields: isTemporalMode ? [] : colFields,
                         colGrouping,
                         valField,
                         aggType,
