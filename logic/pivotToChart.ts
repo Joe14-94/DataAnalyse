@@ -85,14 +85,16 @@ export const generateChartMetadata = (
 ): ChartMetadata => {
   const { rowFields, colFields, colGrouping, valField, aggType } = config;
 
-  const isMultiSeries = colFields.length > 0;
+  // Utiliser result.colHeaders pour détecter multi-séries (fonctionne en mode temporel)
+  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const isMultiSeries = seriesHeaders.length > 0 && seriesHeaders.length > 1;
   const hasTemporalData = colGrouping !== 'none';
   const hasHierarchy = rowFields.length > 1;
   const dataRows = result.displayRows.filter(r => r.type === 'data');
 
   // Noms des séries pour graphiques multi-séries
   const seriesNames = isMultiSeries
-    ? result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'))
+    ? seriesHeaders
     : [getAggregationLabel(aggType, valField)];
 
   return {
@@ -135,6 +137,10 @@ export const transformPivotToChartData = (
     return row.type !== 'grandTotal';
   });
 
+  // Détecter si multi-séries en utilisant result.colHeaders (fonctionne en mode temporel)
+  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const isMultiSeries = seriesHeaders.length > 0 && seriesHeaders.length > 1;
+
   // Transformer en ChartDataPoint
   let chartData: ChartDataPoint[] = dataRows.map(row => {
     const dataPoint: ChartDataPoint = {
@@ -142,7 +148,7 @@ export const transformPivotToChartData = (
     };
 
     // Pour graphiques multi-séries : ajouter toutes les métriques
-    if (config.colFields.length > 0) {
+    if (isMultiSeries) {
       // Exclure les colonnes de variation (_DIFF, _PCT)
       const metricKeys = Object.keys(row.metrics).filter(
         key => !key.endsWith('_DIFF') && !key.endsWith('_PCT')
@@ -169,10 +175,10 @@ export const transformPivotToChartData = (
   } else if (sortBy === 'value') {
     chartData.sort((a, b) => {
       // Pour multi-séries, trier par la somme de toutes les séries
-      const aValue = config.colFields.length > 0
+      const aValue = isMultiSeries
         ? Object.keys(a).filter(k => k !== 'name').reduce((sum, k) => sum + (a[k] || 0), 0)
         : (a.value || 0);
-      const bValue = config.colFields.length > 0
+      const bValue = isMultiSeries
         ? Object.keys(b).filter(k => k !== 'name').reduce((sum, k) => sum + (b[k] || 0), 0)
         : (b.value || 0);
 
@@ -189,7 +195,7 @@ export const transformPivotToChartData = (
       // Agréger les "Autres"
       const othersPoint: ChartDataPoint = { name: 'Autres' };
 
-      if (config.colFields.length > 0) {
+      if (isMultiSeries) {
         const metricKeys = Object.keys(topN[0]).filter(k => k !== 'name');
         metricKeys.forEach(key => {
           othersPoint[key] = others.reduce((sum, item) => sum + (item[key] || 0), 0);
