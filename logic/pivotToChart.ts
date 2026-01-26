@@ -87,7 +87,7 @@ export const generateChartMetadata = (
 
   // Utiliser result.colHeaders pour détecter multi-séries (fonctionne en mode temporel)
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
-  const isMultiSeries = seriesHeaders.length > 0 && seriesHeaders.length > 1;
+  const isMultiSeries = seriesHeaders.length > 1;
   const hasTemporalData = colGrouping !== 'none';
   const hasHierarchy = rowFields.length > 1;
   const dataRows = result.displayRows.filter(r => r.type === 'data');
@@ -139,7 +139,19 @@ export const transformPivotToChartData = (
 
   // Détecter si multi-séries en utilisant result.colHeaders (fonctionne en mode temporel)
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
-  const isMultiSeries = seriesHeaders.length > 0 && seriesHeaders.length > 1;
+  const isMultiSeries = seriesHeaders.length > 1;
+
+  // DEBUG: Log pour vérifier la détection
+  if (dataRows.length > 0) {
+    console.log('📊 transformPivotToChartData:', {
+      colHeadersCount: result.colHeaders.length,
+      seriesHeadersCount: seriesHeaders.length,
+      seriesHeaders: seriesHeaders,
+      isMultiSeries,
+      firstRowMetrics: dataRows[0]?.metrics,
+      firstRowTotal: dataRows[0]?.rowTotal
+    });
+  }
 
   // Transformer en ChartDataPoint
   let chartData: ChartDataPoint[] = dataRows.map(row => {
@@ -148,7 +160,7 @@ export const transformPivotToChartData = (
     };
 
     // Pour graphiques multi-séries : ajouter toutes les métriques
-    if (isMultiSeries) {
+    if (isMultiSeries && row.metrics && Object.keys(row.metrics).length > 0) {
       // Exclure les colonnes de variation (_DIFF, _PCT)
       const metricKeys = Object.keys(row.metrics).filter(
         key => !key.endsWith('_DIFF') && !key.endsWith('_PCT')
