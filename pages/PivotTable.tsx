@@ -579,6 +579,56 @@ export const PivotTable: React.FC = () => {
         return () => clearTimeout(timer);
     }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals]);
 
+    // Fonction pour convertir temporalResults en format PivotResult
+    const convertTemporalToPivotResult = (): PivotResult | null => {
+        if (!temporalConfig || temporalResults.length === 0) return null;
+
+        // Construire les en-têtes de colonnes à partir des sources
+        const colHeaders = temporalConfig.sources.map(source => source.label);
+
+        // Construire les lignes d'affichage
+        const displayRows: any[] = temporalResults
+            .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
+            .map(result => {
+                const row: any = {
+                    rowKeys: [result.groupKey],
+                    rowLabels: [result.groupLabel],
+                    metrics: {},
+                    rowTotal: 0
+                };
+
+                // Ajouter les valeurs pour chaque source
+                let total = 0;
+                temporalConfig.sources.forEach(source => {
+                    const value = result.values[source.id] || 0;
+                    row.metrics[source.label] = value;
+                    total += value;
+                });
+                row.rowTotal = total;
+
+                return row;
+            });
+
+        // Calculer les totaux de colonnes
+        const colTotals: Record<string, number> = {};
+        temporalConfig.sources.forEach(source => {
+            const total = temporalResults
+                .filter(result => !result.isSubtotal)
+                .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
+            colTotals[source.label] = total;
+        });
+
+        // Calculer le total général
+        const grandTotal = Object.values(colTotals).reduce((sum, val) => sum + val, 0);
+
+        return {
+            colHeaders,
+            displayRows,
+            colTotals,
+            grandTotal
+        };
+    };
+
     // Mémoriser les données pour le graphique (pivot normal ou temporel converti)
     const chartPivotData = useMemo(() => {
         if (isTemporalMode) {
@@ -750,56 +800,6 @@ export const PivotTable: React.FC = () => {
             XLSX.utils.book_append_sheet(wb, ws, 'TCD');
             XLSX.writeFile(wb, `TCD_${primaryDataset?.name || 'Analyse'}_${new Date().toISOString().slice(0, 10)}.${format}`);
         }
-    };
-
-    // Fonction pour convertir temporalResults en format PivotResult
-    const convertTemporalToPivotResult = (): PivotResult | null => {
-        if (!temporalConfig || temporalResults.length === 0) return null;
-
-        // Construire les en-têtes de colonnes à partir des sources
-        const colHeaders = temporalConfig.sources.map(source => source.label);
-
-        // Construire les lignes d'affichage
-        const displayRows: any[] = temporalResults
-            .filter(result => !result.isSubtotal) // Exclure les sous-totaux pour les graphiques
-            .map(result => {
-                const row: any = {
-                    rowKeys: [result.groupKey],
-                    rowLabels: [result.groupLabel],
-                    metrics: {},
-                    rowTotal: 0
-                };
-
-                // Ajouter les valeurs pour chaque source
-                let total = 0;
-                temporalConfig.sources.forEach(source => {
-                    const value = result.values[source.id] || 0;
-                    row.metrics[source.label] = value;
-                    total += value;
-                });
-                row.rowTotal = total;
-
-                return row;
-            });
-
-        // Calculer les totaux de colonnes
-        const colTotals: Record<string, number> = {};
-        temporalConfig.sources.forEach(source => {
-            const total = temporalResults
-                .filter(result => !result.isSubtotal)
-                .reduce((sum, result) => sum + (result.values[source.id] || 0), 0);
-            colTotals[source.label] = total;
-        });
-
-        // Calculer le total général
-        const grandTotal = Object.values(colTotals).reduce((sum, val) => sum + val, 0);
-
-        return {
-            colHeaders,
-            displayRows,
-            colTotals,
-            grandTotal
-        };
     };
 
     const handleToChart = () => {
