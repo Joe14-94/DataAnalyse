@@ -80,7 +80,7 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                         ))}
                      </Pie>
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }} />
-                     <Legend wrapperStyle={{ fontSize: '11px' }} />
+                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   </PieChart>
                </ResponsiveContainer>
             );
@@ -88,14 +88,14 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
             const isMultiSeries = seriesKeys.length > 1;
             return (
                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 40 }}>
+                  <LineChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 60 }}>
                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                     <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={40} />
+                     <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={50} />
                      <YAxis fontSize={10} stroke="#94a3b8" />
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
                      {isMultiSeries ? (
                         <>
-                           <Legend wrapperStyle={{ fontSize: '10px' }} />
+                           <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                            {seriesKeys.map((key, idx) => (
                               <Line key={key} type="monotone" dataKey={key} name={displaySeriesNames[key] || key} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} isAnimationActive={false} />
                            ))}
@@ -111,12 +111,12 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
             const isStacked = chartType === 'stacked-area';
             return (
                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 40 }}>
+                  <AreaChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 60 }}>
                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                     <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={40} />
+                     <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={50} />
                      <YAxis fontSize={10} stroke="#94a3b8" />
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
-                     {(isMultiSeries || isStacked) && <Legend wrapperStyle={{ fontSize: '10px' }} />}
+                     {(isMultiSeries || isStacked) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />}
                      {isMultiSeries || isStacked ? (
                         seriesKeys.map((key, idx) => (
                            <Area key={key} type="monotone" dataKey={key} name={displaySeriesNames[key] || key} fill={colors[idx % colors.length]} stroke={colors[idx % colors.length]} fillOpacity={0.6} stackId={isStacked ? 'stack' : undefined} isAnimationActive={false} />
@@ -134,12 +134,12 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
 
             return (
                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout={isBar ? 'vertical' : 'horizontal'} margin={{ top: 15, right: 20, left: 10, bottom: isBar ? 5 : 40 }}>
+                  <BarChart data={chartData} layout={isBar ? 'vertical' : 'horizontal'} margin={{ top: 15, right: 20, left: 10, bottom: isBar ? 5 : 60 }}>
                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                     <XAxis type={isBar ? 'number' : 'category'} dataKey={isBar ? undefined : 'name'} fontSize={10} stroke="#94a3b8" angle={isBar ? 0 : -45} textAnchor={isBar ? 'middle' : 'end'} height={isBar ? 30 : 40} />
+                     <XAxis type={isBar ? 'number' : 'category'} dataKey={isBar ? undefined : 'name'} fontSize={10} stroke="#94a3b8" angle={isBar ? 0 : -45} textAnchor={isBar ? 'middle' : 'end'} height={isBar ? 30 : 50} />
                      <YAxis type={isBar ? 'category' : 'number'} dataKey={isBar ? 'name' : undefined} fontSize={10} stroke="#94a3b8" />
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
-                     {(isMultiSeries || isStacked) && <Legend wrapperStyle={{ fontSize: '10px' }} />}
+                     {(isMultiSeries || isStacked) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />}
                      {isMultiSeries || isStacked ? (
                         seriesKeys.map((key, idx) => (
                            <Bar key={key} dataKey={key} name={displaySeriesNames[key] || key} fill={colors[idx % colors.length]} stackId={isStacked ? 'stack' : undefined} radius={isBar ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false} />
@@ -161,6 +161,21 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                   <Treemap data={chartData} dataKey="value" stroke="#fff" content={<TreemapContentWrapper />} isAnimationActive={false}>
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
                   </Treemap>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'radar') {
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={chartData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+                     <PolarGrid stroke="#e2e8f0" />
+                     <PolarAngleAxis dataKey="name" tick={{ fontSize: 9 }} />
+                     <PolarRadiusAxis tick={{ fontSize: 9 }} />
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
+                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                     {seriesKeys.map((key, idx) => (
+                        <Radar key={key} name={displaySeriesNames[key] || key} dataKey={key} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.6} isAnimationActive={false} />
+                     ))}
+                  </RadarChart>
                </ResponsiveContainer>
             );
          }
