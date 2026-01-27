@@ -1,49 +1,6 @@
 
 import { parseSmartNumber, getGroupedLabel, formatNumberValue } from '../utils';
-import { FieldConfig, Dataset, FilterRule, PivotJoin } from '../types';
-
-// Types spécifiques au moteur
-export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
-export type SortBy = 'label' | 'value' | string; // 'value' = Grand Total, string = Specific Column Key
-export type SortOrder = 'asc' | 'desc';
-export type DateGrouping = 'none' | 'year' | 'quarter' | 'month';
-
-export interface PivotRow {
-  type: 'data' | 'subtotal' | 'grandTotal';
-  keys: string[];
-  level: number;
-  metrics: Record<string, number | string>;
-  rowTotal: number | string;
-  label?: string;
-  isCollapsed?: boolean;
-}
-
-export interface PivotConfig {
-  rows: any[]; // Données brutes (déjà jointes/blended si nécessaire)
-  rowFields: string[];
-  colFields: string[]; // UPDATED: Array support
-  colGrouping: DateGrouping;
-  valField: string;
-  aggType: AggregationType;
-  filters: FilterRule[];
-  sortBy: SortBy;
-  sortOrder: SortOrder;
-  showSubtotals: boolean;
-  showVariations?: boolean; // NEW: Enable Time Intelligence
-  
-  // Context pour le formatage
-  currentDataset?: Dataset | null;
-  joins?: PivotJoin[]; 
-  datasets?: Dataset[];
-  valFormatting?: Partial<FieldConfig>;
-}
-
-export interface PivotResult {
-  colHeaders: string[];
-  displayRows: PivotRow[];
-  colTotals: Record<string, number | string>;
-  grandTotal: number | string;
-}
+import { FieldConfig, Dataset, FilterRule, PivotJoin, PivotConfig, PivotResult, PivotRow, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
 
 // Structure optimisée pour le calcul interne
 interface OptimizedRow {

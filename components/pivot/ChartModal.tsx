@@ -8,7 +8,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   Cell, Treemap, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import { PivotResult, PivotConfig } from '../../logic/pivotEngine';
 import {
   ChartType,
   ColorPalette,
@@ -24,6 +23,7 @@ import {
   getSingleColors,
   generateGradient
 } from '../../logic/pivotToChart';
+import { PivotResult, PivotConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
 
 // Custom Treemap Content Component

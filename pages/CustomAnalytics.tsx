@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Save, FileDown, FileType, Printer
 } from 'lucide-react';
 import { FieldConfig, ChartType as WidgetChartType, FilterRule } from '../types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 type ChartType = 'bar' | 'column' | 'pie' | 'area' | 'radar' | 'treemap' | 'kpi' | 'line';
 type AnalysisMode = 'snapshot' | 'trend';
@@ -126,6 +126,7 @@ export const CustomAnalytics: React.FC = () => {
   const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis, companyLogo, datasets, currentDatasetId, switchDataset } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [mode, setMode] = useState<AnalysisMode>('snapshot');
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
@@ -148,6 +149,33 @@ export const CustomAnalytics: React.FC = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
+    // Check if we have incoming state from Pivot (ChartModal)
+    if (location.state?.fromPivotChart) {
+       const { pivotConfig, chartType: incomingChartType } = location.state.fromPivotChart;
+
+       if (pivotConfig.rowFields && pivotConfig.rowFields.length > 0) {
+          setDimension(pivotConfig.rowFields[0]);
+       }
+       if (pivotConfig.valField) {
+          setValueField(pivotConfig.valField);
+          setMetric(pivotConfig.aggType === 'sum' ? 'sum' : 'count');
+       }
+       if (incomingChartType) {
+          setChartType(incomingChartType === 'column' ? 'column' :
+                       incomingChartType === 'bar' ? 'bar' :
+                       incomingChartType === 'pie' ? 'pie' :
+                       incomingChartType === 'area' ? 'area' :
+                       incomingChartType === 'radar' ? 'radar' :
+                       incomingChartType === 'treemap' ? 'treemap' : 'bar');
+       }
+       if (pivotConfig.filters) {
+          setFilters(pivotConfig.filters);
+       }
+
+       // Clear state to avoid re-applying on refresh
+       window.history.replaceState({}, document.title);
+    }
+
     if (!selectedBatchId && batches.length > 0) {
       setSelectedBatchId(batches[batches.length - 1].id);
     }
@@ -161,7 +189,7 @@ export const CustomAnalytics: React.FC = () => {
     if (fields.length > 0 && (!dimension || !fields.includes(dimension))) {
       setDimension(fields[0]);
     }
-  }, [batches, fields, selectedBatchId, dimension, startDate, endDate]);
+  }, [batches, fields, selectedBatchId, dimension, startDate, endDate, location.state]);
 
   useEffect(() => {
      if (mode === 'trend') {
