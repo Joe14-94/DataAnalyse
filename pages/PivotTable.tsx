@@ -113,9 +113,22 @@ export const PivotTable: React.FC = () => {
 
     useEffect(() => {
         if (!isInitialized || !primaryDataset) return;
+
+        const currentTemporalComparison = temporalConfig ? {
+            ...temporalConfig,
+            groupByFields: rowFields,
+            valueField: valField,
+            aggType: aggType === 'list' ? 'sum' : aggType as any
+        } : undefined;
+
         savePivotState({
             datasetId: primaryDataset.id,
-            config: { sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, isTemporalMode, temporalComparison: temporalConfig || undefined }
+            config: {
+                sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting,
+                filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
+                selectedBatchId, isTemporalMode,
+                temporalComparison: currentTemporalComparison
+            }
         });
     }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
 
@@ -227,8 +240,17 @@ export const PivotTable: React.FC = () => {
         if (detailRows.length > 0) setDrilldownData({ rows: detailRows, title: `Détails: ${rowKeys.join(' > ')}`, fields: primaryDataset?.fields || [] });
     };
 
-    const handleTemporalDrilldown = (result: TemporalComparisonResult) => {
-        if (result.details) setDrilldownData({ rows: result.details, title: `Détails: ${result.groupLabel}`, fields: primaryDataset?.fields || [] });
+    const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
+        const sourceDetails = result.details ? result.details[sourceId] : undefined;
+        const sourceLabel = temporalConfig?.sources.find(s => s.id === sourceId)?.label || sourceId;
+
+        if (sourceDetails) {
+            setDrilldownData({
+                rows: sourceDetails,
+                title: `Détails: ${result.groupLabel.replace(/\x1F/g, ' > ')} (${sourceLabel})`,
+                fields: primaryDataset?.fields || []
+            });
+        }
     };
 
     const handleLoadAnalysis = (id: string) => {
@@ -244,9 +266,21 @@ export const PivotTable: React.FC = () => {
 
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
+            const currentTemporalComparison = temporalConfig ? {
+                ...temporalConfig,
+                groupByFields: rowFields,
+                valueField: valField,
+                aggType: aggType === 'list' ? 'sum' : aggType as any
+            } : undefined;
+
             saveAnalysis({
                name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
-               config: { sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, isTemporalMode, temporalComparison: temporalConfig || undefined }
+               config: {
+                   sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting,
+                   filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
+                   selectedBatchId, isTemporalMode,
+                   temporalComparison: currentTemporalComparison
+               }
             });
             setIsSaving(false); setAnalysisName('');
         }

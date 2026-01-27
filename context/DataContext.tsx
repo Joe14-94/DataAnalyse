@@ -292,6 +292,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const updateRows = useCallback((updatesByBatch: Record<string, Record<string, any>>) => {
+    setAllBatches(prev => prev.map(b => {
+      const batchUpdates = updatesByBatch[b.id];
+      if (!batchUpdates) return b;
+      return {
+        ...b,
+        rows: b.rows.map(r => {
+          const rowUpdate = batchUpdates[String(r.id)];
+          return rowUpdate ? { ...r, ...rowUpdate } : r;
+        })
+      };
+    }));
+  }, []);
+
   const enrichBatchesWithLookup = useCallback((datasetId: string, targetDatasetId: string, primaryKey: string, secondaryKey: string, columnsToAdd: string[], newColumnName: string) => {
     // Get target dataset's latest batch
     const targetBatches = batches.filter(b => b.datasetId === targetDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -540,7 +554,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, enrichBatchesWithLookup }}>
+                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
                       {children}
