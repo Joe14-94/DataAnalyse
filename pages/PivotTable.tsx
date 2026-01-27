@@ -88,7 +88,7 @@ export const PivotTable: React.FC = () => {
         if (isInitialized) return;
         if (lastPivotState && currentDataset && lastPivotState.datasetId === currentDataset.id) {
             const c = lastPivotState.config;
-            setSources(c.sources || [{ id: 'main', datasetId: currentDataset.id, isPrimary: true, color: SOURCE_COLORS[0] }]);
+            setSources(c.sources || []);
             setRowFields(c.rowFields || []);
             setColFields(c.colFields || []);
             setColGrouping(c.colGrouping || 'none');
@@ -104,8 +104,9 @@ export const PivotTable: React.FC = () => {
             if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
             setIsTemporalMode(c.isTemporalMode || false);
             setTemporalConfig(c.temporalComparison || null);
-        } else if (currentDataset) {
-            setSources([{ id: 'main', datasetId: currentDataset.id, isPrimary: true, color: SOURCE_COLORS[0] }]);
+        } else {
+            // Si aucun TCD n'a été créé ou travaillé, on laisse les sources vides
+            setSources([]);
         }
         setIsInitialized(true);
     }, [currentDataset, lastPivotState]);

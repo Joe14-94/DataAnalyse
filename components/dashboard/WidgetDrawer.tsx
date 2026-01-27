@@ -152,6 +152,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                      <div>
                         <Label>Source de données</Label>
                         <Select value={tempWidget.config?.source?.datasetId || ''} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } } })}>
+                           <option value="">-- Choisir une source --</option>
                            {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </Select>
                      </div>

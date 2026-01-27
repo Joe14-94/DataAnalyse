@@ -67,7 +67,7 @@ export const Dashboard: React.FC = () => {
          style: { borderColor: 'border-slate-200', borderWidth: '1' },
          config: {
             metric: 'count',
-            source: datasets.length > 0 ? { datasetId: datasets[0].id, mode: 'latest' } : undefined
+            source: undefined
          }
       });
       setShowWidgetDrawer(true);
