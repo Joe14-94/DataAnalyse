@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataScope - Tableau de Bord</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // --- DESIGN SYSTEM TOKENS ---
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb', // Primary Action
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            // Semantic Colors
+            canvas: '#f8fafc', // Global Background (slate-50)
+            surface: '#ffffff', // Card Background
+
+            // Text Colors
+            'txt-main': '#1e293b', // slate-800
+            'txt-secondary': '#475569', // slate-600
+            'txt-muted': '#94a3b8', // slate-400
+
+            // Status Colors
+            success: { bg: '#dcfce7', text: '#15803d', border: '#86efac' }, // green-100/700
+            warning: { bg: '#fef9c3', text: '#a16207', border: '#fde047' }, // yellow-100/700
+            danger: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' }, // red-100/700
+            info: { bg: '#e0f2fe', text: '#0369a1', border: '#7dd3fc' }, // sky-100/700
+
+            // Border
+            'border-default': '#e2e8f0', // slate-200
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['Fira Code', 'Consolas', 'monospace'],
+            outfit: ['Outfit', 'sans-serif'],
+            inter: ['Inter', 'sans-serif'],
+          },
+          fontSize: {
+            'app-base': 'var(--app-font-size)',
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+            'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for cleaner look */
+    :root {
+      --app-font-size: 11px;
+      --app-sidebar-width: 176px;
+    }
+
+    html {
+      font-size: var(--app-font-size);
+    }
+
+    body {
+      /* Base size driven by html font-size (rem) */
+      margin: 0;
+    }
+
+    html.font-outfit,
+    html.font-outfit * {
+      font-family: 'Outfit', sans-serif !important;
+    }
+
+    html.font-inter,
+    html.font-inter * {
+      font-family: 'Inter', sans-serif !important;
+    }
+
+    html.font-mono,
+    html.font-mono * {
+      font-family: 'Fira Code', 'Consolas', monospace !important;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "recharts": "https://esm.sh/recharts@2.12.2?deps=react@18.2.0,react-dom@18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.2.0,react-dom@18.2.0",
+    "vite": "https://esm.sh/vite@5.1.6",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@4.2.1",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@3.8.2",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "@tanstack/react-virtual": "https://esm.sh/@tanstack/react-virtual@3.0.0?deps=react@18.2.0,react-dom@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+
+<body class="bg-canvas text-txt-main antialiased">
+  <div id="root"></div>
+  <!-- Point d'entrée pour Vite -->
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
