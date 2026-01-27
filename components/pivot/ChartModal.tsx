@@ -23,7 +23,7 @@ import {
   getSingleColors,
   generateGradient
 } from '../../logic/pivotToChart';
-import { PivotResult, PivotConfig } from '../../types';
+import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
 
 // Custom Treemap Content Component
@@ -69,13 +69,17 @@ interface ChartModalProps {
   onClose: () => void;
   pivotData: PivotResult;
   pivotConfig: PivotConfig;
+  isTemporalMode?: boolean;
+  temporalComparison?: TemporalComparisonConfig | null;
 }
 
 export const ChartModal: React.FC<ChartModalProps> = ({
   isOpen,
   onClose,
   pivotData,
-  pivotConfig
+  pivotConfig,
+  isTemporalMode = false,
+  temporalComparison = null
 }) => {
   const navigate = useNavigate();
   const { addDashboardWidget } = useWidgets();
@@ -313,6 +317,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               sortOrder: pivotConfig.sortOrder,
               showSubtotals: pivotConfig.showSubtotals
             },
+            isTemporalMode,
+            temporalComparison,
             chartType: selectedChartType,
             hierarchyLevel,
             limit: limit > 0 ? limit : undefined,

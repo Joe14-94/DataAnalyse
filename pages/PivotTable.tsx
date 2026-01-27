@@ -266,7 +266,7 @@ export const PivotTable: React.FC = () => {
                     rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
                 };
             });
-            return { colHeaders, displayRows, colTotals: {}, grandTotal: 0 };
+            return { colHeaders, displayRows, colTotals: {}, grandTotal: 0, isTemporal: true };
         }
         return pivotData;
     }, [isTemporalMode, temporalResults, temporalConfig, pivotData]);
@@ -308,7 +308,20 @@ export const PivotTable: React.FC = () => {
             <SourceManagementModal isOpen={isSourceModalOpen} onClose={() => setIsSourceModalOpen(false)} sources={sources} datasets={datasets} batches={batches} primaryDataset={primaryDataset} onSourcesChange={setSources} />
             <DrilldownModal isOpen={drilldownData !== null} onClose={() => setDrilldownData(null)} title={drilldownData?.title || ''} rows={drilldownData?.rows || []} fields={drilldownData?.fields || []} />
             {isChartModalOpen && chartPivotData && (
-                <ChartModal isOpen={isChartModalOpen} onClose={() => setIsChartModalOpen(false)} pivotData={chartPivotData as any} pivotConfig={{ rows: blendedRows, rowFields: isTemporalMode ? (temporalConfig?.groupByFields || []) : rowFields, colFields: isTemporalMode ? [] : colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, currentDataset: primaryDataset, datasets, valFormatting }} />
+                <ChartModal
+                   isOpen={isChartModalOpen}
+                   onClose={() => setIsChartModalOpen(false)}
+                   pivotData={chartPivotData as any}
+                   pivotConfig={{
+                      rows: blendedRows,
+                      rowFields: isTemporalMode ? (temporalConfig?.groupByFields || []) : rowFields,
+                      colFields: isTemporalMode ? [] : colFields,
+                      colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations,
+                      currentDataset: primaryDataset, datasets, valFormatting
+                   }}
+                   isTemporalMode={isTemporalMode}
+                   temporalComparison={temporalConfig}
+                />
             )}
             <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
         </div>
