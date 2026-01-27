@@ -1,4 +1,4 @@
-import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
+import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType } from './pivotEngine';
 
 // ============================================================================
 // TYPES

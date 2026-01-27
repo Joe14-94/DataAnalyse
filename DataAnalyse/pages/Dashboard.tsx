@@ -23,12 +23,8 @@ import { transformPivotToChartData, transformPivotToTreemapData, getChartColors,
 import html2canvas from 'html2canvas';
 import { useNavigate } from 'react-router-dom';
 
-import { WidgetCard } from '../components/dashboard/WidgetCard';
-import { WidgetDisplay } from '../components/dashboard/WidgetDisplay';
-import { WidgetDrawer } from '../components/dashboard/WidgetDrawer';
-import { DashboardHeader } from '../components/dashboard/DashboardHeader';
-import { DashboardFilters } from '../components/dashboard/DashboardFilters';
-import { useWidgetData } from '../hooks/useWidgetData';
+// --- UTILS ---
+const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6'];
 
 // Calculate responsive styling based on widget height
 const getResponsiveChartStyles = (height: WidgetHeight | undefined) => {
@@ -883,25 +879,27 @@ const WidgetItem: React.FC<WidgetItemProps> = ({
 
 const LivePreview: React.FC<{ widget: DashboardWidget, globalDateRange: any }> = ({ widget, globalDateRange }) => {
    const data = useWidgetData(widget, globalDateRange);
-   return <WidgetDisplay widget={widget} data={data} />;
+   const isText = widget.type === 'text';
+   const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-brand-50 border-brand-200' : 'bg-surface';
+   const borderClass = widget.style?.borderColor || 'border-border-default';
+   const widthVal = widget.style?.borderWidth || '1';
+   const widthClass = widthVal === '0' ? 'border-0' : widthVal === '2' ? 'border-2' : widthVal === '4' ? 'border-4' : 'border';
+
+   return (
+      <div className={`w-full h-full rounded-lg ${borderClass} ${widthClass} shadow-sm p-4 flex flex-col ${bgColor} relative`}>
+         <h3 className="text-xs font-bold text-txt-secondary mb-2 uppercase tracking-wider truncate">{widget.title || 'Titre du widget'}</h3>
+         <div className="flex-1 min-h-0 relative"><WidgetDisplay widget={widget} data={data} /></div>
+      </div>
+   );
 };
 
 export const Dashboard: React.FC = () => {
-   const {
-      dashboardWidgets, addDashboardWidget, removeDashboardWidget,
-      duplicateDashboardWidget, updateDashboardWidget, reorderDashboardWidgets,
-      dashboardFilters, clearDashboardFilters, setDashboardFilter
-   } = useWidgets();
-
+   const { dashboardWidgets, addDashboardWidget, removeDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, reorderDashboardWidgets, dashboardFilters, clearDashboardFilters, setDashboardFilter } = useWidgets();
    const { datasets, currentDatasetId, switchDataset } = useDatasets();
    const [isEditMode, setIsEditMode] = useState(false);
    const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
    const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
-   const [tempWidget, setTempWidget] = useState<Partial<DashboardWidget>>({
-      type: 'kpi', size: 'sm', height: 'md',
-      style: { borderColor: 'border-slate-200', borderWidth: '1' },
-      config: { metric: 'count' }
-   });
+   const [tempWidget, setTempWidget] = useState<Partial<DashboardWidget>>({ type: 'kpi', size: 'sm', height: 'md', style: { borderColor: 'border-slate-200', borderWidth: '1' }, config: { metric: 'count' } });
    const navigate = useNavigate();
 
    // D&D State
@@ -921,23 +919,12 @@ export const Dashboard: React.FC = () => {
       else addDashboardWidget(tempWidget as any);
       setShowWidgetDrawer(false);
       setEditingWidgetId(null);
-      setTempWidget({
-         type: 'kpi', size: 'sm', height: 'md',
-         style: { borderColor: 'border-slate-200', borderWidth: '1' },
-         config: { metric: 'count' }
-      });
+      setTempWidget({ type: 'kpi', size: 'sm', height: 'md', style: { borderColor: 'border-slate-200', borderWidth: '1' }, config: { metric: 'count' } });
    };
 
    const openNewWidget = () => {
       setEditingWidgetId(null);
-      setTempWidget({
-         title: '', type: 'kpi', size: 'sm', height: 'md',
-         style: { borderColor: 'border-slate-200', borderWidth: '1' },
-         config: {
-            metric: 'count',
-            source: undefined
-         }
-      });
+      setTempWidget({ title: '', type: 'kpi', size: 'sm', height: 'md', style: { borderColor: 'border-slate-200', borderWidth: '1' }, config: { metric: 'count', source: datasets.length > 0 ? { datasetId: datasets[0].id, mode: 'latest' } : undefined } });
       setShowWidgetDrawer(true);
    };
 
@@ -1046,60 +1033,146 @@ export const Dashboard: React.FC = () => {
 
    const allFields = useMemo(() => [...availableFields, ...secondaryFields], [availableFields, secondaryFields]);
 
-   const fullscreenWidget = useMemo(() =>
-      dashboardWidgets.find(w => w.id === fullscreenWidgetId),
-      [dashboardWidgets, fullscreenWidgetId]
-   );
-
    return (
       <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar relative bg-canvas">
-         {fullscreenWidgetId && fullscreenWidget && (
+         {fullscreenWidgetId && (
             <div className="fixed inset-0 z-50 bg-white p-8 flex flex-col animate-in zoom-in-95 duration-200">
                <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-slate-800">
-                     {fullscreenWidget.title}
+                     {dashboardWidgets.find(w => w.id === fullscreenWidgetId)?.title}
                   </h2>
                   <button onClick={() => setFullscreenWidgetId(null)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
                      <X className="w-6 h-6 text-slate-600" />
                   </button>
                </div>
                <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-6 shadow-inner">
-                  <FullscreenWidgetView widget={fullscreenWidget} globalDateRange={globalDateRange} />
+                  {(() => {
+                     const w = dashboardWidgets.find(w => w.id === fullscreenWidgetId);
+                     if (w) return <WidgetDisplay widget={w} data={useWidgetData(w, globalDateRange)} />
+                     return null;
+                  })()}
                </div>
             </div>
          )}
 
          <div className="max-w-7xl mx-auto space-y-6 pb-12">
-            <DashboardHeader
-               datasets={datasets}
-               currentDatasetId={currentDatasetId}
-               switchDataset={switchDataset}
-               isEditMode={isEditMode}
-               setIsEditMode={setIsEditMode}
-               openNewWidget={openNewWidget}
-               handlePresentationMode={handlePresentationMode}
-               navigate={navigate}
-            />
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+               <div>
+                  <Heading level={2} className="flex items-center gap-2">
+                     <Layout className="w-6 h-6 text-txt-muted" /> Tableau de bord
+                  </Heading>
+                  <Text variant="muted">Vue d'ensemble de vos données</Text>
+               </div>
 
-            <DashboardFilters
-               globalDateRange={globalDateRange}
-               setGlobalDateRange={setGlobalDateRange}
-               dashboardFilters={dashboardFilters}
-               setDashboardFilter={setDashboardFilter}
-               clearDashboardFilters={clearDashboardFilters}
-            />
+               {/* GLOBAL DATASET SELECTOR IN HEADER */}
+               <div className="relative">
+                  <select
+                     id="tour-dataset-selector"
+                     className="w-full md:w-56 appearance-none bg-white border border-slate-300 text-slate-700 text-app-base rounded-md py-1.5 pl-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                     value={currentDatasetId || ''}
+                     onChange={(e) => {
+                        if (e.target.value === '__NEW__') navigate('/import');
+                        else switchDataset(e.target.value);
+                     }}
+                  >
+                     {datasets.length === 0 && <option value="">Aucun tableau</option>}
+                     {datasets.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                     ))}
+                     <option disabled>──────────</option>
+                     <option value="__NEW__">+ Nouvelle typologie...</option>
+                  </select>
+               </div>
+
+               <div className="flex gap-2">
+                  <Button variant="ghost" onClick={handlePresentationMode} icon={<Maximize2 className="w-4 h-4" />}>Plein Écran</Button>
+                  {isEditMode ? (
+                     <>
+                        <Button variant="secondary" onClick={openNewWidget} icon={<Plus className="w-4 h-4" />}>Ajouter</Button>
+                        <Button onClick={() => setIsEditMode(false)} icon={<Check className="w-4 h-4" />}>Terminer</Button>
+                     </>
+                  ) : (
+                     <Button variant="outline" onClick={() => setIsEditMode(true)} icon={<Edit3 className="w-4 h-4" />}>Personnaliser</Button>
+                  )}
+               </div>
+            </div>
+
+            {/* GLOBAL CONTROLS & FILTERS */}
+            <div className="flex flex-col lg:flex-row gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm items-start lg:items-center">
+
+               {/* DATE RANGE PICKER (GLOBAL) */}
+               <div className="flex items-center gap-2 border-r border-slate-100 pr-4 mr-2">
+                  <div className="bg-blue-50 p-2 rounded text-blue-600">
+                     <CalendarRange className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                     <div className="flex flex-col">
+                        <label className="text-sm font-bold text-slate-400 uppercase">Début</label>
+                        <input
+                           type="date"
+                           className="text-app-base border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
+                           value={globalDateRange.start}
+                           onChange={(e) => setGlobalDateRange({ ...globalDateRange, start: e.target.value })}
+                        />
+                     </div>
+                     <span className="text-slate-300 mt-3">-</span>
+                     <div className="flex flex-col">
+                        <label className="text-sm font-bold text-slate-400 uppercase">Fin</label>
+                        <input
+                           type="date"
+                           className="text-app-base border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
+                           value={globalDateRange.end}
+                           onChange={(e) => setGlobalDateRange({ ...globalDateRange, end: e.target.value })}
+                        />
+                     </div>
+                     {(globalDateRange.start || globalDateRange.end) && (
+                        <button
+                           onClick={() => setGlobalDateRange({ start: '', end: '' })}
+                           className="mt-3 p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-500 transition-colors"
+                           title="Effacer la période"
+                        >
+                           <X className="w-4 h-4" />
+                        </button>
+                     )}
+                  </div>
+               </div>
+
+               {/* DRILL DOWN FILTERS */}
+               {Object.keys(dashboardFilters).length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2 flex-1">
+                     <div className="text-xs font-bold text-brand-700 flex items-center mr-2">
+                        <Filter className="w-3 h-3 mr-1" /> Filtres actifs :
+                     </div>
+                     {Object.entries(dashboardFilters).map(([field, value]) => (
+                        <Badge key={field} variant="brand" className="bg-blue-50 border-blue-200 shadow-sm pl-2 pr-1 py-1 flex items-center gap-1">
+                           <span className="text-blue-400">{field}:</span>
+                           <span className="font-bold text-blue-900">{String(value)}</span>
+                           <button onClick={() => setDashboardFilter(field, null)} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                        </Badge>
+                     ))}
+                     <button onClick={clearDashboardFilters} className="ml-auto text-xs text-slate-400 hover:text-red-600 font-medium flex items-center px-2 py-1 hover:bg-red-50 rounded transition-colors">
+                        <FilterX className="w-3 h-3 mr-1" /> Tout effacer
+                     </button>
+                  </div>
+               ) : (
+                  <div className="text-xs text-slate-400 italic flex items-center gap-1.5">
+                     <MousePointerClick className="w-3 h-3" /> Cliquez sur un graphique pour filtrer le tableau de bord
+                  </div>
+               )}
+            </div>
 
             {/* Grid */}
             {dashboardWidgets.length === 0 ? (
                <div className="text-center py-20 border-2 border-dashed border-border-default rounded-xl bg-surface">
-                  <div className="w-12 h-12 text-txt-muted mx-auto mb-3" />
-                  <p className="mb-4">Votre tableau de bord est vide.</p>
-                  <button className="px-4 py-2 bg-brand-600 text-white rounded-lg" onClick={() => { setIsEditMode(true); openNewWidget(); }}>Créer mon premier widget</button>
+                  <Activity className="w-12 h-12 text-txt-muted mx-auto mb-3" />
+                  <Text className="mb-4">Votre tableau de bord est vide.</Text>
+                  <Button onClick={() => { setIsEditMode(true); openNewWidget(); }}>Créer mon premier widget</Button>
                </div>
             ) : (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {dashboardWidgets.map((widget, index) => (
-                     <WidgetCard
+                     <WidgetItem
                         key={widget.id}
                         widget={widget}
                         index={index}
