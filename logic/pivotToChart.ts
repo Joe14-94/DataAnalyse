@@ -1,12 +1,6 @@
-import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType } from './pivotEngine';
+import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'stacked-bar' | 'stacked-area' | 'radar' | 'treemap' | 'radial' | 'funnel';
-export type ColorPalette = 'default' | 'pastel' | 'vibrant';
-export type ColorMode = 'single' | 'gradient' | 'multi';
+export type { ChartType, ColorPalette, ColorMode };
 
 export interface ChartDataPoint {
   name: string;

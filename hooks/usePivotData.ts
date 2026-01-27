@@ -1,9 +1,9 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useBatches, useDatasets } from '../context/DataContext';
-import { PivotSourceConfig, Dataset, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule } from '../types';
+import { PivotSourceConfig, Dataset, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder } from '../types';
 import { evaluateFormula } from '../utils';
-import { calculatePivotData, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder } from '../logic/pivotEngine';
+import { calculatePivotData } from '../logic/pivotEngine';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
 
 interface UsePivotDataProps {

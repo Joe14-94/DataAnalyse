@@ -10,8 +10,8 @@ interface PivotHeaderProps {
    primaryDataset: Dataset | null;
    showExportMenu: boolean;
    setShowExportMenu: (v: boolean) => void;
-   handleExport: (format: any, mode?: any) => void;
-   handleExportSpreadsheet: (format: any) => void;
+   handleExport: (format: 'pdf' | 'html', mode?: 'A4' | 'adaptive') => void;
+   handleExportSpreadsheet: (format: 'xlsx' | 'csv') => void;
    showLoadMenu: boolean;
    setShowLoadMenu: (v: boolean) => void;
    savedAnalyses: SavedAnalysis[];

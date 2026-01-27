@@ -1,6 +1,6 @@
 
 export type WidgetType = 'kpi' | 'chart' | 'list' | 'text';
-export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel';
+export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel' | 'stacked-bar' | 'stacked-area';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full';
 export type WidgetHeight = 'sm' | 'md' | 'lg' | 'xl';
 export type KpiStyle = 'simple' | 'trend' | 'progress';
@@ -20,6 +20,20 @@ export interface WidgetSource {
   batchId?: string;
 }
 
+export interface PivotChartConfig {
+  pivotConfig: any; // Using any here to avoid circular dependencies if needed, or proper import
+  chartType: ChartType;
+  hierarchyLevel?: number;
+  limit?: number;
+  sortBy?: 'name' | 'value' | 'none';
+  sortOrder?: 'asc' | 'desc';
+  colorMode?: ColorMode;
+  colorPalette?: ColorPalette;
+  singleColor?: string;
+  gradientStart?: string;
+  gradientEnd?: string;
+}
+
 export interface WidgetConfig {
   source?: WidgetSource;
   secondarySource?: SecondarySourceConfig;
@@ -31,6 +45,7 @@ export interface WidgetConfig {
   kpiStyle?: KpiStyle;
   target?: number;
   showTrend?: boolean;
+  pivotChart?: PivotChartConfig;
 
   // Color Config (pour widgets simples)
   colorMode?: ColorMode; // 'multi' | 'single' | 'gradient'

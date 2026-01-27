@@ -1,14 +1,13 @@
 
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
-import { DashboardWidget, Dataset, PivotConfig } from '../types';
+import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
 import { parseSmartNumber } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { transformPivotToChartData, transformPivotToTreemapData, getChartColors, generateGradient } from '../logic/pivotToChart';
 
 export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string, end: string }) => {
    const { batches } = useBatches();
-   const { datasets } = useWidgets(); // Use useWidgets for dashboardFilters, but wait, datasets is in useDatasets()
    const { datasets: allDatasets } = useDatasets();
    const { dashboardFilters } = useWidgets();
 
@@ -39,16 +38,16 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          // Appliquer les filtres du TCD
          if (pc.filters && pc.filters.length > 0) {
             workingRows = workingRows.filter(row => {
-               return pc.filters!.every(filter => {
+               return pc.filters!.every((filter: FilterRule) => {
                   const rowVal = row[filter.field];
                   if (filter.operator === 'in' && Array.isArray(filter.value)) {
                      return filter.value.includes(String(rowVal));
                   } else if (filter.operator === 'contains') {
                      return String(rowVal || '').includes(String(filter.value));
                   } else if (filter.operator === 'gt') {
-                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) > filter.value;
+                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) > (filter.value as number);
                   } else if (filter.operator === 'lt') {
-                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) < filter.value;
+                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) < (filter.value as number);
                   } else if (filter.operator === 'eq') {
                      return String(rowVal) === String(filter.value);
                   } else if (filter.operator === 'starts_with') {

@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Loader2, Table2 } from 'lucide-react';
-import { TemporalComparisonResult, Dataset, PivotSourceConfig } from '../../types';
-import { formatPivotOutput, PivotResult } from '../../logic/pivotEngine';
+import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult } from '../../types';
+import { formatPivotOutput } from '../../logic/pivotEngine';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
 import { formatDateLabelForDisplay } from '../../utils';
 
@@ -137,7 +137,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  ) : (columnLabels[`row_${field}`] || field)}
                               </th>
                            ))}
-                           {pivotData.colHeaders.map(col => {
+                           {pivotData.colHeaders.map((col: string) => {
                               const isDiff = col.endsWith('_DIFF');
                               const isPct = col.endsWith('_PCT');
                               let label = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(col);
@@ -166,7 +166,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     }
                                     return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-100 whitespace-nowrap">{row.keys[cIdx]}</td>;
                                  })}
-                                 {pivotData.colHeaders.map(col => {
+                                 {pivotData.colHeaders.map((col: string) => {
                                     const val = row.metrics[col];
                                     const isDiff = col.endsWith('_DIFF');
                                     const isPct = col.endsWith('_PCT');

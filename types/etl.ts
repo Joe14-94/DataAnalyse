@@ -18,7 +18,7 @@ export type TransformationType =
   | 'select';
 
 export type JoinType = 'inner' | 'left' | 'right' | 'full';
-export type AggregationType = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'first' | 'last';
+export type ETLAggregationType = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'first' | 'last';
 
 export type FilterOperator =
   | 'equals'
@@ -53,7 +53,7 @@ export interface AggregateConfig {
   groupBy: string[];
   aggregations: {
     field: string;
-    operation: AggregationType;
+    operation: ETLAggregationType;
     alias?: string;
   }[];
 }
@@ -62,7 +62,7 @@ export interface ETLPivotConfig {
   index: string;
   columns: string;
   values: string;
-  aggFunc: AggregationType;
+  aggFunc: ETLAggregationType;
 }
 
 export interface UnpivotConfig {

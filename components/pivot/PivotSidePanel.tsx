@@ -1,11 +1,10 @@
 
 import React from 'react';
 import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown } from 'lucide-react';
-import { PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig } from '../../types';
+import { PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig, AggregationType, DateGrouping } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
 import { formatDateFr } from '../../utils';
 import { Checkbox } from '../ui/Checkbox';
-import { AggregationType, DateGrouping } from '../../logic/pivotEngine';
 
 interface PivotSidePanelProps {
    sources: PivotSourceConfig[];

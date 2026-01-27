@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Dataset } from '../../types';
-import { formatPivotOutput, PivotResult } from '../../logic/pivotEngine';
+import { Dataset, PivotResult } from '../../types';
+import { formatPivotOutput } from '../../logic/pivotEngine';
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
@@ -32,7 +32,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         {idx === rowFields.length - 1 ? 'Total' : ''}
                      </td>
                   ))}
-                  {pivotData.colHeaders.map(col => {
+                  {pivotData.colHeaders.map((col: string) => {
                      const isPct = col.endsWith('_PCT');
                      const val = pivotData.colTotals[col];
                      let formatted = formatOutput(val);

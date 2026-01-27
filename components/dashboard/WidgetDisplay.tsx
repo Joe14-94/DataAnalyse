@@ -288,25 +288,30 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
       );
    }
 
-   if (chartType === 'line' || chartType === 'area') {
-      const ChartComp = chartType === 'line' ? LineChart : AreaChart;
-      const DataComp = chartType === 'line' ? Line : Area;
+   if (chartType === 'line') {
       return (
          <ResponsiveContainer width="100%" height="100%">
-            <ChartComp data={chartData} onClick={handleChartClick} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <LineChart data={chartData} onClick={handleChartClick} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
                <YAxis fontSize={10} stroke="#94a3b8" />
                <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-               <DataComp
-                  type="monotone"
-                  dataKey="value"
-                  stroke={colors[0]}
-                  fill={colors[0]}
-                  fillOpacity={0.3}
-                  strokeWidth={2}
-               />
-            </ChartComp>
+               <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={2} dot={{ r: 2 }} />
+            </LineChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'area') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} onClick={handleChartClick} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+               <YAxis fontSize={10} stroke="#94a3b8" />
+               <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
+               <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.3} strokeWidth={2} />
+            </AreaChart>
          </ResponsiveContainer>
       );
    }

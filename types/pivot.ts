@@ -1,5 +1,47 @@
 
 import { DataRow, FilterRule } from './common';
+import { Dataset, FieldConfig } from './dataset';
+
+export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
+export type SortBy = 'label' | 'value' | string;
+export type SortOrder = 'asc' | 'desc';
+export type DateGrouping = 'none' | 'year' | 'quarter' | 'month';
+
+export interface PivotRow {
+  type: 'data' | 'subtotal' | 'grandTotal';
+  keys: string[];
+  level: number;
+  metrics: Record<string, number | string>;
+  rowTotal: number | string;
+  label?: string;
+  isCollapsed?: boolean;
+}
+
+export interface PivotConfig {
+  rows: any[];
+  rowFields: string[];
+  colFields: string[];
+  colGrouping: DateGrouping;
+  valField: string;
+  aggType: AggregationType;
+  filters: FilterRule[];
+  sortBy: SortBy;
+  sortOrder: SortOrder;
+  showSubtotals: boolean;
+  showVariations?: boolean;
+
+  currentDataset?: Dataset | null;
+  joins?: PivotJoin[];
+  datasets?: Dataset[];
+  valFormatting?: Partial<FieldConfig>;
+}
+
+export interface PivotResult {
+  colHeaders: string[];
+  displayRows: PivotRow[];
+  colTotals: Record<string, number | string>;
+  grandTotal: number | string;
+}
 
 export interface PivotJoin {
   id: string;
