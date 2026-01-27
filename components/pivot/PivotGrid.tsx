@@ -58,7 +58,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                <table className="min-w-full divide-y divide-slate-200 border-collapse">
                   <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                      <tr>
-                        {temporalConfig.groupByFields.map((field: string) => {
+                        {rowFields.map((field: string) => {
                            const displayLabel = columnLabels[`group_${field}`] || field;
                            const isEditing = editingColumn === `group_${field}`;
                            return (
@@ -91,7 +91,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            <tr key={result.groupKey} className={isSubtotal ? `bg-slate-50 font-bold border-t border-slate-200` : 'hover:bg-blue-50/30'}>
                               {(() => {
                                  const labels = result.groupLabel.split('\x1F');
-                                 const numFields = temporalConfig.groupByFields.length;
+                                 const numFields = rowFields.length;
                                  return Array.from({ length: numFields }, (_, gIdx) => {
                                     const label = labels[gIdx] || '';
                                     if (isSubtotal && gIdx > subtotalLevel) return null;

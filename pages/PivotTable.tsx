@@ -113,9 +113,22 @@ export const PivotTable: React.FC = () => {
 
     useEffect(() => {
         if (!isInitialized || !primaryDataset) return;
+
+        const currentTemporalComparison = temporalConfig ? {
+            ...temporalConfig,
+            groupByFields: rowFields,
+            valueField: valField,
+            aggType: aggType === 'list' ? 'sum' : aggType as any
+        } : undefined;
+
         savePivotState({
             datasetId: primaryDataset.id,
-            config: { sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, isTemporalMode, temporalComparison: temporalConfig || undefined }
+            config: {
+                sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting,
+                filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
+                selectedBatchId, isTemporalMode,
+                temporalComparison: currentTemporalComparison
+            }
         });
     }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
 
@@ -244,9 +257,21 @@ export const PivotTable: React.FC = () => {
 
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
+            const currentTemporalComparison = temporalConfig ? {
+                ...temporalConfig,
+                groupByFields: rowFields,
+                valueField: valField,
+                aggType: aggType === 'list' ? 'sum' : aggType as any
+            } : undefined;
+
             saveAnalysis({
                name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
-               config: { sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, isTemporalMode, temporalComparison: temporalConfig || undefined }
+               config: {
+                   sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting,
+                   filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
+                   selectedBatchId, isTemporalMode,
+                   temporalComparison: currentTemporalComparison
+               }
             });
             setIsSaving(false); setAnalysisName('');
         }
