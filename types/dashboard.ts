@@ -22,6 +22,8 @@ export interface WidgetSource {
 
 export interface PivotChartConfig {
   pivotConfig: any; // Using any here to avoid circular dependencies if needed, or proper import
+  isTemporalMode?: boolean;
+  temporalComparison?: any;
   chartType: ChartType;
   hierarchyLevel?: number;
   limit?: number;

@@ -2,9 +2,10 @@
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
 import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
-import { parseSmartNumber } from '../utils';
+import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { transformPivotToChartData, transformPivotToTreemapData, getChartColors, generateGradient } from '../logic/pivotToChart';
+import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
 
 export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string, end: string }) => {
    const { batches } = useBatches();
@@ -58,19 +59,68 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
          }
 
-         const pivotResult = calculatePivotData({
-            rows: workingRows,
-            rowFields: pc.rowFields,
-            colFields: pc.colFields,
-            colGrouping: pc.colGrouping,
-            valField: pc.valField,
-            aggType: pc.aggType,
-            filters: [],
-            sortBy: pc.sortBy,
-            sortOrder: pc.sortOrder,
-            showSubtotals: pc.showSubtotals,
-            currentDataset: dataset
-         });
+         let pivotResult: any = null;
+
+         if (pivotChart.isTemporalMode && pivotChart.temporalComparison) {
+            const tc = pivotChart.temporalComparison;
+            const sourceDataMap = new Map<string, any[]>();
+
+            tc.sources.forEach((source: any) => {
+               const batch = batches.find(b => b.id === source.batchId);
+               if (batch) {
+                  // Enrichissement calculé si nécessaire
+                  let rows = batch.rows;
+                  if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+                     rows = rows.map(r => {
+                        const enriched = { ...r };
+                        dataset.calculatedFields?.forEach(cf => {
+                           enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                        });
+                        return enriched;
+                     });
+                  }
+                  sourceDataMap.set(source.id, rows);
+               }
+            });
+
+            const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
+            const results = calculateTemporalComparison(sourceDataMap, {
+               ...tc,
+               groupByFields: pc.rowFields,
+               valueField: pc.valField,
+               aggType: pc.aggType
+            }, dateColumn, pc.showSubtotals);
+
+            // Formater pour transformPivotToChartData
+            const colHeaders = tc.sources.map((s: any) => s.label);
+            const displayRows = results.map(r => {
+               const keys = r.groupLabel.split('\x1F');
+               return {
+                  type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
+                  keys: keys,
+                  level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
+                  label: r.groupLabel.replace(/\x1F/g, ' > '),
+                  metrics: tc.sources.reduce((acc: any, s: any) => ({ ...acc, [s.label]: r.values[s.id] || 0 }), {}),
+                  rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
+               };
+            });
+
+            pivotResult = { colHeaders, displayRows, colTotals: {}, grandTotal: 0, isTemporal: true };
+         } else {
+            pivotResult = calculatePivotData({
+               rows: workingRows,
+               rowFields: pc.rowFields,
+               colFields: pc.colFields,
+               colGrouping: pc.colGrouping,
+               valField: pc.valField,
+               aggType: pc.aggType,
+               filters: [],
+               sortBy: pc.sortBy,
+               sortOrder: pc.sortOrder,
+               showSubtotals: pc.showSubtotals,
+               currentDataset: dataset
+            });
+         }
 
          if (!pivotResult) return { error: 'Erreur lors du calcul du TCD' };
 
