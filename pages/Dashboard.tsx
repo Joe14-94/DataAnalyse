@@ -171,9 +171,6 @@ export const Dashboard: React.FC = () => {
 
          <div className="max-w-7xl mx-auto space-y-6 pb-12">
             <DashboardHeader
-               datasets={datasets}
-               currentDatasetId={currentDatasetId}
-               switchDataset={switchDataset}
                isEditMode={isEditMode}
                setIsEditMode={setIsEditMode}
                openNewWidget={openNewWidget}
