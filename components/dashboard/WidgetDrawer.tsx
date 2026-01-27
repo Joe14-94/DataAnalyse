@@ -43,6 +43,35 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
 }) => {
    if (!isOpen) return null;
 
+   const updateConfig = (updates: Partial<any>) => {
+      const newConfig = { ...tempWidget.config, ...updates };
+
+      // Synchronisation si c'est un widget TCD
+      if (newConfig.pivotChart) {
+         const pivotChart = { ...newConfig.pivotChart };
+         const pivotConfig = { ...pivotChart.pivotConfig };
+
+         if (updates.chartType) pivotChart.chartType = updates.chartType;
+         if (updates.limit !== undefined) pivotChart.limit = updates.limit;
+         if (updates.colorMode) pivotChart.colorMode = updates.colorMode;
+         if (updates.colorPalette) pivotChart.colorPalette = updates.colorPalette;
+         if (updates.singleColor) pivotChart.singleColor = updates.singleColor;
+         if (updates.gradientStart) pivotChart.gradientStart = updates.gradientStart;
+         if (updates.gradientEnd) pivotChart.gradientEnd = updates.gradientEnd;
+
+         if (updates.metric) pivotConfig.aggType = updates.metric;
+         if (updates.valueField !== undefined) pivotConfig.valField = updates.valueField;
+         if (updates.dimension !== undefined) {
+            pivotConfig.rowFields = updates.dimension ? [updates.dimension] : [];
+         }
+
+         pivotChart.pivotConfig = pivotConfig;
+         newConfig.pivotChart = pivotChart;
+      }
+
+      setTempWidget({ ...tempWidget, config: newConfig });
+   };
+
    return (
       <div className="fixed inset-0 z-50 flex bg-slate-900/10 backdrop-blur-sm animate-in fade-in duration-200">
          <div className="flex-1 flex flex-col overflow-hidden relative border-r border-slate-200">
@@ -160,10 +189,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                            <Label>Mode couleur</Label>
                            <Select
                               value={tempWidget.config?.colorMode || 'multi'}
-                              onChange={e => setTempWidget({
-                                 ...tempWidget,
-                                 config: { ...tempWidget.config!, colorMode: e.target.value as ColorMode }
-                              })}
+                              onChange={e => updateConfig({ colorMode: e.target.value as ColorMode })}
                            >
                               <option value="multi">Plusieurs couleurs (Palette)</option>
                               <option value="single">Couleur unique</option>
@@ -176,10 +202,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                               <Label>Palette</Label>
                               <Select
                                  value={tempWidget.config?.colorPalette || 'default'}
-                                 onChange={e => setTempWidget({
-                                    ...tempWidget,
-                                    config: { ...tempWidget.config!, colorPalette: e.target.value as ColorPalette }
-                                 })}
+                                 onChange={e => updateConfig({ colorPalette: e.target.value as ColorPalette })}
                               >
                                  <option value="default">Défaut</option>
                                  <option value="pastel">Pastel</option>
@@ -195,18 +218,12 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                  <input
                                     type="color"
                                     value={tempWidget.config?.singleColor || '#3b82f6'}
-                                    onChange={e => setTempWidget({
-                                       ...tempWidget,
-                                       config: { ...tempWidget.config!, singleColor: e.target.value }
-                                    })}
+                                    onChange={e => updateConfig({ singleColor: e.target.value })}
                                     className="w-10 h-10 rounded border border-slate-300 cursor-pointer"
                                  />
                                  <Input
                                     value={tempWidget.config?.singleColor || '#3b82f6'}
-                                    onChange={e => setTempWidget({
-                                       ...tempWidget,
-                                       config: { ...tempWidget.config!, singleColor: e.target.value }
-                                    })}
+                                    onChange={e => updateConfig({ singleColor: e.target.value })}
                                     className="font-mono text-xs"
                                  />
                               </div>
@@ -221,18 +238,12 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                     <input
                                        type="color"
                                        value={tempWidget.config?.gradientStart || '#3b82f6'}
-                                       onChange={e => setTempWidget({
-                                          ...tempWidget,
-                                          config: { ...tempWidget.config!, gradientStart: e.target.value }
-                                       })}
+                                       onChange={e => updateConfig({ gradientStart: e.target.value })}
                                        className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
                                     />
                                     <Input
                                        value={tempWidget.config?.gradientStart || '#3b82f6'}
-                                       onChange={e => setTempWidget({
-                                          ...tempWidget,
-                                          config: { ...tempWidget.config!, gradientStart: e.target.value }
-                                       })}
+                                       onChange={e => updateConfig({ gradientStart: e.target.value })}
                                        className="font-mono text-[10px] px-1 h-8"
                                     />
                                  </div>
@@ -243,18 +254,12 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                     <input
                                        type="color"
                                        value={tempWidget.config?.gradientEnd || '#ef4444'}
-                                       onChange={e => setTempWidget({
-                                          ...tempWidget,
-                                          config: { ...tempWidget.config!, gradientEnd: e.target.value }
-                                       })}
+                                       onChange={e => updateConfig({ gradientEnd: e.target.value })}
                                        className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
                                     />
                                     <Input
                                        value={tempWidget.config?.gradientEnd || '#ef4444'}
-                                       onChange={e => setTempWidget({
-                                          ...tempWidget,
-                                          config: { ...tempWidget.config!, gradientEnd: e.target.value }
-                                       })}
+                                       onChange={e => updateConfig({ gradientEnd: e.target.value })}
                                        className="font-mono text-[10px] px-1 h-8"
                                     />
                                  </div>
@@ -272,10 +277,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                            <Label>Type de graphique</Label>
                            <Select
                               value={tempWidget.config?.chartType || 'column'}
-                              onChange={e => setTempWidget({
-                                 ...tempWidget,
-                                 config: { ...tempWidget.config!, chartType: e.target.value as ChartType }
-                              })}
+                              onChange={e => updateConfig({ chartType: e.target.value as ChartType })}
                            >
                               {[
                                  'column', 'bar', 'line', 'area', 'pie', 'donut',
@@ -292,7 +294,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                      <div className="grid grid-cols-2 gap-4">
                         <div>
                            <Label>Métrique</Label>
-                           <Select value={tempWidget.config?.metric} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, metric: e.target.value as any } })}>
+                           <Select value={tempWidget.config?.metric} onChange={e => updateConfig({ metric: e.target.value as any })}>
                               <option value="count">Compte</option>
                               <option value="sum">Somme</option>
                               <option value="avg">Moyenne</option>
@@ -302,7 +304,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                         {['sum', 'avg', 'distinct'].includes(tempWidget.config?.metric || '') && (
                            <div>
                               <Label>Champ valeur</Label>
-                              <Select value={tempWidget.config?.valueField || ''} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, valueField: e.target.value } })}>
+                              <Select value={tempWidget.config?.valueField || ''} onChange={e => updateConfig({ valueField: e.target.value })}>
                                  <option value="">-- Choisir --</option>
                                  {allFields.map(f => <option key={f} value={f}>{f}</option>)}
                               </Select>
@@ -314,14 +316,14 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                         <div className="grid grid-cols-2 gap-4">
                            <div>
                               <Label>Axe de regroupement</Label>
-                              <Select value={tempWidget.config?.dimension || ''} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, dimension: e.target.value } })}>
+                              <Select value={tempWidget.config?.dimension || ''} onChange={e => updateConfig({ dimension: e.target.value })}>
                                  <option value="">-- Choisir --</option>
                                  {allFields.map(f => <option key={f} value={f}>{f}</option>)}
                               </Select>
                            </div>
                            <div>
                               <Label>Limite (Top N)</Label>
-                              <Input type="number" value={tempWidget.config?.limit || 10} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, limit: parseInt(e.target.value) } })} />
+                              <Input type="number" value={tempWidget.config?.limit || 10} onChange={e => updateConfig({ limit: parseInt(e.target.value) })} />
                            </div>
                         </div>
                      )}
