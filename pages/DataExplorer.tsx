@@ -998,10 +998,10 @@ export const DataExplorer: React.FC = () => {
                               className="hover:bg-blue-50 transition-colors cursor-pointer group"
                               onClick={() => handleRowClick(row)}
                            >
-                              <td className={`px-6 py-2 whitespace-nowrap text-xs text-slate-500 font-mono group-hover:text-blue-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
+                              <td className={`px-6 py-2 whitespace-nowrap text-sm text-slate-500 font-mono group-hover:text-blue-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
                                  {formatDateFr(row._importDate)}
                               </td>
-                              <td className={`px-6 py-2 whitespace-nowrap text-xs text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
+                              <td className={`px-6 py-2 whitespace-nowrap text-sm text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                                  {row.id}
                               </td>
                               {displayFields.map(field => {
@@ -1021,11 +1021,11 @@ export const DataExplorer: React.FC = () => {
                                  }
 
                                  return (
-                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-base text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={field} className={`px-3 py-1 whitespace-nowrap text-sm text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {isEditMode && !isBlended ? (
                                           <input
                                              type="text"
-                                             className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+                                             className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
                                              value={val ?? ''}
                                              onChange={(e) => handleCellEdit(row._batchId, row.id, field, e.target.value)}
                                              onClick={(e) => e.stopPropagation()}
@@ -1041,7 +1041,7 @@ export const DataExplorer: React.FC = () => {
                                  const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
                                  return (
-                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-app-base text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                        {val !== undefined && val !== null ? <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span> : <span className="text-indigo-200">-</span>}
                                     </td>
                                  );
@@ -1077,11 +1077,11 @@ export const DataExplorer: React.FC = () => {
                   <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                      <div>
                         <label className="block text-xs font-bold text-slate-600 mb-1">Nom de la colonne</label>
-                        <input type="text" className="block w-full rounded-md border-slate-300 text-xs p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
+                        <input type="text" className="block w-full rounded-md border-slate-300 text-sm p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
                      </div>
                      <div className="flex-1 flex flex-col min-h-[300px]">
                         <label className="block text-xs font-bold text-slate-600 mb-1 flex justify-between"><span>Formule</span><span className="text-xs text-slate-400">Syntaxe Excel simplifiée</span></label>
-                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-xs p-2 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
+                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-sm p-2 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
                         <div className="border border-t-0 border-slate-300 rounded-b-md bg-white flex flex-col h-64">
                            <div className="flex border-b border-slate-200">
                               <button onClick={() => setCalcTab('fields')} className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'fields' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}>Champs ({currentDataset.fields.length})</button>
@@ -1118,7 +1118,7 @@ export const DataExplorer: React.FC = () => {
                      <div className="grid grid-cols-2 gap-4">
                         <div>
                            <label className="block text-xs font-bold text-slate-600 mb-1">Type de résultat</label>
-                           <select className="block w-full rounded-md border-slate-300 text-xs p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
+                           <select className="block w-full rounded-md border-slate-300 text-sm p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
                               <option value="number">Nombre</option>
                               <option value="text">Texte</option>
                               <option value="boolean">Vrai/Faux</option>
@@ -1362,7 +1362,7 @@ export const DataExplorer: React.FC = () => {
 
          {/* DETAILS DRAWER */}
          {isDrawerOpen && selectedRow && (
-            <div className="fixed inset-y-0 right-0 w-[600px] bg-white shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-slate-200">
+            <div className="fixed inset-y-0 right-0 w-full md:w-[600px] bg-white shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-slate-200">
                <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-start">
                   <div><div className="flex items-center gap-2 mb-1"><History className="w-5 h-5 text-blue-600" /><h3 className="text-lg font-bold text-slate-800">Fiche Détail & Historique</h3></div><p className="text-xs text-slate-500">Suivi de l'entité via la clé : <strong className="text-slate-700">{trackingKey}</strong></p></div>
                   <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white rounded-full p-1 shadow-sm border border-slate-200"><X className="w-5 h-5" /></button>
