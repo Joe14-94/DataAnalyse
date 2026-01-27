@@ -45,8 +45,14 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
          return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
       }
 
-      const seriesKeys = chartData.length > 0 ? Object.keys(chartData[0]).filter(k => k !== 'name') : [];
-      const displaySeriesNames = seriesKeys.length === 1 && seriesName ? { [seriesKeys[0]]: seriesName } : {};
+      // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
+      const seriesKeys = Array.from(new Set(chartData.flatMap((d: any) =>
+         Object.keys(d).filter(k => k !== 'name')
+      ))) as string[];
+
+      const displaySeriesNames: Record<string, string> = (seriesKeys.length === 1 && seriesName)
+         ? { [seriesKeys[0]]: seriesName }
+         : {};
 
       try {
          if (chartType === 'pie' || chartType === 'donut') {

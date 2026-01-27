@@ -36,19 +36,20 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          let workingRows = dsBatches[dsBatches.length - 1].rows;
 
-         // Appliquer les filtres du TCD
-         if (pc.filters && pc.filters.length > 0) {
-            workingRows = workingRows.filter(row => {
+         const applyPivotFilters = (rows: any[]) => {
+            if (!pc.filters || pc.filters.length === 0) return rows;
+            return rows.filter(row => {
                return pc.filters!.every((filter: FilterRule) => {
                   const rowVal = row[filter.field];
+                  const fieldUnit = dataset.fieldConfigs?.[filter.field]?.unit;
                   if (filter.operator === 'in' && Array.isArray(filter.value)) {
                      return filter.value.includes(String(rowVal));
                   } else if (filter.operator === 'contains') {
                      return String(rowVal || '').includes(String(filter.value));
                   } else if (filter.operator === 'gt') {
-                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) > (filter.value as number);
+                     return parseSmartNumber(rowVal, fieldUnit) > (filter.value as number);
                   } else if (filter.operator === 'lt') {
-                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) < (filter.value as number);
+                     return parseSmartNumber(rowVal, fieldUnit) < (filter.value as number);
                   } else if (filter.operator === 'eq') {
                      return String(rowVal) === String(filter.value);
                   } else if (filter.operator === 'starts_with') {
@@ -57,7 +58,10 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                   return true;
                });
             });
-         }
+         };
+
+         // Appliquer les filtres du TCD
+         workingRows = applyPivotFilters(workingRows);
 
          let pivotResult: any = null;
 
@@ -79,7 +83,8 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                         return enriched;
                      });
                   }
-                  sourceDataMap.set(source.id, rows);
+                  // Appliquer les filtres TCD sur chaque source
+                  sourceDataMap.set(source.id, applyPivotFilters(rows));
                }
             });
 
