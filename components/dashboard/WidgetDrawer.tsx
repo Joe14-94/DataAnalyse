@@ -4,10 +4,11 @@ import { X, Eye, Activity, BarChart3, ListOrdered, Type, PaintBucket, Palette } 
 import { Heading, Text } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { Label, Input, Select } from '../ui/Form';
-import { DashboardWidget, WidgetType, WidgetSize, WidgetHeight, Dataset, ColorMode, ColorPalette } from '../../types';
+import { DashboardWidget, WidgetType, WidgetSize, WidgetHeight, Dataset, ColorMode, ColorPalette, ChartType } from '../../types';
 import { WidgetDisplay } from './WidgetDisplay';
 import { useWidgetData } from '../../hooks/useWidgetData';
 import { BORDER_COLORS } from '../../utils/constants';
+import { getChartTypeConfig } from '../../logic/pivotToChart';
 
 interface WidgetDrawerProps {
    isOpen: boolean;
@@ -266,6 +267,28 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
 
                {tempWidget.type !== 'text' && (
                   <div className="space-y-6">
+                     {tempWidget.type === 'chart' && (
+                        <div>
+                           <Label>Type de graphique</Label>
+                           <Select
+                              value={tempWidget.config?.chartType || 'column'}
+                              onChange={e => setTempWidget({
+                                 ...tempWidget,
+                                 config: { ...tempWidget.config!, chartType: e.target.value as ChartType }
+                              })}
+                           >
+                              {[
+                                 'column', 'bar', 'line', 'area', 'pie', 'donut',
+                                 'stacked-bar', 'stacked-area', 'radar', 'treemap'
+                              ].map(ct => (
+                                 <option key={ct} value={ct}>
+                                    {getChartTypeConfig(ct as ChartType).label}
+                                 </option>
+                              ))}
+                           </Select>
+                        </div>
+                     )}
+
                      <div className="grid grid-cols-2 gap-4">
                         <div>
                            <Label>Métrique</Label>

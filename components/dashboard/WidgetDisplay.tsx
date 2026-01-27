@@ -302,7 +302,7 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
       );
    }
 
-   if (chartType === 'area') {
+   if (chartType === 'area' || chartType === 'stacked-area') {
       return (
          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} onClick={handleChartClick} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -312,6 +312,20 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
                <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.3} strokeWidth={2} />
             </AreaChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'radar') {
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={chartData}>
+               <PolarGrid stroke="#e2e8f0" />
+               <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+               <PolarRadiusAxis tick={{ fontSize: 10 }} />
+               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+               <Radar name="Valeur" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.6} />
+            </RadarChart>
          </ResponsiveContainer>
       );
    }
@@ -330,14 +344,15 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
       );
    }
 
+   const isVertical = chartType === 'bar';
    return (
       <ResponsiveContainer width="100%" height="100%">
-         <BarChart data={chartData} onClick={handleChartClick}>
+         <BarChart data={chartData} onClick={handleChartClick} layout={isVertical ? 'vertical' : 'horizontal'}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-            <YAxis fontSize={10} stroke="#94a3b8" />
+            <XAxis type={isVertical ? 'number' : 'category'} dataKey={isVertical ? undefined : 'name'} fontSize={10} stroke="#94a3b8" />
+            <YAxis type={isVertical ? 'category' : 'number'} dataKey={isVertical ? 'name' : undefined} fontSize={10} stroke="#94a3b8" width={isVertical ? 80 : 30} />
             <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} className="cursor-pointer">
+            <Bar dataKey="value" radius={isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0]} className="cursor-pointer">
                {chartData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />)}
             </Bar>
          </BarChart>
