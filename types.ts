@@ -157,10 +157,44 @@ export interface AnalyticsState {
 // --- NOUVEAUX TYPES POUR LE DASHBOARD ---
 
 export type WidgetType = 'kpi' | 'chart' | 'list' | 'text'; // Ajout de 'text'
-export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel';
+export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel' | 'stacked-bar' | 'stacked-area';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full'; // 1 col, 2 cols, 3 cols, 4 cols
 export type WidgetHeight = 'sm' | 'md' | 'lg' | 'xl'; // Hauteur : sm=h-32, md=h-64, lg=h-96, xl=h-[500px]
 export type KpiStyle = 'simple' | 'trend' | 'progress';
+
+// NOUVEAU : Types pour les widgets de graphiques TCD
+export type ColorMode = 'single' | 'gradient' | 'multi';
+export type ColorPalette = 'default' | 'pastel' | 'vibrant';
+
+// NOUVEAU : Configuration d'un widget issu d'un graphique TCD
+export interface PivotChartConfig {
+  // Configuration du TCD source
+  pivotConfig: {
+    rowFields: string[];
+    colFields: string[];
+    colGrouping: 'none' | 'year' | 'quarter' | 'month';
+    valField: string;
+    aggType: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
+    filters: FilterRule[];
+    sortBy: 'label' | 'value' | string;
+    sortOrder: 'asc' | 'desc';
+    showSubtotals: boolean;
+  };
+
+  // Configuration du graphique
+  chartType: ChartType;
+  hierarchyLevel?: number; // Niveau de hiérarchie (0, 1, 2...)
+  limit?: number; // Top N
+  sortBy?: 'name' | 'value' | 'none';
+  sortOrder?: 'asc' | 'desc';
+
+  // Configuration des couleurs
+  colorMode: ColorMode;
+  colorPalette?: ColorPalette;
+  singleColor?: string; // Pour mode 'single'
+  gradientStart?: string; // Pour mode 'gradient'
+  gradientEnd?: string; // Pour mode 'gradient'
+}
 
 export interface SecondarySourceConfig {
   datasetId: string;
@@ -191,6 +225,13 @@ export interface WidgetConfig {
   target?: number; // Objectif (pour les KPI ou Jauges)
   showTrend?: boolean; // Afficher l'évolution vs période précédente
 
+  // Color Config (pour widgets simples)
+  colorMode?: ColorMode; // 'multi' | 'single' | 'gradient'
+  colorPalette?: ColorPalette; // 'default' | 'pastel' | 'vibrant'
+  singleColor?: string; // Couleur unique (mode 'single')
+  gradientStart?: string; // Couleur de début (mode 'gradient')
+  gradientEnd?: string; // Couleur de fin (mode 'gradient')
+
   // Text Config (Nouveau pour WidgetType = 'text')
   textContent?: string;
   textStyle?: {
@@ -202,6 +243,9 @@ export interface WidgetConfig {
   // Filters
   filterField?: string; // Filtre optionnel spécifique au widget
   filterValue?: string;
+
+  // NOUVEAU : Configuration pour widgets de graphiques TCD
+  pivotChart?: PivotChartConfig;
 }
 
 // NOUVEAU : Style personnalisé du widget

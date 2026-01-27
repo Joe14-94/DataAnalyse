@@ -4,7 +4,7 @@ import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType } fro
 // TYPES
 // ============================================================================
 
-export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'stacked-bar' | 'stacked-area' | 'radar' | 'treemap';
+export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'stacked-bar' | 'stacked-area' | 'radar' | 'treemap' | 'radial' | 'funnel';
 export type ColorPalette = 'default' | 'pastel' | 'vibrant';
 export type ColorMode = 'single' | 'gradient' | 'multi';
 
@@ -570,6 +570,16 @@ export const getChartTypeConfig = (chartType: ChartType) => {
       label: 'Treemap',
       description: 'Carte arborescente',
       bestFor: 'Hiérarchies et proportions'
+    },
+    'radial': {
+      label: 'Jauge radiale',
+      description: 'Graphique en barres radiales',
+      bestFor: 'KPI et indicateurs circulaires'
+    },
+    'funnel': {
+      label: 'Entonnoir',
+      description: 'Graphique en entonnoir',
+      bestFor: 'Étapes de conversion et processus'
     }
   };
 

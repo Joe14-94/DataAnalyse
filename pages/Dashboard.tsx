@@ -18,11 +18,24 @@ import {
    ListOrdered, Radar as RadarIcon, LayoutGrid, Filter, Link as LinkIcon, FilterX, Type, Copy, PaintBucket, Eye, GripHorizontal, Move, CalendarRange, MousePointerClick, MoreVertical, Download, Image as ImageIcon, Maximize2, FileText
 } from 'lucide-react';
 import { DashboardWidget, WidgetConfig, WidgetSize, WidgetType, ChartType, Dataset, KpiStyle, WidgetHeight } from '../types';
+import { calculatePivotData, PivotConfig } from '../logic/pivotEngine';
+import { transformPivotToChartData, transformPivotToTreemapData, getChartColors, generateGradient } from '../logic/pivotToChart';
 import html2canvas from 'html2canvas';
 import { useNavigate } from 'react-router-dom';
 
 // --- UTILS ---
 const COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bfa', '#fbbf24', '#22d3ee', '#f472b6'];
+
+// Calculate responsive styling based on widget height
+const getResponsiveChartStyles = (height: WidgetHeight | undefined) => {
+   const heightMap: Record<WidgetHeight, { px: number; fontSize: number; marginBottom: number }> = {
+      sm: { px: 128, fontSize: 9, marginBottom: 30 },
+      md: { px: 256, fontSize: 10, marginBottom: 40 },
+      lg: { px: 384, fontSize: 11, marginBottom: 50 },
+      xl: { px: 500, fontSize: 12, marginBottom: 60 }
+   };
+   return heightMap[height || 'md'];
+};
 
 const BORDER_COLORS = [
    { label: 'Gris', class: 'border-slate-200', bg: 'bg-slate-200' },
@@ -61,6 +74,145 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
 
    return useMemo(() => {
       if (widget.type === 'text') return { text: widget.config.textContent, style: widget.config.textStyle };
+
+      // NOUVEAU : Gérer les widgets basés sur des graphiques TCD
+      if (widget.config.pivotChart) {
+         const { pivotChart } = widget.config;
+         const { pivotConfig: pc } = pivotChart;
+
+         // 1. Récupérer les données du dataset source
+         if (!pc.rowFields || pc.rowFields.length === 0) return { error: 'Configuration de graphique TCD invalide' };
+
+         const dataset = datasets.find(d => d.id === widget.config.source?.datasetId);
+         if (!dataset) return { error: 'Jeu de données introuvable' };
+
+         // 2. Filtrer les batches du dataset
+         let dsBatches = batches.filter(b => b.datasetId === widget.config.source?.datasetId);
+
+         if (globalDateRange.start) {
+            dsBatches = dsBatches.filter(b => b.date >= globalDateRange.start);
+         }
+         if (globalDateRange.end) {
+            dsBatches = dsBatches.filter(b => b.date <= globalDateRange.end);
+         }
+
+         dsBatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+         if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
+
+         // 3. Sélectionner le batch le plus récent
+         let workingRows = dsBatches[dsBatches.length - 1].rows;
+
+         // 4. Appliquer les filtres du TCD
+         if (pc.filters && pc.filters.length > 0) {
+            workingRows = workingRows.filter(row => {
+               return pc.filters!.every(filter => {
+                  if (filter.operator === 'in' && Array.isArray(filter.value)) {
+                     return filter.value.includes(row[filter.field]);
+                  } else if (filter.operator === 'contains') {
+                     return String(row[filter.field] || '').includes(String(filter.value));
+                  } else if (filter.operator === 'gt') {
+                     return parseSmartNumber(row[filter.field], dataset.fieldConfigs?.[filter.field]?.unit) > filter.value;
+                  } else if (filter.operator === 'lt') {
+                     return parseSmartNumber(row[filter.field], dataset.fieldConfigs?.[filter.field]?.unit) < filter.value;
+                  } else if (filter.operator === 'eq') {
+                     return String(row[filter.field]) === String(filter.value);
+                  } else if (filter.operator === 'starts_with') {
+                     return String(row[filter.field] || '').startsWith(String(filter.value));
+                  }
+                  return true;
+               });
+            });
+         }
+
+         // 5. Calculer le TCD
+         const pivotResult = calculatePivotData({
+            rows: workingRows,
+            rowFields: pc.rowFields,
+            colFields: pc.colFields,
+            colGrouping: pc.colGrouping,
+            valField: pc.valField,
+            aggType: pc.aggType,
+            filters: [],
+            sortBy: pc.sortBy,
+            sortOrder: pc.sortOrder,
+            showSubtotals: pc.showSubtotals,
+            currentDataset: dataset
+         });
+
+         if (!pivotResult) return { error: 'Erreur lors du calcul du TCD' };
+
+         // 6. Transformer en données de graphique
+         let chartData;
+         const fullPivotConfig = { rows: workingRows, ...pc } as PivotConfig;
+         if (pivotChart.chartType === 'treemap') {
+            chartData = transformPivotToTreemapData(pivotResult, fullPivotConfig, pivotChart.hierarchyLevel);
+         } else {
+            chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
+               chartType: pivotChart.chartType,
+               hierarchyLevel: pivotChart.hierarchyLevel,
+               limit: pivotChart.limit,
+               excludeSubtotals: true,
+               sortBy: pivotChart.sortBy || 'value',
+               sortOrder: pivotChart.sortOrder || 'desc',
+               showOthers: (pivotChart.limit || 0) > 0
+            });
+         }
+
+         // 7. Déterminer le nombre de séries et le nombre de points
+         const seriesCount = chartData && chartData.length > 0
+            ? Object.keys(chartData[0]).filter(k => k !== 'name').length
+            : 1;
+         const pointCount = chartData?.length || 0;
+
+         // 8. Calculer les couleurs
+         // Stratégie:
+         // - Pour pie, donut, treemap: toujours une couleur par point de données
+         // - Pour les autres graphiques:
+         //   - Si multi-séries (seriesCount > 1): une couleur par série
+         //   - Si mono-série (seriesCount = 1): une couleur par point de données (pour les dégradés/palettes)
+         const isMultiSeriesChart = seriesCount > 1;
+         const colorCount = (pivotChart.chartType === 'pie' || pivotChart.chartType === 'donut' || pivotChart.chartType === 'treemap')
+            ? pointCount
+            : (isMultiSeriesChart ? seriesCount : pointCount);
+
+         // Initialiser les valeurs par défaut si elles ne sont pas définies
+         const effectiveColorMode = pivotChart.colorMode || 'multi';
+         const effectiveColorPalette = pivotChart.colorPalette || 'vibrant';
+         const effectiveSingleColor = pivotChart.singleColor || '#0066cc';
+         const effectiveGradientStart = pivotChart.gradientStart || '#0066cc';
+         const effectiveGradientEnd = pivotChart.gradientEnd || '#e63946';
+
+         // Debug: calcul des couleurs pour les widgets TCD
+         console.log('🎨 Calcul des couleurs pour widget TCD:', {
+            colorMode: pivotChart.colorMode,
+            effectiveColorMode,
+            colorPalette: pivotChart.colorPalette,
+            effectiveColorPalette,
+            colorCount
+         });
+
+         let colors = [];
+         if (effectiveColorMode === 'single') {
+            colors = Array(Math.max(colorCount, 1)).fill(effectiveSingleColor);
+         } else if (effectiveColorMode === 'gradient') {
+            colors = generateGradient(
+               effectiveGradientStart,
+               effectiveGradientEnd,
+               Math.max(colorCount, 1)
+            );
+         } else {
+            colors = getChartColors(Math.max(colorCount, 1), effectiveColorPalette);
+         }
+
+         return {
+            data: chartData,
+            colors,
+            unit: dataset.fieldConfigs?.[pc.valField]?.unit || '',
+            seriesName: pc.valField,
+            seriesCount
+         };
+      }
 
       const { source, metric, dimension, valueField, target, secondarySource, limit } = widget.config;
       if (!source) return null;
@@ -149,7 +301,23 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
             else if (metric === 'sum' && valueField) counts[key] = (counts[key] || 0) + parseVal(row, valueField);
          });
          let sorted = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, limit || 10);
-         return { current: sorted, max: sorted.length > 0 ? sorted[0].value : 0, unit: currentUnit };
+
+         // Calculer les couleurs basées sur la configuration du widget
+         const colorCount = sorted.length;
+         let colors = [];
+         if (widget.config.colorMode === 'single') {
+            colors = Array(Math.max(colorCount, 1)).fill(widget.config.singleColor || '#0066cc');
+         } else if (widget.config.colorMode === 'gradient') {
+            colors = generateGradient(
+               widget.config.gradientStart || '#0066cc',
+               widget.config.gradientEnd || '#e63946',
+               Math.max(colorCount, 1)
+            );
+         } else {
+            colors = getChartColors(Math.max(colorCount, 1), widget.config.colorPalette || 'default');
+         }
+
+         return { current: sorted, max: sorted.length > 0 ? sorted[0].value : 0, unit: currentUnit, colors };
       }
 
       if (dimension) {
@@ -161,15 +329,30 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
             counts[key] = (counts[key] || 0) + val;
          });
 
+         // Calculer les couleurs basées sur la configuration du widget
+         const colorCount = Object.keys(counts).length;
+         let colors = [];
+         if (widget.config.colorMode === 'single') {
+            colors = Array(Math.max(colorCount, 1)).fill(widget.config.singleColor || '#0066cc');
+         } else if (widget.config.colorMode === 'gradient') {
+            colors = generateGradient(
+               widget.config.gradientStart || '#0066cc',
+               widget.config.gradientEnd || '#e63946',
+               Math.max(colorCount, 1)
+            );
+         } else {
+            colors = getChartColors(Math.max(colorCount, 1), widget.config.colorPalette || 'default');
+         }
+
          if (widget.config.chartType === 'radial') {
-            const data = Object.entries(counts).map(([name, value], idx) => ({ name, value, fill: COLORS[idx % COLORS.length] })).sort((a, b) => b.value - a.value).slice(0, 5);
-            return { data, unit: currentUnit };
+            const data = Object.entries(counts).map(([name, value], idx) => ({ name, value, fill: colors[idx % colors.length] })).sort((a, b) => b.value - a.value).slice(0, 5);
+            return { data, unit: currentUnit, colors };
          }
 
          let data = Object.entries(counts).map(([name, value]) => ({ name, value, size: value }));
          data.sort((a, b) => b.value - a.value);
          if (limit) data = data.slice(0, limit);
-         return { data, unit: currentUnit };
+         return { data, unit: currentUnit, colors };
       }
 
       else {
@@ -204,6 +387,300 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
       const size = style.size === 'large' ? 'text-lg' : style.size === 'xl' ? 'text-2xl' : 'text-app-base';
       const color = style.color === 'primary' ? 'text-brand-600' : style.color === 'muted' ? 'text-txt-muted' : 'text-txt-main';
       return <div className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: align }}>{widget.config.textContent || '...'}</div>;
+   }
+
+   // NOUVEAU : Gestion des widgets de graphiques TCD
+   if (widget.config.pivotChart && widget.type === 'chart') {
+      const { colors, data: chartData, unit, seriesName } = data;
+      const { pivotChart } = widget.config;
+      const chartType = pivotChart.chartType;
+
+      if (!chartData || chartData.length === 0) {
+         return <div className="flex items-center justify-center h-full text-txt-muted">Aucune donnée</div>;
+      }
+
+      // Récupérer les clés de données multiples (pour séries)
+      const seriesKeys = chartData.length > 0 ? Object.keys(chartData[0]).filter(k => k !== 'name') : [];
+      // Utiliser le nom de la série s'il y en a qu'une, sinon garder les clés
+      const displaySeriesNames = seriesKeys.length === 1 && seriesName ? { [seriesKeys[0]]: seriesName } : {};
+      const responsiveStyles = getResponsiveChartStyles(widget.height);
+
+      try {
+         // Charger la composante Recharts appropriée
+         if (chartType === 'pie' || chartType === 'donut') {
+            const pieDataKey = seriesKeys[0] || 'value';
+            const pieName = displaySeriesNames[pieDataKey] || pieDataKey || 'Valeur';
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                     <Pie
+                        data={chartData}
+                        dataKey={pieDataKey}
+                        nameKey="name"
+                        name={pieName}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={chartType === 'donut' ? '50%' : 0}
+                        outerRadius="80%"
+                        paddingAngle={1}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                        isAnimationActive={false}
+                     >
+                        {chartData.map((entry: any, index: number) => (
+                           <Cell
+                              key={`cell-${index}`}
+                              fill={colors[index % colors.length]}
+                              stroke="#fff"
+                              strokeWidth={2}
+                           />
+                        ))}
+                     </Pie>
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }} />
+                     <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  </PieChart>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'line') {
+            const isMultiSeries = seriesKeys.length > 1;
+            const dotRadius = Math.max(2, responsiveStyles.fontSize / 5);
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: responsiveStyles.marginBottom }}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                     <XAxis
+                        dataKey="name"
+                        fontSize={responsiveStyles.fontSize}
+                        stroke="#94a3b8"
+                        angle={-45}
+                        textAnchor="end"
+                        height={Math.max(40, responsiveStyles.marginBottom - 10)}
+                     />
+                     <YAxis fontSize={responsiveStyles.fontSize} stroke="#94a3b8" />
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: `${responsiveStyles.fontSize}px` }} />
+                     {isMultiSeries ? (
+                        <>
+                           <Legend wrapperStyle={{ fontSize: `${responsiveStyles.fontSize}px` }} />
+                           {seriesKeys.map((key, idx) => (
+                              <Line
+                                 key={key}
+                                 type="monotone"
+                                 dataKey={key}
+                                 name={displaySeriesNames[key] || key}
+                                 stroke={colors[idx % colors.length]}
+                                 strokeWidth={Math.max(1, responsiveStyles.fontSize / 10)}
+                                 dot={{ r: dotRadius }}
+                                 activeDot={{ r: dotRadius + 2 }}
+                                 isAnimationActive={false}
+                              />
+                           ))}
+                        </>
+                     ) : (
+                        <Line
+                           type="monotone"
+                           dataKey={seriesKeys[0] || 'value'}
+                           name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                           stroke={colors[0]}
+                           strokeWidth={Math.max(1, responsiveStyles.fontSize / 10)}
+                           dot={{ r: dotRadius }}
+                           activeDot={{ r: dotRadius + 2 }}
+                           isAnimationActive={false}
+                        />
+                     )}
+                  </LineChart>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'area' || chartType === 'stacked-area') {
+            const isMultiSeries = seriesKeys.length > 1;
+            const isStacked = chartType === 'stacked-area';
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: responsiveStyles.marginBottom }}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                     <XAxis
+                        dataKey="name"
+                        fontSize={responsiveStyles.fontSize}
+                        stroke="#94a3b8"
+                        angle={-45}
+                        textAnchor="end"
+                        height={Math.max(40, responsiveStyles.marginBottom - 10)}
+                     />
+                     <YAxis fontSize={responsiveStyles.fontSize} stroke="#94a3b8" />
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: `${responsiveStyles.fontSize}px` }} />
+                     {(isMultiSeries || isStacked) && <Legend wrapperStyle={{ fontSize: `${responsiveStyles.fontSize}px` }} />}
+                     {isMultiSeries || isStacked ? (
+                        seriesKeys.map((key, idx) => (
+                           <Area
+                              key={key}
+                              type="monotone"
+                              dataKey={key}
+                              name={displaySeriesNames[key] || key}
+                              fill={colors[idx % colors.length]}
+                              stroke={colors[idx % colors.length]}
+                              fillOpacity={0.6}
+                              stackId={isStacked ? 'stack' : undefined}
+                              isAnimationActive={false}
+                           />
+                        ))
+                     ) : (
+                        <Area
+                           type="monotone"
+                           dataKey={seriesKeys[0] || 'value'}
+                           name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                           fill={colors[0]}
+                           stroke={colors[0]}
+                           fillOpacity={0.6}
+                           isAnimationActive={false}
+                        />
+                     )}
+                  </AreaChart>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'bar' || chartType === 'column' || chartType === 'stacked-bar') {
+            const isBar = chartType === 'bar';
+            const isMultiSeries = seriesKeys.length > 1;
+            const isStacked = chartType === 'stacked-bar';
+
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout={isBar ? 'vertical' : 'horizontal'} margin={{ top: 15, right: 20, left: 10, bottom: isBar ? 5 : responsiveStyles.marginBottom }}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                     <XAxis
+                        type={isBar ? 'number' : 'category'}
+                        dataKey={isBar ? undefined : 'name'}
+                        fontSize={responsiveStyles.fontSize}
+                        stroke="#94a3b8"
+                        angle={isBar ? 0 : -45}
+                        textAnchor={isBar ? 'middle' : 'end'}
+                        height={isBar ? 30 : Math.max(40, responsiveStyles.marginBottom - 10)}
+                     />
+                     <YAxis
+                        type={isBar ? 'category' : 'number'}
+                        dataKey={isBar ? 'name' : undefined}
+                        fontSize={responsiveStyles.fontSize}
+                        stroke="#94a3b8"
+                     />
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: `${responsiveStyles.fontSize}px` }} />
+                     {(isMultiSeries || isStacked) && <Legend wrapperStyle={{ fontSize: `${responsiveStyles.fontSize}px` }} />}
+                     {isMultiSeries || isStacked ? (
+                        seriesKeys.map((key, idx) => (
+                           <Bar
+                              key={key}
+                              dataKey={key}
+                              name={displaySeriesNames[key] || key}
+                              fill={colors[idx % colors.length]}
+                              stackId={isStacked ? 'stack' : undefined}
+                              radius={isBar ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+                              isAnimationActive={false}
+                           />
+                        ))
+                     ) : (
+                        <Bar
+                           dataKey={seriesKeys[0] || 'value'}
+                           name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                           fill={colors[0]}
+                           radius={isBar ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+                           isAnimationActive={false}
+                        >
+                           {chartData.map((entry: any, index: number) => (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                           ))}
+                        </Bar>
+                     )}
+                  </BarChart>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'radar') {
+            const radarDataKey = seriesKeys[0] || 'value';
+            const radarName = displaySeriesNames[radarDataKey] || radarDataKey || 'Valeur';
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={chartData} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
+                     <PolarGrid stroke="#f1f5f9" />
+                     <PolarAngleAxis dataKey="name" fontSize={responsiveStyles.fontSize} stroke="#94a3b8" />
+                     <PolarRadiusAxis fontSize={responsiveStyles.fontSize} stroke="#94a3b8" />
+                     <Radar
+                        name={radarName}
+                        dataKey={radarDataKey}
+                        stroke={colors[0]}
+                        fill={colors[0]}
+                        fillOpacity={0.5}
+                        strokeWidth={Math.max(1, responsiveStyles.fontSize / 10)}
+                        isAnimationActive={false}
+                     />
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: `${responsiveStyles.fontSize}px` }} />
+                     <Legend wrapperStyle={{ fontSize: `${responsiveStyles.fontSize}px` }} />
+                  </RadarChart>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'treemap') {
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <Treemap
+                     data={chartData}
+                     dataKey="value"
+                     aspectRatio={4 / 3}
+                     stroke="#fff"
+                     fill={colors[0]}
+                     isAnimationActive={false}
+                  >
+                     {chartData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                     ))}
+                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: `${responsiveStyles.fontSize}px` }} />
+                  </Treemap>
+               </ResponsiveContainer>
+            );
+         }
+
+         // Défaut : Bar Chart (Column)
+         const isMultiSeriesDefault = seriesKeys.length > 1;
+         return (
+            <ResponsiveContainer width="100%" height="100%">
+               <BarChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: responsiveStyles.marginBottom }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis
+                     dataKey="name"
+                     fontSize={responsiveStyles.fontSize}
+                     stroke="#94a3b8"
+                     angle={-45}
+                     textAnchor="end"
+                     height={Math.max(40, responsiveStyles.marginBottom - 10)}
+                  />
+                  <YAxis fontSize={responsiveStyles.fontSize} stroke="#94a3b8" />
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: `${responsiveStyles.fontSize}px` }} />
+                  {isMultiSeriesDefault && <Legend wrapperStyle={{ fontSize: `${responsiveStyles.fontSize}px` }} />}
+                  {isMultiSeriesDefault ? (
+                     seriesKeys.map((key, idx) => (
+                        <Bar
+                           key={key}
+                           dataKey={key}
+                           name={displaySeriesNames[key] || key}
+                           fill={colors[idx % colors.length]}
+                           radius={[4, 4, 0, 0]}
+                           isAnimationActive={false}
+                        />
+                     ))
+                  ) : (
+                     <Bar
+                        dataKey={seriesKeys[0] || 'value'}
+                        name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                        fill={colors[0]}
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={false}
+                     >
+                        {chartData.map((entry: any, index: number) => (
+                           <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                        ))}
+                     </Bar>
+                  )}
+               </BarChart>
+            </ResponsiveContainer>
+         );
+      } catch (error) {
+         console.error('Erreur rendu graphique TCD:', error);
+         return <div className="flex items-center justify-center h-full text-danger-text">Erreur de rendu</div>;
+      }
    }
 
    const { unit } = data;
@@ -247,6 +724,8 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
 
    if (widget.type === 'list') {
       const { current, max } = data;
+      const chartColors = data.colors || COLORS;
+      const barColor = chartColors[0];
       return (
          <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {current.map((item: any, idx: number) => (
@@ -256,7 +735,7 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
                      <span className="text-txt-secondary font-mono">{item.value.toLocaleString()} {unit}</span>
                   </div>
                   <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-brand-500 rounded-full opacity-80" style={{ width: `${(item.value / max) * 100}%` }} />
+                     <div className="h-full rounded-full opacity-80" style={{ backgroundColor: barColor, width: `${(item.value / max) * 100}%` }} />
                   </div>
                </div>
             ))}
@@ -268,28 +747,33 @@ const WidgetDisplay: React.FC<{ widget: DashboardWidget, data: any }> = ({ widge
    const { chartType } = widget.config;
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
    const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
+   const responsiveStyles = getResponsiveChartStyles(widget.height);
 
    if (chartType === 'radial') {
+      const chartColors = data.colors || COLORS;
       return (
          <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="100%" barSize={10} data={chartData}>
-               <RadialBar background dataKey="value" cornerRadius={10} onClick={handleChartClick} className="cursor-pointer" />
-               <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ fontSize: '10px' }} align="right" />
+            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="100%" barSize={Math.max(5, responsiveStyles.fontSize - 1)} data={chartData}>
+               <RadialBar background dataKey="value" cornerRadius={10} onClick={handleChartClick} className="cursor-pointer">
+                  {chartData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />)}
+               </RadialBar>
+               <Legend iconSize={responsiveStyles.fontSize - 1} layout="vertical" verticalAlign="middle" wrapperStyle={{ fontSize: `${responsiveStyles.fontSize}px` }} align="right" />
                <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
             </RadialBarChart>
          </ResponsiveContainer>
       );
    }
 
+   const chartColors = data.colors || COLORS;
    return (
       <ResponsiveContainer width="100%" height="100%">
-         <BarChart data={chartData} onClick={handleChartClick}>
+         <BarChart data={chartData} onClick={handleChartClick} margin={{ top: 15, right: 20, left: 10, bottom: responsiveStyles.marginBottom }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-            <YAxis fontSize={10} stroke="#94a3b8" />
+            <XAxis dataKey="name" fontSize={responsiveStyles.fontSize} stroke="#94a3b8" angle={-45} textAnchor="end" height={Math.max(40, responsiveStyles.marginBottom - 10)} />
+            <YAxis fontSize={responsiveStyles.fontSize} stroke="#94a3b8" />
             <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} className="cursor-pointer">
-               {chartData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} className="cursor-pointer">
+               {chartData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />)}
             </Bar>
          </BarChart>
       </ResponsiveContainer>
@@ -446,7 +930,19 @@ export const Dashboard: React.FC = () => {
 
    const openEditWidget = (w: DashboardWidget) => {
       setEditingWidgetId(w.id);
-      setTempWidget({ ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } });
+      // Initialiser les valeurs de couleur par défaut pour les widgets pivotChart s'ils n'existent pas
+      let updatedWidget = { ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } };
+      if (updatedWidget.config?.pivotChart) {
+         updatedWidget.config.pivotChart = {
+            ...updatedWidget.config.pivotChart,
+            colorMode: updatedWidget.config.pivotChart.colorMode || 'multi',
+            colorPalette: updatedWidget.config.pivotChart.colorPalette || 'vibrant',
+            singleColor: updatedWidget.config.pivotChart.singleColor || '#0066cc',
+            gradientStart: updatedWidget.config.pivotChart.gradientStart || '#0066cc',
+            gradientEnd: updatedWidget.config.pivotChart.gradientEnd || '#e63946'
+         };
+      }
+      setTempWidget(updatedWidget);
       setShowWidgetDrawer(true);
    };
 
@@ -834,6 +1330,163 @@ export const Dashboard: React.FC = () => {
                                  </div>
                               </div>
                            )}
+                        </div>
+                     )}
+
+                     {/* COLOR CONFIGURATION SECTION */}
+                     {(tempWidget.type === 'chart' || tempWidget.type === 'list') && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-4">
+                           <div className="flex items-center gap-2 text-sm font-bold text-txt-main">
+                              <PaintBucket className="w-4 h-4 text-brand-600" /> Configuration des couleurs
+                           </div>
+                           <div className="space-y-3">
+                              {/* Mode Couleur */}
+                              <div>
+                                 <Label>Mode couleur</Label>
+                                 <Select
+                                    value={tempWidget.config?.pivotChart ? tempWidget.config.pivotChart.colorMode : (tempWidget.config?.colorMode || 'multi')}
+                                    onChange={e => {
+                                       if (tempWidget.config?.pivotChart) {
+                                          setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, colorMode: e.target.value as any } } });
+                                       } else {
+                                          setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, colorMode: e.target.value as any } });
+                                       }
+                                    }}>
+                                    <option value="multi">Plusieurs couleurs</option>
+                                    <option value="single">Couleur unique</option>
+                                    <option value="gradient">Dégradé</option>
+                                 </Select>
+                              </div>
+
+                              {/* Palette Selection (pour mode 'multi') */}
+                              {((tempWidget.config?.pivotChart && tempWidget.config.pivotChart.colorMode === 'multi') || (!tempWidget.config?.pivotChart && (tempWidget.config?.colorMode === 'multi' || !tempWidget.config?.colorMode))) && (
+                                 <div>
+                                    <Label>Palette</Label>
+                                    <Select
+                                       value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.colorPalette || 'default') : (tempWidget.config?.colorPalette || 'default')}
+                                       onChange={e => {
+                                          if (tempWidget.config?.pivotChart) {
+                                             setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, colorPalette: e.target.value as any } } });
+                                          } else {
+                                             setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, colorPalette: e.target.value as any } });
+                                          }
+                                       }}>
+                                       <option value="default">Défaut</option>
+                                       <option value="pastel">Pastel</option>
+                                       <option value="vibrant">Vibrant</option>
+                                    </Select>
+                                 </div>
+                              )}
+
+                              {/* Single Color (pour mode 'single') */}
+                              {((tempWidget.config?.pivotChart && tempWidget.config.pivotChart.colorMode === 'single') || (!tempWidget.config?.pivotChart && tempWidget.config?.colorMode === 'single')) && (
+                                 <div className="flex items-center gap-3">
+                                    <div>
+                                       <Label>Couleur</Label>
+                                       <input
+                                          type="color"
+                                          value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.singleColor || '#0066cc') : (tempWidget.config?.singleColor || '#0066cc')}
+                                          onChange={e => {
+                                             if (tempWidget.config?.pivotChart) {
+                                                setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, singleColor: e.target.value } } });
+                                             } else {
+                                                setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, singleColor: e.target.value } });
+                                             }
+                                          }}
+                                          className="w-12 h-10 rounded border border-slate-300 cursor-pointer"
+                                       />
+                                    </div>
+                                    <div>
+                                       <Label>Valeur</Label>
+                                       <Input
+                                          type="text"
+                                          value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.singleColor || '#0066cc') : (tempWidget.config?.singleColor || '#0066cc')}
+                                          onChange={e => {
+                                             if (tempWidget.config?.pivotChart) {
+                                                setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, singleColor: e.target.value } } });
+                                             } else {
+                                                setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, singleColor: e.target.value } });
+                                             }
+                                          }}
+                                          placeholder="#0066cc"
+                                          className="text-xs w-20"
+                                       />
+                                    </div>
+                                 </div>
+                              )}
+
+                              {/* Gradient Colors (pour mode 'gradient') */}
+                              {((tempWidget.config?.pivotChart && tempWidget.config.pivotChart.colorMode === 'gradient') || (!tempWidget.config?.pivotChart && tempWidget.config?.colorMode === 'gradient')) && (
+                                 <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                       <div>
+                                          <Label>Couleur début</Label>
+                                          <input
+                                             type="color"
+                                             value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.gradientStart || '#0066cc') : (tempWidget.config?.gradientStart || '#0066cc')}
+                                             onChange={e => {
+                                                if (tempWidget.config?.pivotChart) {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, gradientStart: e.target.value } } });
+                                                } else {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, gradientStart: e.target.value } });
+                                                }
+                                             }}
+                                             className="w-12 h-10 rounded border border-slate-300 cursor-pointer"
+                                          />
+                                       </div>
+                                       <div>
+                                          <Label>Valeur</Label>
+                                          <Input
+                                             type="text"
+                                             value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.gradientStart || '#0066cc') : (tempWidget.config?.gradientStart || '#0066cc')}
+                                             onChange={e => {
+                                                if (tempWidget.config?.pivotChart) {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, gradientStart: e.target.value } } });
+                                                } else {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, gradientStart: e.target.value } });
+                                                }
+                                             }}
+                                             placeholder="#0066cc"
+                                             className="text-xs w-20"
+                                          />
+                                       </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                       <div>
+                                          <Label>Couleur fin</Label>
+                                          <input
+                                             type="color"
+                                             value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.gradientEnd || '#e63946') : (tempWidget.config?.gradientEnd || '#e63946')}
+                                             onChange={e => {
+                                                if (tempWidget.config?.pivotChart) {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, gradientEnd: e.target.value } } });
+                                                } else {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, gradientEnd: e.target.value } });
+                                                }
+                                             }}
+                                             className="w-12 h-10 rounded border border-slate-300 cursor-pointer"
+                                          />
+                                       </div>
+                                       <div>
+                                          <Label>Valeur</Label>
+                                          <Input
+                                             type="text"
+                                             value={tempWidget.config?.pivotChart ? (tempWidget.config.pivotChart.gradientEnd || '#e63946') : (tempWidget.config?.gradientEnd || '#e63946')}
+                                             onChange={e => {
+                                                if (tempWidget.config?.pivotChart) {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, pivotChart: { ...tempWidget.config.pivotChart, gradientEnd: e.target.value } } });
+                                                } else {
+                                                   setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, gradientEnd: e.target.value } });
+                                                }
+                                             }}
+                                             placeholder="#e63946"
+                                             className="text-xs w-20"
+                                          />
+                                       </div>
+                                    </div>
+                                 </div>
+                              )}
+                           </div>
                         </div>
                      )}
                   </div>
