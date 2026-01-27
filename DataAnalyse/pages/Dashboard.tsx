@@ -183,6 +183,7 @@ const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string
          const effectiveGradientStart = pivotChart.gradientStart || '#0066cc';
          const effectiveGradientEnd = pivotChart.gradientEnd || '#e63946';
 
+         // Debug: calcul des couleurs pour les widgets TCD
          console.log('🎨 Calcul des couleurs pour widget TCD:', {
             colorMode: pivotChart.colorMode,
             effectiveColorMode,
