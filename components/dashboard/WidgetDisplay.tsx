@@ -13,12 +13,18 @@ import { getChartColors, generateGradient } from '../../logic/pivotToChart';
 
 export const TreemapContent = (props: any, colors: string[]) => {
    const { x, y, width, height, name, index } = props;
+
+   // Sécurité si pas de dimensions ou pas de nom
+   if (!width || !height || width <= 0 || height <= 0) return null;
+
+   const displayName = name || 'Sans nom';
+
    return (
       <g>
          <rect x={x} y={y} width={width} height={height} fill={colors[index % colors.length]} stroke="#fff" />
          {width > 40 && height > 20 && (
             <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize="0.8rem" dy={4} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-               {name.substring(0, 10)}
+               {displayName.length > 10 ? displayName.substring(0, 10) + '...' : displayName}
             </text>
          )}
       </g>
