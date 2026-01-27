@@ -14,8 +14,10 @@ Ce document résume les améliorations apportées à la structure de l'applicati
 - **Mémoïsation Granulaire** : Utilisation systématique de `React.memo` sur les composants de rendu de widgets (`WidgetCard`, `WidgetDisplay`) pour éviter les re-renders inutiles.
 - **Composants Partagés** : Unification du composant `TreemapContent` pour garantir une cohérence visuelle et faciliter la maintenance des visualisations complexes.
 
-### 3. Nouvelles Fonctionnalités de Robustesse
+### 3. Nouvelles Fonctionnalités et Robustesse
 - **Mise à jour Automatique** : Implémentation du mode `updateMode: 'latest'` permettant aux widgets de dashboard de se mettre à jour dynamiquement lors de nouveaux imports, sans intervention manuelle.
+- **Mode Édition (Data Explorer)** : Ajout d'une interface d'édition interactive permettant de modifier les valeurs des cellules directement dans la vue Données, avec persistance automatique.
+- **Drilldown TCD Précis** : Amélioration du mode comparaison du TCD pour isoler précisément les données sources lors du drilldown (par source ID).
 
 ## 🚀 Recommandations pour le futur
 

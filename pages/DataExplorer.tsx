@@ -15,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -75,6 +75,10 @@ export const DataExplorer: React.FC = () => {
 
    // COLUMN BORDERS STATE
    const [showColumnBorders, setShowColumnBorders] = useState<boolean>(true);
+
+   // EDIT MODE STATE
+   const [isEditMode, setIsEditMode] = useState(false);
+   const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({});
 
    // VLOOKUP / ENRICHMENT STATE
    const [isVlookupDrawerOpen, setIsVlookupDrawerOpen] = useState(false);
@@ -205,8 +209,41 @@ export const DataExplorer: React.FC = () => {
    }, [resizingColumn, resizeStartX, resizeStartWidth]);
 
    const handleRowClick = (row: any) => {
+      if (isEditMode) return;
       setSelectedRow(row);
       setIsDrawerOpen(true);
+   };
+
+   const handleCellEdit = (batchId: string, rowId: string, field: string, value: any) => {
+      setPendingChanges(prev => {
+         const batchChanges = prev[batchId] || {};
+         const rowChanges = batchChanges[rowId] || {};
+         return {
+            ...prev,
+            [batchId]: {
+               ...batchChanges,
+               [rowId]: {
+                  ...rowChanges,
+                  [field]: value
+               }
+            }
+         };
+      });
+   };
+
+   const handleSaveEdits = () => {
+      if (Object.keys(pendingChanges).length === 0) {
+         setIsEditMode(false);
+         return;
+      }
+      updateRows(pendingChanges);
+      setIsEditMode(false);
+      setPendingChanges({});
+   };
+
+   const handleCancelEdits = () => {
+      setIsEditMode(false);
+      setPendingChanges({});
    };
 
    const handleAddCalculatedField = () => {
@@ -723,6 +760,7 @@ export const DataExplorer: React.FC = () => {
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
+               <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-blue-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
                <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
@@ -737,6 +775,27 @@ export const DataExplorer: React.FC = () => {
                <Button variant="outline" onClick={handleExportFullCSV} disabled={processedRows.length === 0}><Download className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Export</span></Button>
             </div>
          </div>
+
+         {/* EDIT MODE TOOLBAR */}
+         {isEditMode && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-sm flex items-center justify-between animate-in slide-in-from-top duration-300">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-full text-blue-600">
+                     <GitCommit className="w-5 h-5" />
+                  </div>
+                  <div>
+                     <p className="text-sm font-bold text-blue-900">Mode Édition Activé</p>
+                     <p className="text-xs text-blue-700">Modifiez les cellules directement dans le tableau. Les changements ne sont pas encore enregistrés.</p>
+                  </div>
+               </div>
+               <div className="flex gap-3">
+                  <Button variant="outline" onClick={handleCancelEdits}>Annuler</Button>
+                  <Button variant="primary" onClick={handleSaveEdits} className="bg-blue-600 hover:bg-blue-700 shadow-md">
+                     Enregistrer les modifications ({Object.values(pendingChanges).reduce((acc, curr) => acc + Object.keys(curr).length, 0)} lignes)
+                  </Button>
+               </div>
+            </div>
+         )}
 
          {/* Formatting & Actions Toolbar */}
          <div className={`transition-all duration-300 overflow-hidden ${selectedCol ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -946,7 +1005,7 @@ export const DataExplorer: React.FC = () => {
                                  {row.id}
                               </td>
                               {displayFields.map(field => {
-                                 const val = row[field];
+                                 const val = pendingChanges[row._batchId]?.[row.id]?.[field] ?? row[field];
                                  let displayVal: React.ReactNode = val;
                                  const cellStyle = getCellStyle(field, val);
                                  const config = currentDataset.fieldConfigs?.[field];
@@ -954,12 +1013,26 @@ export const DataExplorer: React.FC = () => {
                                  const isNumeric = config?.type === 'number';
                                  const defaultWidth = isNumeric ? 120 : 180;
                                  const colWidth = columnWidths[field] || defaultWidth;
-                                 if (config?.type === 'number' && val !== undefined && val !== '') displayVal = formatNumberValue(val, config);
-                                 else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
-                                 else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
+
+                                 if (!isEditMode || isBlended) {
+                                    if (config?.type === 'number' && val !== undefined && val !== '') displayVal = formatNumberValue(val, config);
+                                    else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
+                                    else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
+                                 }
+
                                  return (
                                     <td key={field} className={`px-3 py-1 whitespace-nowrap text-base text-slate-700 truncate ${cellStyle} ${config?.type === 'number' ? 'text-right font-mono' : ''} ${isBlended ? 'text-purple-700 bg-purple-50/20' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} title={String(val)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
-                                       {displayVal}
+                                       {isEditMode && !isBlended ? (
+                                          <input
+                                             type="text"
+                                             className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+                                             value={val ?? ''}
+                                             onChange={(e) => handleCellEdit(row._batchId, row.id, field, e.target.value)}
+                                             onClick={(e) => e.stopPropagation()}
+                                          />
+                                       ) : (
+                                          displayVal
+                                       )}
                                     </td>
                                  );
                               })}
