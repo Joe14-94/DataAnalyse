@@ -46,14 +46,14 @@ const TreemapContent = (props: any, chartColors: string[]) => {
         stroke="#fff"
         strokeWidth={2}
       />
-      {width > 60 && height > 30 && (
+      {width > 40 && height > 20 && (
         <text
           x={x + width / 2}
           y={y + height / 2}
           textAnchor="middle"
           fill="#fff"
-          fontSize={11}
-          fontWeight="bold"
+          fontSize={10}
+          fontWeight="normal"
           dy={4}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
         >
@@ -368,12 +368,15 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
 
+    // Pour le Treemap, le nom est dans payload[0].payload.name
+    const title = label || payload[0].payload.name || '';
+
     return (
       <div style={tooltipStyle}>
-        <p className="font-semibold text-slate-800 mb-1">{label}</p>
+        {title && <p className="font-semibold text-slate-800 mb-1">{title}</p>}
         {payload.map((entry: any, index: number) => (
           <p key={index} style={{ color: entry.color }} className="text-xs">
-            {entry.name}: <span className="font-bold">{formatChartValue(entry.value, pivotConfig)}</span>
+            {entry.name === 'value' || entry.name === 'size' ? 'Valeur' : entry.name}: <span className="font-bold">{formatChartValue(entry.value, pivotConfig)}</span>
           </p>
         ))}
       </div>

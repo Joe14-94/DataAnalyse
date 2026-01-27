@@ -22,9 +22,9 @@ export const TreemapContent = (props: any, colors: string[]) => {
    return (
       <g>
          <rect x={x} y={y} width={width} height={height} fill={colors[index % colors.length]} stroke="#fff" />
-         {width > 40 && height > 20 && (
-            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize="0.8rem" dy={4} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-               {displayName.length > 10 ? displayName.substring(0, 10) + '...' : displayName}
+         {width > 30 && height > 20 && (
+            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize="10px" fontWeight="normal" dy={4} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+               {displayName.length > 12 ? displayName.substring(0, 10) + '...' : displayName}
             </text>
          )}
       </g>
@@ -165,7 +165,13 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
             return (
                <ResponsiveContainer width="100%" height="100%">
                   <Treemap data={chartData} dataKey="value" stroke="#fff" content={<TreemapContentWrapper />} isAnimationActive={false}>
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
+                     <Tooltip
+                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }}
+                        formatter={(value: any, name: any, props: any) => [
+                           `${value.toLocaleString()} ${unit || ''}`,
+                           props.payload.name || name
+                        ]}
+                     />
                   </Treemap>
                </ResponsiveContainer>
             );
