@@ -22,6 +22,8 @@ export interface WidgetSource {
 
 export interface PivotChartConfig {
   pivotConfig: any; // Using any here to avoid circular dependencies if needed, or proper import
+  isTemporalMode?: boolean;
+  temporalComparison?: any;
   chartType: ChartType;
   hierarchyLevel?: number;
   limit?: number;
@@ -36,6 +38,7 @@ export interface PivotChartConfig {
 
 export interface WidgetConfig {
   source?: WidgetSource;
+  sources?: WidgetSource[]; // Nouveau : Support multi-sources natif
   secondarySource?: SecondarySourceConfig;
   metric?: 'count' | 'sum' | 'avg' | 'distinct';
   dimension?: string;

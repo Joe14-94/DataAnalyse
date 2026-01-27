@@ -2,9 +2,10 @@
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
 import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
-import { parseSmartNumber } from '../utils';
+import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { transformPivotToChartData, transformPivotToTreemapData, getChartColors, generateGradient } from '../logic/pivotToChart';
+import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
 
 export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string, end: string }) => {
    const { batches } = useBatches();
@@ -35,19 +36,20 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          let workingRows = dsBatches[dsBatches.length - 1].rows;
 
-         // Appliquer les filtres du TCD
-         if (pc.filters && pc.filters.length > 0) {
-            workingRows = workingRows.filter(row => {
+         const applyPivotFilters = (rows: any[]) => {
+            if (!pc.filters || pc.filters.length === 0) return rows;
+            return rows.filter(row => {
                return pc.filters!.every((filter: FilterRule) => {
                   const rowVal = row[filter.field];
+                  const fieldUnit = dataset.fieldConfigs?.[filter.field]?.unit;
                   if (filter.operator === 'in' && Array.isArray(filter.value)) {
                      return filter.value.includes(String(rowVal));
                   } else if (filter.operator === 'contains') {
                      return String(rowVal || '').includes(String(filter.value));
                   } else if (filter.operator === 'gt') {
-                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) > (filter.value as number);
+                     return parseSmartNumber(rowVal, fieldUnit) > (filter.value as number);
                   } else if (filter.operator === 'lt') {
-                     return parseSmartNumber(rowVal, dataset.fieldConfigs?.[filter.field]?.unit) < (filter.value as number);
+                     return parseSmartNumber(rowVal, fieldUnit) < (filter.value as number);
                   } else if (filter.operator === 'eq') {
                      return String(rowVal) === String(filter.value);
                   } else if (filter.operator === 'starts_with') {
@@ -56,21 +58,81 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                   return true;
                });
             });
-         }
+         };
 
-         const pivotResult = calculatePivotData({
-            rows: workingRows,
-            rowFields: pc.rowFields,
-            colFields: pc.colFields,
-            colGrouping: pc.colGrouping,
-            valField: pc.valField,
-            aggType: pc.aggType,
-            filters: [],
-            sortBy: pc.sortBy,
-            sortOrder: pc.sortOrder,
-            showSubtotals: pc.showSubtotals,
-            currentDataset: dataset
-         });
+         // Appliquer les filtres du TCD
+         workingRows = applyPivotFilters(workingRows);
+
+         let pivotResult: any = null;
+
+         if (pivotChart.isTemporalMode && pivotChart.temporalComparison) {
+            const tc = pivotChart.temporalComparison;
+            const sourceDataMap = new Map<string, any[]>();
+
+            tc.sources.forEach((source: any) => {
+               const batch = batches.find(b => b.id === source.batchId);
+               if (batch) {
+                  // Enrichissement calculé si nécessaire
+                  let rows = batch.rows;
+                  if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+                     rows = rows.map(r => {
+                        const enriched = { ...r };
+                        dataset.calculatedFields?.forEach(cf => {
+                           enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+                        });
+                        return enriched;
+                     });
+                  }
+                  // Appliquer les filtres TCD sur chaque source
+                  sourceDataMap.set(source.id, applyPivotFilters(rows));
+               }
+            });
+
+            const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
+            const results = calculateTemporalComparison(sourceDataMap, {
+               ...tc,
+               groupByFields: pc.rowFields,
+               valueField: pc.valField,
+               aggType: pc.aggType === 'list' ? 'sum' : pc.aggType
+            }, dateColumn, pc.showSubtotals);
+
+            // Formater pour transformPivotToChartData
+            const colHeaders = tc.sources.map((s: any, idx: number) => s.label || `Source ${idx + 1}`);
+            const displayRows = results.map(r => {
+               const keys = r.groupLabel.split('\x1F');
+
+               // Construire les métriques en s'assurant que toutes les sources sont représentées
+               const metrics: Record<string, number> = {};
+               tc.sources.forEach((s: any) => {
+                  metrics[s.label || `Source ${s.id}`] = typeof r.values[s.id] === 'number' ? r.values[s.id] : 0;
+               });
+
+               return {
+                  type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
+                  keys: keys,
+                  level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
+                  label: r.groupLabel.replace(/\x1F/g, ' > '),
+                  metrics,
+                  rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
+               };
+            });
+
+            pivotResult = { colHeaders, displayRows, colTotals: {}, grandTotal: 0, isTemporal: true };
+         } else {
+            pivotResult = calculatePivotData({
+               rows: workingRows,
+               rowFields: pc.rowFields,
+               colFields: pc.colFields,
+               colGrouping: pc.colGrouping,
+               valField: pc.valField,
+               aggType: pc.aggType,
+               filters: [],
+               sortBy: pc.sortBy,
+               sortOrder: pc.sortOrder,
+               showSubtotals: pc.showSubtotals,
+               currentDataset: dataset
+            });
+         }
 
          if (!pivotResult) return { error: 'Erreur lors du calcul du TCD' };
 
@@ -90,9 +152,9 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
          }
 
-         const seriesCount = chartData && chartData.length > 0
-            ? Object.keys(chartData[0]).filter(k => k !== 'name').length
-            : 1;
+         // Détection robuste du nombre de séries (à travers tous les points de données)
+         const allKeys = chartData ? Array.from(new Set(chartData.flatMap(d => Object.keys(d).filter(k => k !== 'name')))) : [];
+         const seriesCount = allKeys.length || 1;
          const pointCount = chartData?.length || 0;
 
          const colorCount = (pivotChart.chartType === 'pie' || pivotChart.chartType === 'donut' || pivotChart.chartType === 'treemap')
