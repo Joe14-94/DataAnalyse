@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   Cell, Treemap, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
+import { TreemapContent } from '../ui/TreemapContent';
 import {
   ChartType,
   ColorPalette,
@@ -26,43 +27,6 @@ import {
 import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
 
-// Custom Treemap Content Component
-const TreemapContent = (props: any, chartColors: string[]) => {
-  const { x, y, width, height, name, index, value } = props;
-
-  // Si pas de dimensions valides, ne rien afficher
-  if (!width || !height || width <= 0 || height <= 0) {
-    return null;
-  }
-
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill={chartColors[index % chartColors.length]}
-        stroke="#fff"
-        strokeWidth={2}
-      />
-      {width > 40 && height > 20 && (
-        <text
-          x={x + width / 2}
-          y={y + height / 2}
-          textAnchor="middle"
-          fill="#fff"
-          fontSize={10}
-          fontWeight="normal"
-          dy={4}
-          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-        >
-          {name && name.length > 15 ? name.substring(0, 12) + '...' : name}
-        </text>
-      )}
-    </g>
-  );
-};
 
 interface ChartModalProps {
   isOpen: boolean;
@@ -71,6 +35,7 @@ interface ChartModalProps {
   pivotConfig: PivotConfig;
   isTemporalMode?: boolean;
   temporalComparison?: TemporalComparisonConfig | null;
+  selectedBatchId?: string;
 }
 
 export const ChartModal: React.FC<ChartModalProps> = ({
@@ -79,7 +44,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   pivotData,
   pivotConfig,
   isTemporalMode = false,
-  temporalComparison = null
+  temporalComparison = null,
+  selectedBatchId
 }) => {
   const navigate = useNavigate();
   const { addDashboardWidget } = useWidgets();
@@ -111,6 +77,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'value' | 'none'>('value');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [hierarchyLevel, setHierarchyLevel] = useState<number | undefined>(undefined);
+  const [updateMode, setUpdateMode] = useState<'fixed' | 'latest'>('latest');
 
   // Nouveaux états pour les modes de coloration
   const [colorMode, setColorMode] = useState<ColorMode>('multi');
@@ -303,7 +270,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           chartType: selectedChartType,
           source: {
             datasetId: currentDatasetId,
-            mode: 'latest' as const
+            mode: (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
+            batchId: updateMode === 'fixed' ? selectedBatchId : undefined
           },
           pivotChart: {
             pivotConfig: {
@@ -319,6 +287,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             },
             isTemporalMode,
             temporalComparison,
+            updateMode,
             chartType: selectedChartType,
             hierarchyLevel,
             limit: limit > 0 ? limit : undefined,
@@ -595,8 +564,6 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'treemap': {
-        // Créer un composant wrapper qui capture les couleurs
-        const TreemapContentWrapper: React.FC<any> = (props) => TreemapContent(props, colors);
         return (
           <ResponsiveContainer width="100%" height="100%">
             <Treemap
@@ -605,7 +572,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               aspectRatio={4 / 3}
               stroke="#fff"
               fill="#60a5fa"
-              content={<TreemapContentWrapper />}
+              content={<TreemapContent colors={colors} />}
             >
               <Tooltip content={<CustomTooltip />} />
             </Treemap>
@@ -849,12 +816,26 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           )}
 
           {/* Badge suggestion */}
-          {selectedChartType === metadata.suggestedType && (
-            <div className="ml-auto flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
-              <TrendingUp className="w-3 h-3" />
-              Recommandé
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
+                <input
+                   type="checkbox"
+                   id="auto-update-modal"
+                   checked={updateMode === 'latest'}
+                   onChange={e => setUpdateMode(e.target.checked ? 'latest' : 'fixed')}
+                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                />
+                <label htmlFor="auto-update-modal" className="text-xs font-bold text-blue-800 cursor-pointer select-none">
+                   Mise à jour automatique
+                </label>
+             </div>
+             {selectedChartType === metadata.suggestedType && (
+               <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
+                 <TrendingUp className="w-3 h-3" />
+                 Recommandé
+               </div>
+             )}
+          </div>
         </div>
 
         {/* Chart */}

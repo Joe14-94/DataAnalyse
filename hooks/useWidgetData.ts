@@ -4,8 +4,9 @@ import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
 import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
 import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
-import { transformPivotToChartData, transformPivotToTreemapData, getChartColors, generateGradient } from '../logic/pivotToChart';
+import { transformPivotToChartData, transformPivotToTreemapData } from '../logic/pivotToChart';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
+import { applyPivotFilters, getEffectiveBatches, getChartColorsForWidget } from '../logic/widgetEngine';
 
 export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start: string, end: string }) => {
    const { batches } = useBatches();
@@ -22,46 +23,21 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          if (!pc.rowFields || pc.rowFields.length === 0) return { error: 'Configuration de graphique TCD invalide' };
 
-         const dataset = allDatasets.find(d => d.id === widget.config.source?.datasetId);
+         const datasetId = widget.config.source?.datasetId;
+         const dataset = allDatasets.find(d => d.id === datasetId);
          if (!dataset) return { error: 'Jeu de données introuvable' };
 
-         let dsBatches = batches.filter(b => b.datasetId === widget.config.source?.datasetId);
-
-         if (globalDateRange.start) dsBatches = dsBatches.filter(b => b.date >= globalDateRange.start);
-         if (globalDateRange.end) dsBatches = dsBatches.filter(b => b.date <= globalDateRange.end);
-
-         dsBatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+         const dsBatches = getEffectiveBatches(batches, datasetId, globalDateRange);
          if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
-         let workingRows = dsBatches[dsBatches.length - 1].rows;
-
-         const applyPivotFilters = (rows: any[]) => {
-            if (!pc.filters || pc.filters.length === 0) return rows;
-            return rows.filter(row => {
-               return pc.filters!.every((filter: FilterRule) => {
-                  const rowVal = row[filter.field];
-                  const fieldUnit = dataset.fieldConfigs?.[filter.field]?.unit;
-                  if (filter.operator === 'in' && Array.isArray(filter.value)) {
-                     return filter.value.includes(String(rowVal));
-                  } else if (filter.operator === 'contains') {
-                     return String(rowVal || '').includes(String(filter.value));
-                  } else if (filter.operator === 'gt') {
-                     return parseSmartNumber(rowVal, fieldUnit) > (filter.value as number);
-                  } else if (filter.operator === 'lt') {
-                     return parseSmartNumber(rowVal, fieldUnit) < (filter.value as number);
-                  } else if (filter.operator === 'eq') {
-                     return String(rowVal) === String(filter.value);
-                  } else if (filter.operator === 'starts_with') {
-                     return String(rowVal || '').startsWith(String(filter.value));
-                  }
-                  return true;
-               });
-            });
-         };
+         let targetBatch = dsBatches[dsBatches.length - 1];
+         if (pivotChart.updateMode === 'fixed' && widget.config.source?.mode === 'specific' && widget.config.source?.batchId) {
+            const specific = dsBatches.find(b => b.id === widget.config.source?.batchId);
+            if (specific) targetBatch = specific;
+         }
 
          // Appliquer les filtres du TCD
-         workingRows = applyPivotFilters(workingRows);
+         let workingRows = applyPivotFilters(targetBatch.rows, pc.filters, dataset);
 
          let pivotResult: any = null;
 
@@ -69,7 +45,21 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             const tc = pivotChart.temporalComparison;
             const sourceDataMap = new Map<string, any[]>();
 
-            tc.sources.forEach((source: any) => {
+            // Logique de mise à jour automatique pour le mode temporel
+            let effectiveSources = tc.sources;
+            if (pivotChart.updateMode === 'latest') {
+               const sortedBatches = [...batches]
+                  .filter(b => b.datasetId === widget.config.source?.datasetId)
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+               effectiveSources = tc.sources.map((s: any, idx: number) => ({
+                  ...s,
+                  batchId: sortedBatches[idx]?.id || s.batchId,
+                  // On garde le label original s'il a été personnalisé, sinon on pourrait mettre la date
+               }));
+            }
+
+            effectiveSources.forEach((source: any) => {
                const batch = batches.find(b => b.id === source.batchId);
                if (batch) {
                   // Enrichissement calculé si nécessaire
@@ -84,7 +74,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                      });
                   }
                   // Appliquer les filtres TCD sur chaque source
-                  sourceDataMap.set(source.id, applyPivotFilters(rows));
+                  sourceDataMap.set(source.id, applyPivotFilters(rows, pc.filters, dataset));
                }
             });
 
@@ -97,14 +87,25 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             }, dateColumn, pc.showSubtotals);
 
             // Formater pour transformPivotToChartData
-            const colHeaders = tc.sources.map((s: any, idx: number) => s.label || `Source ${idx + 1}`);
+            const colHeaders = effectiveSources.map((s: any, idx: number) => {
+               if (pivotChart.updateMode === 'latest') {
+                  const batch = batches.find(b => b.id === s.batchId);
+                  if (batch) {
+                     const dateStr = new Date(batch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                     return `${s.label.split(' (')[0]} (${dateStr})`;
+                  }
+               }
+               return s.label || `Source ${idx + 1}`;
+            });
+
             const displayRows = results.map(r => {
                const keys = r.groupLabel.split('\x1F');
 
                // Construire les métriques en s'assurant que toutes les sources sont représentées
                const metrics: Record<string, number> = {};
-               tc.sources.forEach((s: any) => {
-                  metrics[s.label || `Source ${s.id}`] = typeof r.values[s.id] === 'number' ? r.values[s.id] : 0;
+               effectiveSources.forEach((s: any) => {
+                  const label = colHeaders[effectiveSources.indexOf(s)];
+                  metrics[label] = typeof r.values[s.id] === 'number' ? r.values[s.id] : 0;
                });
 
                return {
@@ -161,20 +162,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             ? pointCount
             : (seriesCount > 1 ? seriesCount : pointCount);
 
-         const effectiveColorMode = pivotChart.colorMode || 'multi';
-         const effectiveColorPalette = pivotChart.colorPalette || 'vibrant';
-         const effectiveSingleColor = pivotChart.singleColor || '#0066cc';
-         const effectiveGradientStart = pivotChart.gradientStart || '#0066cc';
-         const effectiveGradientEnd = pivotChart.gradientEnd || '#e63946';
-
-         let colors = [];
-         if (effectiveColorMode === 'single') {
-            colors = Array(Math.max(colorCount, 1)).fill(effectiveSingleColor);
-         } else if (effectiveColorMode === 'gradient') {
-            colors = generateGradient(effectiveGradientStart, effectiveGradientEnd, Math.max(colorCount, 1));
-         } else {
-            colors = getChartColors(Math.max(colorCount, 1), effectiveColorPalette);
-         }
+         const colors = getChartColorsForWidget(pivotChart, colorCount);
 
          return {
             data: chartData,
@@ -193,13 +181,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       const dataset = allDatasets.find(d => d.id === source.datasetId);
       if (!dataset) return { error: 'Jeu de données introuvable' };
 
-      let dsBatches = batches.filter(b => b.datasetId === source.datasetId);
-
-      if (globalDateRange.start) dsBatches = dsBatches.filter(b => b.date >= globalDateRange.start);
-      if (globalDateRange.end) dsBatches = dsBatches.filter(b => b.date <= globalDateRange.end);
-
-      dsBatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+      const dsBatches = getEffectiveBatches(batches, source.datasetId, globalDateRange);
       if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
       let targetBatch = dsBatches[dsBatches.length - 1];
@@ -216,12 +198,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
       if (secondarySource && secondarySource.datasetId) {
          secondaryDataset = allDatasets.find(d => d.id === secondarySource.datasetId);
-         let secBatches = batches.filter(b => b.datasetId === secondarySource.datasetId);
-
-         if (globalDateRange.start) secBatches = secBatches.filter(b => b.date >= globalDateRange.start);
-         if (globalDateRange.end) secBatches = secBatches.filter(b => b.date <= globalDateRange.end);
-
-         secBatches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+         const secBatches = getEffectiveBatches(batches, secondarySource.datasetId, globalDateRange);
 
          if (secBatches.length > 0) {
             const secBatch = secBatches[secBatches.length - 1];
@@ -255,14 +232,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
       // Calcul des couleurs pour widgets standards
       const colorCount = limit || 10;
-      let standardColors = [];
-      if (widget.config.colorMode === 'single') {
-         standardColors = Array(colorCount).fill(widget.config.singleColor || '#3b82f6');
-      } else if (widget.config.colorMode === 'gradient') {
-         standardColors = generateGradient(widget.config.gradientStart || '#3b82f6', widget.config.gradientEnd || '#ef4444', colorCount);
-      } else {
-         standardColors = getChartColors(colorCount, widget.config.colorPalette || 'default');
-      }
+      const standardColors = getChartColorsForWidget(widget.config, colorCount);
 
       if (widget.type === 'list') {
          const counts: Record<string, number> = {};

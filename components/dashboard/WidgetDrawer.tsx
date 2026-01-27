@@ -58,6 +58,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
          if (updates.singleColor) pivotChart.singleColor = updates.singleColor;
          if (updates.gradientStart) pivotChart.gradientStart = updates.gradientStart;
          if (updates.gradientEnd) pivotChart.gradientEnd = updates.gradientEnd;
+         if (updates.updateMode) pivotChart.updateMode = updates.updateMode;
 
          if (updates.metric) pivotConfig.aggType = updates.metric;
          if (updates.valueField !== undefined) pivotConfig.valField = updates.valueField;
@@ -149,12 +150,29 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                      )}
                   </div>
                   {tempWidget.type !== 'text' && (
-                     <div>
-                        <Label>Source de données</Label>
-                        <Select value={tempWidget.config?.source?.datasetId || ''} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } } })}>
-                           <option value="">-- Choisir une source --</option>
-                           {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                        </Select>
+                     <div className="space-y-3">
+                        <div>
+                           <Label>Source de données</Label>
+                           <Select value={tempWidget.config?.source?.datasetId || ''} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } } })}>
+                              <option value="">-- Choisir une source --</option>
+                              {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                           </Select>
+                        </div>
+
+                        {tempWidget.config?.pivotChart && (
+                           <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                              <input
+                                 type="checkbox"
+                                 id="auto-update-mode"
+                                 checked={tempWidget.config.pivotChart.updateMode === 'latest'}
+                                 onChange={e => updateConfig({ updateMode: e.target.checked ? 'latest' : 'fixed' })}
+                                 className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                              />
+                              <label htmlFor="auto-update-mode" className="text-xs font-bold text-blue-800 cursor-pointer select-none">
+                                 Mise à jour automatique (derniers imports)
+                              </label>
+                           </div>
+                        )}
                      </div>
                   )}
                </div>
