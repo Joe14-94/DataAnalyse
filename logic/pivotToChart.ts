@@ -271,10 +271,10 @@ export const transformPivotToTreemapData = (
     const value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
 
     // Créer un label hiérarchique si plusieurs niveaux
-    const label = keys.length > 1 ? keys.join(' > ') : keys[0];
+    const label = keys.length > 1 ? keys.join(' > ') : (keys[0] || '(Vide)');
 
     return {
-      name: label,
+      name: String(label),
       size: value,
       value: value // Pour compatibilité avec le tooltip
     };
@@ -304,11 +304,11 @@ const formatRowLabel = (row: PivotRow, config: PivotConfig): string => {
   if (row.label) return row.label;
 
   if (row.keys.length === 1) {
-    return row.keys[0];
+    return row.keys[0] || '(Vide)';
   }
 
   // Pour hiérarchie, concaténer avec séparateur
-  return row.keys.join(' > ');
+  return row.keys.length > 0 ? row.keys.join(' > ') : '(Vide)';
 };
 
 /**

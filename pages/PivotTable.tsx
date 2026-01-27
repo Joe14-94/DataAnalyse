@@ -321,6 +321,7 @@ export const PivotTable: React.FC = () => {
                    }}
                    isTemporalMode={isTemporalMode}
                    temporalComparison={temporalConfig}
+                   selectedBatchId={selectedBatchId}
                 />
             )}
             <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />

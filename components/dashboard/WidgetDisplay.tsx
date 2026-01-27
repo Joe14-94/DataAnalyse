@@ -10,20 +10,7 @@ import { DashboardWidget } from '../../types';
 import { useWidgets } from '../../context/DataContext';
 import { CHART_COLORS } from '../../utils/constants';
 import { getChartColors, generateGradient } from '../../logic/pivotToChart';
-
-export const TreemapContent = (props: any, colors: string[]) => {
-   const { x, y, width, height, name, index } = props;
-   return (
-      <g>
-         <rect x={x} y={y} width={width} height={height} fill={colors[index % colors.length]} stroke="#fff" />
-         {width > 40 && height > 20 && (
-            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize="0.8rem" dy={4} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-               {name.substring(0, 10)}
-            </text>
-         )}
-      </g>
-   );
-};
+import { TreemapContent } from '../ui/TreemapContent';
 
 interface WidgetDisplayProps {
    widget: DashboardWidget;
@@ -155,11 +142,16 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                </ResponsiveContainer>
             );
          } else if (chartType === 'treemap') {
-            const TreemapContentWrapper = (props: any) => TreemapContent(props, colors);
             return (
                <ResponsiveContainer width="100%" height="100%">
-                  <Treemap data={chartData} dataKey="value" stroke="#fff" content={<TreemapContentWrapper />} isAnimationActive={false}>
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
+                  <Treemap data={chartData} dataKey="value" stroke="#fff" content={<TreemapContent colors={colors} />} isAnimationActive={false}>
+                     <Tooltip
+                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }}
+                        formatter={(value: any, name: any, props: any) => [
+                           `${value.toLocaleString()} ${unit || ''}`,
+                           props.payload.name || name
+                        ]}
+                     />
                   </Treemap>
                </ResponsiveContainer>
             );
@@ -352,14 +344,13 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
    }
 
    if (chartType === 'treemap') {
-      const TreemapContentWrapper = (props: any) => TreemapContent(props, colors);
       return (
          <ResponsiveContainer width="100%" height="100%">
             <Treemap
                data={chartData}
                dataKey="value"
                stroke="#fff"
-               content={<TreemapContentWrapper />}
+               content={<TreemapContent colors={colors} />}
             />
          </ResponsiveContainer>
       );
