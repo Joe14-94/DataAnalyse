@@ -93,19 +93,26 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                ...tc,
                groupByFields: pc.rowFields,
                valueField: pc.valField,
-               aggType: pc.aggType
+               aggType: pc.aggType === 'list' ? 'sum' : pc.aggType
             }, dateColumn, pc.showSubtotals);
 
             // Formater pour transformPivotToChartData
-            const colHeaders = tc.sources.map((s: any) => s.label);
+            const colHeaders = tc.sources.map((s: any, idx: number) => s.label || `Source ${idx + 1}`);
             const displayRows = results.map(r => {
                const keys = r.groupLabel.split('\x1F');
+
+               // Construire les métriques en s'assurant que toutes les sources sont représentées
+               const metrics: Record<string, number> = {};
+               tc.sources.forEach((s: any) => {
+                  metrics[s.label || `Source ${s.id}`] = typeof r.values[s.id] === 'number' ? r.values[s.id] : 0;
+               });
+
                return {
                   type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
                   keys: keys,
                   level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
                   label: r.groupLabel.replace(/\x1F/g, ' > '),
-                  metrics: tc.sources.reduce((acc: any, s: any) => ({ ...acc, [s.label]: r.values[s.id] || 0 }), {}),
+                  metrics,
                   rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
                };
             });
@@ -145,9 +152,9 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
          }
 
-         const seriesCount = chartData && chartData.length > 0
-            ? Object.keys(chartData[0]).filter(k => k !== 'name').length
-            : 1;
+         // Détection robuste du nombre de séries (à travers tous les points de données)
+         const allKeys = chartData ? Array.from(new Set(chartData.flatMap(d => Object.keys(d).filter(k => k !== 'name')))) : [];
+         const seriesCount = allKeys.length || 1;
          const pointCount = chartData?.length || 0;
 
          const colorCount = (pivotChart.chartType === 'pie' || pivotChart.chartType === 'donut' || pivotChart.chartType === 'treemap')

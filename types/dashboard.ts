@@ -38,6 +38,7 @@ export interface PivotChartConfig {
 
 export interface WidgetConfig {
   source?: WidgetSource;
+  sources?: WidgetSource[]; // Nouveau : Support multi-sources natif
   secondarySource?: SecondarySourceConfig;
   metric?: 'count' | 'sum' | 'avg' | 'distinct';
   dimension?: string;
