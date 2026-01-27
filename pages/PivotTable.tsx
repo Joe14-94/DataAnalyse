@@ -240,8 +240,17 @@ export const PivotTable: React.FC = () => {
         if (detailRows.length > 0) setDrilldownData({ rows: detailRows, title: `Détails: ${rowKeys.join(' > ')}`, fields: primaryDataset?.fields || [] });
     };
 
-    const handleTemporalDrilldown = (result: TemporalComparisonResult) => {
-        if (result.details) setDrilldownData({ rows: result.details, title: `Détails: ${result.groupLabel}`, fields: primaryDataset?.fields || [] });
+    const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
+        const sourceDetails = result.details ? result.details[sourceId] : undefined;
+        const sourceLabel = temporalConfig?.sources.find(s => s.id === sourceId)?.label || sourceId;
+
+        if (sourceDetails) {
+            setDrilldownData({
+                rows: sourceDetails,
+                title: `Détails: ${result.groupLabel.replace(/\x1F/g, ' > ')} (${sourceLabel})`,
+                fields: primaryDataset?.fields || []
+            });
+        }
     };
 
     const handleLoadAnalysis = (id: string) => {

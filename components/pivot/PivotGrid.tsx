@@ -20,7 +20,7 @@ interface PivotGridProps {
    showVariations: boolean;
    showTotalCol: boolean;
    handleDrilldown: (rowKeys: string[], colLabel: string) => void;
-   handleTemporalDrilldown: (result: TemporalComparisonResult) => void;
+   handleTemporalDrilldown: (result: TemporalComparisonResult, sourceId: string) => void;
    primaryDataset: Dataset | null;
    datasets: Dataset[];
    aggType: string;
@@ -107,7 +107,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const delta = result.deltas[source.id];
                                  return (
                                     <React.Fragment key={source.id}>
-                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`} onClick={() => !isSubtotal && handleTemporalDrilldown(result)}>
+                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
                                           {formatCurrency(value)}
                                        </td>
                                        {showVariations && source.id !== temporalConfig.referenceSourceId && (

@@ -101,7 +101,7 @@ export interface TemporalComparisonResult {
   groupLabel: string;
   values: { [sourceId: string]: number };
   deltas: { [sourceId: string]: { value: number; percentage: number } };
-  details?: DataRow[];
+  details?: { [sourceId: string]: DataRow[] };
   isSubtotal?: boolean;
   subtotalLevel?: number;
 }

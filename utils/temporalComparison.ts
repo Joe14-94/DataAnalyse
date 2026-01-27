@@ -205,7 +205,7 @@ export const calculateTemporalComparison = (
     const values: { [sourceId: string]: number } = {};
     const deltas: { [sourceId: string]: { value: number; percentage: number } } = {};
     let groupLabel = '';
-    let details: DataRow[] | undefined;
+    const details: { [sourceId: string]: DataRow[] } = {};
 
     // Récupérer les valeurs pour chaque source
     sources.forEach(source => {
@@ -215,11 +215,10 @@ export const calculateTemporalComparison = (
       if (group) {
         values[source.id] = group.value;
         if (!groupLabel) groupLabel = group.label;
-        if (source.id === referenceSourceId) {
-          details = group.details;
-        }
+        details[source.id] = group.details;
       } else {
         values[source.id] = 0;
+        details[source.id] = [];
       }
     });
 
