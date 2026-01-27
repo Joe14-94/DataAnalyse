@@ -5,6 +5,9 @@ export type WidgetSize = 'sm' | 'md' | 'lg' | 'full';
 export type WidgetHeight = 'sm' | 'md' | 'lg' | 'xl';
 export type KpiStyle = 'simple' | 'trend' | 'progress';
 
+export type ColorMode = 'single' | 'gradient' | 'multi';
+export type ColorPalette = 'default' | 'pastel' | 'vibrant';
+
 export interface SecondarySourceConfig {
   datasetId: string;
   joinFieldPrimary: string;
@@ -28,6 +31,14 @@ export interface WidgetConfig {
   kpiStyle?: KpiStyle;
   target?: number;
   showTrend?: boolean;
+
+  // Color Config (pour widgets simples)
+  colorMode?: ColorMode; // 'multi' | 'single' | 'gradient'
+  colorPalette?: ColorPalette; // 'default' | 'pastel' | 'vibrant'
+  singleColor?: string; // Couleur unique (mode 'single')
+  gradientStart?: string; // Couleur début (mode 'gradient')
+  gradientEnd?: string; // Couleur fin (mode 'gradient')
+
   textContent?: string;
   textStyle?: {
     align?: 'left' | 'center' | 'right';

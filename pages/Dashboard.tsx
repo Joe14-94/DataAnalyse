@@ -1,10 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
-import { Heading, Text } from '../components/ui/Typography';
-import { Button } from '../components/ui/Button';
-import { Activity, X } from 'lucide-react';
-import { DashboardWidget, WidgetType, WidgetSize, WidgetHeight } from '../types';
+import { X, Maximize2 } from 'lucide-react';
+import { DashboardWidget } from '../types';
 import html2canvas from 'html2canvas';
 import { useNavigate } from 'react-router-dom';
 
@@ -77,7 +75,19 @@ export const Dashboard: React.FC = () => {
 
    const openEditWidget = (w: DashboardWidget) => {
       setEditingWidgetId(w.id);
-      setTempWidget({ ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } });
+      // Initialize default color values for pivotChart widgets if they don't exist
+      let updatedWidget = { ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } };
+      if (updatedWidget.config?.pivotChart) {
+         updatedWidget.config.pivotChart = {
+            ...updatedWidget.config.pivotChart,
+            colorMode: updatedWidget.config.pivotChart.colorMode || 'multi',
+            colorPalette: updatedWidget.config.pivotChart.colorPalette || 'vibrant',
+            singleColor: updatedWidget.config.pivotChart.singleColor || '#0066cc',
+            gradientStart: updatedWidget.config.pivotChart.gradientStart || '#0066cc',
+            gradientEnd: updatedWidget.config.pivotChart.gradientEnd || '#e63946'
+         };
+      }
+      setTempWidget(updatedWidget);
       setShowWidgetDrawer(true);
    };
 
@@ -174,7 +184,7 @@ export const Dashboard: React.FC = () => {
    );
 
    return (
-      <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar relative bg-slate-50">
+      <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar relative bg-canvas">
          {fullscreenWidgetId && fullscreenWidget && (
             <div className="fixed inset-0 z-50 bg-white p-8 flex flex-col animate-in zoom-in-95 duration-200">
                <div className="flex justify-between items-center mb-6">
@@ -213,10 +223,10 @@ export const Dashboard: React.FC = () => {
 
             {/* Grid */}
             {dashboardWidgets.length === 0 ? (
-               <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-xl bg-white">
-                  <Activity className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <Text className="mb-4 text-slate-500">Votre tableau de bord est vide.</Text>
-                  <Button onClick={() => { setIsEditMode(true); openNewWidget(); }}>Créer mon premier widget</Button>
+               <div className="text-center py-20 border-2 border-dashed border-border-default rounded-xl bg-surface">
+                  <div className="w-12 h-12 text-txt-muted mx-auto mb-3" />
+                  <p className="mb-4">Votre tableau de bord est vide.</p>
+                  <button className="px-4 py-2 bg-brand-600 text-white rounded-lg" onClick={() => { setIsEditMode(true); openNewWidget(); }}>Créer mon premier widget</button>
                </div>
             ) : (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

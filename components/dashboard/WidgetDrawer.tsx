@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { X, Eye, Activity, BarChart3, ListOrdered, Type, PaintBucket } from 'lucide-react';
+import { X, Eye, Activity, BarChart3, ListOrdered, Type, PaintBucket, Palette } from 'lucide-react';
 import { Heading, Text } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { Label, Input, Select } from '../ui/Form';
-import { DashboardWidget, WidgetType, WidgetSize, WidgetHeight, Dataset } from '../../types';
+import { DashboardWidget, WidgetType, WidgetSize, WidgetHeight, Dataset, ColorMode, ColorPalette } from '../../types';
 import { WidgetDisplay } from './WidgetDisplay';
 import { useWidgetData } from '../../hooks/useWidgetData';
 import { BORDER_COLORS } from '../../utils/constants';
@@ -129,11 +129,11 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                </div>
 
                {/* APPEARANCE SECTION */}
-               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                     <PaintBucket className="w-4 h-4 text-blue-600" /> Apparence du conteneur
-                  </div>
+               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-6">
                   <div className="space-y-3">
+                     <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                        <PaintBucket className="w-4 h-4 text-blue-600" /> Style du conteneur
+                     </div>
                      <div>
                         <Label>Couleur de bordure</Label>
                         <div className="flex flex-wrap gap-2">
@@ -148,6 +148,120 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                         </div>
                      </div>
                   </div>
+
+                  {tempWidget.type === 'chart' && (
+                     <div className="space-y-4 pt-4 border-t border-slate-200">
+                        <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                           <Palette className="w-4 h-4 text-blue-600" /> Couleurs du graphique
+                        </div>
+
+                        <div>
+                           <Label>Mode couleur</Label>
+                           <Select
+                              value={tempWidget.config?.colorMode || 'multi'}
+                              onChange={e => setTempWidget({
+                                 ...tempWidget,
+                                 config: { ...tempWidget.config!, colorMode: e.target.value as ColorMode }
+                              })}
+                           >
+                              <option value="multi">Plusieurs couleurs (Palette)</option>
+                              <option value="single">Couleur unique</option>
+                              <option value="gradient">Dégradé</option>
+                           </Select>
+                        </div>
+
+                        {tempWidget.config?.colorMode === 'multi' && (
+                           <div>
+                              <Label>Palette</Label>
+                              <Select
+                                 value={tempWidget.config?.colorPalette || 'default'}
+                                 onChange={e => setTempWidget({
+                                    ...tempWidget,
+                                    config: { ...tempWidget.config!, colorPalette: e.target.value as ColorPalette }
+                                 })}
+                              >
+                                 <option value="default">Défaut</option>
+                                 <option value="pastel">Pastel</option>
+                                 <option value="vibrant">Vibrant</option>
+                              </Select>
+                           </div>
+                        )}
+
+                        {tempWidget.config?.colorMode === 'single' && (
+                           <div>
+                              <Label>Couleur</Label>
+                              <div className="flex items-center gap-3">
+                                 <input
+                                    type="color"
+                                    value={tempWidget.config?.singleColor || '#3b82f6'}
+                                    onChange={e => setTempWidget({
+                                       ...tempWidget,
+                                       config: { ...tempWidget.config!, singleColor: e.target.value }
+                                    })}
+                                    className="w-10 h-10 rounded border border-slate-300 cursor-pointer"
+                                 />
+                                 <Input
+                                    value={tempWidget.config?.singleColor || '#3b82f6'}
+                                    onChange={e => setTempWidget({
+                                       ...tempWidget,
+                                       config: { ...tempWidget.config!, singleColor: e.target.value }
+                                    })}
+                                    className="font-mono text-xs"
+                                 />
+                              </div>
+                           </div>
+                        )}
+
+                        {tempWidget.config?.colorMode === 'gradient' && (
+                           <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                 <Label>Début</Label>
+                                 <div className="flex items-center gap-2">
+                                    <input
+                                       type="color"
+                                       value={tempWidget.config?.gradientStart || '#3b82f6'}
+                                       onChange={e => setTempWidget({
+                                          ...tempWidget,
+                                          config: { ...tempWidget.config!, gradientStart: e.target.value }
+                                       })}
+                                       className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+                                    />
+                                    <Input
+                                       value={tempWidget.config?.gradientStart || '#3b82f6'}
+                                       onChange={e => setTempWidget({
+                                          ...tempWidget,
+                                          config: { ...tempWidget.config!, gradientStart: e.target.value }
+                                       })}
+                                       className="font-mono text-[10px] px-1 h-8"
+                                    />
+                                 </div>
+                              </div>
+                              <div>
+                                 <Label>Fin</Label>
+                                 <div className="flex items-center gap-2">
+                                    <input
+                                       type="color"
+                                       value={tempWidget.config?.gradientEnd || '#ef4444'}
+                                       onChange={e => setTempWidget({
+                                          ...tempWidget,
+                                          config: { ...tempWidget.config!, gradientEnd: e.target.value }
+                                       })}
+                                       className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+                                    />
+                                    <Input
+                                       value={tempWidget.config?.gradientEnd || '#ef4444'}
+                                       onChange={e => setTempWidget({
+                                          ...tempWidget,
+                                          config: { ...tempWidget.config!, gradientEnd: e.target.value }
+                                       })}
+                                       className="font-mono text-[10px] px-1 h-8"
+                                    />
+                                 </div>
+                              </div>
+                           </div>
+                        )}
+                     </div>
+                  )}
                </div>
 
                {tempWidget.type !== 'text' && (
