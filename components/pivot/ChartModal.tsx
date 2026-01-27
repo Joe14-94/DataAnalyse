@@ -23,6 +23,7 @@ import {
   getSingleColors,
   generateGradient
 } from '../../logic/pivotToChart';
+import { PivotResult, PivotConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
 
 // Custom Treemap Content Component
