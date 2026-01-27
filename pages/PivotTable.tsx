@@ -255,11 +255,17 @@ export const PivotTable: React.FC = () => {
     const chartPivotData = useMemo(() => {
         if (isTemporalMode && temporalConfig) {
             const colHeaders = temporalConfig.sources.map((s: any) => s.label);
-            const displayRows = temporalResults.filter(r => !r.isSubtotal).map(r => ({
-                type: 'data', keys: [r.groupKey], level: 0, label: r.groupLabel,
-                metrics: temporalConfig.sources.reduce((acc: any, s: any) => ({ ...acc, [s.label]: r.values[s.id] || 0 }), {}),
-                rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
-            }));
+            const displayRows = temporalResults.map(r => {
+                const keys = r.groupLabel.split('\x1F');
+                return {
+                    type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
+                    keys: keys,
+                    level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
+                    label: r.groupLabel.replace(/\x1F/g, ' > '),
+                    metrics: temporalConfig.sources.reduce((acc: any, s: any) => ({ ...acc, [s.label]: r.values[s.id] || 0 }), {}),
+                    rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
+                };
+            });
             return { colHeaders, displayRows, colTotals: {}, grandTotal: 0 };
         }
         return pivotData;
