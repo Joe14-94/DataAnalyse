@@ -37,7 +37,7 @@ export interface PivotChartConfig {
 export interface WidgetConfig {
   source?: WidgetSource;
   secondarySource?: SecondarySourceConfig;
-  metric: 'count' | 'sum' | 'avg' | 'distinct';
+  metric?: 'count' | 'sum' | 'avg' | 'distinct';
   dimension?: string;
   valueField?: string;
   limit?: number;
