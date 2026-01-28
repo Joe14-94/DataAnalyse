@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric } from '../types';
+import { CalculatedField, PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric } from '../types';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
@@ -25,7 +25,8 @@ type DropZoneType = 'row' | 'col' | 'val' | 'filter';
 export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
-        lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField
+        lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField,
+        removeCalculatedField, updateCalculatedField
     } = useData();
     const navigate = useNavigate();
 
@@ -55,6 +56,7 @@ export const PivotTable: React.FC = () => {
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
     const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+    const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
     const [editingColumn, setEditingColumn] = useState<string | null>(null);
 
@@ -296,20 +298,28 @@ export const PivotTable: React.FC = () => {
         setShowLoadMenu(false);
     };
 
-    const handleAddCalculatedMeasure = (name: string, formula: string) => {
-        if (primaryDataset) {
+    const handleSaveCalculatedField = (field: Partial<CalculatedField>) => {
+        if (!primaryDataset) return;
+
+        if (editingCalcField) {
+            updateCalculatedField(primaryDataset.id, editingCalcField.id, field);
+            // Update metrics if name changed
+            if (field.name && field.name !== editingCalcField.name) {
+                setMetrics(prev => prev.map(m => m.field === editingCalcField.name ? { ...m, field: field.name! } : m));
+            }
+        } else {
             const id = generateId();
-            const unit = formula.includes('* 100') ? '%' : undefined;
             addCalculatedField(primaryDataset.id, {
                 id,
-                name,
-                formula,
-                outputType: 'number',
-                unit
+                name: field.name!,
+                formula: field.formula!,
+                outputType: field.outputType || 'number',
+                unit: field.unit
             });
             // Auto add to metrics
-            setMetrics(prev => [...prev, { field: name, aggType: 'sum' }]);
+            setMetrics(prev => [...prev, { field: field.name!, aggType: 'sum' }]);
         }
+        setEditingCalcField(null);
     };
 
     const handleSaveAnalysis = () => {
@@ -371,7 +381,9 @@ export const PivotTable: React.FC = () => {
                    isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection: (id) => setExpandedSections(p => ({ ...p, [id]: !p[id] })), usedFields,
                    allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate, showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
                    handleDragStart, handleDragOver: (e) => e.preventDefault(), handleDrop, removeField, draggedField,
-                   openCalcModal: () => setIsCalcModalOpen(true) }}
+                   openCalcModal: () => { setEditingCalcField(null); setIsCalcModalOpen(true); },
+                   removeCalculatedField: (id: string) => primaryDataset && removeCalculatedField(primaryDataset.id, id),
+                   openEditCalcModal: (field: any) => { setEditingCalcField(field); setIsCalcModalOpen(true); } }}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
@@ -408,7 +420,14 @@ export const PivotTable: React.FC = () => {
                 />
             )}
             <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
-            <CalculatedFieldModal isOpen={isCalcModalOpen} onClose={() => setIsCalcModalOpen(false)} fields={allAvailableFields} onSave={handleAddCalculatedMeasure} />
+            <CalculatedFieldModal
+                isOpen={isCalcModalOpen}
+                onClose={() => { setIsCalcModalOpen(false); setEditingCalcField(null); }}
+                fields={allAvailableFields}
+                onSave={handleSaveCalculatedField}
+                initialField={editingCalcField}
+                sampleRow={blendedRows.length > 0 ? blendedRows[0] : null}
+            />
         </div>
     );
 };

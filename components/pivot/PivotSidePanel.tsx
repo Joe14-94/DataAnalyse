@@ -60,16 +60,20 @@ interface PivotSidePanelProps {
    removeField: (zone: any, field: string, index?: number) => void;
    draggedField: string | null;
    openCalcModal?: () => void;
+   removeCalculatedField?: (id: string) => void;
+   openEditCalcModal?: (field: any) => void;
 }
 
 const FieldChip: React.FC<{
    field: string,
    zone: string,
    onDelete?: () => void,
+   onEdit?: () => void,
    disabled?: boolean,
    color?: string,
-   handleDragStart: (e: React.DragEvent, field: string, source: any) => void
-}> = ({ field, zone, onDelete, disabled, color = 'blue', handleDragStart }) => {
+   handleDragStart: (e: React.DragEvent, field: string, source: any) => void,
+   isCalculated?: boolean
+}> = ({ field, zone, onDelete, onEdit, disabled, color = 'blue', handleDragStart, isCalculated }) => {
    const isJoined = field.startsWith('[');
    const displayLabel = field.includes('] ') ? field.split('] ')[1] : field;
    const colorClasses = (SOURCE_COLOR_CLASSES as any)[color] || SOURCE_COLOR_CLASSES.blue;
@@ -95,18 +99,31 @@ const FieldChip: React.FC<{
            ${baseStyle} ${!disabled ? 'cursor-grab' : ''}
        `}
        >
-           <div className="flex items-center gap-1 overflow-hidden">
+           <div className="flex items-center gap-1 overflow-hidden flex-1">
                <GripVertical className={`w-2.5 h-2.5 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
+               {isCalculated && <Calculator className="w-2.5 h-2.5 text-indigo-500 flex-shrink-0" />}
                <span className="truncate" title={field}>{displayLabel}</span>
            </div>
-           {onDelete && (
-               <button
-                   onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                   className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
-               >
-                   <X className="w-2.5 h-2.5" />
-               </button>
-           )}
+           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+               {onEdit && (
+                   <button
+                       onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                       className="p-0.5 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded transition-colors"
+                       title="Modifier"
+                   >
+                       <Plus className="w-2.5 h-2.5" />
+                   </button>
+               )}
+               {onDelete && (
+                   <button
+                       onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                       className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
+                       title="Supprimer"
+                   >
+                       <X className="w-2.5 h-2.5" />
+                   </button>
+               )}
+           </div>
        </div>
    );
 };
@@ -121,7 +138,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
       allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
-      handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal
+      handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal,
+      removeCalculatedField, openEditCalcModal
    } = props;
 
    return (
@@ -257,7 +275,26 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                         </button>
                         {expandedSections[group.id] && (
                            <div className="mt-1 pl-2 space-y-1">
-                              {group.fields.map((f: string) => <FieldChip key={f} field={f} zone="list" disabled={usedFields.has(f)} color={group.color} handleDragStart={handleDragStart} />)}
+                              {group.fields.map((f: string) => {
+                                 const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
+                                 return (
+                                    <FieldChip
+                                       key={f}
+                                       field={f}
+                                       zone="list"
+                                       disabled={usedFields.has(f)}
+                                       color={group.color}
+                                       handleDragStart={handleDragStart}
+                                       isCalculated={!!calcField}
+                                       onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
+                                       onDelete={calcField && removeCalculatedField ? () => {
+                                          if (confirm(`Supprimer le champ calculé "${f}" ?`)) {
+                                             removeCalculatedField(calcField.id);
+                                          }
+                                       } : undefined}
+                                    />
+                                 );
+                              })}
                            </div>
                         )}
                      </div>
@@ -270,8 +307,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
          {!isTemporalMode && (
             <div className={`flex flex-col gap-2 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div className="grid grid-cols-2 gap-2">
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2 h-2" /> Filtres</div>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] resize-y overflow-auto ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`} style={{ maxHeight: '300px' }}>
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
                      <div className="space-y-2">
                         {filters.map((f, idx) => (
                            <div key={idx} className="p-1.5 bg-slate-50 rounded border border-slate-200">
@@ -321,8 +358,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                         ))}
                      </div>
                   </div>
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2 h-2" /> Colonnes</div>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] resize-y overflow-auto ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`} style={{ maxHeight: '300px' }}>
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Table2 className="w-2 h-2" /> Colonnes</div>
                      <div className="space-y-1">
                         {colFields.map(f => <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} handleDragStart={handleDragStart} />)}
                         {isColFieldDate && <select className="w-full text-[10px] border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
@@ -330,12 +367,12 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                   </div>
                </div>
                <div className="grid grid-cols-2 gap-2">
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2 h-2" /> Lignes</div>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] resize-y overflow-auto ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`} style={{ maxHeight: '300px' }}>
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Layers className="w-2 h-2" /> Lignes</div>
                      {rowFields.map(f => <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} handleDragStart={handleDragStart} />)}
                   </div>
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between">
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] resize-y overflow-auto ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`} style={{ maxHeight: '300px' }}>
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
                         <div className="flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)</div>
                         {openCalcModal && (
                            <button onClick={openCalcModal} className="p-0.5 hover:bg-indigo-50 text-indigo-500 rounded transition-colors" title="Ajouter un champ calculé">
