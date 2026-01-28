@@ -19,7 +19,7 @@ interface PivotGridProps {
    setColumnLabels: (v: any) => void;
    showVariations: boolean;
    showTotalCol: boolean;
-   handleDrilldown: (rowKeys: string[], colLabel: string) => void;
+   handleDrilldown: (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => void;
    handleTemporalDrilldown: (result: TemporalComparisonResult, sourceId: string) => void;
    primaryDataset: Dataset | null;
    datasets: Dataset[];
@@ -33,6 +33,7 @@ interface PivotGridProps {
    totalColumns: number;
    paddingTop: number;
    paddingBottom: number;
+   isSelectionMode?: boolean;
 }
 
 export const PivotGrid: React.FC<PivotGridProps> = (props) => {
@@ -40,7 +41,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields,
       columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics,
-      valFormatting, virtualItems, rowVirtualizer, parentRef, totalColumns, paddingTop, paddingBottom
+      valFormatting, virtualItems, rowVirtualizer, parentRef, totalColumns, paddingTop, paddingBottom,
+      isSelectionMode = false
    } = props;
 
    const getMetricInfoFromCol = (col: string) => {
@@ -192,7 +194,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  })}
                                  {pivotData.colHeaders.map((col: string) => {
                                     const val = row.metrics[col];
-                                    const { metric, isDiff, isPct } = getMetricInfoFromCol(col);
+                                    const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
 
                                     let formatted = formatOutput(val, metric);
                                     let cellClass = "text-slate-600";
@@ -205,13 +207,23 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
                                     }
                                     return (
-                                       <td key={col} className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 transition-colors ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''}`} onClick={() => handleDrilldown(row.keys, col)}>
+                                       <td
+                                          key={col}
+                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''} ${isSelectionMode ? 'hover:bg-emerald-100 hover:ring-1 hover:ring-emerald-400' : 'hover:bg-blue-100'}`}
+                                          onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
+                                       >
                                           {formatted}
                                        </td>
                                     );
                                  })}
                                  {showTotalCol && (
-                                    <td className="px-2 py-1 text-right bg-slate-50 border-l border-slate-200 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => handleDrilldown(row.keys, 'Total')}>
+                                    <td
+                                       className={`px-2 py-1 text-right bg-slate-50 border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? 'hover:bg-emerald-100 hover:ring-1 hover:ring-emerald-400' : 'hover:bg-blue-100'}`}
+                                       onClick={() => {
+                                          const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal;
+                                          handleDrilldown(row.keys, 'Total', value, '');
+                                       }}
+                                    >
                                        {typeof row.rowTotal === 'object' ? (
                                           <div className="flex flex-col gap-0.5">
                                              {Object.entries(row.rowTotal).map(([label, v], idx) => (

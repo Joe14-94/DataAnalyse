@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -21,12 +21,16 @@ interface PivotHeaderProps {
    analysisName: string;
    setAnalysisName: (v: string) => void;
    handleSaveAnalysis: () => void;
+   openCalcModal: () => void;
+   openSpecificDashboardModal: () => void;
+   selectedItemsCount?: number;
 }
 
 export const PivotHeader: React.FC<PivotHeaderProps> = ({
    isTemporalMode, setIsTemporalMode, handleToChart, primaryDataset, showExportMenu, setShowExportMenu,
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
-   isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis
+   isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
+   openCalcModal, openSpecificDashboardModal, selectedItemsCount = 0
 }) => {
    return (
       <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-2 shrink-0">
@@ -47,6 +51,19 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
          </div>
 
          <div className="flex items-center gap-2">
+            <button onClick={openCalcModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50">
+               <Calculator className="w-3 h-3" /> Colonne calculée
+            </button>
+
+            <button onClick={openSpecificDashboardModal} disabled={!primaryDataset} className="relative flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">
+               <MonitorPlay className="w-3 h-3" /> Créer Dashboard
+               {selectedItemsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full border border-white shadow-sm">
+                     {selectedItemsCount}
+                  </span>
+               )}
+            </button>
+
             <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 disabled:opacity-50">
                <PieChart className="w-3 h-3" /> Graphique
             </button>
