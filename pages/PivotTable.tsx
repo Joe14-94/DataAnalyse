@@ -467,6 +467,7 @@ export const PivotTable: React.FC = () => {
                        isSelectionMode, selectedItems: specificDashboardItems,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,
+                       onRemoveField: removeField,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}

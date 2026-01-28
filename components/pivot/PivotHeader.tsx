@@ -126,7 +126,15 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                <button onClick={() => setIsSaving(true)} disabled={!primaryDataset} className="p-1.5 text-slate-500 hover:text-blue-600 border border-slate-300 rounded bg-white disabled:opacity-50" title="Sauvegarder"><Save className="w-4 h-4" /></button>
             ) : (
                <div className="flex items-center gap-1">
-                  <input type="text" className="p-1 text-xs border border-blue-300 rounded w-24" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
+                  <input
+                     type="text"
+                     className="p-1 text-xs border border-blue-300 rounded w-24"
+                     placeholder="Nom..."
+                     value={analysisName}
+                     onChange={e => setAnalysisName(e.target.value)}
+                     onKeyDown={(e) => { if (e.key === 'Enter') handleSaveAnalysis(); }}
+                     autoFocus
+                  />
                   <button onClick={handleSaveAnalysis} className="p-1 bg-blue-600 text-white rounded"><Check className="w-3 h-3" /></button>
                   <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded"><X className="w-3 h-3" /></button>
                </div>

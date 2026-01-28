@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Loader2, Table2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Table2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult, SortBy, SortOrder } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
@@ -41,6 +41,7 @@ interface PivotGridProps {
    setSortOrder: (v: SortOrder) => void;
    columnWidths: Record<string, number>;
    setColumnWidths: (v: any) => void;
+   onRemoveField?: (zone: any, field: string) => void;
 }
 
 export const PivotGrid: React.FC<PivotGridProps> = (props) => {
@@ -51,7 +52,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       valFormatting, virtualItems, rowVirtualizer, parentRef, totalColumns, paddingTop, paddingBottom,
       isSelectionMode = false, selectedItems = [],
       sortBy, setSortBy, sortOrder, setSortOrder,
-      columnWidths, setColumnWidths
+      columnWidths, setColumnWidths, onRemoveField
    } = props;
 
    const getMetricInfoFromCol = (col: string) => {
@@ -140,12 +141,25 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const width = columnWidths[widthId] || 150;
                            return (
                               <th key={field} className="px-2 py-1.5 text-left text-xs font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap cursor-pointer hover:bg-slate-100 group relative" style={{ width, minWidth: width }} onClick={() => idx === 0 && handleHeaderClick('label')} onDoubleClick={() => setEditingColumn(`group_${field}`)}>
-                                 <div className="flex items-center overflow-hidden">
+                                 <div className="flex items-center overflow-hidden gap-1">
                                     <span className="truncate flex-1">
                                        {isEditing ? (
-                                          <input type="text" defaultValue={displayLabel} autoFocus className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900" onClick={(e) => e.stopPropagation()} onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value })); setEditingColumn(null); }} />
+                                          <input
+                                             type="text"
+                                             defaultValue={displayLabel}
+                                             autoFocus
+                                             className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                             onClick={(e) => e.stopPropagation()}
+                                             onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value })); setEditingColumn(null); }}
+                                             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                          />
                                        ) : displayLabel}
                                     </span>
+                                    {onRemoveField && !isEditing && (
+                                       <button onClick={(e) => { e.stopPropagation(); onRemoveField('row', field); }} className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100" title="Retirer">
+                                          <X className="w-3 h-3" />
+                                       </button>
+                                    )}
                                     {idx === 0 && renderSortIcon('label')}
                                  </div>
                                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
@@ -157,10 +171,18 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            return (
                               <React.Fragment key={source.id}>
                                  <th className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`} style={{ width, minWidth: width }} onClick={() => handleHeaderClick(source.id)} onDoubleClick={() => setEditingColumn(source.id)}>
-                                    <div className="flex items-center justify-end overflow-hidden">
+                                    <div className="flex items-center justify-end overflow-hidden gap-1">
                                        <span className="truncate flex-1">
                                           {editingColumn === source.id ? (
-                                             <input type="text" defaultValue={columnLabels[source.id] || source.label} autoFocus className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900" onClick={(e) => e.stopPropagation()} onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value })); setEditingColumn(null); }} />
+                                             <input
+                                                type="text"
+                                                defaultValue={columnLabels[source.id] || source.label}
+                                                autoFocus
+                                                className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                                onClick={(e) => e.stopPropagation()}
+                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value })); setEditingColumn(null); }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                             />
                                           ) : (columnLabels[source.id] || source.label)}
                                        </span>
                                        {renderSortIcon(source.id)}
@@ -236,12 +258,25 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     onClick={() => idx === 0 && handleHeaderClick('label')}
                                     onDoubleClick={() => setEditingColumn(`row_${field}`)}
                                  >
-                                    <div className="flex items-center overflow-hidden">
+                                    <div className="flex items-center overflow-hidden gap-1">
                                        <span className="truncate flex-1">
                                           {editingColumn === `row_${field}` ? (
-                                             <input type="text" defaultValue={columnLabels[`row_${field}`] || field} autoFocus className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900" onClick={(e) => e.stopPropagation()} onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value })); setEditingColumn(null); }} />
+                                             <input
+                                                type="text"
+                                                defaultValue={columnLabels[`row_${field}`] || field}
+                                                autoFocus
+                                                className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                                onClick={(e) => e.stopPropagation()}
+                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value })); setEditingColumn(null); }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                             />
                                           ) : (columnLabels[`row_${field}`] || field)}
                                        </span>
+                                       {onRemoveField && !editingColumn?.startsWith('row_') && (
+                                          <button onClick={(e) => { e.stopPropagation(); onRemoveField('row', field); }} className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100" title="Retirer">
+                                             <X className="w-3 h-3" />
+                                          </button>
+                                       )}
                                        {idx === 0 && renderSortIcon('label')}
                                     </div>
                                     <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
@@ -265,12 +300,34 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     onClick={() => handleHeaderClick(col)}
                                     onDoubleClick={() => setEditingColumn(col)}
                                  >
-                                    <div className="flex items-center justify-end overflow-hidden">
+                                    <div className="flex items-center justify-end overflow-hidden gap-1">
                                        <span className="truncate flex-1">
                                           {editingColumn === col ? (
-                                             <input type="text" defaultValue={columnLabels[col] || displayLabel} autoFocus className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900" onClick={(e) => e.stopPropagation()} onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value })); setEditingColumn(null); }} />
+                                             <input
+                                                type="text"
+                                                defaultValue={columnLabels[col] || displayLabel}
+                                                autoFocus
+                                                className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                                onClick={(e) => e.stopPropagation()}
+                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value })); setEditingColumn(null); }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                             />
                                           ) : (columnLabels[col] || displayLabel)}
                                        </span>
+                                       {onRemoveField && !isDiff && !isPct && !editingColumn && (
+                                          <button
+                                             onClick={(e) => {
+                                                e.stopPropagation();
+                                                const { metric } = getMetricInfoFromCol(col);
+                                                if (metric) onRemoveField('val', metric.field);
+                                                else if (colLabel !== 'ALL') onRemoveField('col', colLabel);
+                                             }}
+                                             className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100"
+                                             title="Retirer"
+                                          >
+                                             <X className="w-3 h-3" />
+                                          </button>
+                                       )}
                                        {renderSortIcon(col)}
                                     </div>
                                     <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, col, 120)} />
