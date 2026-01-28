@@ -31,6 +31,8 @@ interface PivotSidePanelProps {
    setValField: (f: string) => void;
    aggType: AggregationType;
    setAggType: (t: AggregationType) => void;
+   metrics: any[];
+   setMetrics: (m: any[]) => void;
    valFormatting: Partial<FieldConfig>;
    setValFormatting: (f: Partial<FieldConfig>) => void;
    filters: FilterRule[];
@@ -55,8 +57,9 @@ interface PivotSidePanelProps {
    handleDragStart: (e: React.DragEvent, field: string, source: any) => void;
    handleDragOver: (e: React.DragEvent) => void;
    handleDrop: (e: React.DragEvent, targetZone: any) => void;
-   removeField: (zone: any, field: string) => void;
+   removeField: (zone: any, field: string, index?: number) => void;
    draggedField: string | null;
+   openCalcModal?: () => void;
 }
 
 const FieldChip: React.FC<{
@@ -118,7 +121,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
       allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
-      handleDragStart, handleDragOver, handleDrop, removeField, draggedField
+      handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal
    } = props;
 
    return (
@@ -332,15 +335,41 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      {rowFields.map(f => <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} handleDragStart={handleDragStart} />)}
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs</div>
-                     {valField && (
-                        <div>
-                           <FieldChip field={valField} zone="val" onDelete={() => setValField('')} handleDragStart={handleDragStart} />
-                           <div className="grid grid-cols-2 gap-1 mt-1">
-                              {['count', 'sum', 'avg'].map(t => <button key={t} onClick={() => setAggType(t as any)} className={`px-1 py-0.5 text-[10px] uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500'}`}>{t}</button>)}
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between">
+                        <div className="flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)</div>
+                        {openCalcModal && (
+                           <button onClick={openCalcModal} className="p-0.5 hover:bg-indigo-50 text-indigo-500 rounded transition-colors" title="Ajouter un champ calculé">
+                              <Plus className="w-2.5 h-2.5" />
+                           </button>
+                        )}
+                     </div>
+                     <div className="space-y-2">
+                        {metrics.map((m, idx) => (
+                           <div key={`${m.field}-${idx}`} className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <FieldChip field={m.field} zone="val" onDelete={() => removeField('val', m.field, idx)} handleDragStart={handleDragStart} />
+                              <div className="grid grid-cols-5 gap-0.5 mt-1">
+                                 {['sum', 'count', 'avg', 'min', 'max'].map(t => (
+                                    <button
+                                       key={t}
+                                       onClick={() => {
+                                          const n = [...metrics];
+                                          n[idx] = { ...n[idx], aggType: t as any };
+                                          setMetrics(n);
+                                       }}
+                                       className={`px-0.5 py-0.5 text-[8px] uppercase rounded border ${m.aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                    >
+                                       {t.substring(0, 3)}
+                                    </button>
+                                 ))}
+                              </div>
                            </div>
-                        </div>
-                     )}
+                        ))}
+                        {metrics.length === 0 && valField && (
+                           <div>
+                              <FieldChip field={valField} zone="val" onDelete={() => setValField('')} handleDragStart={handleDragStart} />
+                           </div>
+                        )}
+                     </div>
                   </div>
                </div>
             </div>

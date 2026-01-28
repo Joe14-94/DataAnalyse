@@ -1,7 +1,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useBatches, useDatasets } from '../context/DataContext';
-import { PivotSourceConfig, Dataset, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder } from '../types';
+import { PivotSourceConfig, Dataset, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder, PivotMetric } from '../types';
 import { evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
@@ -14,6 +14,7 @@ interface UsePivotDataProps {
    colGrouping: DateGrouping;
    valField: string;
    aggType: AggregationType;
+   metrics: PivotMetric[];
    filters: FilterRule[];
    sortBy: SortBy;
    sortOrder: SortOrder;
@@ -24,7 +25,7 @@ interface UsePivotDataProps {
 }
 
 export const usePivotData = ({
-   sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig
+   sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig
 }: UsePivotDataProps) => {
    const { batches } = useBatches();
    const { datasets } = useDatasets();
@@ -130,7 +131,7 @@ export const usePivotData = ({
        const timer = setTimeout(() => {
            const result = calculatePivotData({
                rows: blendedRows,
-               rowFields, colFields, colGrouping, valField, aggType, filters,
+               rowFields, colFields, colGrouping, valField, aggType, metrics, filters,
                sortBy, sortOrder, showSubtotals, showVariations,
                currentDataset: primaryDataset,
                datasets
@@ -139,7 +140,7 @@ export const usePivotData = ({
            setIsCalculating(false);
        }, 150);
        return () => clearTimeout(timer);
-   }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
+   }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
 
    // --- ASYNC CALCULATION (TEMPORAL) ---
    useEffect(() => {

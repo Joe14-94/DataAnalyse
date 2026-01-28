@@ -569,18 +569,26 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
       dateCount++;
     }
 
-    // Détection des nombres
-    const startsWithValidNumChar = /^[-+0-9.,]/.test(cleanVal);
-    const startsWithCurrency = /^[$€£]/.test(cleanVal);
-    if (startsWithValidNumChar || startsWithCurrency) {
-      const withoutUnit = cleanVal.replace(/[\s]?[a-zA-Z%€$£%°]+$/, '');
-      const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, '');
-      if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) {
-        numberCount++;
-        // Compter les nombres autres que 0 et 1
-        const numValue = parseFloat(cleanNum.replace(',', '.'));
-        if (numValue !== 0 && numValue !== 1) {
-          otherNumericCount++;
+    // Détection des nombres (y compris pourcentages et unités)
+    const hasNumbers = /[0-9]/.test(cleanVal);
+    if (hasNumbers) {
+      // Supprimer les unités courantes à la fin ou au début
+      const withoutUnit = cleanVal
+        .replace(/[\s]?[a-zA-Z%€$£%°]+$/, '') // Unité à la fin (ex: 12.5 %)
+        .replace(/^[$€£][\s]?/, '');         // Symbole au début (ex: $ 100)
+
+      // On vérifie si la partie restante est purement numérique
+      const isPurelyNumeric = /^[-+0-9.,\s]*$/.test(withoutUnit);
+
+      if (isPurelyNumeric) {
+        const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, '');
+        const parsed = parseFloat(cleanNum.replace(',', '.'));
+
+        if (!isNaN(parsed)) {
+          numberCount++;
+          if (parsed !== 0 && parsed !== 1) {
+            otherNumericCount++;
+          }
         }
       }
     }
