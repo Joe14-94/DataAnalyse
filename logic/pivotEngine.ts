@@ -1,5 +1,5 @@
 
-import { parseSmartNumber, getGroupedLabel, formatNumberValue } from '../utils';
+import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters } from '../utils';
 import { FieldConfig, Dataset, FilterRule, PivotJoin, PivotConfig, PivotResult, PivotRow, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
 
 // Structure optimisée pour le calcul interne
@@ -55,15 +55,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   }
 
   // Optimisation 1.1 : Pré-calcul des valeurs de filtres
-  const preparedFilters = filters.map(f => {
-      let preparedValue = f.value;
-      if (f.operator === 'gt' || f.operator === 'lt') {
-          preparedValue = parseSmartNumber(f.value);
-      } else if (typeof f.value === 'string' && f.operator !== 'in') {
-          preparedValue = f.value.toLowerCase();
-      }
-      return { ...f, preparedValue };
-  });
+  const preparedFilters = prepareFilters(filters);
 
   // --- PHASE 1 : FILTRAGE & PRE-CALCUL (O(N)) ---
   
@@ -74,34 +66,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
     const row = rows[i];
     
     // 1.1 Filtrage Rapide
-    if (preparedFilters.length > 0) {
-      let pass = true;
-      for (const f of preparedFilters) {
-         const rowVal = row[f.field];
-         
-         if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
-             if (f.value.length > 0 && !f.value.includes(String(rowVal))) {
-                 pass = false; break;
-             }
-             continue;
-         }
-         
-         if (f.operator === 'gt' || f.operator === 'lt') {
-             const rowNum = parseSmartNumber(rowVal);
-             if (f.operator === 'gt' && rowNum <= (f.preparedValue as number)) { pass = false; break; }
-             if (f.operator === 'lt' && rowNum >= (f.preparedValue as number)) { pass = false; break; }
-             continue;
-         }
-
-         const strRowVal = String(rowVal || '').toLowerCase();
-         const strFilterVal = f.preparedValue as string;
-
-         if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) { pass = false; break; }
-         if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) { pass = false; break; }
-         if (f.operator === 'eq' && strRowVal !== strFilterVal) { pass = false; break; }
-      }
-      if (!pass) continue;
-    }
+    if (!applyPreparedFilters(row, preparedFilters)) continue;
 
     // 1.2 Extraction Clés Lignes
     const rowKeys = new Array(rowFields.length);
