@@ -1,5 +1,5 @@
 
-export type WidgetType = 'kpi' | 'chart' | 'list' | 'text';
+export type WidgetType = 'kpi' | 'chart' | 'list' | 'text' | 'report';
 export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'funnel' | 'stacked-bar' | 'stacked-area';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full';
 export type WidgetHeight = 'sm' | 'md' | 'lg' | 'xl';
@@ -37,7 +37,18 @@ export interface PivotChartConfig {
   gradientEnd?: string;
 }
 
+export interface SpecificDashboardItem {
+  id: string;
+  label: string;
+  value: number | string;
+  rowPath: string[];
+  colLabel: string;
+  metricLabel: string;
+  color?: string;
+}
+
 export interface WidgetConfig {
+  reportItems?: SpecificDashboardItem[]; // For 'report' type
   source?: WidgetSource;
   sources?: WidgetSource[]; // Nouveau : Support multi-sources natif
   secondarySource?: SecondarySourceConfig;

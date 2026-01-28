@@ -5,14 +5,14 @@ import { useData } from '../context/DataContext';
 import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { CalculatedField, PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric } from '../types';
+import { CalculatedField, PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem } from '../types';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
-import { SpecificDashboardModal, SpecificDashboardItem } from '../components/pivot/SpecificDashboardModal';
+import { SpecificDashboardModal } from '../components/pivot/SpecificDashboardModal';
 import { detectDateColumn, formatCurrency, formatPercentage } from '../utils/temporalComparison';
 
 import { usePivotData } from '../hooks/usePivotData';
@@ -29,7 +29,7 @@ export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
         lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField,
-        removeCalculatedField, updateCalculatedField
+        removeCalculatedField, updateCalculatedField, addDashboardWidget
     } = useData();
     const navigate = useNavigate();
 
@@ -359,6 +359,22 @@ export const PivotTable: React.FC = () => {
         removeCalculatedField(primaryDataset.id, id);
     };
 
+    const handleSaveSpecificDashboard = (title: string, items: SpecificDashboardItem[]) => {
+        addDashboardWidget({
+            title,
+            type: 'report',
+            size: 'lg',
+            height: 'lg',
+            config: {
+                reportItems: items
+            }
+        });
+        setIsSpecificDashboardModalOpen(false);
+        setSpecificDashboardItems([]);
+        alert("Rapport ajouté à votre tableau de bord !");
+        navigate('/dashboard');
+    };
+
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
             const currentTemporalComparison = temporalConfig ? {
@@ -435,7 +451,7 @@ export const PivotTable: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="bg-white text-emerald-700 px-2 py-0.5 rounded text-[10px] font-black">{specificDashboardItems.length} CELLULES</span>
-                                <Button size="sm" className="bg-white text-emerald-700 hover:bg-emerald-50 py-1" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Terminer</Button>
+                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-emerald-50 py-1 shadow-sm" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Terminer</Button>
                             </div>
                         </div>
                     )}
@@ -488,6 +504,7 @@ export const PivotTable: React.FC = () => {
                 items={specificDashboardItems}
                 setItems={setSpecificDashboardItems}
                 onStartSelection={() => { setIsSpecificDashboardModalOpen(false); setIsSelectionMode(true); }}
+                onSave={handleSaveSpecificDashboard}
             />
         </div>
     );

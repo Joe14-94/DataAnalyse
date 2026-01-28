@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { X, Layout, GripVertical, Trash2, Edit2, Check, MonitorPlay, Plus, Save, MousePointerClick } from 'lucide-react';
 import { Button } from '../ui/Button';
-
-export interface SpecificDashboardItem {
-    id: string;
-    label: string;
-    value: number | string;
-    rowPath: string[];
-    colLabel: string;
-    metricLabel: string;
-    color?: string;
-}
+import { SpecificDashboardItem } from '../../types';
 
 interface SpecificDashboardModalProps {
     isOpen: boolean;
@@ -18,15 +9,17 @@ interface SpecificDashboardModalProps {
     items: SpecificDashboardItem[];
     setItems: (items: SpecificDashboardItem[]) => void;
     onStartSelection: () => void;
+    onSave: (title: string, items: SpecificDashboardItem[]) => void;
 }
 
 export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
-    isOpen, onClose, items, setItems, onStartSelection
+    isOpen, onClose, items, setItems, onStartSelection, onSave
 }) => {
     if (!isOpen) return null;
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editLabel, setEditLabel] = useState('');
+    const [dashboardTitle, setDashboardTitle] = useState('Nouveau Rapport TCD');
 
     const removeItem = (id: string) => {
         setItems(items.filter(item => item.id !== id));
@@ -142,9 +135,24 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                     <div className="flex-1 bg-slate-100 overflow-y-auto p-8 custom-scrollbar">
                         <div className="max-w-3xl mx-auto">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[600px] flex flex-col overflow-hidden">
-                                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
-                                    <h2 className="text-2xl font-black">Dashboard Spécifique</h2>
-                                    <p className="text-emerald-50 text-sm opacity-80">Rapport personnalisé généré depuis le TCD</p>
+                                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-500 to-teal-600 text-white group relative">
+                                    {editingId === 'title' ? (
+                                        <div className="flex gap-2">
+                                            <input
+                                                className="flex-1 text-2xl font-black bg-white/20 border border-white/30 rounded px-2 outline-none text-white placeholder:text-white/50"
+                                                value={dashboardTitle}
+                                                onChange={e => setDashboardTitle(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setEditingId(null)} className="bg-white/20 hover:bg-white/30 rounded p-1"><Check className="w-5 h-5" /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-2xl font-black">{dashboardTitle}</h2>
+                                            <button onClick={() => { setEditingId('title'); }} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/20 rounded transition-all"><Edit2 className="w-4 h-4" /></button>
+                                        </div>
+                                    )}
+                                    <p className="text-emerald-50 text-sm opacity-80 mt-1">Rapport personnalisé généré depuis le TCD</p>
                                 </div>
 
                                 <div className="p-8 grid grid-cols-2 lg:grid-cols-3 gap-6">
@@ -185,10 +193,7 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                         <Button
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 shadow-md"
                             disabled={items.length === 0}
-                            onClick={() => {
-                                alert("Dashboard sauvegardé avec succès !");
-                                onClose();
-                            }}
+                            onClick={() => onSave(dashboardTitle, items)}
                         >
                             <Save className="w-4 h-4 mr-2" />
                             Sauvegarder le Dashboard
