@@ -10,9 +10,9 @@ interface HeadingProps {
 
 export const Heading: React.FC<HeadingProps> = ({ level = 1, children, className = '' }) => {
   const styles = {
-    1: "text-2xl font-bold text-txt-main tracking-tight",
-    2: "text-xl font-bold text-txt-main",
-    3: "text-lg font-semibold text-txt-main",
+    1: "text-[1.8em] font-bold text-txt-main tracking-tight",
+    2: "text-[1.5em] font-bold text-txt-main",
+    3: "text-[1.2em] font-semibold text-txt-main",
     4: "text-base font-bold text-txt-secondary uppercase tracking-wider"
   };
 

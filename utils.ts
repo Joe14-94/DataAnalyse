@@ -569,18 +569,26 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
       dateCount++;
     }
 
-    // Détection des nombres
-    const startsWithValidNumChar = /^[-+0-9.,]/.test(cleanVal);
-    const startsWithCurrency = /^[$€£]/.test(cleanVal);
-    if (startsWithValidNumChar || startsWithCurrency) {
-      const withoutUnit = cleanVal.replace(/[\s]?[a-zA-Z%€$£%°]+$/, '');
-      const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, '');
-      if (cleanNum && !isNaN(parseFloat(cleanNum.replace(',', '.')))) {
-        numberCount++;
-        // Compter les nombres autres que 0 et 1
-        const numValue = parseFloat(cleanNum.replace(',', '.'));
-        if (numValue !== 0 && numValue !== 1) {
-          otherNumericCount++;
+    // Détection des nombres (y compris pourcentages et unités)
+    const hasNumbers = /[0-9]/.test(cleanVal);
+    if (hasNumbers) {
+      // Supprimer les unités courantes à la fin ou au début
+      const withoutUnit = cleanVal
+        .replace(/[\s]?[a-zA-Z%€$£%°]+$/, '') // Unité à la fin (ex: 12.5 %)
+        .replace(/^[$€£][\s]?/, '');         // Symbole au début (ex: $ 100)
+
+      // On vérifie si la partie restante est purement numérique
+      const isPurelyNumeric = /^[-+0-9.,\s]*$/.test(withoutUnit);
+
+      if (isPurelyNumeric) {
+        const cleanNum = withoutUnit.replace(/[^0-9.,-]/g, '');
+        const parsed = parseFloat(cleanNum.replace(',', '.'));
+
+        if (!isNaN(parsed)) {
+          numberCount++;
+          if (parsed !== 0 && parsed !== 1) {
+            otherNumericCount++;
+          }
         }
       }
     }
@@ -612,6 +620,60 @@ export const extractDomain = (email: string): string => {
   } catch (e) {
     return 'Format invalide';
   }
+};
+
+/**
+ * Préparation des filtres pour optimisation (évite les calculs répétitifs dans les boucles)
+ */
+export const prepareFilters = (filters: any[]) => {
+  return filters.map(f => {
+    let preparedValue = f.value;
+    const isArrayIn = (f.operator === 'in' || !f.operator) && Array.isArray(f.value);
+
+    if (f.operator === 'gt' || f.operator === 'lt') {
+      preparedValue = parseSmartNumber(f.value);
+    } else if (isArrayIn) {
+      // BOLT OPTIMIZATION: Convert filter array to Set for O(1) lookups
+      preparedValue = new Set((f.value as any[]).map(v => String(v)));
+    } else if (typeof f.value === 'string' && f.operator !== 'in') {
+      preparedValue = f.value.toLowerCase();
+    }
+    return { ...f, preparedValue, isArrayIn };
+  });
+};
+
+/**
+ * Applique un filtre préparé sur une ligne de données
+ */
+export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean => {
+  if (preparedFilters.length === 0) return true;
+
+  for (const f of preparedFilters) {
+    const rowVal = row[f.field];
+
+    if (f.isArrayIn && f.preparedValue instanceof Set) {
+      if (f.preparedValue.size > 0 && !f.preparedValue.has(String(rowVal))) {
+        return false;
+      }
+      continue;
+    }
+
+    if (f.operator === 'gt' || f.operator === 'lt') {
+      const rowNum = parseSmartNumber(rowVal);
+      if (f.operator === 'gt' && rowNum <= (f.preparedValue as number)) return false;
+      if (f.operator === 'lt' && rowNum >= (f.preparedValue as number)) return false;
+      continue;
+    }
+
+    const strRowVal = String(rowVal || '').toLowerCase();
+    const strFilterVal = String(f.preparedValue || '');
+
+    if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) return false;
+    if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) return false;
+    if (f.operator === 'eq' && strRowVal !== strFilterVal) return false;
+  }
+
+  return true;
 };
 
 // --- EXPORT FUNCTION (PDF/HTML) ---

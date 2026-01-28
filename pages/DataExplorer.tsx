@@ -814,6 +814,20 @@ export const DataExplorer: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-3 items-center">
+                     <div className="flex items-center gap-2 pr-3 border-r border-teal-100">
+                        <span className="text-xs text-slate-600 font-medium whitespace-nowrap">Type :</span>
+                        <select
+                           className="text-xs border border-slate-200 rounded py-1 px-2 bg-white focus:ring-1 focus:ring-teal-500"
+                           value={selectedConfig?.type || 'text'}
+                           onChange={(e) => handleFormatChange('type', e.target.value)}
+                        >
+                           <option value="text">Texte</option>
+                           <option value="number">Nombre</option>
+                           <option value="date">Date</option>
+                           <option value="boolean">Oui/Non</option>
+                        </select>
+                     </div>
+
                      {isSelectedNumeric ? (
                         <>
                            <div className="flex items-center gap-2">

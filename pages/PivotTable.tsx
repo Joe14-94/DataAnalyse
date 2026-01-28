@@ -4,12 +4,13 @@ import { useData } from '../context/DataContext';
 import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
+import { PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric } from '../types';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
+import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
 import { detectDateColumn, formatCurrency, formatPercentage } from '../utils/temporalComparison';
 
 import { usePivotData } from '../hooks/usePivotData';
@@ -24,7 +25,7 @@ type DropZoneType = 'row' | 'col' | 'val' | 'filter';
 export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
-        lastPivotState, savePivotState, isLoading, companyLogo
+        lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField
     } = useData();
     const navigate = useNavigate();
 
@@ -37,6 +38,7 @@ export const PivotTable: React.FC = () => {
     const [valField, setValField] = useState<string>('');
     const [colGrouping, setColGrouping] = useState<DateGrouping>('none');
     const [aggType, setAggType] = useState<AggregationType>('count');
+    const [metrics, setMetrics] = useState<PivotMetric[]>([]);
     const [valFormatting, setValFormatting] = useState<Partial<FieldConfig>>({});
     const [filters, setFilters] = useState<FilterRule[]>([]);
     const [showSubtotals, setShowSubtotals] = useState(true);
@@ -52,6 +54,7 @@ export const PivotTable: React.FC = () => {
     const [showLoadMenu, setShowLoadMenu] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+    const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
     const [editingColumn, setEditingColumn] = useState<string | null>(null);
 
@@ -80,7 +83,7 @@ export const PivotTable: React.FC = () => {
     const {
        blendedRows, pivotData, temporalResults, isCalculating, primaryDataset, datasetBatches
     } = usePivotData({
-       sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig
+       sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig
     });
 
     // --- INITIALISATION ---
@@ -94,6 +97,7 @@ export const PivotTable: React.FC = () => {
             setColGrouping(c.colGrouping || 'none');
             setValField(c.valField || '');
             setAggType((c.aggType as AggregationType) || 'count');
+            setMetrics(c.metrics || []);
             setValFormatting(c.valFormatting || {});
             setFilters(c.filters || []);
             setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
@@ -124,13 +128,13 @@ export const PivotTable: React.FC = () => {
         savePivotState({
             datasetId: primaryDataset.id,
             config: {
-                sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting,
+                sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting,
                 filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
                 selectedBatchId, isTemporalMode,
                 temporalComparison: currentTemporalComparison
             }
         });
-    }, [sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
 
     useEffect(() => {
         if (isLoading || !isInitialized) return;
@@ -187,7 +191,13 @@ export const PivotTable: React.FC = () => {
         setValFormatting({});
         if (blendedRows.length > 0) {
             const type = detectColumnType(blendedRows.slice(0, 50).map(r => String(r[newField] || '')));
-            setAggType((type === 'number' ? 'sum' : 'count') as AggregationType);
+            const newAgg = (type === 'number' ? 'sum' : 'count') as AggregationType;
+            setAggType(newAgg);
+
+            // Auto-update metrics if it was empty or matches valField
+            if (metrics.length === 0) {
+                setMetrics([{ field: newField, aggType: newAgg }]);
+            }
         }
     };
 
@@ -207,20 +217,42 @@ export const PivotTable: React.FC = () => {
         const { field, source } = data;
         if (source === 'row') setRowFields(prev => prev.filter(f => f !== field));
         if (source === 'col') setColFields(prev => prev.filter(f => f !== field));
-        if (source === 'val' && valField === field) setValField('');
+        if (source === 'val') {
+            setMetrics(prev => prev.filter(m => m.field !== field));
+            if (valField === field) setValField('');
+        }
         if (source === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
 
         if (targetZone === 'row' && !rowFields.includes(field)) setRowFields(prev => [...prev, field]);
         else if (targetZone === 'col' && !colFields.includes(field)) setColFields(prev => [...prev, field]);
-        else if (targetZone === 'val') handleValFieldChange(field);
+        else if (targetZone === 'val') {
+            if (metrics.length < 15) {
+                const type = blendedRows.length > 0 ? detectColumnType(blendedRows.slice(0, 50).map(r => String(r[field] || ''))) : 'text';
+                const agg = (type === 'number' ? 'sum' : 'count') as AggregationType;
+                setMetrics(prev => [...prev, { field, aggType: agg }]);
+                if (!valField) {
+                    setValField(field);
+                    setAggType(agg);
+                }
+            } else {
+                alert("Limite de 15 métriques atteinte");
+            }
+        }
         else if (targetZone === 'filter' && !filters.some(f => f.field === field)) setFilters(prev => [...prev, { field, operator: 'in', value: [] }]);
         setDraggedField(null);
     };
 
-    const removeField = (zone: DropZoneType, field: string) => {
+    const removeField = (zone: DropZoneType, field: string, index?: number) => {
         if (zone === 'row') setRowFields(prev => prev.filter(f => f !== field));
         if (zone === 'col') setColFields(prev => prev.filter(f => f !== field));
-        if (zone === 'val') setValField('');
+        if (zone === 'val') {
+            if (index !== undefined) {
+                setMetrics(prev => prev.filter((_, i) => i !== index));
+            } else {
+                setMetrics(prev => prev.filter(m => m.field !== field));
+            }
+            if (valField === field) setValField('');
+        }
         if (zone === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
     };
 
@@ -264,6 +296,22 @@ export const PivotTable: React.FC = () => {
         setShowLoadMenu(false);
     };
 
+    const handleAddCalculatedMeasure = (name: string, formula: string) => {
+        if (primaryDataset) {
+            const id = generateId();
+            const unit = formula.includes('* 100') ? '%' : undefined;
+            addCalculatedField(primaryDataset.id, {
+                id,
+                name,
+                formula,
+                outputType: 'number',
+                unit
+            });
+            // Auto add to metrics
+            setMetrics(prev => [...prev, { field: name, aggType: 'sum' }]);
+        }
+    };
+
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
             const currentTemporalComparison = temporalConfig ? {
@@ -276,7 +324,7 @@ export const PivotTable: React.FC = () => {
             saveAnalysis({
                name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
                config: {
-                   sources, rowFields, colFields, colGrouping, valField, aggType, valFormatting,
+                   sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting,
                    filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
                    selectedBatchId, isTemporalMode,
                    temporalComparison: currentTemporalComparison
@@ -319,22 +367,23 @@ export const PivotTable: React.FC = () => {
                 <PivotSidePanel
                    {...{ sources, datasets, datasetBatches, selectedBatchId, setSelectedBatchId, startAddSource: () => setIsSourceModalOpen(true), removeSource: (id) => setSources(s => s.filter(x => x.id !== id)),
                    isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
-                   rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField, aggType, setAggType, valFormatting, setValFormatting, filters, setFilters,
+                   rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField, aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
                    isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection: (id) => setExpandedSections(p => ({ ...p, [id]: !p[id] })), usedFields,
                    allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate, showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
-                   handleDragStart, handleDragOver: (e) => e.preventDefault(), handleDrop, removeField, draggedField }}
+                   handleDragStart, handleDragOver: (e) => e.preventDefault(), handleDrop, removeField, draggedField,
+                   openCalcModal: () => setIsCalcModalOpen(true) }}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
-                       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
+                       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, rowFields, footerRef, valField, aggType, primaryDataset, datasets, valFormatting, showTotalCol }}
+                       {...{ pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol }}
                     />
                 </div>
             </div>
@@ -359,6 +408,7 @@ export const PivotTable: React.FC = () => {
                 />
             )}
             <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
+            <CalculatedFieldModal isOpen={isCalcModalOpen} onClose={() => setIsCalcModalOpen(false)} fields={allAvailableFields} onSave={handleAddCalculatedMeasure} />
         </div>
     );
 };

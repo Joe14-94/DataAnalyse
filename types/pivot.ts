@@ -12,9 +12,16 @@ export interface PivotRow {
   keys: string[];
   level: number;
   metrics: Record<string, number | string>;
-  rowTotal: number | string;
+  rowTotal: number | string | Record<string, number | string>;
   label?: string;
   isCollapsed?: boolean;
+}
+
+export interface PivotMetric {
+  field: string;
+  aggType: AggregationType;
+  label?: string;
+  formatting?: Partial<FieldConfig>;
 }
 
 export interface PivotConfig {
@@ -22,8 +29,9 @@ export interface PivotConfig {
   rowFields: string[];
   colFields: string[];
   colGrouping: DateGrouping;
-  valField: string;
-  aggType: AggregationType;
+  valField: string; // Keep for backward compatibility
+  aggType: AggregationType; // Keep for backward compatibility
+  metrics?: PivotMetric[];
   filters: FilterRule[];
   sortBy: SortBy;
   sortOrder: SortOrder;
@@ -40,7 +48,7 @@ export interface PivotResult {
   colHeaders: string[];
   displayRows: PivotRow[];
   colTotals: Record<string, number | string>;
-  grandTotal: number | string;
+  grandTotal: number | string | Record<string, number | string>;
 }
 
 export interface PivotJoin {
@@ -113,6 +121,7 @@ export interface PivotState {
     colFields: string[];
     valField: string;
     aggType: string;
+    metrics?: PivotMetric[];
     filters: FilterRule[];
     joins?: PivotJoin[];
     sources?: PivotSourceConfig[];

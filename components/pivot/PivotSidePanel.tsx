@@ -31,6 +31,8 @@ interface PivotSidePanelProps {
    setValField: (f: string) => void;
    aggType: AggregationType;
    setAggType: (t: AggregationType) => void;
+   metrics: any[];
+   setMetrics: (m: any[]) => void;
    valFormatting: Partial<FieldConfig>;
    setValFormatting: (f: Partial<FieldConfig>) => void;
    filters: FilterRule[];
@@ -55,8 +57,9 @@ interface PivotSidePanelProps {
    handleDragStart: (e: React.DragEvent, field: string, source: any) => void;
    handleDragOver: (e: React.DragEvent) => void;
    handleDrop: (e: React.DragEvent, targetZone: any) => void;
-   removeField: (zone: any, field: string) => void;
+   removeField: (zone: any, field: string, index?: number) => void;
    draggedField: string | null;
+   openCalcModal?: () => void;
 }
 
 const FieldChip: React.FC<{
@@ -114,11 +117,11 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed,
       setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
       rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField,
-      aggType, setAggType, valFormatting, setValFormatting, filters, setFilters,
+      aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
       allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
-      handleDragStart, handleDragOver, handleDrop, removeField, draggedField
+      handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal
    } = props;
 
    return (
@@ -169,7 +172,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                        {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)}</option>)}
                                     </select>
                                  ) : (
-                                    <div className="text-xs text-slate-500 truncate">Jointure: {src.joinConfig?.primaryKey} = {src.joinConfig?.secondaryKey}</div>
+                                    <div className="text-[10px] text-slate-500 truncate">Jointure: {src.joinConfig?.primaryKey} = {src.joinConfig?.secondaryKey}</div>
                                  )}
                               </div>
                            );
@@ -249,7 +252,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                   {groupedFields.map(group => (
                      <div key={group.id} className="mb-2">
-                        <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-xs font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
+                        <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
                            {expandedSections[group.id] ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
                         </button>
                         {expandedSections[group.id] && (
@@ -268,44 +271,105 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             <div className={`flex flex-col gap-2 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div className="grid grid-cols-2 gap-2">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2 h-2" /> Filtres</div>
-                     <div className="space-y-1">
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2 h-2" /> Filtres</div>
+                     <div className="space-y-2">
                         {filters.map((f, idx) => (
-                           <div key={idx}>
+                           <div key={idx} className="p-1.5 bg-slate-50 rounded border border-slate-200">
                               <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} handleDragStart={handleDragStart} />
-                              <select className="w-full text-xs border border-slate-200 rounded p-0.5 mt-0.5" value={f.operator || 'in'} onChange={(e) => { const n = [...filters]; n[idx] = { ...n[idx], operator: e.target.value as any }; setFilters(n); }}>
-                                 <option value="in">Egal à</option>
-                                 <option value="contains">Contient</option>
-                                 <option value="gt">&gt;</option>
-                                 <option value="lt">&lt;</option>
-                              </select>
+                              <div className="flex flex-col gap-1 mt-1.5">
+                                 <select
+                                    className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white font-medium"
+                                    value={f.operator || 'eq'}
+                                    onChange={(e) => {
+                                       const n = [...filters];
+                                       const newOp = e.target.value as any;
+                                       n[idx] = { ...n[idx], operator: newOp };
+                                       // Ajuster la valeur si on passe de IN à autre chose ou inversement
+                                       if (newOp === 'in' && !Array.isArray(n[idx].value)) {
+                                          n[idx].value = n[idx].value ? [String(n[idx].value)] : [];
+                                       } else if (newOp !== 'in' && Array.isArray(n[idx].value)) {
+                                          n[idx].value = n[idx].value.join(', ');
+                                       }
+                                       setFilters(n);
+                                    }}
+                                 >
+                                    <option value="eq">Egal à</option>
+                                    <option value="in">Dans la liste</option>
+                                    <option value="contains">Contient</option>
+                                    <option value="starts_with">Commence par</option>
+                                    <option value="gt">&gt;</option>
+                                    <option value="lt">&lt;</option>
+                                 </select>
+                                 <input
+                                    type="text"
+                                    className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white"
+                                    placeholder={f.operator === 'in' ? "Valeur1, Valeur2..." : "Valeur..."}
+                                    value={Array.isArray(f.value) ? f.value.join(', ') : (f.value || '')}
+                                    onChange={(e) => {
+                                       const n = [...filters];
+                                       const val = e.target.value;
+                                       if (f.operator === 'in') {
+                                          n[idx] = { ...n[idx], value: val.split(',').map(v => v.trim()).filter(v => v !== '') };
+                                       } else {
+                                          n[idx] = { ...n[idx], value: val };
+                                       }
+                                       setFilters(n);
+                                    }}
+                                 />
+                              </div>
                            </div>
                         ))}
                      </div>
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2 h-2" /> Colonnes</div>
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2 h-2" /> Colonnes</div>
                      <div className="space-y-1">
                         {colFields.map(f => <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} handleDragStart={handleDragStart} />)}
-                        {isColFieldDate && <select className="w-full text-xs border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
+                        {isColFieldDate && <select className="w-full text-[10px] border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
                      </div>
                   </div>
                </div>
                <div className="grid grid-cols-2 gap-2">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2 h-2" /> Lignes</div>
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2 h-2" /> Lignes</div>
                      {rowFields.map(f => <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} handleDragStart={handleDragStart} />)}
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs</div>
-                     {valField && (
-                        <div>
-                           <FieldChip field={valField} zone="val" onDelete={() => setValField('')} handleDragStart={handleDragStart} />
-                           <div className="grid grid-cols-2 gap-1 mt-1">
-                              {['count', 'sum', 'avg'].map(t => <button key={t} onClick={() => setAggType(t as any)} className={`px-1 py-0.5 text-xs uppercase rounded border ${aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500'}`}>{t}</button>)}
+                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between">
+                        <div className="flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)</div>
+                        {openCalcModal && (
+                           <button onClick={openCalcModal} className="p-0.5 hover:bg-indigo-50 text-indigo-500 rounded transition-colors" title="Ajouter un champ calculé">
+                              <Plus className="w-2.5 h-2.5" />
+                           </button>
+                        )}
+                     </div>
+                     <div className="space-y-2">
+                        {metrics.map((m, idx) => (
+                           <div key={`${m.field}-${idx}`} className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                              <FieldChip field={m.field} zone="val" onDelete={() => removeField('val', m.field, idx)} handleDragStart={handleDragStart} />
+                              <div className="grid grid-cols-5 gap-0.5 mt-1">
+                                 {['sum', 'count', 'avg', 'min', 'max'].map(t => (
+                                    <button
+                                       key={t}
+                                       onClick={() => {
+                                          const n = [...metrics];
+                                          n[idx] = { ...n[idx], aggType: t as any };
+                                          setMetrics(n);
+                                       }}
+                                       className={`px-0.5 py-0.5 text-[8px] uppercase rounded border ${m.aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                    >
+                                       {t.substring(0, 3)}
+                                    </button>
+                                 ))}
+                              </div>
                            </div>
-                        </div>
-                     )}
+                        ))}
+                        {metrics.length === 0 && valField && (
+                           <div>
+                              <FieldChip field={valField} zone="val" onDelete={() => setValField('')} handleDragStart={handleDragStart} />
+                           </div>
+                        )}
+                     </div>
                   </div>
                </div>
             </div>
