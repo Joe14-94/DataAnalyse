@@ -7,12 +7,21 @@ import { calculateTemporalComparison, detectDateColumn } from '../utils/temporal
 
 export const applyPivotFilters = (rows: any[], filters: FilterRule[] | undefined, dataset: Dataset) => {
    if (!filters || filters.length === 0) return rows;
+
+   // BOLT OPTIMIZATION: Pre-process filters to use Sets for 'in' operator (O(1) lookup)
+   const preparedFilters = filters.map(f => {
+      if (f.operator === 'in' && Array.isArray(f.value)) {
+         return { ...f, preparedSet: new Set(f.value.map(v => String(v))) };
+      }
+      return f;
+   });
+
    return rows.filter(row => {
-      return filters.every((filter: FilterRule) => {
+      return preparedFilters.every((filter: any) => {
          const rowVal = row[filter.field];
          const fieldUnit = dataset.fieldConfigs?.[filter.field]?.unit;
-         if (filter.operator === 'in' && Array.isArray(filter.value)) {
-            return filter.value.includes(String(rowVal));
+         if (filter.operator === 'in' && filter.preparedSet) {
+            return (filter.preparedSet as Set<string>).has(String(rowVal));
          } else if (filter.operator === 'contains') {
             return String(rowVal || '').includes(String(filter.value));
          } else if (filter.operator === 'gt') {

@@ -55,14 +55,21 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   }
 
   // Optimisation 1.1 : Pré-calcul des valeurs de filtres
+  // BOLT MEASUREMENT: Using Set for 'in' filters reduces complexity from O(N*M) to O(N+M)
+  // For 10k rows and 100 filter items, this saves ~1M operations per pivot calculation.
   const preparedFilters = filters.map(f => {
       let preparedValue = f.value;
+      const isArrayIn = (f.operator === 'in' || !f.operator) && Array.isArray(f.value);
+
       if (f.operator === 'gt' || f.operator === 'lt') {
           preparedValue = parseSmartNumber(f.value);
+      } else if (isArrayIn) {
+          // BOLT OPTIMIZATION: Convert filter array to Set for O(1) lookups
+          preparedValue = new Set((f.value as any[]).map(v => String(v)));
       } else if (typeof f.value === 'string' && f.operator !== 'in') {
           preparedValue = f.value.toLowerCase();
       }
-      return { ...f, preparedValue };
+      return { ...f, preparedValue, isArrayIn };
   });
 
   // --- PHASE 1 : FILTRAGE & PRE-CALCUL (O(N)) ---
@@ -78,9 +85,9 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       let pass = true;
       for (const f of preparedFilters) {
          const rowVal = row[f.field];
-
-         if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
-             if (f.value.length > 0 && !f.value.includes(String(rowVal))) {
+         
+         if (f.isArrayIn && f.preparedValue instanceof Set) {
+             if (f.preparedValue.size > 0 && !f.preparedValue.has(String(rowVal))) {
                  pass = false; break;
              }
              continue;
