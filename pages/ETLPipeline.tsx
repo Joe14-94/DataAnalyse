@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import {
     Workflow, Plus, Play, Save, Trash2, Eye, Settings, ChevronDown, ChevronUp,
-    Filter, Merge, BarChart3, Copy, Scissors, ArrowLeftRight, Table2, X, AlertCircle
+    Filter, Merge, BarChart3, Copy, Scissors, ArrowLeftRight, Table2, X, AlertCircle, Search, Clock
 } from 'lucide-react';
-import { useData } from '../context/DataContext';
-import { DataRow, TransformationType, FilterCondition, FilterOperator, JoinType, AggregationType } from '../types';
+import { useData, usePipeline } from '../context/DataContext';
+import { DataRow, TransformationType, FilterCondition, FilterOperator, JoinType, AggregationType, Pipeline } from '../types';
 import {
     applyFilter, applyJoin, applyAggregate, applyUnion, applySelect,
     applyRename, applySort, applyDistinct, applySplit, applyMerge, applyCalculate
@@ -242,13 +242,80 @@ const StepConfiguration: React.FC<{
 
 export const ETLPipeline: React.FC = () => {
     const { datasets, batches } = useData();
+    const { pipelineModule, addPipeline, updatePipeline, deletePipeline } = usePipeline();
 
-    // Pipeline state
+    // UI state
+    const [activePipelineId, setActivePipelineId] = useState<string | null>(null);
+    const [pipelineName, setPipelineName] = useState('Nouveau Pipeline');
+
+    // Pipeline state (current working copy)
     const [steps, setSteps] = useState<TransformationStep[]>([]);
     const [sourceDatasetId, setSourceDatasetId] = useState<string>('');
     const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
     const [showAddStep, setShowAddStep] = useState(false);
     const [previewLimit, setPreviewLimit] = useState(100);
+    const [showPipelineList, setShowPipelineList] = useState(true);
+
+    // Load pipeline when selected
+    useEffect(() => {
+        if (activePipelineId) {
+            const p = pipelineModule.pipelines.find(p => p.id === activePipelineId);
+            if (p) {
+                setPipelineName(p.name);
+                // Convert nodes back to steps
+                const loadedSteps: TransformationStep[] = p.nodes.map(node => ({
+                    id: node.id,
+                    type: node.type,
+                    label: node.label,
+                    config: (node.config as any).config || node.config, // Handle nesting if any
+                    isExpanded: false
+                }));
+                setSteps(loadedSteps);
+
+                // Find source dataset ID from the first 'source' node if it exists
+                const sourceNode = p.nodes.find(n => n.type === 'source');
+                if (sourceNode && (sourceNode.config as any).datasetId) {
+                    setSourceDatasetId((sourceNode.config as any).datasetId);
+                }
+            }
+        } else {
+            setSteps([]);
+            setSourceDatasetId('');
+            setPipelineName('Nouveau Pipeline');
+        }
+    }, [activePipelineId, pipelineModule.pipelines]);
+
+    const handleSavePipeline = () => {
+        const nodes = steps.map(step => ({
+            id: step.id,
+            type: step.type,
+            label: step.label,
+            position: { x: 0, y: 0 },
+            config: step.type === 'source' ? { type: 'source', datasetId: sourceDatasetId } : { type: step.type, config: step.config } as any,
+            isValid: true
+        }));
+
+        if (activePipelineId) {
+            updatePipeline(activePipelineId, { name: pipelineName, nodes, connections: [] });
+            alert('Pipeline mis à jour !');
+        } else {
+            const id = addPipeline({
+                name: pipelineName,
+                nodes,
+                connections: []
+            });
+            setActivePipelineId(id);
+            alert('Pipeline sauvegardé !');
+        }
+    };
+
+    const handleNewPipeline = () => {
+        setActivePipelineId(null);
+        setSteps([]);
+        setSourceDatasetId('');
+        setPipelineName('Nouveau Pipeline');
+        setShowPipelineList(false);
+    };
 
     // Get source data
     const sourceData = useMemo(() => {
@@ -433,15 +500,84 @@ export const ETLPipeline: React.FC = () => {
 
     return (
         <div className="p-6 max-w-[1600px] mx-auto">
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-                    <Workflow className="w-8 h-8 text-brand-600" />
-                    Pipeline de Transformation ETL
-                </h1>
-                <p className="text-slate-600">
-                    Créez des pipelines de transformation de données avec preview en temps réel
-                </p>
+            <div className="mb-6 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-3">
+                        <Workflow className="w-8 h-8 text-brand-600" />
+                        Pipeline de Transformation ETL
+                    </h1>
+                    <p className="text-slate-600">
+                        Créez des pipelines de transformation de données avec preview en temps réel
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setShowPipelineList(!showPipelineList)}>
+                        <Clock className="w-4 h-4 mr-2" />
+                        {showPipelineList ? 'Cacher la liste' : 'Mes Pipelines'}
+                    </Button>
+                    <Button onClick={handleNewPipeline} variant="outline" className="text-brand-600 border-brand-200 hover:bg-brand-50">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Nouveau
+                    </Button>
+                </div>
             </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {showPipelineList && (
+                    <div className="lg:col-span-1">
+                        <Card className="h-full">
+                            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <Search className="w-4 h-4" />
+                                Mes Pipelines
+                            </h3>
+                            <div className="space-y-2">
+                                {pipelineModule.pipelines.length === 0 ? (
+                                    <p className="text-sm text-slate-500 italic py-4 text-center">Aucun pipeline sauvegardé</p>
+                                ) : (
+                                    pipelineModule.pipelines.map(p => (
+                                        <div
+                                            key={p.id}
+                                            className={`p-3 rounded-lg border transition-all cursor-pointer flex items-center justify-between group ${
+                                                activePipelineId === p.id ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:border-slate-300'
+                                            }`}
+                                            onClick={() => setActivePipelineId(p.id)}
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-sm text-slate-800 truncate">{p.name}</div>
+                                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                                    Modifié le {new Date(p.updatedAt).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); if(window.confirm('Supprimer ce pipeline ?')) deletePipeline(p.id); }}
+                                                className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+                )}
+
+                <div className={showPipelineList ? 'lg:col-span-3 space-y-6' : 'lg:col-span-4 space-y-6'}>
+                    <Card className="flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                            <input
+                                type="text"
+                                value={pipelineName}
+                                onChange={(e) => setPipelineName(e.target.value)}
+                                className="text-xl font-bold text-slate-800 bg-transparent border-none focus:ring-0 w-full"
+                                placeholder="Nom du pipeline..."
+                            />
+                        </div>
+                        <Button onClick={handleSavePipeline} className="bg-emerald-600 hover:bg-emerald-700">
+                            <Save className="w-4 h-4 mr-2" />
+                            Sauvegarder
+                        </Button>
+                    </Card>
 
             {/* Source Selection */}
             <Card className="mb-6">
@@ -646,6 +782,8 @@ export const ETLPipeline: React.FC = () => {
                     )}
                 </>
             )}
+                </div>
+            </div>
         </div>
     );
 };

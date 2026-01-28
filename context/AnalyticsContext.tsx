@@ -6,6 +6,7 @@ interface AnalyticsContextType {
   lastPivotState: PivotState | null;
   lastAnalyticsState: AnalyticsState | null;
   saveAnalysis: (analysis: Omit<SavedAnalysis, 'id' | 'createdAt'>) => void;
+  updateAnalysis: (id: string, updates: Partial<SavedAnalysis>) => void;
   deleteAnalysis: (id: string) => void;
   savePivotState: (state: PivotState | null) => void;
   saveAnalyticsState: (state: AnalyticsState | null) => void;

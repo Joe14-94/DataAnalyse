@@ -6,13 +6,14 @@ import { Button } from '../components/ui/Button';
 import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText } from 'lucide-react';
 import { APP_VERSION, runSelfDiagnostics } from '../utils';
 import { useNavigate } from 'react-router-dom';
-import { DiagnosticSuite, Dataset, UIPrefs } from '../types';
+import { DiagnosticSuite, Dataset, UIPrefs, AppState } from '../types';
 import { useSettings } from '../context/SettingsContext';
 import { Palette, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
 import { useReferentials } from '../context/ReferentialContext';
+import { BackupRestoreModal } from '../components/settings/BackupRestoreModal';
 
 export const Settings: React.FC = () => {
-   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName } = useData();
+   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
    const {
       chartsOfAccounts,
@@ -40,6 +41,15 @@ export const Settings: React.FC = () => {
    const [editingDatasetId, setEditingDatasetId] = useState<string | null>(null);
    const [editName, setEditName] = useState('');
 
+   // Backup/Restore state
+   const [backupModalMode, setBackupModalMode] = useState<'backup' | 'restore' | null>(null);
+   const [restoreFileContent, setRestoreFileContent] = useState<string | null>(null);
+   const [restoreAvailableData, setRestoreAvailableData] = useState<Partial<AppState> | undefined>(undefined);
+
+   // Analysis Management State
+   const [editingAnalysisId, setEditingAnalysisId] = useState<string | null>(null);
+   const [editAnalysisName, setEditAnalysisName] = useState('');
+
    // Finance Settings State
    type FinanceTab = 'charts' | 'axes' | 'calendar' | 'masterdata';
    const [activeFinanceTab, setActiveFinanceTab] = useState<FinanceTab>('charts');
@@ -63,25 +73,24 @@ export const Settings: React.FC = () => {
    const [calendarForm, setCalendarForm] = useState({ fiscalYear: new Date().getFullYear(), startDate: '', endDate: '' });
    const [masterDataForm, setMasterDataForm] = useState({ code: '', name: '', category: '', taxId: '' });
 
-   const handleDownloadBackup = () => {
-      const json = getBackupJson();
+   const handleDownloadBackup = (keys: (keyof AppState)[]) => {
+      const json = getBackupJson(keys);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
 
-      // Safer download implementation
       const link = document.createElement('a');
       link.href = url;
-      link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
+      const isComplete = keys.length >= 10;
+      link.download = `datascope_backup_${isComplete ? 'complete' : 'partielle'}_${new Date().toISOString().split('T')[0]}.json`;
       link.style.display = 'none';
-      link.target = '_blank'; // Fixes some restrictive sandbox issues
       document.body.appendChild(link);
       link.click();
 
-      // Cleanup with delay
       setTimeout(() => {
          document.body.removeChild(link);
          URL.revokeObjectURL(url);
       }, 100);
+      setBackupModalMode(null);
    };
 
    const handleImportClick = () => {
@@ -96,17 +105,30 @@ export const Settings: React.FC = () => {
       reader.onload = async (event) => {
          const content = event.target?.result as string;
          if (content) {
-            const success = await importBackup(content);
-            if (success) {
-               alert('Restauration effectuée avec succès !');
-            } else {
-               alert('Erreur lors de la restauration. Le fichier est peut-être corrompu.');
+            try {
+               const parsed = JSON.parse(content);
+               setRestoreFileContent(content);
+               setRestoreAvailableData(parsed);
+               setBackupModalMode('restore');
+            } catch (err) {
+               alert('Fichier invalide');
             }
          }
       };
       reader.readAsText(file);
-      // Reset input
       e.target.value = '';
+   };
+
+   const handleConfirmRestore = async (keys: (keyof AppState)[]) => {
+      if (!restoreFileContent) return;
+      const success = await importBackup(restoreFileContent, keys);
+      if (success) {
+         alert('Restauration effectuée avec succès !');
+         setBackupModalMode(null);
+         setRestoreFileContent(null);
+      } else {
+         alert('Erreur lors de la restauration.');
+      }
    };
 
    const handleLoadDemo = () => {
@@ -161,7 +183,30 @@ export const Settings: React.FC = () => {
       setEditName('');
    };
 
-   // Chart of Accounts handlers
+   // Analysis Handlers
+   const startEditingAnalysis = (a: any) => {
+      setEditingAnalysisId(a.id);
+      setEditAnalysisName(a.name);
+   };
+
+   const saveEditingAnalysis = () => {
+      if (editingAnalysisId && editAnalysisName.trim()) {
+         updateAnalysis(editingAnalysisId, { name: editAnalysisName.trim() });
+         setEditingAnalysisId(null);
+         setEditAnalysisName('');
+      }
+   };
+
+   const cancelEditingAnalysis = () => {
+      setEditingAnalysisId(null);
+      setEditAnalysisName('');
+   };
+
+   const handleDeleteAnalysis = (id: string, name: string) => {
+      if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'analyse "${name}" ?`)) {
+         deleteAnalysis(id);
+      }
+   };
    const handleDeleteChart = (id: string, name: string) => {
       const chart = chartsOfAccounts.find(c => c.id === id);
 
@@ -793,6 +838,93 @@ export const Settings: React.FC = () => {
                      </div>
                   </Card>
 
+                  {/* GESTION DES ANALYSES SAUVEGARDÉES (NOUVEAU) */}
+                  <Card title="Gestion des analyses sauvegardées" icon={<LayoutIcon className="w-5 h-5 text-indigo-600" />}>
+                     <div className="space-y-4">
+                        <p className="text-sm text-slate-600">
+                           Retrouvez et gérez ici tous les Tableaux Croisés Dynamiques (TCD) que vous avez sauvegardés.
+                        </p>
+
+                        <div className="divide-y divide-slate-100 border border-slate-200 rounded-md bg-white">
+                           {savedAnalyses.filter(a => a.type === 'pivot').length === 0 ? (
+                              <div className="p-4 text-center text-slate-400 text-sm italic">
+                                 Aucune analyse TCD sauvegardée.
+                              </div>
+                           ) : (
+                              savedAnalyses.filter(a => a.type === 'pivot').map(analysis => {
+                                 const isEditing = editingAnalysisId === analysis.id;
+                                 const ds = datasets.find(d => d.id === analysis.datasetId);
+
+                                 return (
+                                    <div key={analysis.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors group">
+                                       <div className="flex items-start gap-3 flex-1 min-w-0">
+                                          <div className="p-2 bg-indigo-50 rounded text-indigo-600 mt-0.5">
+                                             <Table2 className="w-5 h-5" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                             {isEditing ? (
+                                                <div className="flex items-center gap-2">
+                                                   <input
+                                                      type="text"
+                                                      className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none w-full max-w-[250px]"
+                                                      value={editAnalysisName}
+                                                      onChange={(e) => setEditAnalysisName(e.target.value)}
+                                                      autoFocus
+                                                      onKeyDown={(e) => { if (e.key === 'Enter') saveEditingAnalysis(); if (e.key === 'Escape') cancelEditingAnalysis(); }}
+                                                   />
+                                                   <button onClick={saveEditingAnalysis} className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200" title="Sauvegarder">
+                                                      <Check className="w-4 h-4" />
+                                                   </button>
+                                                   <button onClick={cancelEditingAnalysis} className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200" title="Annuler">
+                                                      <X className="w-4 h-4" />
+                                                   </button>
+                                                </div>
+                                             ) : (
+                                                <h4 className="font-bold text-slate-800 truncate">{analysis.name}</h4>
+                                             )}
+                                             <div className="flex flex-wrap items-center gap-3 mt-1 text-[10px] text-slate-500">
+                                                <span className="flex items-center gap-1">
+                                                   <Database className="w-3 h-3" />
+                                                   Source: {ds?.name || 'Dataset supprimé'}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                   <Calendar className="w-3 h-3" />
+                                                   Sauvegardé le : {new Date(analysis.createdAt).toLocaleDateString('fr-FR')}
+                                                </span>
+                                             </div>
+                                          </div>
+                                       </div>
+
+                                       {!isEditing && (
+                                          <div className="flex items-center gap-2 shrink-0">
+                                             <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-slate-600 hover:bg-slate-50 border-slate-200"
+                                                onClick={() => startEditingAnalysis(analysis)}
+                                             >
+                                                <Edit2 className="w-3.5 h-3.5 mr-2" />
+                                                Renommer
+                                             </Button>
+                                             <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-red-600 hover:bg-red-50 hover:border-red-200 border-slate-200"
+                                                onClick={() => handleDeleteAnalysis(analysis.id, analysis.name)}
+                                             >
+                                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                                Supprimer
+                                             </Button>
+                                          </div>
+                                       )}
+                                    </div>
+                                 );
+                              })
+                           )}
+                        </div>
+                     </div>
+                  </Card>
+
                   {/* GESTION DES DATASETS */}
                   <Card title="Gestion des typologies">
                      <div className="space-y-4">
@@ -913,18 +1045,18 @@ export const Settings: React.FC = () => {
                   <Card title="Sauvegarde et restauration">
                      <div className="space-y-4">
                         <p className="text-sm text-slate-600">
-                           Pour sécuriser vos données ou les transférer sur un autre poste, effectuez des sauvegardes régulières via le fichier JSON.
+                           Sécurisez vos données en effectuant des sauvegardes complètes ou partielles.
                         </p>
 
                         <div className="flex flex-col gap-3 pt-2">
-                           <Button onClick={handleDownloadBackup} disabled={batches.length === 0} className="w-full">
+                           <Button onClick={() => setBackupModalMode('backup')} className="w-full">
                               <Download className="w-4 h-4 mr-2" />
-                              Télécharger la sauvegarde
+                              Exporter des données
                            </Button>
 
                            <Button variant="outline" onClick={handleImportClick} className="w-full">
                               <Upload className="w-4 h-4 mr-2" />
-                              Restaurer une sauvegarde
+                              Importer des données
                            </Button>
                            <input
                               type="file"
@@ -978,6 +1110,19 @@ export const Settings: React.FC = () => {
                   </Card>
                </div>
             </div>
+
+            {backupModalMode && (
+               <BackupRestoreModal
+                  mode={backupModalMode}
+                  isOpen={!!backupModalMode}
+                  onClose={() => setBackupModalMode(null)}
+                  availableData={restoreAvailableData}
+                  onConfirm={(keys) => {
+                     if (backupModalMode === 'backup') handleDownloadBackup(keys);
+                     else handleConfirmRestore(keys);
+                  }}
+               />
+            )}
 
             <div className="text-center text-xs text-slate-400 pt-8">
                <p>DataScope v{APP_VERSION}</p>

@@ -7,8 +7,8 @@ export interface PersistenceContextType {
   savedMappings: Record<string, string>;
   companyLogo: string | undefined;
   updateCompanyLogo: (logo: string | undefined) => void;
-  importBackup: (jsonData: string) => Promise<boolean>;
-  getBackupJson: () => string;
+  importBackup: (jsonData: string, keys?: (keyof AppState)[]) => Promise<boolean>;
+  getBackupJson: (keys?: (keyof AppState)[]) => string;
   clearAll: () => Promise<void>;
   loadDemoData: () => void;
   updateSavedMappings: (newMappings: Record<string, string>) => void;
