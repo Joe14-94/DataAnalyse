@@ -1,5 +1,5 @@
-import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
-import { parseSmartNumber, prepareFilters, applyPreparedFilters } from '../utils';
+import { DataRow, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
+import { parseSmartNumber } from '../utils';
 
 /**
  * Parse une date avec support du format français DD/MM/YYYY
@@ -165,13 +165,9 @@ export const calculateTemporalComparison = (
   sourceDataMap: Map<string, DataRow[]>,
   config: TemporalComparisonConfig,
   dateColumn: string = 'Date écriture',
-  showSubtotals: boolean = false,
-  filters: FilterRule[] = []
+  showSubtotals: boolean = false
 ): TemporalComparisonResult[] => {
   const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
-
-  // Préparer les filtres une seule fois
-  const preparedFilters = prepareFilters(filters);
 
   // Filtrer et agréger chaque source
   const aggregatedSources = new Map<string, Map<string, { label: string; value: number; details: DataRow[] }>>();
@@ -183,13 +179,13 @@ export const calculateTemporalComparison = (
       return;
     }
 
-    // Filtrer par période et par filtres personnalisés
+    // Filtrer par période
     const filteredData = filterDataByPeriod(
       sourceData,
       dateColumn,
       periodFilter.startMonth,
       periodFilter.endMonth
-    ).filter(row => applyPreparedFilters(row, preparedFilters));
+    );
 
     // Agréger
     const aggregated = aggregateDataByGroup(filteredData, groupByFields, valueField, aggType);

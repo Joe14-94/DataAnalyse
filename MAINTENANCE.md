@@ -18,6 +18,8 @@ Ce document résume les améliorations apportées à la structure de l'applicati
 - **Mise à jour Automatique** : Implémentation du mode `updateMode: 'latest'` permettant aux widgets de dashboard de se mettre à jour dynamiquement lors de nouveaux imports, sans intervention manuelle.
 - **Mode Édition (Data Explorer)** : Ajout d'une interface d'édition interactive permettant de modifier les valeurs des cellules directement dans la vue Données, avec persistance automatique.
 - **Drilldown TCD Précis** : Amélioration du mode comparaison du TCD pour isoler précisément les données sources lors du drilldown (par source ID).
+- **Standardisation du Design System** : Audit complet et suppression des styles arbitraires (`text-[10px]`, etc.) au profit des tokens Tailwind standard (`text-xs`, `text-sm`). Unification du composant `Heading` pour une hiérarchie typographique stricte.
+- **Détection d'Anomalies (Z-Score)** : Validation de la logique statistique $|Z| > 2.5$ pour le marquage visuel des valeurs aberrantes dans l'explorateur de données.
 
 ## 🚀 Recommandations pour le futur
 

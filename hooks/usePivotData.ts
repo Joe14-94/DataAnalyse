@@ -185,7 +185,7 @@ export const usePivotData = ({
                aggType: validAggType as any
            };
 
-           const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
+           const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals);
            setTemporalResults(results);
            setIsCalculating(false);
        }, 150);
