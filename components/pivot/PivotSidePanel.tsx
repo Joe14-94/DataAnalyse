@@ -104,11 +104,11 @@ const FieldChip: React.FC<{
                {isCalculated && <Calculator className="w-2.5 h-2.5 text-indigo-500 flex-shrink-0" />}
                <span className="truncate" title={field}>{displayLabel}</span>
            </div>
-           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+           <div className="flex items-center gap-0.5">
                {onEdit && (
                    <button
                        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                       className="p-0.5 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded transition-colors"
+                       className="p-0.5 hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 rounded transition-colors"
                        title="Modifier"
                    >
                        <Plus className="w-2.5 h-2.5" />
@@ -117,7 +117,7 @@ const FieldChip: React.FC<{
                {onDelete && (
                    <button
                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                       className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
+                       className="p-0.5 hover:bg-red-50 text-red-400 hover:text-red-600 rounded transition-colors bg-white/50 shadow-sm"
                        title="Supprimer"
                    >
                        <X className="w-2.5 h-2.5" />
@@ -130,21 +130,32 @@ const FieldChip: React.FC<{
 
 export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
    const [fieldsZoneHeight, setFieldsZoneHeight] = useState(240);
+   const [dropZonesHeight, setDropZonesHeight] = useState(300);
+   const [fieldSearchTerm, setFieldSearchTerm] = useState('');
    const isResizing = useRef(false);
+   const isResizingDropZones = useRef(false);
    const panelRef = useRef<HTMLDivElement>(null);
+   const dropZonesRef = useRef<HTMLDivElement>(null);
 
    const handleMouseMove = useCallback((e: MouseEvent) => {
-      if (!isResizing.current || !panelRef.current) return;
+      if (!panelRef.current) return;
       const rect = panelRef.current.getBoundingClientRect();
-      // Calculate height based on mouse Y relative to the top of the panel,
-      // subtracting the space taken by the headers above the fields list
-      const headerOffset = 200;
-      const newHeight = e.clientY - rect.top - headerOffset;
-      setFieldsZoneHeight(Math.max(100, Math.min(newHeight, 800)));
+
+      if (isResizing.current) {
+         // Calculate height based on mouse Y relative to the top of the panel
+         const headerOffset = 200;
+         const newHeight = e.clientY - rect.top - headerOffset;
+         setFieldsZoneHeight(Math.max(100, Math.min(newHeight, 800)));
+      } else if (isResizingDropZones.current && dropZonesRef.current) {
+         const dropZonesRect = dropZonesRef.current.getBoundingClientRect();
+         const newHeight = e.clientY - dropZonesRect.top;
+         setDropZonesHeight(Math.max(80, Math.min(newHeight, 600)));
+      }
    }, []);
 
    const handleMouseUp = useCallback(() => {
       isResizing.current = false;
+      isResizingDropZones.current = false;
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
@@ -153,6 +164,14 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
    const handleMouseDown = (e: React.MouseEvent) => {
       isResizing.current = true;
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+   };
+
+   const handleDropZonesMouseDown = (e: React.MouseEvent) => {
+      isResizingDropZones.current = true;
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'row-resize';
@@ -309,18 +328,34 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      {isFieldsPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
                   </button>
                </div>
-               {!isFieldsPanelCollapsed && <input type="text" placeholder="Rechercher..." className="w-full text-xs border border-slate-300 rounded px-1 py-0.5 bg-white" disabled={sources.length === 0} />}
+               {!isFieldsPanelCollapsed && (
+                  <input
+                     type="text"
+                     placeholder="Rechercher..."
+                     className="w-full text-xs border border-slate-300 rounded px-1 py-0.5 bg-white"
+                     disabled={sources.length === 0}
+                     value={fieldSearchTerm}
+                     onChange={(e) => setFieldSearchTerm(e.target.value)}
+                  />
+               )}
             </div>
             {!isFieldsPanelCollapsed && (
                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                  {groupedFields.map(group => (
+                  {groupedFields.map(group => {
+                     const filteredFields = group.fields.filter((f: string) =>
+                        f.toLowerCase().includes(fieldSearchTerm.toLowerCase())
+                     );
+
+                     if (fieldSearchTerm && filteredFields.length === 0) return null;
+
+                     return (
                      <div key={group.id} className="mb-2">
                         <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
-                           {expandedSections[group.id] ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
+                           {expandedSections[group.id] || fieldSearchTerm ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
                         </button>
-                        {expandedSections[group.id] && (
+                        {(expandedSections[group.id] || fieldSearchTerm) && (
                            <div className="mt-1 pl-2 space-y-1">
-                              {group.fields.map((f: string) => {
+                              {filteredFields.map((f: string) => {
                                  const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
                                  return (
                                     <FieldChip
@@ -343,7 +378,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                            </div>
                         )}
                      </div>
-                  ))}
+                     );
+                  })}
                </div>
             )}
          </div>
@@ -361,8 +397,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
          {/* 4. DROP ZONES */}
          {!isTemporalMode && (
-            <div className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-               <div className="grid grid-cols-2 gap-2 h-1/2 min-h-0">
+            <div ref={dropZonesRef} className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+               <div className="grid grid-cols-2 gap-2 min-h-0" style={{ height: `${dropZonesHeight}px` }}>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
                      <div className="space-y-2">
@@ -422,7 +458,17 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      </div>
                   </div>
                </div>
-               <div className="grid grid-cols-2 gap-2 h-1/2 min-h-0">
+
+               {/* INTERNAL SPLITTER FOR DROP ZONES */}
+               <div
+                  onMouseDown={handleDropZonesMouseDown}
+                  className="h-1 bg-slate-100 hover:bg-blue-400 cursor-row-resize transition-all rounded-full mx-8 -my-1.5 z-10 flex items-center justify-center group"
+                  title="Redimensionner les zones de dépôt"
+               >
+                  <div className="w-4 h-0.5 bg-slate-300 rounded-full group-hover:bg-white opacity-50 group-hover:opacity-100"></div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Layers className="w-2 h-2" /> Lignes</div>
                      {rowFields.map(f => <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} handleDragStart={handleDragStart} />)}
