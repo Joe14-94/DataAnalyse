@@ -614,6 +614,55 @@ export const extractDomain = (email: string): string => {
   }
 };
 
+/**
+ * Préparation des filtres pour optimisation (évite les calculs répétitifs dans les boucles)
+ */
+export const prepareFilters = (filters: any[]) => {
+  return filters.map(f => {
+    let preparedValue = f.value;
+    if (f.operator === 'gt' || f.operator === 'lt') {
+      preparedValue = parseSmartNumber(f.value);
+    } else if (typeof f.value === 'string' && f.operator !== 'in') {
+      preparedValue = f.value.toLowerCase();
+    }
+    return { ...f, preparedValue };
+  });
+};
+
+/**
+ * Applique un filtre préparé sur une ligne de données
+ */
+export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean => {
+  if (preparedFilters.length === 0) return true;
+
+  for (const f of preparedFilters) {
+    const rowVal = row[f.field];
+
+    if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
+      if (f.value.length > 0 && !f.value.includes(String(rowVal))) {
+        return false;
+      }
+      continue;
+    }
+
+    if (f.operator === 'gt' || f.operator === 'lt') {
+      const rowNum = parseSmartNumber(rowVal);
+      if (f.operator === 'gt' && rowNum <= (f.preparedValue as number)) return false;
+      if (f.operator === 'lt' && rowNum >= (f.preparedValue as number)) return false;
+      continue;
+    }
+
+    const strRowVal = String(rowVal || '').toLowerCase();
+    const strFilterVal = String(f.preparedValue || '');
+
+    if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) return false;
+    if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) return false;
+    if (f.operator === 'eq' && strRowVal !== strFilterVal) return false;
+  }
+
+  return true;
+};
+
 // --- EXPORT FUNCTION (PDF/HTML) ---
 export const exportView = async (
   format: 'pdf' | 'html',
