@@ -340,7 +340,22 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                )}
             </div>
             {!isFieldsPanelCollapsed && (
-               <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+               <div
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => {
+                     e.preventDefault();
+                     try {
+                        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                        const { field, source } = data;
+                        if (source !== 'list') {
+                           removeField(source, field);
+                        }
+                     } catch (err) {
+                        console.error("Error on drop in fields list:", err);
+                     }
+                  }}
+                  className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1"
+               >
                   {groupedFields.map(group => {
                      const filteredFields = group.fields.filter((f: string) =>
                         f.toLowerCase().includes(fieldSearchTerm.toLowerCase())
@@ -349,35 +364,35 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      if (fieldSearchTerm && filteredFields.length === 0) return null;
 
                      return (
-                     <div key={group.id} className="mb-2">
-                        <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
-                           {expandedSections[group.id] || fieldSearchTerm ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
-                        </button>
-                        {(expandedSections[group.id] || fieldSearchTerm) && (
-                           <div className="mt-1 pl-2 space-y-1">
-                              {filteredFields.map((f: string) => {
-                                 const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
-                                 return (
-                                    <FieldChip
-                                       key={f}
-                                       field={f}
-                                       zone="list"
-                                       disabled={usedFields.has(f)}
-                                       color={group.color}
-                                       handleDragStart={handleDragStart}
-                                       isCalculated={!!calcField}
-                                       onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
-                                       onDelete={calcField && removeCalculatedField ? () => {
-                                          if (confirm(`Supprimer le champ calculé "${f}" ?`)) {
-                                             removeCalculatedField(calcField.id);
-                                          }
-                                       } : undefined}
-                                    />
-                                 );
-                              })}
-                           </div>
-                        )}
-                     </div>
+                        <div key={group.id} className="mb-2">
+                           <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
+                              {expandedSections[group.id] || fieldSearchTerm ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
+                           </button>
+                           {(expandedSections[group.id] || fieldSearchTerm) && (
+                              <div className="mt-1 pl-2 space-y-1">
+                                 {filteredFields.map((f: string) => {
+                                    const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
+                                    return (
+                                       <FieldChip
+                                          key={f}
+                                          field={f}
+                                          zone="list"
+                                          disabled={usedFields.has(f)}
+                                          color={group.color}
+                                          handleDragStart={handleDragStart}
+                                          isCalculated={!!calcField}
+                                          onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
+                                          onDelete={calcField && removeCalculatedField ? () => {
+                                             if (confirm(`Supprimer le champ calculé "${f}" ?`)) {
+                                                removeCalculatedField(calcField.id);
+                                             }
+                                          } : undefined}
+                                       />
+                                    );
+                                 })}
+                              </div>
+                           )}
+                        </div>
                      );
                   })}
                </div>

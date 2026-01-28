@@ -166,9 +166,10 @@ export const PivotTable: React.FC = () => {
         rowFields.forEach(f => used.add(f));
         colFields.forEach(f => used.add(f));
         if (valField) used.add(valField);
+        metrics.forEach(m => used.add(m.field));
         filters.forEach(f => used.add(f.field));
         return used;
-    }, [rowFields, colFields, valField, filters]);
+    }, [rowFields, colFields, valField, metrics, filters]);
 
     const groupedFields = useMemo(() => {
         return sources.map(src => {
