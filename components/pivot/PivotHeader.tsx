@@ -105,16 +105,20 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
             </div>
 
             <div className="relative">
-               <button onClick={() => setShowLoadMenu(!showLoadMenu)} disabled={!primaryDataset} className="p-1.5 text-slate-500 hover:text-green-600 border border-slate-300 rounded bg-white disabled:opacity-50" title="Charger"><Database className="w-4 h-4" /></button>
-               {showLoadMenu && primaryDataset && (
+               <button onClick={() => setShowLoadMenu(!showLoadMenu)} className="p-1.5 text-slate-500 hover:text-green-600 border border-slate-300 rounded bg-white" title="Charger"><Database className="w-4 h-4" /></button>
+               {showLoadMenu && (
                   <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 max-h-80 overflow-y-auto">
-                     {savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === primaryDataset.id).length === 0 ? (
+                     <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 border-b border-slate-100">Analyses sauvegardées</div>
+                     {savedAnalyses.filter(a => a.type === 'pivot').length === 0 ? (
                         <div className="px-3 py-2 text-xs text-slate-500 italic">Aucune analyse sauvegardée</div>
                      ) : (
-                        savedAnalyses.filter(a => a.type === 'pivot' && a.datasetId === primaryDataset.id).map(a => (
-                           <button key={a.id} onClick={() => handleLoadAnalysis(a.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between gap-2">
-                              <span className="truncate">{a.name}</span>
-                              <span className="text-[10px] text-slate-400">{new Date(a.createdAt).toLocaleDateString()}</span>
+                        savedAnalyses.filter(a => a.type === 'pivot').map(a => (
+                           <button key={a.id} onClick={() => handleLoadAnalysis(a.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between gap-2 border-b border-slate-50 last:border-0">
+                              <div className="flex flex-col min-w-0">
+                                 <span className="truncate font-medium text-slate-700">{a.name}</span>
+                                 <span className="text-[9px] text-slate-400">{primaryDataset?.id === a.datasetId ? 'Ce dataset' : 'Autre dataset'}</span>
+                              </div>
+                              <span className="text-[9px] text-slate-400 shrink-0">{new Date(a.createdAt).toLocaleDateString()}</span>
                            </button>
                         ))
                      )}

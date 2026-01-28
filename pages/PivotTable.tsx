@@ -27,7 +27,7 @@ type DropZoneType = 'row' | 'col' | 'val' | 'filter';
 
 export const PivotTable: React.FC = () => {
     const {
-        batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
+        batches, currentDataset, currentDatasetId, switchDataset, datasets, savedAnalyses, saveAnalysis,
         lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField,
         removeCalculatedField, updateCalculatedField, addDashboardWidget
     } = useData();
@@ -118,7 +118,8 @@ export const PivotTable: React.FC = () => {
             if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
             setIsTemporalMode(c.isTemporalMode || false);
             setTemporalConfig(c.temporalComparison || null);
-            if ((c as any).columnWidths) setColumnWidths((c as any).columnWidths);
+            if (c.columnLabels) setColumnLabels(c.columnLabels);
+            if (c.columnWidths) setColumnWidths(c.columnWidths);
         } else {
             // Si aucun TCD n'a été créé ou travaillé, on laisse les sources vides
             setSources([]);
@@ -143,10 +144,11 @@ export const PivotTable: React.FC = () => {
                 filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
                 selectedBatchId, isTemporalMode,
                 temporalComparison: currentTemporalComparison,
-                columnWidths
+                columnWidths,
+                columnLabels
             } as any
         });
-    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig, columnWidths, columnLabels]);
 
     useEffect(() => {
         if (isLoading || !isInitialized) return;
@@ -324,9 +326,19 @@ export const PivotTable: React.FC = () => {
         const a = savedAnalyses.find(x => x.id === id);
         if (a) {
             const c = a.config;
+            if (a.datasetId && a.datasetId !== currentDatasetId) {
+                switchDataset(a.datasetId);
+            }
             setSources(c.sources || sources);
-            setRowFields(c.rowFields); setColFields(c.colFields); setValField(c.valField); setAggType(c.aggType);
-            setFilters(c.filters); setIsTemporalMode(!!c.isTemporalMode); setTemporalConfig(c.temporalComparison);
+            setRowFields(c.rowFields);
+            setColFields(c.colFields);
+            setValField(c.valField);
+            setAggType(c.aggType);
+            setFilters(c.filters);
+            setIsTemporalMode(!!c.isTemporalMode);
+            setTemporalConfig(c.temporalComparison);
+            setColumnLabels(c.columnLabels || {});
+            setColumnWidths(c.columnWidths || {});
         }
         setShowLoadMenu(false);
     };
@@ -395,7 +407,9 @@ export const PivotTable: React.FC = () => {
                    sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting,
                    filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
                    selectedBatchId, isTemporalMode,
-                   temporalComparison: currentTemporalComparison
+                   temporalComparison: currentTemporalComparison,
+                   columnLabels,
+                   columnWidths
                }
             });
             setIsSaving(false); setAnalysisName('');

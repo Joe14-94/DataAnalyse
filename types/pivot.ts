@@ -128,6 +128,7 @@ export interface PivotState {
     joins?: PivotJoin[];
     sources?: PivotSourceConfig[];
     temporalComparison?: TemporalComparisonConfig;
+    columnLabels?: Record<string, string>;
     [key: string]: any;
   };
 }
