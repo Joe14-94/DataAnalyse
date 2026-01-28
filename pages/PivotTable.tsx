@@ -27,7 +27,7 @@ type DropZoneType = 'row' | 'col' | 'val' | 'filter';
 
 export const PivotTable: React.FC = () => {
     const {
-        batches, currentDataset, datasets, savedAnalyses, saveAnalysis,
+        batches, currentDataset, currentDatasetId, switchDataset, datasets, savedAnalyses, saveAnalysis,
         lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField,
         removeCalculatedField, updateCalculatedField, addDashboardWidget
     } = useData();
