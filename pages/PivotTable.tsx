@@ -322,6 +322,15 @@ export const PivotTable: React.FC = () => {
         setEditingCalcField(null);
     };
 
+    const handleRemoveCalculatedField = (id: string) => {
+        if (!primaryDataset) return;
+        const field = primaryDataset.calculatedFields?.find(f => f.id === id);
+        if (field) {
+            setMetrics(prev => prev.filter(m => m.field !== field.name));
+        }
+        removeCalculatedField(primaryDataset.id, id);
+    };
+
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
             const currentTemporalComparison = temporalConfig ? {
@@ -382,7 +391,7 @@ export const PivotTable: React.FC = () => {
                    allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate, showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
                    handleDragStart, handleDragOver: (e) => e.preventDefault(), handleDrop, removeField, draggedField,
                    openCalcModal: () => { setEditingCalcField(null); setIsCalcModalOpen(true); },
-                   removeCalculatedField: (id: string) => primaryDataset && removeCalculatedField(primaryDataset.id, id),
+                   removeCalculatedField: handleRemoveCalculatedField,
                    openEditCalcModal: (field: any) => { setEditingCalcField(field); setIsCalcModalOpen(true); } }}
                 />
 

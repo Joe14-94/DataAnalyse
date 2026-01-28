@@ -20,7 +20,6 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
     const [formula, setFormula] = useState(initialField?.formula || '');
     const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean'>(initialField?.outputType || 'number');
     const [unit, setUnit] = useState(initialField?.unit || '');
-    const [activeTab, setActiveTab] = useState<'fields' | 'functions'>('fields');
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -99,7 +98,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
@@ -114,9 +113,9 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                 </div>
 
                 <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Left Side: Basic Info & Formula */}
-                        <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Left Column: Basic Info & Formula (span 5) */}
+                        <div className="lg:col-span-5 space-y-4">
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
                                 <input
@@ -136,7 +135,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                 <div className="relative group">
                                     <textarea
                                         ref={textareaRef}
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none h-32 shadow-sm transition-all focus:border-indigo-500 bg-slate-50 focus:bg-white"
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none h-40 shadow-sm transition-all focus:border-indigo-500 bg-slate-50 focus:bg-white"
                                         placeholder="Utilisez les noms de champs entre crochets []"
                                         value={formula}
                                         onChange={e => setFormula(e.target.value)}
@@ -147,7 +146,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Type de résultat</label>
                                     <select
@@ -175,55 +174,51 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             </div>
                         </div>
 
-                        {/* Right Side: Assistance Tabs */}
-                        <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
-                            <div className="flex bg-white border-b border-slate-200">
-                                <button
-                                    onClick={() => setActiveTab('fields')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold transition-all ${activeTab === 'fields' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                                >
-                                    <Database className="w-3 h-3" /> Champs
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('functions')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold transition-all ${activeTab === 'functions' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                                >
-                                    <FunctionSquare className="w-3 h-3" /> Fonctions
-                                </button>
+                        {/* Middle Column: Fields (span 3) */}
+                        <div className="lg:col-span-3 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
+                            <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
+                                <Database className="w-3.5 h-3.5 text-indigo-600" />
+                                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Champs</span>
                             </div>
+                            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
+                                <div className="grid grid-cols-1 gap-1.5">
+                                    {fields.map(f => (
+                                        <button
+                                            key={f}
+                                            onClick={() => insertIntoFormula(`[${f}]`)}
+                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
+                                        >
+                                            <span className="truncate flex-1 font-medium">{f}</span>
+                                            <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
 
-                            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar min-h-[200px]">
-                                {activeTab === 'fields' ? (
-                                    <div className="grid grid-cols-1 gap-1.5">
-                                        {fields.map(f => (
-                                            <button
-                                                key={f}
-                                                onClick={() => insertIntoFormula(`[${f}]`)}
-                                                className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
-                                            >
-                                                <span className="truncate flex-1">{f}</span>
+                        {/* Right Column: Functions (span 4) */}
+                        <div className="lg:col-span-4 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
+                            <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
+                                <FunctionSquare className="w-3.5 h-3.5 text-indigo-600" />
+                                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Fonctions</span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
+                                <div className="space-y-1.5">
+                                    {functions.map(fn => (
+                                        <button
+                                            key={fn.name}
+                                            onClick={() => insertIntoFormula(`${fn.name}(`)}
+                                            className="w-full text-left px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
+                                        >
+                                            <div className="flex justify-between items-center mb-0.5">
+                                                <span className="text-[11px] font-bold text-indigo-700 font-mono">{fn.name}</span>
                                                 <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-1.5">
-                                        {functions.map(fn => (
-                                            <button
-                                                key={fn.name}
-                                                onClick={() => insertIntoFormula(`${fn.name}(`)}
-                                                className="w-full text-left px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
-                                            >
-                                                <div className="flex justify-between items-center mb-0.5">
-                                                    <span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span>
-                                                    <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
-                                                </div>
-                                                <div className="text-[10px] text-slate-400 font-mono mb-1">{fn.syntax}</div>
-                                                <div className="text-[10px] text-slate-500 leading-tight">{fn.desc}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                            </div>
+                                            <div className="text-[9px] text-slate-400 font-mono mb-1">{fn.syntax}</div>
+                                            <div className="text-[9px] text-slate-500 leading-tight">{fn.desc}</div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
