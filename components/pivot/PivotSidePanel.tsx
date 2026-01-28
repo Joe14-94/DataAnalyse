@@ -172,7 +172,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                        {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)}</option>)}
                                     </select>
                                  ) : (
-                                    <div className="text-[10px] text-slate-500 truncate">Jointure: {src.joinConfig?.primaryKey} = {src.joinConfig?.secondaryKey}</div>
+                                    <div className="text-xs text-slate-500 truncate">Jointure: {src.joinConfig?.primaryKey} = {src.joinConfig?.secondaryKey}</div>
                                  )}
                               </div>
                            );
@@ -252,7 +252,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                   {groupedFields.map(group => (
                      <div key={group.id} className="mb-2">
-                        <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
+                        <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-xs font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
                            {expandedSections[group.id] ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
                         </button>
                         {expandedSections[group.id] && (
@@ -271,67 +271,32 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             <div className={`flex flex-col gap-2 transition-opacity ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div className="grid grid-cols-2 gap-2">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2 h-2" /> Filtres</div>
-                     <div className="space-y-2">
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Filter className="w-2 h-2" /> Filtres</div>
+                     <div className="space-y-1">
                         {filters.map((f, idx) => (
-                           <div key={idx} className="p-1.5 bg-slate-50 rounded border border-slate-200">
+                           <div key={idx}>
                               <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} handleDragStart={handleDragStart} />
-                              <div className="flex flex-col gap-1 mt-1.5">
-                                 <select
-                                    className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white font-medium"
-                                    value={f.operator || 'eq'}
-                                    onChange={(e) => {
-                                       const n = [...filters];
-                                       const newOp = e.target.value as any;
-                                       n[idx] = { ...n[idx], operator: newOp };
-                                       // Ajuster la valeur si on passe de IN à autre chose ou inversement
-                                       if (newOp === 'in' && !Array.isArray(n[idx].value)) {
-                                          n[idx].value = n[idx].value ? [String(n[idx].value)] : [];
-                                       } else if (newOp !== 'in' && Array.isArray(n[idx].value)) {
-                                          n[idx].value = n[idx].value.join(', ');
-                                       }
-                                       setFilters(n);
-                                    }}
-                                 >
-                                    <option value="eq">Egal à</option>
-                                    <option value="in">Dans la liste</option>
-                                    <option value="contains">Contient</option>
-                                    <option value="starts_with">Commence par</option>
-                                    <option value="gt">&gt;</option>
-                                    <option value="lt">&lt;</option>
-                                 </select>
-                                 <input
-                                    type="text"
-                                    className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white"
-                                    placeholder={f.operator === 'in' ? "Valeur1, Valeur2..." : "Valeur..."}
-                                    value={Array.isArray(f.value) ? f.value.join(', ') : (f.value || '')}
-                                    onChange={(e) => {
-                                       const n = [...filters];
-                                       const val = e.target.value;
-                                       if (f.operator === 'in') {
-                                          n[idx] = { ...n[idx], value: val.split(',').map(v => v.trim()).filter(v => v !== '') };
-                                       } else {
-                                          n[idx] = { ...n[idx], value: val };
-                                       }
-                                       setFilters(n);
-                                    }}
-                                 />
-                              </div>
+                              <select className="w-full text-xs border border-slate-200 rounded p-0.5 mt-0.5" value={f.operator || 'in'} onChange={(e) => { const n = [...filters]; n[idx] = { ...n[idx], operator: e.target.value as any }; setFilters(n); }}>
+                                 <option value="in">Egal à</option>
+                                 <option value="contains">Contient</option>
+                                 <option value="gt">&gt;</option>
+                                 <option value="lt">&lt;</option>
+                              </select>
                            </div>
                         ))}
                      </div>
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2 h-2" /> Colonnes</div>
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Table2 className="w-2 h-2" /> Colonnes</div>
                      <div className="space-y-1">
                         {colFields.map(f => <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} handleDragStart={handleDragStart} />)}
-                        {isColFieldDate && <select className="w-full text-[10px] border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
+                        {isColFieldDate && <select className="w-full text-xs border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
                      </div>
                   </div>
                </div>
                <div className="grid grid-cols-2 gap-2">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2 h-2" /> Lignes</div>
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Layers className="w-2 h-2" /> Lignes</div>
                      {rowFields.map(f => <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} handleDragStart={handleDragStart} />)}
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 min-h-[50px] ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>

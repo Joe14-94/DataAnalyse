@@ -1,5 +1,5 @@
 
-import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters } from '../utils';
+import { parseSmartNumber, getGroupedLabel, formatNumberValue } from '../utils';
 import { FieldConfig, Dataset, FilterRule, PivotJoin, PivotConfig, PivotResult, PivotRow, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
 
 import { PivotMetric } from '../types/pivot';
@@ -79,7 +79,34 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
     const row = rows[i];
     
     // 1.1 Filtrage Rapide
-    if (!applyPreparedFilters(row, preparedFilters)) continue;
+    if (preparedFilters.length > 0) {
+      let pass = true;
+      for (const f of preparedFilters) {
+         const rowVal = row[f.field];
+         
+         if (f.isArrayIn && f.preparedValue instanceof Set) {
+             if (f.preparedValue.size > 0 && !f.preparedValue.has(String(rowVal))) {
+                 pass = false; break;
+             }
+             continue;
+         }
+
+         if (f.operator === 'gt' || f.operator === 'lt') {
+             const rowNum = parseSmartNumber(rowVal);
+             if (f.operator === 'gt' && rowNum <= (f.preparedValue as number)) { pass = false; break; }
+             if (f.operator === 'lt' && rowNum >= (f.preparedValue as number)) { pass = false; break; }
+             continue;
+         }
+
+         const strRowVal = String(rowVal || '').toLowerCase();
+         const strFilterVal = f.preparedValue as string;
+
+         if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) { pass = false; break; }
+         if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) { pass = false; break; }
+         if (f.operator === 'eq' && strRowVal !== strFilterVal) { pass = false; break; }
+      }
+      if (!pass) continue;
+    }
 
     // 1.2 Extraction Clés Lignes
     const rowKeys = new Array(rowFields.length);
