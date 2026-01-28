@@ -124,7 +124,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 id={item.id}
                 to={item.path}
                 title={isCollapsed ? item.name : ''}
-                className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap
+                className={`flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap
                   ${isActive
                     ? 'bg-brand-50 text-brand-700'
                     : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
@@ -142,7 +142,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
           <button
             onClick={handleQuickSave}
-            className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-1.5 rounded transition-colors
+            className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-sm font-bold py-1.5 rounded transition-colors
                 ${isCollapsed ? 'w-8 h-8 p-0' : 'w-full px-3'}
              `}
             title="Sauvegarde rapide"

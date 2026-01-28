@@ -32,7 +32,7 @@ const LivePreview: React.FC<{ widget: DashboardWidget, globalDateRange: any }> =
 
    return (
       <div className={`w-full h-full rounded-lg ${borderClass} ${widthClass} shadow-sm p-4 flex flex-col ${bgColor} relative`}>
-         <h3 className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider truncate">{widget.title || 'Titre du widget'}</h3>
+         <h3 className="text-sm font-bold text-slate-500 mb-1.5 uppercase tracking-wider truncate">{widget.title || 'Titre du widget'}</h3>
          <div className="flex-1 min-h-0 relative"><WidgetDisplay widget={widget} data={data} /></div>
       </div>
    );
@@ -263,7 +263,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                     <Input
                                        value={tempWidget.config?.gradientStart || '#3b82f6'}
                                        onChange={e => updateConfig({ gradientStart: e.target.value })}
-                                       className="font-mono text-[10px] px-1 h-8"
+                                       className="font-mono text-xs px-1 h-8"
                                     />
                                  </div>
                               </div>
@@ -279,7 +279,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                     <Input
                                        value={tempWidget.config?.gradientEnd || '#ef4444'}
                                        onChange={e => updateConfig({ gradientEnd: e.target.value })}
-                                       className="font-mono text-[10px] px-1 h-8"
+                                       className="font-mono text-xs px-1 h-8"
                                     />
                                  </div>
                               </div>

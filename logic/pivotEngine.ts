@@ -92,7 +92,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
              }
              continue;
          }
-         
+
          if (f.operator === 'gt' || f.operator === 'lt') {
              const rowNum = parseSmartNumber(rowVal);
              if (f.operator === 'gt' && rowNum <= (f.preparedValue as number)) { pass = false; break; }
