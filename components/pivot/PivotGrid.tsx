@@ -34,6 +34,7 @@ interface PivotGridProps {
    paddingTop: number;
    paddingBottom: number;
    isSelectionMode?: boolean;
+   selectedItems?: any[];
 }
 
 export const PivotGrid: React.FC<PivotGridProps> = (props) => {
@@ -42,7 +43,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics,
       valFormatting, virtualItems, rowVirtualizer, parentRef, totalColumns, paddingTop, paddingBottom,
-      isSelectionMode = false
+      isSelectionMode = false, selectedItems = []
    } = props;
 
    const getMetricInfoFromCol = (col: string) => {
@@ -66,6 +67,14 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       const field = metric?.field || valField;
       const type = metric?.aggType || aggType;
       return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
+   };
+
+   const isItemSelected = (rowKeys: string[], colLabel: string) => {
+      return selectedItems.some(item =>
+         item.colLabel === colLabel &&
+         item.rowPath.length === rowKeys.length &&
+         item.rowPath.every((k: string, i: number) => k === rowKeys[i])
+      );
    };
 
    return (
@@ -206,10 +215,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        if (val === 0 || val === undefined) formatted = '-';
                                        else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
                                     }
+                                    const isSelected = isSelectionMode && isItemSelected(row.keys, col);
                                     return (
                                        <td
                                           key={col}
-                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''} ${isSelectionMode ? 'hover:bg-emerald-100 hover:ring-1 hover:ring-emerald-400' : 'hover:bg-blue-100'}`}
+                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-blue-100 ring-1 ring-blue-400' : 'hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'hover:bg-blue-100'}`}
                                           onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
                                        >
                                           {formatted}
@@ -218,7 +228,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  })}
                                  {showTotalCol && (
                                     <td
-                                       className={`px-2 py-1 text-right bg-slate-50 border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? 'hover:bg-emerald-100 hover:ring-1 hover:ring-emerald-400' : 'hover:bg-blue-100'}`}
+                                       className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`}
                                        onClick={() => {
                                           const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal;
                                           handleDrilldown(row.keys, 'Total', value, '');
