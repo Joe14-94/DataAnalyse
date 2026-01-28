@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
-import { APP_VERSION, generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, db, generateId } from '../utils';
+import { APP_VERSION, db, generateId } from '../utils';
+import { getDemoData, createBackupJson } from '../logic/dataService';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
 import { BatchContext, useBatches } from './BatchContext';
@@ -291,6 +292,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const updateRows = useCallback((updatesByBatch: Record<string, Record<string, any>>) => {
+    setAllBatches(prev => prev.map(b => {
+      const batchUpdates = updatesByBatch[b.id];
+      if (!batchUpdates) return b;
+      return {
+        ...b,
+        rows: b.rows.map(r => {
+          const rowUpdate = batchUpdates[String(r.id)];
+          return rowUpdate ? { ...r, ...rowUpdate } : r;
+        })
+      };
+    }));
+  }, []);
+
   const enrichBatchesWithLookup = useCallback((datasetId: string, targetDatasetId: string, primaryKey: string, secondaryKey: string, columnsToAdd: string[], newColumnName: string) => {
     // Get target dataset's latest batch
     const targetBatches = batches.filter(b => b.datasetId === targetDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -453,58 +468,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loadDemoData = useCallback(() => {
-    // Dataset 1: RH
-    const id1 = 'demo-rh';
-    const ds1: Dataset = {
-      id: id1,
-      name: 'Effectifs RH',
-      fields: ['Nom', 'Email', 'Organisation', 'DateModif', 'Commentaire', 'Budget', 'Quantité'],
-      fieldConfigs: { 'Budget': { type: 'text' } },
-      createdAt: Date.now()
-    };
-    const batches1 = generateSyntheticData(id1);
-
-    // Dataset 2: Projets IT (avec clés communes)
-    const id2 = 'demo-projets';
-    const ds2: Dataset = {
-      id: id2,
-      name: 'Projets IT',
-      fields: ['Projet', 'Organisation', 'Statut', 'DateDébut', 'Budget', 'Responsable', 'Priorité'],
-      fieldConfigs: { 'Budget': { type: 'text' } },
-      createdAt: Date.now()
-    };
-    const batches2 = generateProjectsData(id2);
-
-    // Dataset 3: Budget Annuel (avec clés communes)
-    const id3 = 'demo-budget';
-    const ds3: Dataset = {
-      id: id3,
-      name: 'Budget Annuel',
-      fields: ['Département', 'Organisation', 'Prévisionnel', 'Réalisé', 'Ecart', 'Trimestre'],
-      fieldConfigs: { 'Prévisionnel': { type: 'text' }, 'Réalisé': { type: 'text' }, 'Ecart': { type: 'text' } },
-      createdAt: Date.now()
-    };
-    const batches3 = generateBudgetData(id3);
-
-    // Dataset 4: Ventes (avec clés communes)
-    const id4 = 'demo-ventes';
-    const ds4: Dataset = {
-      id: id4,
-      name: 'Ventes',
-      fields: ['Produit', 'Organisation', 'Région', 'Quantité', 'Prix Unitaire', 'Montant Total', 'Date Vente', 'Commercial'],
-      fieldConfigs: { 'Prix Unitaire': { type: 'text' }, 'Montant Total': { type: 'text' } },
-      createdAt: Date.now()
-    };
-    const batches4 = generateSalesData(id4);
-
-    setDatasets([ds1, ds2, ds3, ds4]);
-    setAllBatches([...batches1, ...batches2, ...batches3, ...batches4]);
-    setCurrentDatasetId(id1);
-    setDashboardWidgets([
-      { id: 'w1', title: 'Effectif Total', type: 'kpi', size: 'sm', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', showTrend: true } },
-      { id: 'w2', title: 'Projets Actifs', type: 'kpi', size: 'sm', config: { source: { datasetId: id2, mode: 'latest' }, metric: 'count', showTrend: false } },
-      { id: 'w3', title: 'Évolution Effectifs', type: 'chart', size: 'full', config: { source: { datasetId: id1, mode: 'latest' }, metric: 'count', dimension: 'DateModif', chartType: 'line' } }
-    ]);
+    const { datasets, batches, widgets, currentDatasetId } = getDemoData();
+    setDatasets(datasets);
+    setAllBatches(batches);
+    setCurrentDatasetId(currentDatasetId);
+    setDashboardWidgets(widgets);
   }, []);
 
   const updateSavedMappings = useCallback((newMappings: Record<string, string>) => {
@@ -536,10 +504,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs,
-      exportDate: new Date().toISOString()
+      hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs
     };
-    return JSON.stringify(state, null, 2);
+    return createBackupJson(state);
   }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs]);
 
   const importBackup = useCallback(async (jsonData: string) => {
@@ -587,7 +554,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
-                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, enrichBatchesWithLookup }}>
+                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
                       {children}

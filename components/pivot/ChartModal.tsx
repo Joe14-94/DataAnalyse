@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { X, BarChart3, TrendingUp, Download, ExternalLink } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { X, BarChart3, TrendingUp, Download, ExternalLink, PlusSquare, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   Cell, Treemap, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import { PivotResult, PivotConfig } from '../../logic/pivotEngine';
+import { TreemapContent } from '../ui/TreemapContent';
 import {
   ChartType,
   ColorPalette,
@@ -22,59 +24,34 @@ import {
   getSingleColors,
   generateGradient
 } from '../../logic/pivotToChart';
+import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
+import { useWidgets, useDatasets } from '../../context/DataContext';
 
-// Custom Treemap Content Component
-const TreemapContent = (props: any, chartColors: string[]) => {
-  const { x, y, width, height, name, index, value } = props;
-
-  // Si pas de dimensions valides, ne rien afficher
-  if (!width || !height || width <= 0 || height <= 0) {
-    return null;
-  }
-
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill={chartColors[index % chartColors.length]}
-        stroke="#fff"
-        strokeWidth={2}
-      />
-      {width > 60 && height > 30 && (
-        <text
-          x={x + width / 2}
-          y={y + height / 2}
-          textAnchor="middle"
-          fill="#fff"
-          fontSize={11}
-          fontWeight="bold"
-          dy={4}
-          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
-        >
-          {name && name.length > 15 ? name.substring(0, 12) + '...' : name}
-        </text>
-      )}
-    </g>
-  );
-};
 
 interface ChartModalProps {
   isOpen: boolean;
   onClose: () => void;
   pivotData: PivotResult;
   pivotConfig: PivotConfig;
+  isTemporalMode?: boolean;
+  temporalComparison?: TemporalComparisonConfig | null;
+  selectedBatchId?: string;
 }
 
 export const ChartModal: React.FC<ChartModalProps> = ({
   isOpen,
   onClose,
   pivotData,
-  pivotConfig
+  pivotConfig,
+  isTemporalMode = false,
+  temporalComparison = null,
+  selectedBatchId
 }) => {
   const navigate = useNavigate();
+  const { addDashboardWidget } = useWidgets();
+  const { currentDatasetId } = useDatasets();
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Logs de debug
   console.log('=== ChartModal rendu ===');
@@ -100,6 +77,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'value' | 'none'>('value');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [hierarchyLevel, setHierarchyLevel] = useState<number | undefined>(undefined);
+  const [updateMode, setUpdateMode] = useState<'fixed' | 'latest'>('latest');
 
   // Nouveaux états pour les modes de coloration
   const [colorMode, setColorMode] = useState<ColorMode>('multi');
@@ -150,6 +128,192 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     }
   }, [colorMode, colorPalette, singleColor, gradientStart, gradientEnd, metadata.seriesNames.length, chartData?.length]);
 
+  // Export handlers
+  const handleExportHTML = () => {
+    if (!chartContainerRef.current) return;
+
+    const chartHtml = chartContainerRef.current.innerHTML;
+    const title = `Graphique TCD - ${pivotConfig.valField}`;
+    const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://cdn.jsdelivr.net/npm/recharts@2/dist/recharts.global.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+    h1 { margin: 0; color: #1e293b; font-size: 24px; }
+    .metadata { margin-top: 10px; font-size: 12px; color: #64748b; }
+    .chart-container { margin: 30px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${title}</h1>
+      <div class="metadata">
+        <p>Champ: ${pivotConfig.valField}</p>
+        <p>Agrégation: ${pivotConfig.aggType}</p>
+        <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
+      </div>
+    </div>
+    <div class="chart-container">
+      ${chartHtml}
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `graphique_tcd_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const handleExportPNG = async () => {
+    if (!chartContainerRef.current) return;
+
+    try {
+      const canvas = await html2canvas(chartContainerRef.current, { scale: 2, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `graphique_tcd_${new Date().toISOString().split('T')[0]}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Erreur export PNG:', error);
+    }
+  };
+
+  const handleExportPDF = async (mode: 'A4' | 'adaptive') => {
+    if (!chartContainerRef.current) return;
+
+    try {
+      const jsPDF = (await import('jspdf')).jsPDF;
+      const canvas = await html2canvas(chartContainerRef.current, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+
+      let pdf: any;
+      if (mode === 'A4') {
+        pdf = new jsPDF('p', 'mm', 'a4');
+      } else {
+        const height = (canvas.height * 210) / canvas.width;
+        pdf = new jsPDF('p', 'mm', [210, height]);
+      }
+
+      const imgWidth = 210 - 20;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addText(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
+      pdf.setFontSize(10);
+      pdf.addText(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+      pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
+      pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Erreur export PDF:', error);
+    }
+  };
+
+  const handleExportXLSX = () => {
+    if (!chartData || chartData.length === 0) return;
+
+    const worksheet = XLSX.utils.json_to_sheet(chartData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Données du graphique');
+
+    // Ajouter une feuille de métadonnées
+    const metadata = [
+      ['Métadonnées du graphique'],
+      ['Champ valeur', pivotConfig.valField],
+      ['Type d\'agrégation', pivotConfig.aggType],
+      ['Type de graphique', selectedChartType],
+      ['Date d\'export', new Date().toLocaleString('fr-FR')],
+      [],
+      ['Champs de ligne', pivotConfig.rowFields.join(', ')],
+      ['Champs de colonne', pivotConfig.colFields.join(', ')],
+      ['Nombre de lignes', chartData.length]
+    ];
+
+    const metaSheet = XLSX.utils.aoa_to_sheet(metadata);
+    XLSX.utils.book_append_sheet(workbook, metaSheet, 'Métadonnées');
+
+    XLSX.writeFile(workbook, `graphique_tcd_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setShowExportMenu(false);
+  };
+
+  const handleCreateWidget = () => {
+    try {
+      if (!currentDatasetId) {
+        console.error('Aucun dataset courant sélectionné');
+        return;
+      }
+
+      const newWidget = {
+        title: `Graphique TCD : ${pivotConfig.valField}`,
+        type: 'chart' as const,
+        size: 'md' as const,
+        height: 'lg' as const,
+        config: {
+          metric: (pivotConfig.aggType === 'list' ? 'count' : pivotConfig.aggType) as 'count' | 'sum' | 'avg' | 'distinct',
+          chartType: selectedChartType,
+          source: {
+            datasetId: currentDatasetId,
+            mode: (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
+            batchId: updateMode === 'fixed' ? selectedBatchId : undefined
+          },
+          pivotChart: {
+            pivotConfig: {
+              rowFields: pivotConfig.rowFields,
+              colFields: pivotConfig.colFields,
+              colGrouping: pivotConfig.colGrouping,
+              valField: pivotConfig.valField,
+              aggType: pivotConfig.aggType,
+              filters: pivotConfig.filters,
+              sortBy: pivotConfig.sortBy,
+              sortOrder: pivotConfig.sortOrder,
+              showSubtotals: pivotConfig.showSubtotals
+            },
+            isTemporalMode,
+            temporalComparison,
+            updateMode,
+            chartType: selectedChartType,
+            hierarchyLevel,
+            limit: limit > 0 ? limit : undefined,
+            sortBy,
+            sortOrder,
+            colorMode,
+            colorPalette,
+            singleColor,
+            gradientStart,
+            gradientEnd
+          }
+        }
+      };
+
+      addDashboardWidget(newWidget);
+      console.log('Widget créé avec succès');
+      setShowExportMenu(false);
+      onClose();
+
+      // Naviguer vers le dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Erreur lors de la création du widget:', error);
+    }
+  };
+
   if (!isOpen) {
     console.log('ChartModal fermé');
     return null;
@@ -173,12 +337,15 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
 
+    // Pour le Treemap, le nom est dans payload[0].payload.name
+    const title = label || payload[0].payload.name || '';
+
     return (
       <div style={tooltipStyle}>
-        <p className="font-semibold text-slate-800 mb-1">{label}</p>
+        {title && <p className="font-semibold text-slate-800 mb-1">{title}</p>}
         {payload.map((entry: any, index: number) => (
           <p key={index} style={{ color: entry.color }} className="text-xs">
-            {entry.name}: <span className="font-bold">{formatChartValue(entry.value, pivotConfig)}</span>
+            {entry.name === 'value' || entry.name === 'size' ? 'Valeur' : entry.name}: <span className="font-bold">{formatChartValue(entry.value, pivotConfig)}</span>
           </p>
         ))}
       </div>
@@ -397,8 +564,6 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'treemap': {
-        // Créer un composant wrapper qui capture les couleurs
-        const TreemapContentWrapper: React.FC<any> = (props) => TreemapContent(props, colors);
         return (
           <ResponsiveContainer width="100%" height="100%">
             <Treemap
@@ -407,7 +572,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               aspectRatio={4 / 3}
               stroke="#fff"
               fill="#60a5fa"
-              content={<TreemapContentWrapper />}
+              content={<TreemapContent colors={colors} />}
             >
               <Tooltip content={<CustomTooltip />} />
             </Treemap>
@@ -651,17 +816,31 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           )}
 
           {/* Badge suggestion */}
-          {selectedChartType === metadata.suggestedType && (
-            <div className="ml-auto flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
-              <TrendingUp className="w-3 h-3" />
-              Recommandé
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
+                <input
+                   type="checkbox"
+                   id="auto-update-modal"
+                   checked={updateMode === 'latest'}
+                   onChange={e => setUpdateMode(e.target.checked ? 'latest' : 'fixed')}
+                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                />
+                <label htmlFor="auto-update-modal" className="text-xs font-bold text-blue-800 cursor-pointer select-none">
+                   Mise à jour automatique
+                </label>
+             </div>
+             {selectedChartType === metadata.suggestedType && (
+               <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
+                 <TrendingUp className="w-3 h-3" />
+                 Recommandé
+               </div>
+             )}
+          </div>
         </div>
 
         {/* Chart */}
         <div className="p-6 overflow-hidden" style={{ height: '600px' }}>
-          <div className="h-full w-full">
+          <div className="h-full w-full" ref={chartContainerRef}>
             {!chartData || chartData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="text-slate-400 text-center">
@@ -682,13 +861,73 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             <span className="font-semibold">{getChartTypeConfig(selectedChartType).bestFor}</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* <button
-              onClick={handleExportImage}
-              className="px-3 py-1.5 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
+            {/* Create Widget Button */}
+            <button
+              onClick={handleCreateWidget}
+              className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1 border border-blue-300"
+              title="Ajouter ce graphique au tableau de bord"
             >
-              <Download className="w-3 h-3" />
-              Export PNG
-            </button> */}
+              <PlusSquare className="w-3 h-3" />
+              Créer widget
+            </button>
+
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="px-3 py-1.5 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
+              >
+                <Download className="w-3 h-3" />
+                Exporter
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showExportMenu && (
+                <div className="absolute bottom-full right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    onClick={handleExportHTML}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                  >
+                    HTML
+                  </button>
+                  <button
+                    onClick={handleExportPNG}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                  >
+                    PNG (Haute résolution)
+                  </button>
+                  <button
+                    onClick={() => handleExportPDF('adaptive')}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                  >
+                    PDF (Adaptatif)
+                  </button>
+                  <button
+                    onClick={() => handleExportPDF('A4')}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                  >
+                    PDF (A4)
+                  </button>
+                  <button
+                    onClick={handleExportXLSX}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700"
+                  >
+                    XLSX (Excel)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Open in Analytics */}
+            <button
+              onClick={handleOpenInAnalytics}
+              className="px-3 py-1.5 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
+              title="Ouvrir dans Analytics"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Analytics
+            </button>
+
             <button
               onClick={onClose}
               className="px-4 py-1.5 text-xs bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors"

@@ -20,6 +20,17 @@ interface DatasetContextType {
 
 export const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 
+export const DatasetProvider: React.FC<{
+  children: React.ReactNode;
+  value: DatasetContextType;
+}> = ({ children, value }) => {
+  return (
+    <DatasetContext.Provider value={value}>
+      {children}
+    </DatasetContext.Provider>
+  );
+};
+
 export const useDatasets = () => {
   const context = useContext(DatasetContext);
   if (!context) {

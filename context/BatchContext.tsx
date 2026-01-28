@@ -7,6 +7,7 @@ interface BatchContextType {
   addBatch: (datasetId: string, date: string, rows: any[]) => void;
   deleteBatch: (id: string) => void;
   deleteBatchRow: (batchId: string, rowId: string) => void;
+  updateRows: (updatesByBatch: Record<string, Record<string, any>>) => void;
   enrichBatchesWithLookup: (datasetId: string, targetDatasetId: string, primaryKey: string, secondaryKey: string, columnsToAdd: string[], newColumnName: string) => boolean;
 }
 

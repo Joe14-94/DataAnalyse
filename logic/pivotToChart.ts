@@ -1,12 +1,6 @@
-import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType } from './pivotEngine';
+import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'stacked-bar' | 'stacked-area' | 'radar' | 'treemap';
-export type ColorPalette = 'default' | 'pastel' | 'vibrant';
-export type ColorMode = 'single' | 'gradient' | 'multi';
+export type { ChartType, ColorPalette, ColorMode };
 
 export interface ChartDataPoint {
   name: string;
@@ -277,10 +271,10 @@ export const transformPivotToTreemapData = (
     const value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
 
     // Créer un label hiérarchique si plusieurs niveaux
-    const label = keys.length > 1 ? keys.join(' > ') : keys[0];
+    const label = keys.length > 1 ? keys.join(' > ') : (keys[0] || '(Vide)');
 
     return {
-      name: label,
+      name: String(label),
       size: value,
       value: value // Pour compatibilité avec le tooltip
     };
@@ -310,11 +304,11 @@ const formatRowLabel = (row: PivotRow, config: PivotConfig): string => {
   if (row.label) return row.label;
 
   if (row.keys.length === 1) {
-    return row.keys[0];
+    return row.keys[0] || '(Vide)';
   }
 
   // Pour hiérarchie, concaténer avec séparateur
-  return row.keys.join(' > ');
+  return row.keys.length > 0 ? row.keys.join(' > ') : '(Vide)';
 };
 
 /**
@@ -570,6 +564,16 @@ export const getChartTypeConfig = (chartType: ChartType) => {
       label: 'Treemap',
       description: 'Carte arborescente',
       bestFor: 'Hiérarchies et proportions'
+    },
+    'radial': {
+      label: 'Jauge radiale',
+      description: 'Graphique en barres radiales',
+      bestFor: 'KPI et indicateurs circulaires'
+    },
+    'funnel': {
+      label: 'Entonnoir',
+      description: 'Graphique en entonnoir',
+      bestFor: 'Étapes de conversion et processus'
     }
   };
 

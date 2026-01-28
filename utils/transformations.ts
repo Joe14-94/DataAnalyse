@@ -1,4 +1,4 @@
-import { DataRow, FilterCondition, FilterOperator, JoinType, AggregationType } from '../types';
+import { DataRow, FilterCondition, FilterOperator, JoinType, ETLAggregationType } from '../types';
 import { generateId } from '../utils';
 
 /**
@@ -122,7 +122,7 @@ export const applyJoin = (
 export const applyAggregate = (
   data: DataRow[],
   groupBy: string[],
-  aggregations: { field: string; operation: AggregationType; alias?: string }[]
+  aggregations: { field: string; operation: ETLAggregationType; alias?: string }[]
 ): DataRow[] => {
   if (groupBy.length === 0) {
     // Agrégation globale
@@ -169,7 +169,7 @@ export const applyAggregate = (
 /**
  * Calcule une valeur agrégée
  */
-const calculateAggregation = (values: any[], operation: AggregationType): any => {
+const calculateAggregation = (values: any[], operation: ETLAggregationType): any => {
   if (values.length === 0) return null;
 
   const numbers = values.map(v => Number(v)).filter(n => !isNaN(n));
