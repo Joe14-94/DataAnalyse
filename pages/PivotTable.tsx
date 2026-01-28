@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { MousePointerClick } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
@@ -11,6 +12,7 @@ import { DrilldownModal } from '../components/pivot/DrilldownModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
+import { SpecificDashboardModal, SpecificDashboardItem } from '../components/pivot/SpecificDashboardModal';
 import { detectDateColumn, formatCurrency, formatPercentage } from '../utils/temporalComparison';
 
 import { usePivotData } from '../hooks/usePivotData';
@@ -18,6 +20,7 @@ import { PivotHeader } from '../components/pivot/PivotHeader';
 import { PivotSidePanel } from '../components/pivot/PivotSidePanel';
 import { PivotGrid } from '../components/pivot/PivotGrid';
 import { PivotFooter } from '../components/pivot/PivotFooter';
+import { Button } from '../components/ui/Button';
 import { SOURCE_COLORS } from '../utils/constants';
 
 type DropZoneType = 'row' | 'col' | 'val' | 'filter';
@@ -56,6 +59,9 @@ export const PivotTable: React.FC = () => {
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
     const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+    const [isSpecificDashboardModalOpen, setIsSpecificDashboardModalOpen] = useState(false);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
     const [editingColumn, setEditingColumn] = useState<string | null>(null);
@@ -270,8 +276,30 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
+        if (isSelectionMode) return;
         const detailRows = blendedRows.filter(row => rowFields.every((f, i) => String(row[f] || '') === (rowKeys[i] === '(Vide)' ? '' : rowKeys[i])));
         if (detailRows.length > 0) setDrilldownData({ rows: detailRows, title: `Détails: ${rowKeys.join(' > ')}`, fields: primaryDataset?.fields || [] });
+    };
+
+    const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
+        if (!isSelectionMode) {
+            handleDrilldown(rowKeys, colLabel);
+            return;
+        }
+
+        const id = generateId();
+        const label = `${rowKeys[rowKeys.length-1]} - ${colLabel}`;
+
+        const newItem: SpecificDashboardItem = {
+            id,
+            label,
+            value,
+            rowPath: rowKeys,
+            colLabel,
+            metricLabel
+        };
+
+        setSpecificDashboardItems(prev => [...prev, newItem]);
     };
 
     const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
@@ -380,6 +408,9 @@ export const PivotTable: React.FC = () => {
                handleExport={handleExport} handleExportSpreadsheet={handleExportSpreadsheet} showLoadMenu={showLoadMenu} setShowLoadMenu={setShowLoadMenu}
                savedAnalyses={savedAnalyses} handleLoadAnalysis={handleLoadAnalysis} isSaving={isSaving} setIsSaving={setIsSaving}
                analysisName={analysisName} setAnalysisName={setAnalysisName} handleSaveAnalysis={handleSaveAnalysis}
+               openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
+               openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
+               selectedItemsCount={specificDashboardItems.length}
             />
 
             <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
@@ -395,10 +426,23 @@ export const PivotTable: React.FC = () => {
                    openEditCalcModal: (field: any) => { setEditingCalcField(field); setIsCalcModalOpen(true); } }}
                 />
 
-                <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm relative">
+                    {isSelectionMode && (
+                        <div className="absolute top-0 left-0 right-0 z-20 bg-emerald-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                            <div className="flex items-center gap-2 px-2">
+                                <MousePointerClick className="w-4 h-4 animate-pulse" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Mode sélection : Cliquez sur une cellule pour l'ajouter</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="bg-white text-emerald-700 px-2 py-0.5 rounded text-[10px] font-black">{specificDashboardItems.length} CELLULES</span>
+                                <Button size="sm" className="bg-white text-emerald-700 hover:bg-emerald-50 py-1" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Terminer</Button>
+                            </div>
+                        </div>
+                    )}
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
-                       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
+                       handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
+                       isSelectionMode,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
@@ -436,6 +480,14 @@ export const PivotTable: React.FC = () => {
                 onSave={handleSaveCalculatedField}
                 initialField={editingCalcField}
                 sampleRow={blendedRows.length > 0 ? blendedRows[0] : null}
+            />
+
+            <SpecificDashboardModal
+                isOpen={isSpecificDashboardModalOpen}
+                onClose={() => setIsSpecificDashboardModalOpen(false)}
+                items={specificDashboardItems}
+                setItems={setSpecificDashboardItems}
+                onStartSelection={() => { setIsSpecificDashboardModalOpen(false); setIsSelectionMode(true); }}
             />
         </div>
     );
