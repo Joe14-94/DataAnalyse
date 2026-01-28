@@ -210,6 +210,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
+  const updateCalculatedField = useCallback((datasetId: string, fieldId: string, updates: Partial<CalculatedField>) => {
+    setDatasets(prev => prev.map(d => {
+      if (d.id !== datasetId) return d;
+      return {
+        ...d,
+        calculatedFields: (d.calculatedFields || []).map(f => f.id === fieldId ? { ...f, ...updates } : f)
+      };
+    }));
+  }, []);
+
   const renameDatasetField = useCallback((datasetId: string, oldName: string, newName: string) => {
     if (oldName === newName || !newName.trim()) return;
 
@@ -553,7 +563,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
-              <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
+              <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
