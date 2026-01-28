@@ -255,8 +255,19 @@ export const calculateTemporalComparison = (
     });
   });
 
-  // Trier par label
-  results.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
+  // Trier les résultats
+  const sortBy = (config as any).sortBy || 'label';
+  const sortOrder = (config as any).sortOrder || 'asc';
+
+  results.sort((a, b) => {
+    if (sortBy === 'label') {
+      return sortOrder === 'asc' ? a.groupLabel.localeCompare(b.groupLabel) : b.groupLabel.localeCompare(a.groupLabel);
+    } else {
+      const valA = a.values[sortBy] || 0;
+      const valB = b.values[sortBy] || 0;
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
+    }
+  });
 
   // Générer les sous-totaux si on a plusieurs champs de regroupement ET que showSubtotals est activé
   if (showSubtotals && groupByFields.length > 1) {

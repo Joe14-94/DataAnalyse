@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -24,13 +24,16 @@ interface PivotHeaderProps {
    openCalcModal: () => void;
    openSpecificDashboardModal: () => void;
    selectedItemsCount?: number;
+   searchTerm: string;
+   setSearchTerm: (v: string) => void;
 }
 
 export const PivotHeader: React.FC<PivotHeaderProps> = ({
    isTemporalMode, setIsTemporalMode, handleToChart, primaryDataset, showExportMenu, setShowExportMenu,
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
-   openCalcModal, openSpecificDashboardModal, selectedItemsCount = 0
+   openCalcModal, openSpecificDashboardModal, selectedItemsCount = 0,
+   searchTerm, setSearchTerm
 }) => {
    return (
       <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-2 shrink-0">
@@ -47,6 +50,25 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                <button onClick={() => setIsTemporalMode(true)} className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${isTemporalMode ? 'bg-white text-blue-600 shadow' : 'text-slate-500'}`}>
                   <Calendar className="w-3 h-3 inline mr-1" />Comparaison
                </button>
+            </div>
+
+            <div className="relative ml-2">
+               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+               <input
+                  type="text"
+                  placeholder="Rechercher..."
+                  className="pl-7 pr-3 py-1.5 bg-slate-100 border-none rounded-lg text-xs w-40 md:w-64 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+               />
+               {searchTerm && (
+                  <button
+                     onClick={() => setSearchTerm('')}
+                     className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                     <X className="w-3 h-3" />
+                  </button>
+               )}
             </div>
          </div>
 
