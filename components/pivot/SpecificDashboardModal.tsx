@@ -47,8 +47,8 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 lg:p-8 animate-in fade-in duration-300">
+            <div className="bg-white rounded-2xl shadow-2xl w-[90vw] h-[90vh] overflow-hidden flex flex-col border border-slate-200">
                 {/* Header */}
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-emerald-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
