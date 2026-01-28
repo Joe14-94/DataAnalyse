@@ -444,21 +444,21 @@ export const PivotTable: React.FC = () => {
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm relative">
                     {isSelectionMode && (
-                        <div className="absolute top-0 left-0 right-0 z-20 bg-emerald-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                        <div className="absolute top-0 left-0 right-0 z-20 bg-blue-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
                             <div className="flex items-center gap-2 px-2">
                                 <MousePointerClick className="w-4 h-4 animate-pulse" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Mode sélection : Cliquez sur une cellule pour l'ajouter</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="bg-white text-emerald-700 px-2 py-0.5 rounded text-[10px] font-black">{specificDashboardItems.length} CELLULES</span>
-                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-emerald-50 py-1 shadow-sm" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Terminer</Button>
+                                <span className="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] font-black border border-white/30">{specificDashboardItems.length} CELLULES</span>
+                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-blue-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Terminer</Button>
                             </div>
                         </div>
                     )}
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
-                       isSelectionMode,
+                       isSelectionMode, selectedItems: specificDashboardItems,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
