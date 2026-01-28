@@ -22,10 +22,11 @@ interface UsePivotDataProps {
    showVariations: boolean;
    isTemporalMode: boolean;
    temporalConfig: TemporalComparisonConfig | null;
+   searchTerm: string;
 }
 
 export const usePivotData = ({
-   sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig
+   sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig, searchTerm
 }: UsePivotDataProps) => {
    const { batches } = useBatches();
    const { datasets } = useDatasets();
@@ -120,6 +121,16 @@ export const usePivotData = ({
        return rows;
    }, [currentBatch, sources, primaryDataset, datasets, batches]);
 
+   const filteredRows = useMemo(() => {
+       if (!searchTerm.trim()) return blendedRows;
+       const term = searchTerm.toLowerCase();
+       return blendedRows.filter(row =>
+           Object.values(row).some(val =>
+               String(val ?? '').toLowerCase().includes(term)
+           )
+       );
+   }, [blendedRows, searchTerm]);
+
    // --- ASYNC CALCULATION (STANDARD) ---
    useEffect(() => {
        if (isTemporalMode) {
@@ -130,7 +141,7 @@ export const usePivotData = ({
        setIsCalculating(true);
        const timer = setTimeout(() => {
            const result = calculatePivotData({
-               rows: blendedRows,
+               rows: filteredRows,
                rowFields, colFields, colGrouping, valField, aggType, metrics, filters,
                sortBy, sortOrder, showSubtotals, showVariations,
                currentDataset: primaryDataset,
@@ -140,7 +151,7 @@ export const usePivotData = ({
            setIsCalculating(false);
        }, 150);
        return () => clearTimeout(timer);
-   }, [blendedRows, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
+   }, [filteredRows, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, primaryDataset, datasets, isTemporalMode]);
 
    // --- ASYNC CALCULATION (TEMPORAL) ---
    useEffect(() => {
@@ -173,6 +184,16 @@ export const usePivotData = ({
                            return enriched;
                        });
                    }
+
+                   if (searchTerm.trim()) {
+                       const term = searchTerm.toLowerCase();
+                       rows = rows.filter(row =>
+                           Object.values(row).some(val =>
+                               String(val ?? '').toLowerCase().includes(term)
+                           )
+                       );
+                   }
+
                    sourceDataMap.set(source.id, rows);
                }
            });
@@ -183,7 +204,9 @@ export const usePivotData = ({
                ...temporalConfig,
                groupByFields: rowFields,
                valueField: valField,
-               aggType: validAggType as any
+               aggType: validAggType as any,
+               sortBy,
+               sortOrder
            };
 
            const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
@@ -192,7 +215,7 @@ export const usePivotData = ({
        }, 150);
 
        return () => clearTimeout(timer);
-   }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals]);
+   }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals, searchTerm]);
 
    return {
       blendedRows,

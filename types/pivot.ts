@@ -102,6 +102,8 @@ export interface TemporalComparisonConfig {
   groupByFields: string[];
   valueField: string;
   aggType: 'sum' | 'count' | 'avg' | 'min' | 'max';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface TemporalComparisonResult {

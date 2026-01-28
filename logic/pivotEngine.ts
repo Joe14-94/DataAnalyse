@@ -213,10 +213,16 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           finalTotalMetrics[metricLabel] = valTotal;
 
           // Use first metric for row-level sorting if needed
+          let rawTotalVal = 0;
+          if (typeof valTotal === 'number') rawTotalVal = valTotal;
+          else if (mc.aggType === 'list' && stats.rowTotalMetrics[mIdx] instanceof Set) rawTotalVal = (stats.rowTotalMetrics[mIdx] as Set<string>).size;
+
+          rawMetrics.set(`TOTAL \x1F ${metricLabel}`, rawTotalVal);
+
           if (mIdx === 0) {
-              if (typeof valTotal === 'number') rawRowTotal = valTotal;
-              else if (mc.aggType === 'list') rawRowTotal = (stats.rowTotalMetrics[mIdx] as Set<string>).size;
-              else rawRowTotal = 0;
+              rawRowTotal = rawTotalVal;
+              // Compatibilité pour 'value' qui trie par le grand total de la première métrique
+              rawMetrics.set('value', rawTotalVal);
           }
 
           // Column details
@@ -225,23 +231,34 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               let val = colMetricVals ? colMetricVals[mIdx] : undefined;
               const count = stats.colCounts.get(h) || 1;
 
+              let rawColVal = 0;
+
               if (val !== undefined) {
-                  if (mc.aggType === 'avg') val = val / count;
-                  else if (mc.aggType === 'list') val = formatList(val);
-                  else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(val)) val = undefined;
+                  if (mc.aggType === 'avg') {
+                      val = val / count;
+                      rawColVal = val;
+                  } else if (mc.aggType === 'list') {
+                      rawColVal = (val as Set<string>).size;
+                      val = formatList(val);
+                  } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(val)) {
+                      val = undefined;
+                      rawColVal = 0;
+                  } else if (typeof val === 'number') {
+                      rawColVal = val;
+                  }
               } else {
                   if (mc.aggType === 'list') val = '-';
+                  rawColVal = 0;
               }
 
               const fullKey = colFields.length > 0
                 ? (metricConfigs.length > 1 ? `${h} \x1F ${metricLabel}` : h)
                 : metricLabel;
               finalMetrics[fullKey] = val;
+              rawMetrics.set(fullKey, rawColVal);
 
               if (mIdx === 0) {
-                  if (typeof val === 'number') rawMetrics.set(h, val);
-                  else if (val instanceof Set) rawMetrics.set(h, val.size);
-                  else rawMetrics.set(h, 0);
+                  rawMetrics.set(h, rawColVal);
               }
           });
       });

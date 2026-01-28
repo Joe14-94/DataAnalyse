@@ -50,6 +50,7 @@ export const PivotTable: React.FC = () => {
     const [showVariations, setShowVariations] = useState(false);
     const [sortBy, setSortBy] = useState<SortBy>('label');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // UI STATE
     const [isSaving, setIsSaving] = useState(false);
@@ -65,6 +66,7 @@ export const PivotTable: React.FC = () => {
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
     const [editingColumn, setEditingColumn] = useState<string | null>(null);
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
 
     // PANEL COLLAPSE STATE
     const [isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed] = useState(false);
@@ -91,7 +93,7 @@ export const PivotTable: React.FC = () => {
     const {
        blendedRows, pivotData, temporalResults, isCalculating, primaryDataset, datasetBatches
     } = usePivotData({
-       sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig
+       sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig, searchTerm
     });
 
     // --- INITIALISATION ---
@@ -116,6 +118,7 @@ export const PivotTable: React.FC = () => {
             if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
             setIsTemporalMode(c.isTemporalMode || false);
             setTemporalConfig(c.temporalComparison || null);
+            if ((c as any).columnWidths) setColumnWidths((c as any).columnWidths);
         } else {
             // Si aucun TCD n'a été créé ou travaillé, on laisse les sources vides
             setSources([]);
@@ -139,8 +142,9 @@ export const PivotTable: React.FC = () => {
                 sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting,
                 filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
                 selectedBatchId, isTemporalMode,
-                temporalComparison: currentTemporalComparison
-            }
+                temporalComparison: currentTemporalComparison,
+                columnWidths
+            } as any
         });
     }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig]);
 
@@ -427,6 +431,8 @@ export const PivotTable: React.FC = () => {
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
                selectedItemsCount={specificDashboardItems.length}
+               searchTerm={searchTerm}
+               setSearchTerm={setSearchTerm}
             />
 
             <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
@@ -459,6 +465,8 @@ export const PivotTable: React.FC = () => {
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
                        isSelectionMode, selectedItems: specificDashboardItems,
+                       sortBy, setSortBy, sortOrder, setSortOrder,
+                       columnWidths, setColumnWidths,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
