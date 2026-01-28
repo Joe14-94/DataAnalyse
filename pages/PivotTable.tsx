@@ -372,6 +372,10 @@ export const PivotTable: React.FC = () => {
         const field = primaryDataset.calculatedFields?.find(f => f.id === id);
         if (field) {
             setMetrics(prev => prev.filter(m => m.field !== field.name));
+            if (valField === field.name) setValField('');
+            if (rowFields.includes(field.name)) setRowFields(prev => prev.filter(f => f !== field.name));
+            if (colFields.includes(field.name)) setColFields(prev => prev.filter(f => f !== field.name));
+            setFilters(prev => prev.filter(f => f.field !== field.name));
         }
         removeCalculatedField(primaryDataset.id, id);
     };
@@ -439,7 +443,7 @@ export const PivotTable: React.FC = () => {
         <div className="h-full flex flex-col p-2 gap-2 relative bg-slate-50">
             <PivotHeader
                isTemporalMode={isTemporalMode} setIsTemporalMode={setIsTemporalMode} handleToChart={() => setIsChartModalOpen(true)}
-               primaryDataset={primaryDataset} showExportMenu={showExportMenu} setShowExportMenu={setShowExportMenu}
+               primaryDataset={primaryDataset} datasets={datasets} showExportMenu={showExportMenu} setShowExportMenu={setShowExportMenu}
                handleExport={handleExport} handleExportSpreadsheet={handleExportSpreadsheet} showLoadMenu={showLoadMenu} setShowLoadMenu={setShowLoadMenu}
                savedAnalyses={savedAnalyses} handleLoadAnalysis={handleLoadAnalysis} isSaving={isSaving} setIsSaving={setIsSaving}
                analysisName={analysisName} setAnalysisName={setAnalysisName} handleSaveAnalysis={handleSaveAnalysis}

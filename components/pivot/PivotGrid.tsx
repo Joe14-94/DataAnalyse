@@ -148,12 +148,13 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        {isEditing ? (
                                           <input
                                              type="text"
-                                             defaultValue={displayLabel}
+                                             value={columnLabels[`group_${field}`] || field}
                                              autoFocus
                                              className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                              onClick={(e) => e.stopPropagation()}
-                                             onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value })); setEditingColumn(null); }}
-                                             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                             onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value }))}
+                                             onBlur={() => setEditingColumn(null)}
+                                             onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                           />
                                        ) : displayLabel}
                                     </span>
@@ -178,12 +179,13 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           {editingColumn === source.id ? (
                                              <input
                                                 type="text"
-                                                defaultValue={columnLabels[source.id] || source.label}
+                                                value={columnLabels[source.id] || source.label}
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value })); setEditingColumn(null); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value }))}
+                                                onBlur={() => setEditingColumn(null)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
                                           ) : (columnLabels[source.id] || source.label)}
                                        </span>
@@ -265,12 +267,13 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           {editingColumn === `row_${field}` ? (
                                              <input
                                                 type="text"
-                                                defaultValue={columnLabels[`row_${field}`] || field}
+                                                value={columnLabels[`row_${field}`] || field}
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value })); setEditingColumn(null); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value }))}
+                                                onBlur={() => setEditingColumn(null)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
                                           ) : (columnLabels[`row_${field}`] || field)}
                                        </span>
@@ -307,12 +310,13 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           {editingColumn === col ? (
                                              <input
                                                 type="text"
-                                                defaultValue={columnLabels[col] || displayLabel}
+                                                value={columnLabels[col] || displayLabel}
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value })); setEditingColumn(null); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value }))}
+                                                onBlur={() => setEditingColumn(null)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
                                           ) : (columnLabels[col] || displayLabel)}
                                        </span>
