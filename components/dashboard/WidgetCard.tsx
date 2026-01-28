@@ -58,14 +58,14 @@ export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
                      </button>
                      {openMenuWidgetId === widget.id && (
                         <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 animate-in fade-in zoom-in-95 duration-100">
-                           <button onClick={() => setFullscreenWidgetId(widget.id)} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                           <button onClick={() => setFullscreenWidgetId(widget.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                               <Maximize2 className="w-3 h-3" /> Agrandir
                            </button>
                            <div className="border-t border-slate-100 my-1"></div>
-                           <button onClick={() => handleExportImage(widget.id, widget.title)} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                           <button onClick={() => handleExportImage(widget.id, widget.title)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                               <ImageIcon className="w-3 h-3" /> Image (.png)
                            </button>
-                           <button onClick={() => handleExportCSV(widgetData, widget.title)} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                           <button onClick={() => handleExportCSV(widgetData, widget.title)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                               <FileText className="w-3 h-3" /> Données (.csv)
                            </button>
                         </div>
