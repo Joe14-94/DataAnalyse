@@ -31,7 +31,7 @@ export interface PivotConfig {
   colGrouping: DateGrouping;
   valField: string; // Keep for backward compatibility
   aggType: AggregationType; // Keep for backward compatibility
-  metrics: PivotMetric[];
+  metrics?: PivotMetric[];
   filters: FilterRule[];
   sortBy: SortBy;
   sortOrder: SortOrder;

@@ -117,7 +117,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed,
       setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
       rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField,
-      aggType, setAggType, valFormatting, setValFormatting, filters, setFilters,
+      aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
       allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
