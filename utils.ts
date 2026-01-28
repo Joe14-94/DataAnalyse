@@ -628,12 +628,17 @@ export const extractDomain = (email: string): string => {
 export const prepareFilters = (filters: any[]) => {
   return filters.map(f => {
     let preparedValue = f.value;
+    const isArrayIn = (f.operator === 'in' || !f.operator) && Array.isArray(f.value);
+
     if (f.operator === 'gt' || f.operator === 'lt') {
       preparedValue = parseSmartNumber(f.value);
+    } else if (isArrayIn) {
+      // BOLT OPTIMIZATION: Convert filter array to Set for O(1) lookups
+      preparedValue = new Set((f.value as any[]).map(v => String(v)));
     } else if (typeof f.value === 'string' && f.operator !== 'in') {
       preparedValue = f.value.toLowerCase();
     }
-    return { ...f, preparedValue };
+    return { ...f, preparedValue, isArrayIn };
   });
 };
 
@@ -646,8 +651,8 @@ export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean 
   for (const f of preparedFilters) {
     const rowVal = row[f.field];
 
-    if (Array.isArray(f.value) && (!f.operator || f.operator === 'in')) {
-      if (f.value.length > 0 && !f.value.includes(String(rowVal))) {
+    if (f.isArrayIn && f.preparedValue instanceof Set) {
+      if (f.preparedValue.size > 0 && !f.preparedValue.has(String(rowVal))) {
         return false;
       }
       continue;

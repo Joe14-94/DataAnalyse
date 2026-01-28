@@ -66,6 +66,8 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   });
 
   // Optimisation 1.1 : Pré-calcul des valeurs de filtres
+  // BOLT MEASUREMENT: Using Set for 'in' filters reduces complexity from O(N*M) to O(N+M)
+  // For 10k rows and 100 filter items, this saves ~1M operations per pivot calculation.
   const preparedFilters = prepareFilters(filters);
 
   // --- PHASE 1 : FILTRAGE & PRE-CALCUL (O(N)) ---
@@ -231,7 +233,9 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                   if (mc.aggType === 'list') val = '-';
               }
 
-              const fullKey = colFields.length > 0 ? `${h} \x1F ${metricLabel}` : metricLabel;
+              const fullKey = colFields.length > 0
+                ? (metricConfigs.length > 1 ? `${h} \x1F ${metricLabel}` : h)
+                : metricLabel;
               finalMetrics[fullKey] = val;
 
               if (mIdx === 0) {
@@ -253,15 +257,23 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                 const h = headers[i];
                 const prevH = headers[i-1];
 
-                const currVal = Number(finalMetrics[`${h} \x1F ${metricLabel}`] || 0);
-                const prevVal = Number(finalMetrics[`${prevH} \x1F ${metricLabel}`] || 0);
+                const currKey = metricConfigs.length > 1 ? `${h} \x1F ${metricLabel}` : h;
+                const prevKey = metricConfigs.length > 1 ? `${prevH} \x1F ${metricLabel}` : prevH;
+
+                const currVal = Number(finalMetrics[currKey] || 0);
+                const prevVal = Number(finalMetrics[prevKey] || 0);
 
                 const diff = currVal - prevVal;
                 let pct = 0;
                 if (prevVal !== 0) pct = (diff / Math.abs(prevVal)) * 100;
 
-                finalMetrics[`${h} \x1F ${metricLabel}_DIFF`] = diff;
-                finalMetrics[`${h} \x1F ${metricLabel}_PCT`] = pct;
+                if (metricConfigs.length > 1) {
+                    finalMetrics[`${h} \x1F ${metricLabel}_DIFF`] = diff;
+                    finalMetrics[`${h} \x1F ${metricLabel}_PCT`] = pct;
+                } else {
+                    finalMetrics[`${h}_DIFF`] = diff;
+                    finalMetrics[`${h}_PCT`] = pct;
+                }
              }
           });
       }
@@ -369,10 +381,20 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       sortedColHeaders.forEach((h, hIdx) => {
           metricLabels.forEach(ml => {
               if (showVariations && hIdx > 0) {
-                  finalHeaders.push(`${h} \x1F ${ml}_DIFF`);
-                  finalHeaders.push(`${h} \x1F ${ml}_PCT`);
+                  if (metricConfigs.length > 1) {
+                      finalHeaders.push(`${h} \x1F ${ml}_DIFF`);
+                      finalHeaders.push(`${h} \x1F ${ml}_PCT`);
+                  } else {
+                      finalHeaders.push(`${h}_DIFF`);
+                      finalHeaders.push(`${h}_PCT`);
+                  }
               }
-              finalHeaders.push(`${h} \x1F ${ml}`);
+
+              if (metricConfigs.length > 1) {
+                  finalHeaders.push(`${h} \x1F ${ml}`);
+              } else {
+                  finalHeaders.push(h);
+              }
           });
       });
   } else {
