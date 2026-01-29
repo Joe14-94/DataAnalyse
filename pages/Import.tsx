@@ -266,11 +266,11 @@ export const Import: React.FC = () => {
            initialConfigs[mappedName] = existingConfigs[mappedName];
         } else {
            // Sinon on utilise la détection automatique
-           const sampleValues = rawData.rows.slice(0, 20).map(r => r[index] || '');
-           const detectedType = detectColumnType(sampleValues);
+           const allColumnValues = rawData.rows.map(r => r[index] || '');
+           const detectedType = detectColumnType(allColumnValues);
            
            if (detectedType === 'number') {
-              const detectedUnit = detectUnit(sampleValues);
+              const detectedUnit = detectUnit(allColumnValues);
               initialConfigs[mappedName] = { type: 'number', unit: detectedUnit };
            } else {
               initialConfigs[mappedName] = { type: detectedType };
