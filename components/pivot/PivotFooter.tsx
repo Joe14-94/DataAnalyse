@@ -34,9 +34,17 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
          return { metric, isDiff, isPct };
       }
-      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === col);
-      if (directMetric) return { metric: directMetric, isDiff: false, isPct: false };
-      return { metric: metrics[0], isDiff: false, isPct: false };
+
+      const isDiff = col.endsWith('_DIFF');
+      const isPct = col.endsWith('_PCT');
+      let baseCol = col;
+      if (isDiff) baseCol = col.replace('_DIFF', '');
+      if (isPct) baseCol = col.replace('_PCT', '');
+
+      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+      if (directMetric) return { metric: directMetric, isDiff, isPct };
+
+      return { metric: metrics[0], isDiff, isPct };
    };
 
    const formatOutput = (val: string | number, metric?: any) => {
