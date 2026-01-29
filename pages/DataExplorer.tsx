@@ -15,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -44,6 +44,7 @@ export const DataExplorer: React.FC = () => {
    // CALCULATED FIELDS UI STATE (DRAWER)
    const [isCalcDrawerOpen, setIsCalcDrawerOpen] = useState(false);
    const [calcTab, setCalcTab] = useState<'fields' | 'functions'>('fields');
+   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
    const [previewResult, setPreviewResult] = useState<{ value: any, error?: string } | null>(null);
    const [newField, setNewField] = useState<Partial<CalculatedField>>({
       name: '',
@@ -248,16 +249,38 @@ export const DataExplorer: React.FC = () => {
 
    const handleAddCalculatedField = () => {
       if (!currentDataset || !newField.name || !newField.formula) return;
-      const field: CalculatedField = {
-         id: generateId(),
-         name: newField.name,
-         formula: newField.formula,
-         outputType: newField.outputType as any,
-         unit: newField.unit
-      };
-      addCalculatedField(currentDataset.id, field);
+
+      if (editingFieldId) {
+         updateCalculatedField(currentDataset.id, editingFieldId, {
+            name: newField.name,
+            formula: newField.formula,
+            outputType: newField.outputType as any,
+            unit: newField.unit
+         });
+      } else {
+         const field: CalculatedField = {
+            id: generateId(),
+            name: newField.name,
+            formula: newField.formula,
+            outputType: newField.outputType as any,
+            unit: newField.unit
+         };
+         addCalculatedField(currentDataset.id, field);
+      }
       setNewField({ name: '', formula: '', outputType: 'number', unit: '' });
+      setEditingFieldId(null);
       setPreviewResult(null);
+   };
+
+   const handleEditCalculatedField = (field: CalculatedField) => {
+      setEditingFieldId(field.id);
+      setNewField({
+         name: field.name,
+         formula: field.formula,
+         outputType: field.outputType,
+         unit: field.unit
+      });
+      setIsCalcDrawerOpen(true);
    };
 
    const handleAddConditionalRule = () => {
@@ -944,7 +967,7 @@ export const DataExplorer: React.FC = () => {
                         {calculatedFields.map(cf => {
                            const colWidth = columnWidths[cf.name] || 150;
                            return (
-                              <th key={cf.id} scope="col" className={`px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(cf.name)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                              <th key={cf.id} scope="col" title={`Formule: ${cf.formula}`} className={`px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(cf.name)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                  <div className="flex items-center gap-2 justify-between">
                                     <div className="flex items-center gap-2">
                                        <Calculator className="w-3 h-3" />
@@ -1147,10 +1170,35 @@ export const DataExplorer: React.FC = () => {
                         <div className="text-xs font-bold uppercase mb-1 flex justify-between"><span className={previewResult?.error ? 'text-red-700' : 'text-green-700'}>{previewResult?.error ? 'Erreur' : 'Aperçu (1ère ligne)'}</span></div>
                         <div className={`text-sm font-mono ${previewResult?.error ? 'text-red-800' : 'text-green-900 font-bold'}`}>{previewResult ? (previewResult.error || String(previewResult.value)) : '...'}</div>
                      </div>
+
+                     {/* Existing Fields Section */}
+                     <div className="mt-4 pt-4 border-t border-slate-100">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Champs existants ({calculatedFields.length})</label>
+                        <div className="space-y-2">
+                           {calculatedFields.length === 0 ? (
+                              <p className="text-xs text-slate-400 italic">Aucun champ calculé</p>
+                           ) : (
+                              calculatedFields.map(cf => (
+                                 <div key={cf.id} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200 hover:border-indigo-300 transition-colors group">
+                                    <div className="min-w-0 flex-1">
+                                       <div className="text-xs font-bold text-slate-700 truncate">{cf.name}</div>
+                                       <div className="text-[10px] text-slate-400 font-mono truncate">{cf.formula}</div>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <button onClick={() => handleEditCalculatedField(cf)} className="p-1 hover:bg-indigo-100 text-indigo-600 rounded" title="Modifier"><Calculator className="w-3.5 h-3.5" /></button>
+                                       <button onClick={() => removeCalculatedField(currentDataset.id, cf.id)} className="p-1 hover:bg-red-100 text-red-600 rounded" title="Supprimer"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                 </div>
+                              ))
+                           )}
+                        </div>
+                     </div>
                   </div>
                   <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                     <Button variant="outline" onClick={() => setIsCalcDrawerOpen(false)}>Annuler</Button>
-                     <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula || !!previewResult?.error}>Créer le champ</Button>
+                     <Button variant="outline" onClick={() => { setIsCalcDrawerOpen(false); setEditingFieldId(null); setNewField({ name: '', formula: '', outputType: 'number', unit: '' }); }}>Annuler</Button>
+                     <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula || !!previewResult?.error}>
+                        {editingFieldId ? 'Mettre à jour' : 'Créer le champ'}
+                     </Button>
                   </div>
                </div>
             )}

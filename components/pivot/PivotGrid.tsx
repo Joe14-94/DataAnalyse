@@ -200,9 +200,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const isEditing = editingColumn === `group_${field}`;
                            const widthId = `group_${field}`;
                            const width = columnWidths[widthId] || 150;
+                           const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === field);
                            return (
                               <th
                                  key={field}
+                                 title={calcField ? `Formule: ${calcField.formula}` : undefined}
                                  className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer transition-colors group relative ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
                                  style={{ width, minWidth: width }}
                                  onClick={() => {
@@ -335,9 +337,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               const widthId = `row_${field}`;
                               const width = columnWidths[widthId] || 150;
                               const left = rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
+                              const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === field);
                               return (
                                  <th
                                     key={field}
+                                    title={calcField ? `Formule: ${calcField.formula}` : undefined}
                                     className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap sticky left-0 z-20 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width, left: `${left}px` }}
                                     onClick={() => {
@@ -372,17 +376,19 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               );
                            })}
                            {pivotData.colHeaders.map((col: string) => {
-                              const { colLabel, metricLabel, isDiff, isPct } = getMetricInfoFromCol(col);
+                              const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
                               let displayLabel = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(colLabel);
                               if (metricLabel && !isDiff && !isPct && colLabel === 'ALL') displayLabel = metricLabel;
                               else if (metricLabel && !isDiff && !isPct) displayLabel = `${displayLabel} - ${metricLabel}`;
 
                               const width = columnWidths[col] || 120;
+                              const calcField = metric ? primaryDataset?.calculatedFields?.find(cf => cf.name === metric.field) : null;
+                              const formulaTitle = calcField ? `\nFormule: ${calcField.formula}` : '';
 
                               return (
                                  <th
                                     key={col}
-                                    title={col.replace('\x1F', '-')}
+                                    title={col.replace('\x1F', '-') + formulaTitle}
                                     className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : isDiff || isPct ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width }}
                                     onClick={() => {

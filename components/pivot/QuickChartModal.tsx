@@ -97,7 +97,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {chartData.map((entry, index) => (
+                    {chartData.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={SOURCE_COLORS[index % SOURCE_COLORS.length]} />
                     ))}
                   </Pie>
@@ -124,7 +124,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {chartData.map((entry, index) => (
+                    {chartData.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={SOURCE_COLORS[index % SOURCE_COLORS.length]} />
                     ))}
                   </Bar>
