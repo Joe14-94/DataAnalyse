@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Dataset, PivotResult } from '../../types';
+import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 
 interface PivotFooterProps {
@@ -14,10 +14,12 @@ interface PivotFooterProps {
    datasets: Dataset[];
    valFormatting: any;
    showTotalCol: boolean;
+   styleRules?: PivotStyleRule[];
+   conditionalRules?: ConditionalFormattingRule[];
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol
+   pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules = [], conditionalRules = []
 }) => {
    if (!pivotData) return null;
 
@@ -47,6 +49,52 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return { metric: metrics[0], isDiff, isPct };
    };
 
+   const getCellStyle = (col: string, value: any, metricLabel: string) => {
+      let finalStyle: React.CSSProperties = {};
+
+      // 1. Manual rules
+      styleRules.forEach(rule => {
+         let match = false;
+         if (rule.targetType === 'metric') {
+            if (!rule.targetKey || rule.targetKey === metricLabel) match = true;
+         } else if (rule.targetType === 'col') {
+            if (col.includes(rule.targetKey!)) match = true;
+         }
+
+         if (match) {
+            if (rule.style.backgroundColor) finalStyle.backgroundColor = rule.style.backgroundColor;
+            if (rule.style.textColor) finalStyle.color = rule.style.textColor;
+            if (rule.style.fontWeight) finalStyle.fontWeight = rule.style.fontWeight;
+            if (rule.style.fontStyle) finalStyle.fontStyle = rule.style.fontStyle;
+         }
+      });
+
+      // 2. Conditional rules
+      conditionalRules.forEach(rule => {
+         if (rule.metricLabel && rule.metricLabel !== metricLabel) return;
+
+         let match = false;
+         const numVal = typeof value === 'number' ? value : parseFloat(String(value));
+         const ruleVal = typeof rule.value === 'number' ? rule.value : parseFloat(String(rule.value));
+
+         switch (rule.operator) {
+            case 'gt': match = numVal > ruleVal; break;
+            case 'lt': match = numVal < ruleVal; break;
+            case 'eq': match = numVal === ruleVal; break;
+            case 'between': match = numVal >= ruleVal && numVal <= (rule.value2 || 0); break;
+            case 'contains': match = String(value).includes(String(rule.value)); break;
+         }
+
+         if (match) {
+            if (rule.style.backgroundColor) finalStyle.backgroundColor = rule.style.backgroundColor;
+            if (rule.style.textColor) finalStyle.color = rule.style.textColor;
+            if (rule.style.fontWeight) finalStyle.fontWeight = rule.style.fontWeight;
+         }
+      });
+
+      return finalStyle;
+   };
+
    const formatOutput = (val: string | number, metric?: any) => {
       const field = metric?.field || valField;
       const type = metric?.aggType || aggType;
@@ -66,10 +114,12 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                   {pivotData.colHeaders.map((col: string) => {
                      const val = pivotData.colTotals[col];
                      const { metric, isPct } = getMetricInfoFromCol(col);
+                     const metricLabel = metric?.label || (metric?.field ? `${metric.field} (${metric.aggType})` : '');
+                     const customStyle = getCellStyle(col, val, metricLabel);
 
                      let formatted = formatOutput(val, metric);
                      if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
-                     return <td key={col} className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200">{formatted}</td>;
+                     return <td key={col} className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200" style={customStyle}>{formatted}</td>;
                   })}
                   {showTotalCol && (
                      <td className="px-2 py-2 text-right bg-slate-200 border-l border-slate-300">

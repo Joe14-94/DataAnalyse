@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette } from 'lucide-react';
 import { PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig, AggregationType, DateGrouping } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
 import { formatDateFr } from '../../utils';
@@ -62,6 +62,7 @@ interface PivotSidePanelProps {
    openCalcModal?: () => void;
    removeCalculatedField?: (id: string) => void;
    openEditCalcModal?: (field: any) => void;
+   openFormattingModal: () => void;
 }
 
 const FieldChip: React.FC<{
@@ -529,7 +530,14 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             </div>
          )}
 
-         <div className="p-1.5 bg-slate-50 rounded border border-slate-200 text-xs">
+         <div className="p-1.5 bg-slate-50 rounded border border-slate-200 text-xs flex flex-col gap-1">
+            <button
+               onClick={props.openFormattingModal}
+               className="flex items-center gap-2 w-full px-2 py-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 hover:border-indigo-400 transition-all font-bold mb-1"
+            >
+               <Palette className="w-3.5 h-3.5 text-indigo-500" />
+               Mise en forme
+            </button>
             <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
             <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
             {(isTemporalMode || colFields.length > 0) && <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-blue-700 font-bold" />}

@@ -36,7 +36,7 @@ export const Customization: React.FC = () => {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-       <div className="max-w-4xl mx-auto space-y-6 pb-12"> 
+       <div className="w-full space-y-6 pb-12">
          
          <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-pink-100 text-pink-700 rounded-lg">

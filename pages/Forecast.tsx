@@ -186,7 +186,7 @@ export const Forecast: React.FC = () => {
     };
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto">
+        <div className="p-4 md:p-8 w-full">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-3">
                     <TrendingUp className="w-8 h-8 text-brand-600" />

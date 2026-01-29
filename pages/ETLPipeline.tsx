@@ -499,7 +499,7 @@ export const ETLPipeline: React.FC = () => {
         : { data: sourceData };
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto">
+        <div className="p-4 md:p-8 w-full">
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-3">

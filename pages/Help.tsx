@@ -26,8 +26,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs'
 
 export const Help: React.FC = () => {
   return (
-    <div className="h-full overflow-y-auto bg-slate-50 custom-scrollbar">
-      <div className="max-w-5xl mx-auto py-8 px-4">
+    <div className="h-full overflow-y-auto bg-slate-50 custom-scrollbar p-4 md:p-8">
+      <div className="w-full space-y-8">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-3 bg-brand-600 rounded-xl text-white shadow-lg shadow-brand-200">
             <HelpCircle className="w-8 h-8" />
