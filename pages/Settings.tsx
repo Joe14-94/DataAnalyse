@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText } from 'lucide-react';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText, Eraser } from 'lucide-react';
 import { APP_VERSION, runSelfDiagnostics } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { DiagnosticSuite, Dataset, UIPrefs, AppState } from '../types';
@@ -13,7 +13,7 @@ import { useReferentials } from '../context/ReferentialContext';
 import { BackupRestoreModal } from '../components/settings/BackupRestoreModal';
 
 export const Settings: React.FC = () => {
-   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis } = useData();
+   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, clearDatasetBatches, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
    const {
       chartsOfAccounts,
@@ -150,6 +150,12 @@ export const Settings: React.FC = () => {
    const handleDeleteDataset = (id: string, name: string) => {
       if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement la typologie "${name}" et tout son historique d'imports ? Cette action est irréversible.`)) {
          deleteDataset(id);
+      }
+   };
+
+   const handleClearData = (id: string, name: string) => {
+      if (window.confirm(`Voulez-vous supprimer TOUT l'historique de données (imports) pour la typologie "${name}" ? La structure (colonnes, calculs) sera conservée.`)) {
+         clearDatasetBatches(id);
       }
    };
 
@@ -897,6 +903,16 @@ export const Settings: React.FC = () => {
 
                                        {!isEditing && (
                                           <div className="flex items-center gap-2 shrink-0">
+                                             <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-orange-600 hover:bg-orange-50 hover:border-orange-200 border-slate-200"
+                                                onClick={() => handleClearData(ds.id, ds.name)}
+                                                disabled={dsBatches.length === 0}
+                                             >
+                                                <Eraser className="w-4 h-4 mr-2" />
+                                                Vider
+                                             </Button>
                                              <Button
                                                 variant="outline"
                                                 size="sm"

@@ -9,7 +9,7 @@ import { UploadCloud, ArrowRight, RotateCcw, Check, Edit2, Zap, AlertTriangle, D
 
 export const Import: React.FC = () => {
   const { 
-    addBatch, savedMappings, updateSavedMappings, 
+    addBatch, savedMappings, updateSavedMappings, batches,
     datasets, createDataset, addFieldToDataset, updateDatasetConfigs, switchDataset, deleteDataset
   } = useData();
   
@@ -48,6 +48,11 @@ export const Import: React.FC = () => {
   
   // Conflict Resolution
   const [updateMode, setUpdateMode] = useState<'merge' | 'overwrite'>('merge');
+
+  const existingBatch = useMemo(() => {
+    if (targetDatasetId === 'NEW' || !rawData) return null;
+    return (batches as any[]).find(b => b.datasetId === targetDatasetId && b.date === date);
+  }, [batches, targetDatasetId, date, rawData]);
 
   // Success Message
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -653,6 +658,22 @@ export const Import: React.FC = () => {
            </div>
         </div>
 
+        {/* Alerte Conflit de Date */}
+        {existingBatch && (
+           <Card className="p-4 border-red-200 bg-red-50 animate-pulse">
+              <div className="flex items-start gap-3">
+                 <AlertTriangle className="w-6 h-6 text-red-600 mt-0.5" />
+                 <div className="flex-1">
+                    <h4 className="text-base font-bold text-red-800">Attention : Données déjà présentes pour cette date</h4>
+                    <p className="text-sm text-red-700 mt-1">
+                       Un import existe déjà pour le <strong>{new Date(date).toLocaleDateString('fr-FR')}</strong> dans ce tableau.
+                       Si vous validez, les anciennes données seront <strong>remplacées</strong> par celles-ci.
+                    </p>
+                 </div>
+              </div>
+           </Card>
+        )}
+
         {/* Alerte Evolution */}
         {targetDatasetId !== 'NEW' && hasStructureChanges && (
            <Card className="p-4 border-amber-300 bg-amber-50">
@@ -672,7 +693,7 @@ export const Import: React.FC = () => {
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
                              <input type="radio" name="updateMode" value="overwrite" checked={updateMode === 'overwrite'} onChange={() => setUpdateMode('overwrite')} className="text-amber-600 bg-white focus:ring-amber-500" />
-                             <span className="text-sm font-bold text-slate-800">Écraser et remplacer</span>
+                             <span className="text-sm font-bold text-slate-800">Écraser et remplacer (tout le tableau)</span>
                           </label>
                        </div>
                     </div>
@@ -890,9 +911,9 @@ export const Import: React.FC = () => {
             <RotateCcw className="w-4 h-4 mr-2" />
             Recommencer
           </Button>
-          <Button onClick={handleFinalizeImport}>
+          <Button onClick={handleFinalizeImport} variant={existingBatch ? 'danger' : 'default'}>
             <ArrowRight className="w-4 h-4 mr-2" />
-            {updateMode === 'overwrite' ? 'Écraser et importer' : 'Valider l\'import'}
+            {existingBatch ? 'Remplacer les données' : (updateMode === 'overwrite' ? 'Écraser et importer' : 'Valider l\'import')}
           </Button>
         </div>
       </div>

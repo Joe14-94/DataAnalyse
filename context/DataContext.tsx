@@ -282,18 +282,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // --- BATCH ACTIONS ---
   const addBatch = useCallback((datasetId: string, date: string, rows: any[]) => {
-    const newBatch: ImportBatch = {
-      id: generateId(),
-      datasetId,
-      date,
-      createdAt: Date.now(),
-      rows
-    };
-    setAllBatches(prev => [...prev, newBatch]);
+    setAllBatches(prev => {
+      // Logic: overwrite existing batch for the same dataset and date
+      const existingIdx = prev.findIndex(b => b.datasetId === datasetId && b.date === date);
+
+      const newBatch: ImportBatch = {
+        id: generateId(),
+        datasetId,
+        date,
+        createdAt: Date.now(),
+        rows
+      };
+
+      if (existingIdx !== -1) {
+        const next = [...prev];
+        next[existingIdx] = newBatch;
+        return next;
+      }
+
+      return [...prev, newBatch];
+    });
   }, []);
 
   const deleteBatch = useCallback((id: string) => {
     setAllBatches(prev => prev.filter(b => b.id !== id));
+  }, []);
+
+  const clearDatasetBatches = useCallback((datasetId: string) => {
+    setAllBatches(prev => prev.filter(b => b.datasetId !== datasetId));
   }, []);
 
   const deleteBatchRow = useCallback((batchId: string, rowId: string) => {
@@ -594,7 +610,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
                 <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField }}>
-                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
+                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, clearDatasetBatches, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
                       {children}
