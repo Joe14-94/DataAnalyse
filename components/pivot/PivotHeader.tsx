@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3 } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -19,6 +19,8 @@ interface PivotHeaderProps {
    handleLoadAnalysis: (id: string) => void;
    isSaving: boolean;
    setIsSaving: (v: boolean) => void;
+   isEditMode: boolean;
+   setIsEditMode: (v: boolean) => void;
    analysisName: string;
    setAnalysisName: (v: string) => void;
    handleSaveAnalysis: () => void;
@@ -33,6 +35,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    isTemporalMode, setIsTemporalMode, handleToChart, primaryDataset, datasets, showExportMenu, setShowExportMenu,
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
+   isEditMode, setIsEditMode,
    openCalcModal, openSpecificDashboardModal, selectedItemsCount = 0,
    searchTerm, setSearchTerm
 }) => {
@@ -74,6 +77,15 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
          </div>
 
          <div className="flex items-center gap-2">
+            <button
+               onClick={() => setIsEditMode(!isEditMode)}
+               disabled={!primaryDataset}
+               className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold border transition-all disabled:opacity-50 ${isEditMode ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-inner' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+               title={isEditMode ? "Quitter le mode édition" : "Activer le mode édition pour renommer les colonnes"}
+            >
+               <Edit3 className={`w-3 h-3 ${isEditMode ? 'animate-pulse' : ''}`} /> {isEditMode ? 'Édition : ON' : 'Mode Édition'}
+            </button>
+
             <button onClick={openCalcModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50">
                <Calculator className="w-3 h-3" /> Colonne calculée
             </button>

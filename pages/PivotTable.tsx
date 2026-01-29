@@ -54,6 +54,7 @@ export const PivotTable: React.FC = () => {
 
     // UI STATE
     const [isSaving, setIsSaving] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
     const [analysisName, setAnalysisName] = useState('');
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [showLoadMenu, setShowLoadMenu] = useState(false);
@@ -446,6 +447,7 @@ export const PivotTable: React.FC = () => {
                primaryDataset={primaryDataset} datasets={datasets} showExportMenu={showExportMenu} setShowExportMenu={setShowExportMenu}
                handleExport={handleExport} handleExportSpreadsheet={handleExportSpreadsheet} showLoadMenu={showLoadMenu} setShowLoadMenu={setShowLoadMenu}
                savedAnalyses={savedAnalyses} handleLoadAnalysis={handleLoadAnalysis} isSaving={isSaving} setIsSaving={setIsSaving}
+               isEditMode={isEditMode} setIsEditMode={setIsEditMode}
                analysisName={analysisName} setAnalysisName={setAnalysisName} handleSaveAnalysis={handleSaveAnalysis}
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
@@ -483,7 +485,7 @@ export const PivotTable: React.FC = () => {
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
-                       isSelectionMode, selectedItems: specificDashboardItems,
+                       isSelectionMode, selectedItems: specificDashboardItems, isEditMode,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,
                        onRemoveField: removeField,
