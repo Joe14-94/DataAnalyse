@@ -906,16 +906,6 @@ export const Settings: React.FC = () => {
                                              <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="text-orange-600 hover:bg-orange-50 hover:border-orange-200 border-slate-200"
-                                                onClick={() => handleClearData(ds.id, ds.name)}
-                                                disabled={dsBatches.length === 0}
-                                             >
-                                                <Eraser className="w-4 h-4 mr-2" />
-                                                Vider
-                                             </Button>
-                                             <Button
-                                                variant="outline"
-                                                size="sm"
                                                 className="text-slate-600 hover:bg-slate-50 border-slate-200"
                                                 onClick={() => startEditingAnalysis(analysis)}
                                              >
@@ -1010,6 +1000,16 @@ export const Settings: React.FC = () => {
 
                                        {!isEditing && (
                                           <div className="flex items-center gap-2 shrink-0">
+                                             <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-orange-600 hover:bg-orange-50 hover:border-orange-200 border-slate-200"
+                                                onClick={() => handleClearData(ds.id, ds.name)}
+                                                disabled={dsBatches.length === 0}
+                                             >
+                                                <Eraser className="w-4 h-4 mr-2" />
+                                                Vider
+                                             </Button>
                                              <Button
                                                 variant="outline"
                                                 size="sm"

@@ -911,7 +911,7 @@ export const Import: React.FC = () => {
             <RotateCcw className="w-4 h-4 mr-2" />
             Recommencer
           </Button>
-          <Button onClick={handleFinalizeImport} variant={existingBatch ? 'danger' : 'default'}>
+          <Button onClick={handleFinalizeImport} variant={existingBatch ? 'danger' : 'primary'}>
             <ArrowRight className="w-4 h-4 mr-2" />
             {existingBatch ? 'Remplacer les données' : (updateMode === 'overwrite' ? 'Écraser et importer' : 'Valider l\'import')}
           </Button>
