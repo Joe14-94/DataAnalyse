@@ -325,6 +325,7 @@ export const getDaysDifference = (dateStr: string): number => {
  * Optimisé pour la performance (Regex pre-compilé pour cas généraux)
  */
 const CLEAN_NUM_REGEX = /[^0-9.-]/g;
+const UNIT_REGEX_CACHE = new Map<string, RegExp>();
 
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
@@ -332,11 +333,20 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
 
   let str = String(val);
 
+  // BOLT OPTIMIZATION: Fast path for simple numeric strings
+  if (!unit && /^-?\d+(\.\d+)?$/.test(str)) {
+    return parseFloat(str);
+  }
+
   // Optimisation: Si unité présente, on l'enlève (Case Insensitive)
   if (unit && unit.length > 0) {
-    // Escape special chars for regex (ex: $ or .)
-    const escapedUnit = unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const unitRegex = new RegExp(escapedUnit, 'i');
+    // BOLT OPTIMIZATION: Cache unit regex to avoid repeated new RegExp() calls
+    let unitRegex = UNIT_REGEX_CACHE.get(unit);
+    if (!unitRegex) {
+      const escapedUnit = unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      unitRegex = new RegExp(escapedUnit, 'i');
+      UNIT_REGEX_CACHE.set(unit, unitRegex);
+    }
     str = str.replace(unitRegex, '');
   }
 
