@@ -55,10 +55,10 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                         name={pieName}
                         cx="50%"
                         cy="50%"
-                        innerRadius={chartType === 'donut' ? '50%' : 0}
-                        outerRadius="80%"
-                        paddingAngle={1}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        innerRadius={chartType === 'donut' ? '45%' : 0}
+                        outerRadius="75%"
+                        paddingAngle={2}
+                        label={({ name, percent }) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
                         labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                         isAnimationActive={false}
                      >
@@ -67,7 +67,7 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                         ))}
                      </Pie>
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }} />
-                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', bottom: 0 }} />
+                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />
                   </PieChart>
                </ResponsiveContainer>
             );
@@ -114,25 +114,29 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                   </AreaChart>
                </ResponsiveContainer>
             );
-         } else if (chartType === 'bar' || chartType === 'column' || chartType === 'stacked-bar') {
-            const isBar = chartType === 'bar';
+         } else if (chartType === 'bar' || chartType === 'column' || chartType === 'stacked-bar' || chartType === 'stacked-column' || chartType === 'percent-bar' || chartType === 'percent-column') {
+            const isHorizontal = chartType === 'bar' || chartType === 'stacked-bar' || chartType === 'percent-bar';
+            const isStacked = chartType.startsWith('stacked-') || chartType.startsWith('percent-');
+            const isPercent = chartType.startsWith('percent-');
             const isMultiSeries = seriesKeys.length > 1;
-            const isStacked = chartType === 'stacked-bar';
 
             return (
                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout={isBar ? 'vertical' : 'horizontal'} margin={{ top: 10, right: 10, left: 10, bottom: isBar ? 25 : 35 }}>
-                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                     <XAxis type={isBar ? 'number' : 'category'} dataKey={isBar ? undefined : 'name'} fontSize={10} stroke="#94a3b8" angle={isBar ? 0 : -45} textAnchor={isBar ? 'middle' : 'end'} height={isBar ? 25 : 40} />
-                     <YAxis type={isBar ? 'category' : 'number'} dataKey={isBar ? 'name' : undefined} fontSize={10} stroke="#94a3b8" />
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
+                  <BarChart data={chartData} layout={isHorizontal ? 'vertical' : 'horizontal'} margin={{ top: 10, right: 10, left: 10, bottom: isHorizontal ? 25 : 35 }}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={isHorizontal} horizontal={!isHorizontal} />
+                     <XAxis type={isHorizontal ? 'number' : 'category'} dataKey={isHorizontal ? undefined : 'name'} fontSize={10} stroke="#94a3b8" angle={isHorizontal ? 0 : -45} textAnchor={isHorizontal ? 'middle' : 'end'} height={isHorizontal ? 25 : 40} hide={isPercent} domain={isPercent ? [0, 100] : [0, 'auto']} />
+                     <YAxis type={isHorizontal ? 'category' : 'number'} dataKey={isHorizontal ? 'name' : undefined} fontSize={10} stroke="#94a3b8" hide={!isHorizontal && isPercent} domain={!isHorizontal && isPercent ? [0, 100] : [0, 'auto']} width={isHorizontal ? 100 : 30} />
+                     <Tooltip
+                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }}
+                        formatter={(val: any) => isPercent ? `${Number(val).toFixed(1)}%` : val}
+                     />
                      {(isMultiSeries || isStacked) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />}
                      {isMultiSeries || isStacked ? (
                         seriesKeys.map((key, idx) => (
-                           <Bar key={key} dataKey={key} name={displaySeriesNames[key] || key} fill={colors[idx % colors.length]} stackId={isStacked ? 'stack' : undefined} radius={isBar ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false} />
+                           <Bar key={key} dataKey={key} name={displaySeriesNames[key] || key} fill={colors[idx % colors.length]} stackId={isStacked ? 'stack' : undefined} radius={!isStacked ? (isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]) : 0} isAnimationActive={false} />
                         ))
                      ) : (
-                        <Bar dataKey={seriesKeys[0] || 'value'} name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]} fill={colors[0]} radius={isBar ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false}>
+                        <Bar dataKey={seriesKeys[0] || 'value'} name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]} fill={colors[0]} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false}>
                            {chartData.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                            ))}
