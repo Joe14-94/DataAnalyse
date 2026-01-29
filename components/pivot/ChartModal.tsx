@@ -366,16 +366,19 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
       switch (selectedChartType) {
       case 'bar':
+      case 'stacked-bar':
+      case 'percent-bar': {
+        const isStacked = selectedChartType === 'stacked-bar' || selectedChartType === 'percent-bar';
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ ...chartMargin, left: 120 }}>
+            <BarChart data={chartData} layout="vertical" margin={{ ...chartMargin, left: 140 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-              <XAxis type="number" stroke="#94a3b8" fontSize={11} />
-              <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 10 }} stroke="#94a3b8" />
-              <Tooltip content={<CustomTooltip />} />
-              {metadata.isMultiSeries ? (
+              <XAxis type="number" stroke="#94a3b8" fontSize={11} hide={selectedChartType === 'percent-bar'} domain={selectedChartType === 'percent-bar' ? [0, 100] : [0, 'auto']} />
+              <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 10 }} stroke="#94a3b8" />
+              <Tooltip content={<CustomTooltip />} formatter={(val: any) => selectedChartType === 'percent-bar' ? `${Number(val).toFixed(1)}%` : val} />
+              {metadata.isMultiSeries || isStacked ? (
                 metadata.seriesNames.map((series, idx) => (
-                  <Bar key={series} dataKey={series} fill={colors[idx]} radius={[0, 4, 4, 0]} />
+                  <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0} />
                 ))
               ) : (
                 <Bar dataKey="value" fill={colors[0]} radius={[0, 4, 4, 0]}>
@@ -384,22 +387,26 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   ))}
                 </Bar>
               )}
-              {metadata.isMultiSeries && <Legend wrapperStyle={{ fontSize: '11px' }} />}
+              {(metadata.isMultiSeries || isStacked) && <Legend wrapperStyle={{ fontSize: '11px' }} />}
             </BarChart>
           </ResponsiveContainer>
         );
+      }
 
       case 'column':
+      case 'stacked-column':
+      case 'percent-column': {
+        const isStacked = selectedChartType === 'stacked-column' || selectedChartType === 'percent-column';
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={chartMargin}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <BarChart data={chartData} layout="horizontal" margin={chartMargin}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} />
-              <YAxis stroke="#94a3b8" fontSize={11} />
-              <Tooltip content={<CustomTooltip />} />
-              {metadata.isMultiSeries ? (
+              <YAxis stroke="#94a3b8" fontSize={11} hide={selectedChartType === 'percent-column'} domain={selectedChartType === 'percent-column' ? [0, 100] : [0, 'auto']} />
+              <Tooltip content={<CustomTooltip />} formatter={(val: any) => selectedChartType === 'percent-column' ? `${Number(val).toFixed(1)}%` : val} />
+              {metadata.isMultiSeries || isStacked ? (
                 metadata.seriesNames.map((series, idx) => (
-                  <Bar key={series} dataKey={series} fill={colors[idx]} radius={[4, 4, 0, 0]} />
+                  <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0} />
                 ))
               ) : (
                 <Bar dataKey="value" fill={colors[0]} radius={[4, 4, 0, 0]}>
@@ -408,26 +415,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   ))}
                 </Bar>
               )}
-              {metadata.isMultiSeries && <Legend wrapperStyle={{ fontSize: '11px' }} />}
+              {(metadata.isMultiSeries || isStacked) && <Legend wrapperStyle={{ fontSize: '11px' }} />}
             </BarChart>
           </ResponsiveContainer>
         );
-
-      case 'stacked-bar':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={chartMargin}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} />
-              <YAxis stroke="#94a3b8" fontSize={11} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              {metadata.seriesNames.map((series, idx) => (
-                <Bar key={series} dataKey={series} stackId="a" fill={colors[idx]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        );
+      }
 
       case 'line':
         return (
@@ -512,19 +504,21 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                innerRadius={selectedChartType === 'donut' ? 60 : 0}
-                outerRadius={100}
+                innerRadius={selectedChartType === 'donut' ? '45%' : 0}
+                outerRadius="75%"
                 paddingAngle={2}
                 dataKey="value"
                 stroke="#fff"
                 strokeWidth={2}
-                label={(entry) => `${entry.name}: ${formatChartValue(entry.value, pivotConfig)}`}
+                labelLine={true}
+                label={({ name, percent }) => `${name.length > 15 ? name.substring(0, 15) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
               >
                 {chartData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
+              <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', bottom: 0 }} />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -616,8 +610,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   };
 
   const chartTypeOptions: ChartType[] = [
-    'column', 'bar', 'line', 'area', 'pie', 'donut',
-    'stacked-bar', 'stacked-area', 'radar', 'treemap'
+    'column', 'bar', 'stacked-column', 'stacked-bar', 'percent-column', 'percent-bar',
+    'line', 'area', 'stacked-area', 'pie', 'donut', 'radar', 'treemap'
   ];
 
   return (

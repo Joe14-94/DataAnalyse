@@ -418,9 +418,18 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
                      <div className="space-y-2">
-                        {filters.map((f, idx) => (
+                        {filters.map((f, idx) => {
+                           const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f.field);
+                           return (
                            <div key={idx} className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                              <FieldChip field={f.field} zone="filter" onDelete={() => removeField('filter', f.field)} handleDragStart={handleDragStart} />
+                              <FieldChip
+                                 field={f.field}
+                                 zone="filter"
+                                 onDelete={() => removeField('filter', f.field)}
+                                 handleDragStart={handleDragStart}
+                                 isCalculated={!!calcField}
+                                 onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
+                              />
                               <div className="flex flex-col gap-1 mt-1.5">
                                  <select
                                     className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white font-medium"
@@ -463,13 +472,27 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                  />
                               </div>
                            </div>
-                        ))}
+                           );
+                        })}
                      </div>
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Table2 className="w-2 h-2" /> Colonnes</div>
                      <div className="space-y-1">
-                        {colFields.map(f => <FieldChip key={f} field={f} zone="col" onDelete={() => removeField('col', f)} handleDragStart={handleDragStart} />)}
+                        {colFields.map(f => {
+                           const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
+                           return (
+                              <FieldChip
+                                 key={f}
+                                 field={f}
+                                 zone="col"
+                                 onDelete={() => removeField('col', f)}
+                                 handleDragStart={handleDragStart}
+                                 isCalculated={!!calcField}
+                                 onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
+                              />
+                           );
+                        })}
                         {isColFieldDate && <select className="w-full text-[10px] border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
                      </div>
                   </div>
@@ -487,7 +510,20 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Layers className="w-2 h-2" /> Lignes</div>
-                     {rowFields.map(f => <FieldChip key={f} field={f} zone="row" onDelete={() => removeField('row', f)} handleDragStart={handleDragStart} />)}
+                     {rowFields.map(f => {
+                        const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
+                        return (
+                           <FieldChip
+                              key={f}
+                              field={f}
+                              zone="row"
+                              onDelete={() => removeField('row', f)}
+                              handleDragStart={handleDragStart}
+                              isCalculated={!!calcField}
+                              onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
+                           />
+                        );
+                     })}
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
@@ -499,9 +535,18 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                         )}
                      </div>
                      <div className="space-y-2">
-                        {metrics.map((m, idx) => (
+                        {metrics.map((m, idx) => {
+                           const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === m.field);
+                           return (
                            <div key={`${m.field}-${idx}`} className="p-1.5 bg-slate-50 rounded border border-slate-200">
-                              <FieldChip field={m.field} zone="val" onDelete={() => removeField('val', m.field, idx)} handleDragStart={handleDragStart} />
+                              <FieldChip
+                                 field={m.field}
+                                 zone="val"
+                                 onDelete={() => removeField('val', m.field, idx)}
+                                 handleDragStart={handleDragStart}
+                                 isCalculated={!!calcField}
+                                 onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
+                              />
                               <div className="grid grid-cols-5 gap-0.5 mt-1">
                                  {['sum', 'count', 'avg', 'min', 'max'].map(t => (
                                     <button
@@ -518,7 +563,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                  ))}
                               </div>
                            </div>
-                        ))}
+                           );
+                        })}
                         {metrics.length === 0 && valField && (
                            <div>
                               <FieldChip field={valField} zone="val" onDelete={() => setValField('')} handleDragStart={handleDragStart} />

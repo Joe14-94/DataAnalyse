@@ -200,9 +200,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const isEditing = editingColumn === `group_${field}`;
                            const widthId = `group_${field}`;
                            const width = columnWidths[widthId] || 150;
+                           const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === field);
                            return (
                               <th
                                  key={field}
+                                 title={calcField ? `Formule: ${calcField.formula}` : undefined}
                                  className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer transition-colors group relative ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
                                  style={{ width, minWidth: width }}
                                  onClick={() => {
@@ -289,8 +291,14 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     if (isSubtotal && gIdx > subtotalLevel) return null;
                                     const field = rowFields[gIdx];
                                     const width = columnWidths[`group_${field}`] || 150;
+                                    const left = rowFields.slice(0, gIdx).reduce((acc, f) => acc + (columnWidths[`group_${f}`] || 150), 0);
                                     return (
-                                       <td key={gIdx} className={`px-2 py-1 text-xs border-r border-slate-100 whitespace-nowrap overflow-hidden truncate ${isSubtotal ? 'font-bold' : ''}`} style={isSubtotal && gIdx === subtotalLevel ? {} : { width, minWidth: width }} colSpan={isSubtotal && gIdx === subtotalLevel ? numFields - subtotalLevel : 1}>
+                                       <td
+                                          key={gIdx}
+                                          className={`px-2 py-1 text-xs border-r border-slate-100 whitespace-nowrap overflow-hidden truncate sticky left-0 z-10 bg-white ${isSubtotal ? 'font-bold bg-slate-50' : ''}`}
+                                          style={isSubtotal && gIdx === subtotalLevel ? { left: `${left}px` } : { width, minWidth: width, left: `${left}px` }}
+                                          colSpan={isSubtotal && gIdx === subtotalLevel ? numFields - subtotalLevel : 1}
+                                       >
                                           {(!isSubtotal || gIdx <= subtotalLevel) ? (gIdx === subtotalLevel && isSubtotal ? `Total ${label}` : label) : ''}
                                        </td>
                                     );
@@ -328,11 +336,14 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            {rowFields.map((field, idx) => {
                               const widthId = `row_${field}`;
                               const width = columnWidths[widthId] || 150;
+                              const left = rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
+                              const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === field);
                               return (
                                  <th
                                     key={field}
+                                    title={calcField ? `Formule: ${calcField.formula}` : undefined}
                                     className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap sticky left-0 z-20 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                    style={{ width, minWidth: width }}
+                                    style={{ width, minWidth: width, left: `${left}px` }}
                                     onClick={() => {
                                        if (isEditMode) setEditingColumn(`row_${field}`);
                                        else if (idx === 0) handleHeaderClick('label');
@@ -365,17 +376,19 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               );
                            })}
                            {pivotData.colHeaders.map((col: string) => {
-                              const { colLabel, metricLabel, isDiff, isPct } = getMetricInfoFromCol(col);
+                              const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
                               let displayLabel = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(colLabel);
                               if (metricLabel && !isDiff && !isPct && colLabel === 'ALL') displayLabel = metricLabel;
                               else if (metricLabel && !isDiff && !isPct) displayLabel = `${displayLabel} - ${metricLabel}`;
 
                               const width = columnWidths[col] || 120;
+                              const calcField = metric ? primaryDataset?.calculatedFields?.find(cf => cf.name === metric.field) : null;
+                              const formulaTitle = calcField ? `\nFormule: ${calcField.formula}` : '';
 
                               return (
                                  <th
                                     key={col}
-                                    title={col.replace('\x1F', '-')}
+                                    title={col.replace('\x1F', '-') + formulaTitle}
                                     className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : isDiff || isPct ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width }}
                                     onClick={() => {
@@ -421,11 +434,16 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            {showTotalCol && (
                               <th
                                  className="px-2 py-1.5 text-right text-xs font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap cursor-pointer group"
+                                 style={{
+                                    width: columnWidths['Grand Total'] || 150,
+                                    minWidth: columnWidths['Grand Total'] || 150
+                                 }}
                                  onClick={() => handleHeaderClick('value')}
                               >
-                                 <div className="flex items-center justify-end">
+                                 <div className="flex items-center justify-end relative">
                                     Total
                                     {renderSortIcon('value')}
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, 'Grand Total', 150)} />
                                  </div>
                               </th>
                            )}
@@ -439,13 +457,44 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               <tr key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'}`}>
                                  {rowFields.map((field, cIdx) => {
                                     const width = columnWidths[`row_${field}`] || 150;
+                                    const left = rowFields.slice(0, cIdx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
                                     const headerStyle = getCellStyle(row.keys, '', undefined, '', row.type === 'subtotal');
+
                                     if (row.type === 'subtotal') {
-                                       if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50/30 overflow-hidden truncate" style={{ width, minWidth: width, ...headerStyle }}>{row.keys[cIdx]}</td>;
-                                       if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate" style={headerStyle}>{row.label}</td>;
+                                       if (cIdx < row.level) {
+                                          return (
+                                             <td
+                                                key={cIdx}
+                                                className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50/30 overflow-hidden truncate sticky left-0 z-10"
+                                                style={{ width, minWidth: width, left: `${left}px`, ...headerStyle }}
+                                             >
+                                                {row.keys[cIdx]}
+                                             </td>
+                                          );
+                                       }
+                                       if (cIdx === row.level) {
+                                          return (
+                                             <td
+                                                key={cIdx}
+                                                colSpan={rowFields.length - cIdx}
+                                                className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate sticky left-0 z-10"
+                                                style={{ left: `${left}px`, ...headerStyle }}
+                                             >
+                                                {row.label}
+                                             </td>
+                                          );
+                                       }
                                        return null;
                                     }
-                                    return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-100 whitespace-nowrap overflow-hidden truncate" style={{ width, minWidth: width, ...headerStyle }}>{row.keys[cIdx]}</td>;
+                                    return (
+                                       <td
+                                          key={cIdx}
+                                          className="px-2 py-1 text-xs text-slate-700 border-r border-slate-100 whitespace-nowrap overflow-hidden truncate sticky left-0 z-10 bg-white"
+                                          style={{ width, minWidth: width, left: `${left}px`, ...headerStyle }}
+                                       >
+                                          {row.keys[cIdx]}
+                                       </td>
+                                    );
                                  })}
                                  {pivotData.colHeaders.map((col: string) => {
                                     const width = columnWidths[col] || 120;

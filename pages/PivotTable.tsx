@@ -502,6 +502,7 @@ export const PivotTable: React.FC = () => {
                                 <span className="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] font-black border border-white/30">{specificDashboardItems.length} CELLULES</span>
                                 <Button size="sm" className="bg-indigo-500 text-white font-black hover:bg-indigo-400 py-1 shadow-sm border-none" onClick={() => setIsQuickChartModalOpen(true)} disabled={specificDashboardItems.length === 0}>Visualiser</Button>
                                 <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-blue-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Créer Rapport</Button>
+                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsSelectionMode(false); setSpecificDashboardItems([]); }}>Annuler</Button>
                                 <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => setSpecificDashboardItems([])} disabled={specificDashboardItems.length === 0}>Vider</Button>
                             </div>
                         </div>
@@ -519,7 +520,7 @@ export const PivotTable: React.FC = () => {
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
+                       {...{ pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
                     />
                 </div>
             </div>
