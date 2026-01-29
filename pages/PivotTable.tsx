@@ -340,14 +340,23 @@ export const PivotTable: React.FC = () => {
             if (a.datasetId && a.datasetId !== currentDatasetId) {
                 switchDataset(a.datasetId);
             }
-            setSources(c.sources || sources);
-            setRowFields(c.rowFields);
-            setColFields(c.colFields);
-            setValField(c.valField);
-            setAggType(c.aggType);
-            setFilters(c.filters);
+            setSources(c.sources || []);
+            setRowFields(c.rowFields || []);
+            setColFields(c.colFields || []);
+            setColGrouping(c.colGrouping || 'none');
+            setValField(c.valField || '');
+            setAggType((c.aggType as AggregationType) || 'count');
+            setMetrics(c.metrics || (c.valField ? [{ field: c.valField, aggType: c.aggType }] : []));
+            setValFormatting(c.valFormatting || {});
+            setFilters(c.filters || []);
+            setShowSubtotals(c.showSubtotals !== undefined ? c.showSubtotals : true);
+            setShowTotalCol(c.showTotalCol !== undefined ? c.showTotalCol : true);
+            setShowVariations(c.showVariations || false);
+            setSortBy(c.sortBy || 'label');
+            setSortOrder(c.sortOrder || 'asc');
+            if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
             setIsTemporalMode(!!c.isTemporalMode);
-            setTemporalConfig(c.temporalComparison);
+            setTemporalConfig(c.temporalComparison || null);
             setColumnLabels(c.columnLabels || {});
             setColumnWidths(c.columnWidths || {});
             setStyleRules(c.styleRules || []);

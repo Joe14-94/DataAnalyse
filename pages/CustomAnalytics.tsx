@@ -337,8 +337,13 @@ export const CustomAnalytics: React.FC = () => {
       const analysis = savedAnalyses.find(a => a.id === id);
       if (!analysis || !analysis.config) return;
       const c = analysis.config;
+
+      if (analysis.datasetId && analysis.datasetId !== currentDatasetId) {
+          switchDataset(analysis.datasetId);
+      }
       
       if (c.mode) setMode(c.mode);
+      if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
       if (c.dimension) setDimension(c.dimension);
       if (c.metric) setMetric(c.metric);
       if (c.valueField) setValueField(c.valueField);

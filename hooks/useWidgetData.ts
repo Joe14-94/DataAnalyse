@@ -37,8 +37,20 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             if (specific) targetBatch = specific;
          }
 
+         // Enrichissement calculé si nécessaire
+         let baseRows = targetBatch.rows;
+         if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+            baseRows = baseRows.map(r => {
+               const enriched = { ...r };
+               dataset.calculatedFields?.forEach(cf => {
+                  enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+               });
+               return enriched;
+            });
+         }
+
          // Appliquer les filtres du TCD
-         let workingRows = applyPivotFilters(targetBatch.rows, pc.filters, dataset);
+         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
 
          let pivotResult: any = null;
 
@@ -195,6 +207,18 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       }
 
       let workingRows = targetBatch.rows;
+
+      // Enrichissement calculé pour dataset principal
+      if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+         workingRows = workingRows.map(r => {
+            const enriched = { ...r };
+            dataset.calculatedFields?.forEach(cf => {
+               enriched[cf.name] = evaluateFormula(enriched, cf.formula);
+            });
+            return enriched;
+         });
+      }
+
       let secondaryDataset: Dataset | undefined = undefined;
 
       if (secondarySource && secondarySource.datasetId) {
