@@ -19,10 +19,10 @@ export const Button: React.FC<ButtonProps> = ({
   
   const variants = {
     primary: "bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500 shadow-sm",
-    secondary: "bg-white text-txt-main border border-border-default hover:bg-slate-50 focus:ring-slate-400 shadow-sm",
-    danger: "bg-danger-bg text-danger-text border border-danger-border hover:bg-red-100 focus:ring-red-500",
-    outline: "border border-brand-200 text-brand-600 bg-transparent hover:bg-brand-50 focus:ring-brand-500",
-    ghost: "bg-transparent text-txt-secondary hover:bg-slate-100 hover:text-txt-main focus:ring-slate-400"
+    secondary: "bg-surface text-txt-main border border-border-default hover:bg-canvas focus:ring-brand-500 shadow-sm",
+    danger: "bg-danger-bg text-danger-text border border-danger-border hover:opacity-90 focus:ring-red-500",
+    outline: "border border-brand-500 text-brand-600 bg-transparent hover:bg-brand-50 focus:ring-brand-500",
+    ghost: "bg-transparent text-txt-secondary hover:bg-canvas hover:text-txt-main focus:ring-brand-500"
   };
 
   const sizes = {

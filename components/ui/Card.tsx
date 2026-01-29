@@ -12,9 +12,9 @@ interface CardProps {
 
 export const Card: React.FC<CardProps> = ({ children, className = '', title, icon, action, noPadding = false }) => {
   return (
-    <div className={`bg-surface rounded-lg border border-border-default shadow-card ${className}`}>
+    <div className={`bg-surface rounded-[var(--card-radius)] border border-border-default shadow-[var(--card-shadow)] ${className}`}>
       {(title || action || icon) && (
-        <div className="px-6 py-4 border-b border-border-default flex justify-between items-center bg-slate-50/30">
+        <div className="px-6 py-4 border-b border-border-default flex justify-between items-center bg-canvas/30">
           <div className="flex items-center gap-2">
             {icon && <div className="shrink-0">{icon}</div>}
             {typeof title === 'string' ? (

@@ -19,6 +19,9 @@ export interface UIPrefs {
   fontFamily: 'sans' | 'serif' | 'mono' | 'outfit' | 'inter';
   density: 'ultra' | 'compact' | 'comfortable';
   sidebarWidth: number;
+  theme: 'light' | 'dark';
+  style: 'classic' | 'material' | 'glass';
+  colorPalette: 'blue' | 'indigo' | 'emerald' | 'rose' | 'amber';
 }
 
 export interface AppState {

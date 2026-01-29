@@ -12,7 +12,7 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral', className = '', icon }) => {
   const styles = {
-    neutral: "bg-slate-100 text-slate-600 border-slate-200",
+    neutral: "bg-canvas text-txt-secondary border-border-default",
     brand: "bg-brand-50 text-brand-700 border-brand-200",
     success: "bg-success-bg text-success-text border-success-border",
     warning: "bg-warning-bg text-warning-text border-warning-border",

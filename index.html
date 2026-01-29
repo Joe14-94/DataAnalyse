@@ -19,33 +19,49 @@
       theme: {
         extend: {
           colors: {
-            // --- DESIGN SYSTEM TOKENS ---
+            // --- DESIGN SYSTEM TOKENS (CSS VARIABLES BASED) ---
             brand: {
-              50: '#eff6ff',
-              100: '#dbeafe',
-              200: '#bfdbfe',
-              500: '#3b82f6',
-              600: '#2563eb', // Primary Action
-              700: '#1d4ed8',
-              900: '#1e3a8a',
+              50: 'var(--brand-50)',
+              100: 'var(--brand-100)',
+              200: 'var(--brand-200)',
+              500: 'var(--brand-500)',
+              600: 'var(--brand-600)',
+              700: 'var(--brand-700)',
+              900: 'var(--brand-900)',
             },
             // Semantic Colors
-            canvas: '#f8fafc', // Global Background (slate-50)
-            surface: '#ffffff', // Card Background
+            canvas: 'var(--canvas)',
+            surface: 'var(--surface)',
 
             // Text Colors
-            'txt-main': '#1e293b', // slate-800
-            'txt-secondary': '#475569', // slate-600
-            'txt-muted': '#94a3b8', // slate-400
+            'txt-main': 'var(--txt-main)',
+            'txt-secondary': 'var(--txt-secondary)',
+            'txt-muted': 'var(--txt-muted)',
 
             // Status Colors
-            success: { bg: '#dcfce7', text: '#15803d', border: '#86efac' }, // green-100/700
-            warning: { bg: '#fef9c3', text: '#a16207', border: '#fde047' }, // yellow-100/700
-            danger: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' }, // red-100/700
-            info: { bg: '#e0f2fe', text: '#0369a1', border: '#7dd3fc' }, // sky-100/700
+            success: {
+              bg: 'var(--success-bg)',
+              text: 'var(--success-text)',
+              border: 'var(--success-border)'
+            },
+            warning: {
+              bg: 'var(--warning-bg)',
+              text: 'var(--warning-text)',
+              border: 'var(--warning-border)'
+            },
+            danger: {
+              bg: 'var(--danger-bg)',
+              text: 'var(--danger-text)',
+              border: 'var(--danger-border)'
+            },
+            info: {
+              bg: 'var(--info-bg)',
+              text: 'var(--info-text)',
+              border: 'var(--info-border)'
+            },
 
             // Border
-            'border-default': '#e2e8f0', // slate-200
+            'border-default': 'var(--border-default)',
           },
           fontFamily: {
             sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -69,10 +85,67 @@
     :root {
       --app-font-size: 11px;
       --app-sidebar-width: 176px;
+
+      /* DEFAULT LIGHT THEME (BLUE) */
+      --brand-50: #eff6ff;
+      --brand-100: #dbeafe;
+      --brand-200: #bfdbfe;
+      --brand-500: #3b82f6;
+      --brand-600: #2563eb;
+      --brand-700: #1d4ed8;
+      --brand-900: #1e3a8a;
+
+      --canvas: #f8fafc;
+      --surface: #ffffff;
+
+      --txt-main: #1e293b;
+      --txt-secondary: #475569;
+      --txt-muted: #94a3b8;
+
+      --border-default: #e2e8f0;
+
+      --success-bg: #dcfce7;
+      --success-text: #15803d;
+      --success-border: #86efac;
+
+      --warning-bg: #fef9c3;
+      --warning-text: #a16207;
+      --warning-border: #fde047;
+
+      --danger-bg: #fee2e2;
+      --danger-text: #b91c1c;
+      --danger-border: #fca5a5;
+
+      --info-bg: #e0f2fe;
+      --info-text: #0369a1;
+      --info-border: #7dd3fc;
+
+      --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --card-radius: 0.5rem;
+    }
+
+    /* MATERIAL STYLE */
+    html.style-material {
+      --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+      --card-radius: 0.75rem;
+    }
+
+    /* GLASS STYLE */
+    html.style-glass .bg-surface {
+      background-color: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    html.dark.style-glass .bg-surface {
+      background-color: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     html {
       font-size: var(--app-font-size);
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     body {

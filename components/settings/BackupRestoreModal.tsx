@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { X, Check, Download, Upload, Database, Table2, Layout, Settings as SettingsIcon, Building2, Wallet, TrendingUp, Filter, Workflow, Search } from 'lucide-react';
+import { Check, Download, Upload, Database, Table2, Layout, Settings as SettingsIcon, Building2, Wallet, TrendingUp, Filter, Workflow, Search } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Checkbox } from '../ui/Checkbox';
 import { AppState } from '../../types';
+import { Modal } from '../ui/Modal';
 
 interface BackupRestoreModalProps {
   mode: 'backup' | 'restore';
@@ -48,69 +48,20 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className={`p-6 text-white flex justify-between items-center ${mode === 'backup' ? 'bg-brand-600' : 'bg-emerald-600'}`}>
-          <div className="flex items-center gap-3">
-            {mode === 'backup' ? <Download className="w-6 h-6" /> : <Upload className="w-6 h-6" />}
-            <div>
-              <h3 className="text-xl font-bold">{mode === 'backup' ? 'Sauvegarde sélective' : 'Restauration sélective'}</h3>
-              <p className="text-white/80 text-xs">Choisissez les éléments à {mode === 'backup' ? 'inclure dans l\'export' : 'importer'}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="2xl"
+      icon={mode === 'backup' ? <Download className="w-6 h-6" /> : <Upload className="w-6 h-6" />}
+      title={
+        <div>
+          <h3 className="text-xl font-bold">{mode === 'backup' ? 'Sauvegarde sélective' : 'Restauration sélective'}</h3>
+          <p className="text-txt-muted text-xs font-normal">Choisissez les éléments à {mode === 'backup' ? 'inclure dans l\'export' : 'importer'}</p>
         </div>
-
-        {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {options.map(opt => {
-              const Icon = opt.icon;
-              const isAvailable = !availableData || availableData[opt.key] !== undefined;
-              const isSelected = selectedKeys.includes(opt.key);
-
-              return (
-                <div
-                  key={opt.key}
-                  onClick={() => isAvailable && toggleKey(opt.key)}
-                  className={`relative p-4 rounded-lg border-2 transition-all cursor-pointer group ${
-                    !isAvailable ? 'opacity-40 grayscale cursor-not-allowed border-slate-100 bg-slate-50' :
-                    isSelected ? (mode === 'backup' ? 'border-brand-500 bg-brand-50' : 'border-emerald-500 bg-emerald-50') :
-                    'border-slate-200 hover:border-slate-300 bg-white'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-md ${
-                      isSelected ? (mode === 'backup' ? 'bg-brand-600 text-white' : 'bg-emerald-600 text-white') : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 pr-6">
-                      <div className="text-sm font-bold text-slate-800">{opt.label}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{opt.desc}</div>
-                    </div>
-                    {isAvailable && (
-                      <div className="absolute top-4 right-4">
-                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                           isSelected ? (mode === 'backup' ? 'bg-brand-600 border-brand-600' : 'bg-emerald-600 border-emerald-600') : 'border-slate-300'
-                         }`}>
-                           {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />}
-                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-          <Button variant="ghost" onClick={onClose} className="text-slate-500 hover:text-slate-800 font-bold uppercase tracking-wider text-xs">
+      }
+      footer={
+        <div className="flex justify-between items-center w-full">
+          <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
           <Button
@@ -124,7 +75,48 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
             )}
           </Button>
         </div>
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {options.map(opt => {
+          const Icon = opt.icon;
+          const isAvailable = !availableData || availableData[opt.key] !== undefined;
+          const isSelected = selectedKeys.includes(opt.key);
+
+          return (
+            <div
+              key={opt.key}
+              onClick={() => isAvailable && toggleKey(opt.key)}
+              className={`relative p-4 rounded-lg border-2 transition-all cursor-pointer group ${
+                !isAvailable ? 'opacity-40 grayscale cursor-not-allowed border-border-default bg-canvas' :
+                isSelected ? (mode === 'backup' ? 'border-brand-500 bg-brand-50' : 'border-emerald-500 bg-emerald-50') :
+                'border-border-default hover:border-txt-muted bg-surface'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-md ${
+                  isSelected ? (mode === 'backup' ? 'bg-brand-600 text-white' : 'bg-emerald-600 text-white') : 'bg-canvas text-txt-muted'
+                }`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1 pr-6">
+                  <div className="text-sm font-bold text-txt-main">{opt.label}</div>
+                  <div className="text-[10px] text-txt-secondary mt-0.5 leading-tight">{opt.desc}</div>
+                </div>
+                {isAvailable && (
+                  <div className="absolute top-4 right-4">
+                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                       isSelected ? (mode === 'backup' ? 'bg-brand-600 border-brand-600' : 'bg-emerald-600 border-emerald-600') : 'border-border-default'
+                     }`}>
+                       {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />}
+                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </Modal>
   );
 };
