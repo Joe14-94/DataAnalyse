@@ -6,6 +6,7 @@ import { formatPivotOutput } from '../../logic/pivotEngine';
 interface PivotFooterProps {
    pivotData: PivotResult | null;
    rowFields: string[];
+   columnWidths: Record<string, number>;
    footerRef: React.RefObject<HTMLDivElement>;
    valField: string;
    aggType: string;
@@ -19,9 +20,13 @@ interface PivotFooterProps {
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules = [], conditionalRules = []
+   pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules = [], conditionalRules = []
 }) => {
    if (!pivotData) return null;
+
+   const getColWidth = (id: string, isRowField: boolean = false) => {
+      return columnWidths[id] || (isRowField ? 150 : 120);
+   };
 
    const getMetricInfoFromCol = (col: string) => {
       if (col.includes('\x1F')) {
@@ -106,8 +111,17 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          <table className="min-w-full divide-y divide-slate-200 border-collapse w-full">
             <tbody className="font-bold">
                <tr>
-                  {rowFields.map((_, idx) => (
-                     <td key={idx} className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10" style={{ minWidth: '100px' }}>
+                  {rowFields.map((field, idx) => (
+                     <td
+                        key={idx}
+                        className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
+                        style={{
+                           left: `${rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0)}px`,
+                           width: `${getColWidth(`row_${field}`, true)}px`,
+                           minWidth: `${getColWidth(`row_${field}`, true)}px`,
+                           maxWidth: `${getColWidth(`row_${field}`, true)}px`
+                        }}
+                     >
                         {idx === rowFields.length - 1 ? 'Total' : ''}
                      </td>
                   ))}
@@ -119,10 +133,30 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
 
                      let formatted = formatOutput(val, metric);
                      if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
-                     return <td key={col} className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200" style={customStyle}>{formatted}</td>;
+                     return (
+                        <td
+                           key={col}
+                           className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
+                           style={{
+                              ...customStyle,
+                              width: `${getColWidth(col)}px`,
+                              minWidth: `${getColWidth(col)}px`,
+                              maxWidth: `${getColWidth(col)}px`
+                           }}
+                        >
+                           {formatted}
+                        </td>
+                     );
                   })}
                   {showTotalCol && (
-                     <td className="px-2 py-2 text-right bg-slate-200 border-l border-slate-300">
+                     <td
+                        className="px-2 py-2 text-right bg-slate-200 border-l border-slate-300 truncate"
+                        style={{
+                           width: `${getColWidth('Grand Total', true)}px`,
+                           minWidth: `${getColWidth('Grand Total', true)}px`,
+                           maxWidth: `${getColWidth('Grand Total', true)}px`
+                        }}
+                     >
                         {typeof pivotData.grandTotal === 'object' ? (
                            <div className="flex flex-col gap-0.5">
                               {Object.entries(pivotData.grandTotal).map(([label, v], idx) => (
