@@ -5,10 +5,12 @@ import { useData } from '../context/DataContext';
 import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { CalculatedField, PivotStyleRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem } from '../types';
+import { CalculatedField, PivotStyleRule, ConditionalFormattingRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem } from '../types';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
+import { FormattingModal } from '../components/pivot/FormattingModal';
+import { QuickChartModal } from '../components/pivot/QuickChartModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
@@ -62,12 +64,16 @@ export const PivotTable: React.FC = () => {
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
     const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
     const [isSpecificDashboardModalOpen, setIsSpecificDashboardModalOpen] = useState(false);
+    const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
+    const [isQuickChartModalOpen, setIsQuickChartModalOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
     const [editingColumn, setEditingColumn] = useState<string | null>(null);
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+    const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
+    const [conditionalRules, setConditionalRules] = useState<ConditionalFormattingRule[]>([]);
 
     // PANEL COLLAPSE STATE
     const [isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed] = useState(false);
@@ -121,6 +127,8 @@ export const PivotTable: React.FC = () => {
             setTemporalConfig(c.temporalComparison || null);
             if (c.columnLabels) setColumnLabels(c.columnLabels);
             if (c.columnWidths) setColumnWidths(c.columnWidths);
+            setStyleRules(c.styleRules || []);
+            setConditionalRules(c.conditionalRules || []);
         } else {
             // Si aucun TCD n'a été créé ou travaillé, on laisse les sources vides
             setSources([]);
@@ -146,10 +154,12 @@ export const PivotTable: React.FC = () => {
                 selectedBatchId, isTemporalMode,
                 temporalComparison: currentTemporalComparison,
                 columnWidths,
-                columnLabels
+                columnLabels,
+                styleRules,
+                conditionalRules
             } as any
         });
-    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig, columnWidths, columnLabels]);
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig, columnWidths, columnLabels, styleRules, conditionalRules]);
 
     useEffect(() => {
         if (isLoading || !isInitialized) return;
@@ -340,6 +350,8 @@ export const PivotTable: React.FC = () => {
             setTemporalConfig(c.temporalComparison);
             setColumnLabels(c.columnLabels || {});
             setColumnWidths(c.columnWidths || {});
+            setStyleRules(c.styleRules || []);
+            setConditionalRules(c.conditionalRules || []);
         }
         setShowLoadMenu(false);
     };
@@ -466,7 +478,8 @@ export const PivotTable: React.FC = () => {
                    handleDragStart, handleDragOver: (e) => e.preventDefault(), handleDrop, removeField, draggedField,
                    openCalcModal: () => { setEditingCalcField(null); setIsCalcModalOpen(true); },
                    removeCalculatedField: handleRemoveCalculatedField,
-                   openEditCalcModal: (field: any) => { setEditingCalcField(field); setIsCalcModalOpen(true); } }}
+                   openEditCalcModal: (field: any) => { setEditingCalcField(field); setIsCalcModalOpen(true); },
+                   openFormattingModal: () => setIsFormattingModalOpen(true) }}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm relative">
@@ -478,23 +491,26 @@ export const PivotTable: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] font-black border border-white/30">{specificDashboardItems.length} CELLULES</span>
-                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-blue-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Terminer</Button>
+                                <Button size="sm" className="bg-indigo-500 text-white font-black hover:bg-indigo-400 py-1 shadow-sm border-none" onClick={() => setIsQuickChartModalOpen(true)} disabled={specificDashboardItems.length === 0}>Visualiser</Button>
+                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-blue-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Créer Rapport</Button>
+                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => setSpecificDashboardItems([])} disabled={specificDashboardItems.length === 0}>Vider</Button>
                             </div>
                         </div>
                     )}
                     <PivotGrid
-                       {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
+                       {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, colFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
                        isSelectionMode, selectedItems: specificDashboardItems, isEditMode,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,
+                       styleRules, conditionalRules,
                        onRemoveField: removeField,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol }}
+                       {...{ pivotData, rowFields, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
                     />
                 </div>
             </div>
@@ -528,6 +544,18 @@ export const PivotTable: React.FC = () => {
                 sampleRow={blendedRows.length > 0 ? blendedRows[0] : null}
             />
 
+            <FormattingModal
+                isOpen={isFormattingModalOpen}
+                onClose={() => setIsFormattingModalOpen(false)}
+                styleRules={styleRules}
+                setStyleRules={setStyleRules}
+                conditionalRules={conditionalRules}
+                setConditionalRules={setConditionalRules}
+                metrics={metrics}
+                rowFields={rowFields}
+                colFields={colFields}
+            />
+
             <SpecificDashboardModal
                 isOpen={isSpecificDashboardModalOpen}
                 onClose={() => setIsSpecificDashboardModalOpen(false)}
@@ -535,6 +563,12 @@ export const PivotTable: React.FC = () => {
                 setItems={setSpecificDashboardItems}
                 onStartSelection={() => { setIsSpecificDashboardModalOpen(false); setIsSelectionMode(true); }}
                 onSave={handleSaveSpecificDashboard}
+            />
+
+            <QuickChartModal
+                isOpen={isQuickChartModalOpen}
+                onClose={() => setIsQuickChartModalOpen(false)}
+                items={specificDashboardItems}
             />
         </div>
     );

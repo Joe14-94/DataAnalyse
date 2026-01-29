@@ -42,6 +42,8 @@ export interface PivotConfig {
   joins?: PivotJoin[];
   datasets?: Dataset[];
   valFormatting?: Partial<FieldConfig>;
+  styleRules?: PivotStyleRule[];
+  conditionalRules?: ConditionalFormattingRule[];
 }
 
 export interface PivotResult {
@@ -71,14 +73,26 @@ export interface PivotSourceConfig {
 
 export interface PivotStyleRule {
   id: string;
-  targetType: 'row' | 'col' | 'cell' | 'total';
-  targetKey?: string;
+  targetType: 'row' | 'col' | 'metric' | 'cell';
+  targetKey?: string; // row name, col name or metric label
   style: {
     textColor?: string;
     backgroundColor?: string;
     fontWeight?: 'normal' | 'bold';
     fontStyle?: 'normal' | 'italic';
-    textDecoration?: 'none' | 'underline';
+  };
+}
+
+export interface ConditionalFormattingRule {
+  id: string;
+  metricLabel?: string; // If undefined, applies to all metrics
+  operator: 'gt' | 'lt' | 'eq' | 'between' | 'contains';
+  value: number | string;
+  value2?: number; // For between
+  style: {
+    textColor?: string;
+    backgroundColor?: string;
+    fontWeight?: 'normal' | 'bold';
   };
 }
 
@@ -129,6 +143,8 @@ export interface PivotState {
     sources?: PivotSourceConfig[];
     temporalComparison?: TemporalComparisonConfig;
     columnLabels?: Record<string, string>;
+    styleRules?: PivotStyleRule[];
+    conditionalRules?: ConditionalFormattingRule[];
     [key: string]: any;
   };
 }

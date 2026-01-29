@@ -329,7 +329,7 @@ export const Settings: React.FC = () => {
 
    return (
       <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
-         <div className="pb-10 space-y-6">
+         <div className="w-full pb-10 space-y-6">
             <h2 className="text-2xl font-bold text-slate-800">Paramètres et maintenance</h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Loader2, Table2, ArrowUp, ArrowDown, X } from 'lucide-react';
-import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult, SortBy, SortOrder } from '../../types';
+import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult, SortBy, SortOrder, PivotStyleRule, ConditionalFormattingRule } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
 import { formatDateLabelForDisplay } from '../../utils';
@@ -42,6 +42,8 @@ interface PivotGridProps {
    setSortOrder: (v: SortOrder) => void;
    columnWidths: Record<string, number>;
    setColumnWidths: (v: any) => void;
+   styleRules: PivotStyleRule[];
+   conditionalRules: ConditionalFormattingRule[];
    onRemoveField?: (zone: any, field: string) => void;
 }
 
@@ -53,7 +55,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       valFormatting, virtualItems, rowVirtualizer, parentRef, totalColumns, paddingTop, paddingBottom,
       isSelectionMode = false, isEditMode = false, selectedItems = [],
       sortBy, setSortBy, sortOrder, setSortOrder,
-      columnWidths, setColumnWidths, onRemoveField
+      columnWidths, setColumnWidths, styleRules = [], conditionalRules = [], onRemoveField
    } = props;
 
    const getMetricInfoFromCol = (col: string) => {
@@ -109,6 +111,54 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
    const renderSortIcon = (target: string) => {
       if (sortBy !== target) return null;
       return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />;
+   };
+
+   const getCellStyle = (rowKeys: string[], col: string, value: any, metricLabel: string, isSubtotal: boolean = false) => {
+      let finalStyle: React.CSSProperties = {};
+
+      // 1. Manual rules
+      styleRules.forEach(rule => {
+         let match = false;
+         if (rule.targetType === 'metric') {
+            if (!rule.targetKey || rule.targetKey === metricLabel) match = true;
+         } else if (rule.targetType === 'row') {
+            if (rowKeys.includes(rule.targetKey!)) match = true;
+         } else if (rule.targetType === 'col') {
+            if (col.includes(rule.targetKey!)) match = true;
+         }
+
+         if (match) {
+            if (rule.style.backgroundColor) finalStyle.backgroundColor = rule.style.backgroundColor;
+            if (rule.style.textColor) finalStyle.color = rule.style.textColor;
+            if (rule.style.fontWeight) finalStyle.fontWeight = rule.style.fontWeight;
+            if (rule.style.fontStyle) finalStyle.fontStyle = rule.style.fontStyle;
+         }
+      });
+
+      // 2. Conditional rules (usually only for data cells, but why not subtotals too?)
+      conditionalRules.forEach(rule => {
+         if (rule.metricLabel && rule.metricLabel !== metricLabel) return;
+
+         let match = false;
+         const numVal = typeof value === 'number' ? value : parseFloat(String(value));
+         const ruleVal = typeof rule.value === 'number' ? rule.value : parseFloat(String(rule.value));
+
+         switch (rule.operator) {
+            case 'gt': match = numVal > ruleVal; break;
+            case 'lt': match = numVal < ruleVal; break;
+            case 'eq': match = numVal === ruleVal; break;
+            case 'between': match = numVal >= ruleVal && numVal <= (rule.value2 || 0); break;
+            case 'contains': match = String(value).includes(String(rule.value)); break;
+         }
+
+         if (match) {
+            if (rule.style.backgroundColor) finalStyle.backgroundColor = rule.style.backgroundColor;
+            if (rule.style.textColor) finalStyle.color = rule.style.textColor;
+            if (rule.style.fontWeight) finalStyle.fontWeight = rule.style.fontWeight;
+         }
+      });
+
+      return finalStyle;
    };
 
    const onResizeStart = (e: React.MouseEvent, id: string, defaultWidth: number) => {
@@ -389,17 +439,20 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               <tr key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'}`}>
                                  {rowFields.map((field, cIdx) => {
                                     const width = columnWidths[`row_${field}`] || 150;
+                                    const headerStyle = getCellStyle(row.keys, '', undefined, '', row.type === 'subtotal');
                                     if (row.type === 'subtotal') {
-                                       if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50/30 overflow-hidden truncate" style={{ width, minWidth: width }}>{row.keys[cIdx]}</td>;
-                                       if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate">{row.label}</td>;
+                                       if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50/30 overflow-hidden truncate" style={{ width, minWidth: width, ...headerStyle }}>{row.keys[cIdx]}</td>;
+                                       if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate" style={headerStyle}>{row.label}</td>;
                                        return null;
                                     }
-                                    return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-100 whitespace-nowrap overflow-hidden truncate" style={{ width, minWidth: width }}>{row.keys[cIdx]}</td>;
+                                    return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-100 whitespace-nowrap overflow-hidden truncate" style={{ width, minWidth: width, ...headerStyle }}>{row.keys[cIdx]}</td>;
                                  })}
                                  {pivotData.colHeaders.map((col: string) => {
                                     const width = columnWidths[col] || 120;
                                     const val = row.metrics[col];
                                     const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
+
+                                    const customStyle = getCellStyle(row.keys, col, val, metricLabel, row.type === 'subtotal');
 
                                     let formatted = formatOutput(val, metric);
                                     let cellClass = "text-slate-600";
@@ -416,7 +469,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        <td
                                           key={col}
                                           className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-blue-100 ring-1 ring-blue-400' : 'hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'hover:bg-blue-100'}`}
-                                          style={{ width, minWidth: width }}
+                                       style={{ width, minWidth: width, ...customStyle }}
                                           onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
                                        >
                                           {formatted}
