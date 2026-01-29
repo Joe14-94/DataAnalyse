@@ -70,9 +70,17 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
          const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
          return { colLabel, metricLabel, metric, isDiff, isPct };
       }
-      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === col);
-      if (directMetric) return { colLabel: 'ALL', metricLabel: col, metric: directMetric, isDiff: false, isPct: false };
-      return { colLabel: col, metricLabel: '', metric: metrics[0], isDiff: false, isPct: false };
+
+      const isDiff = col.endsWith('_DIFF');
+      const isPct = col.endsWith('_PCT');
+      let baseCol = col;
+      if (isDiff) baseCol = col.replace('_DIFF', '');
+      if (isPct) baseCol = col.replace('_PCT', '');
+
+      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+      if (directMetric) return { colLabel: 'ALL', metricLabel: baseCol, metric: directMetric, isDiff, isPct };
+
+      return { colLabel: baseCol, metricLabel: '', metric: metrics[0], isDiff, isPct };
    };
 
    const formatOutput = (val: string | number, metric?: any) => {
