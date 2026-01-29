@@ -21,7 +21,6 @@ import { usePivotData } from '../hooks/usePivotData';
 import { PivotHeader } from '../components/pivot/PivotHeader';
 import { PivotSidePanel } from '../components/pivot/PivotSidePanel';
 import { PivotGrid } from '../components/pivot/PivotGrid';
-import { PivotFooter } from '../components/pivot/PivotFooter';
 import { Button } from '../components/ui/Button';
 import { SOURCE_COLORS } from '../utils/constants';
 
@@ -94,7 +93,6 @@ export const PivotTable: React.FC = () => {
 
     // VIRTUALIZATION
     const parentRef = useRef<HTMLDivElement>(null);
-    const footerRef = useRef<HTMLDivElement>(null);
 
     // --- HOOKS ---
     const {
@@ -193,16 +191,6 @@ export const PivotTable: React.FC = () => {
             return { id: src.id, name: ds.name, isPrimary: src.isPrimary, fields, color: src.color };
         }).filter(Boolean);
     }, [sources, datasets]);
-
-    // Sync scroll
-    useEffect(() => {
-        const parent = parentRef.current;
-        const footer = footerRef.current;
-        if (!parent || !footer) return;
-        const handleScroll = () => { footer.scrollLeft = parent.scrollLeft; };
-        parent.addEventListener('scroll', handleScroll);
-        return () => parent.removeEventListener('scroll', handleScroll);
-    }, [pivotData]);
 
     const rowVirtualizer = useVirtualizer({
         count: pivotData ? pivotData.displayRows.length : 0,
@@ -518,9 +506,6 @@ export const PivotTable: React.FC = () => {
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
-                    />
-                    <PivotFooter
-                       {...{ pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
                     />
                 </div>
             </div>
