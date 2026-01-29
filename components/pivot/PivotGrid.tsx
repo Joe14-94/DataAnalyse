@@ -34,6 +34,7 @@ interface PivotGridProps {
    paddingTop: number;
    paddingBottom: number;
    isSelectionMode?: boolean;
+   isEditMode?: boolean;
    selectedItems?: any[];
    sortBy: SortBy;
    setSortBy: (v: SortBy) => void;
@@ -50,7 +51,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics,
       valFormatting, virtualItems, rowVirtualizer, parentRef, totalColumns, paddingTop, paddingBottom,
-      isSelectionMode = false, selectedItems = [],
+      isSelectionMode = false, isEditMode = false, selectedItems = [],
       sortBy, setSortBy, sortOrder, setSortOrder,
       columnWidths, setColumnWidths, onRemoveField
    } = props;
@@ -142,18 +143,27 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const widthId = `group_${field}`;
                            const width = columnWidths[widthId] || 150;
                            return (
-                              <th key={field} className="px-2 py-1.5 text-left text-xs font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap cursor-pointer hover:bg-slate-100 group relative" style={{ width, minWidth: width }} onClick={() => idx === 0 && handleHeaderClick('label')} onDoubleClick={() => setEditingColumn(`group_${field}`)}>
+                              <th
+                                 key={field}
+                                 className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer transition-colors group relative ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                                 style={{ width, minWidth: width }}
+                                 onClick={() => {
+                                    if (isEditMode) setEditingColumn(`group_${field}`);
+                                    else if (idx === 0) handleHeaderClick('label');
+                                 }}
+                              >
                                  <div className="flex items-center overflow-hidden gap-1">
                                     <span className="truncate flex-1">
                                        {isEditing ? (
                                           <input
                                              type="text"
-                                             defaultValue={displayLabel}
+                                             value={columnLabels[`group_${field}`] || field}
                                              autoFocus
                                              className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                              onClick={(e) => e.stopPropagation()}
-                                             onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value })); setEditingColumn(null); }}
-                                             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                             onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value }))}
+                                             onBlur={() => setEditingColumn(null)}
+                                             onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                           />
                                        ) : displayLabel}
                                     </span>
@@ -172,18 +182,26 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const width = columnWidths[source.id] || 120;
                            return (
                               <React.Fragment key={source.id}>
-                                 <th className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-500'}`} style={{ width, minWidth: width }} onClick={() => handleHeaderClick(source.id)} onDoubleClick={() => setEditingColumn(source.id)}>
+                                 <th
+                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                                    style={{ width, minWidth: width }}
+                                    onClick={() => {
+                                       if (isEditMode) setEditingColumn(source.id);
+                                       else handleHeaderClick(source.id);
+                                    }}
+                                 >
                                     <div className="flex items-center justify-end overflow-hidden gap-1">
                                        <span className="truncate flex-1">
                                           {editingColumn === source.id ? (
                                              <input
                                                 type="text"
-                                                defaultValue={columnLabels[source.id] || source.label}
+                                                value={columnLabels[source.id] || source.label}
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value })); setEditingColumn(null); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value }))}
+                                                onBlur={() => setEditingColumn(null)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
                                           ) : (columnLabels[source.id] || source.label)}
                                        </span>
@@ -255,22 +273,25 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               return (
                                  <th
                                     key={field}
-                                    className="px-2 py-1.5 text-left text-xs font-bold text-slate-500 uppercase border-b border-r border-slate-200 bg-slate-50 whitespace-nowrap sticky left-0 z-20 cursor-pointer group relative"
+                                    className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap sticky left-0 z-20 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width }}
-                                    onClick={() => idx === 0 && handleHeaderClick('label')}
-                                    onDoubleClick={() => setEditingColumn(`row_${field}`)}
+                                    onClick={() => {
+                                       if (isEditMode) setEditingColumn(`row_${field}`);
+                                       else if (idx === 0) handleHeaderClick('label');
+                                    }}
                                  >
                                     <div className="flex items-center overflow-hidden gap-1">
                                        <span className="truncate flex-1">
                                           {editingColumn === `row_${field}` ? (
                                              <input
                                                 type="text"
-                                                defaultValue={columnLabels[`row_${field}`] || field}
+                                                value={columnLabels[`row_${field}`] || field}
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value })); setEditingColumn(null); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value }))}
+                                                onBlur={() => setEditingColumn(null)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
                                           ) : (columnLabels[`row_${field}`] || field)}
                                        </span>
@@ -297,22 +318,25 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  <th
                                     key={col}
                                     title={col.replace('\x1F', '-')}
-                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-slate-100 group relative ${isDiff || isPct ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
+                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : isDiff || isPct ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width }}
-                                    onClick={() => handleHeaderClick(col)}
-                                    onDoubleClick={() => setEditingColumn(col)}
+                                    onClick={() => {
+                                       if (isEditMode) setEditingColumn(col);
+                                       else handleHeaderClick(col);
+                                    }}
                                  >
                                     <div className="flex items-center justify-end overflow-hidden gap-1">
                                        <span className="truncate flex-1">
                                           {editingColumn === col ? (
                                              <input
                                                 type="text"
-                                                defaultValue={columnLabels[col] || displayLabel}
+                                                value={columnLabels[col] || displayLabel}
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onBlur={(e) => { setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value })); setEditingColumn(null); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value }))}
+                                                onBlur={() => setEditingColumn(null)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
                                           ) : (columnLabels[col] || displayLabel)}
                                        </span>

@@ -98,7 +98,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white rounded-xl shadow-2xl w-[80vw] h-[80vh] overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
@@ -112,10 +112,10 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-white rounded-full transition-colors"><X className="w-5 h-5" /></button>
                 </div>
 
-                <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        {/* Left Column: Basic Info & Formula (span 5) */}
-                        <div className="lg:col-span-5 space-y-4">
+                <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                        {/* Left Column: Basic Info & Formula (span 4) */}
+                        <div className="lg:col-span-4 space-y-4">
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
                                 <input
@@ -174,17 +174,18 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             </div>
                         </div>
 
-                        {/* Middle Column: Fields (span 3) */}
-                        <div className="lg:col-span-3 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
+                        {/* Middle Column: Fields (span 5) */}
+                        <div className="lg:col-span-5 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
                             <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
                                 <Database className="w-3.5 h-3.5 text-indigo-600" />
                                 <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Champs</span>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
+                            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar min-h-[300px]">
                                 <div className="grid grid-cols-1 gap-1.5">
                                     {fields.map(f => (
                                         <button
                                             key={f}
+                                            title={f}
                                             onClick={() => insertIntoFormula(`[${f}]`)}
                                             className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
                                         >
@@ -196,8 +197,8 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             </div>
                         </div>
 
-                        {/* Right Column: Functions (span 4) */}
-                        <div className="lg:col-span-4 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
+                        {/* Right Column: Functions (span 3) */}
+                        <div className="lg:col-span-3 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
                             <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
                                 <FunctionSquare className="w-3.5 h-3.5 text-indigo-600" />
                                 <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Fonctions</span>

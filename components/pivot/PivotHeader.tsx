@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3 } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -8,6 +8,7 @@ interface PivotHeaderProps {
    setIsTemporalMode: (v: boolean) => void;
    handleToChart: () => void;
    primaryDataset: Dataset | null;
+   datasets: Dataset[];
    showExportMenu: boolean;
    setShowExportMenu: (v: boolean) => void;
    handleExport: (format: 'pdf' | 'html', mode?: 'A4' | 'adaptive') => void;
@@ -18,6 +19,8 @@ interface PivotHeaderProps {
    handleLoadAnalysis: (id: string) => void;
    isSaving: boolean;
    setIsSaving: (v: boolean) => void;
+   isEditMode: boolean;
+   setIsEditMode: (v: boolean) => void;
    analysisName: string;
    setAnalysisName: (v: string) => void;
    handleSaveAnalysis: () => void;
@@ -29,9 +32,10 @@ interface PivotHeaderProps {
 }
 
 export const PivotHeader: React.FC<PivotHeaderProps> = ({
-   isTemporalMode, setIsTemporalMode, handleToChart, primaryDataset, showExportMenu, setShowExportMenu,
+   isTemporalMode, setIsTemporalMode, handleToChart, primaryDataset, datasets, showExportMenu, setShowExportMenu,
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
+   isEditMode, setIsEditMode,
    openCalcModal, openSpecificDashboardModal, selectedItemsCount = 0,
    searchTerm, setSearchTerm
 }) => {
@@ -73,6 +77,15 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
          </div>
 
          <div className="flex items-center gap-2">
+            <button
+               onClick={() => setIsEditMode(!isEditMode)}
+               disabled={!primaryDataset}
+               className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold border transition-all disabled:opacity-50 ${isEditMode ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-inner' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+               title={isEditMode ? "Quitter le mode édition" : "Activer le mode édition pour renommer les colonnes"}
+            >
+               <Edit3 className={`w-3 h-3 ${isEditMode ? 'animate-pulse' : ''}`} /> {isEditMode ? 'Édition : ON' : 'Mode Édition'}
+            </button>
+
             <button onClick={openCalcModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50">
                <Calculator className="w-3 h-3" /> Colonne calculée
             </button>
@@ -112,15 +125,25 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                      {savedAnalyses.filter(a => a.type === 'pivot').length === 0 ? (
                         <div className="px-3 py-2 text-xs text-slate-500 italic">Aucune analyse sauvegardée</div>
                      ) : (
-                        savedAnalyses.filter(a => a.type === 'pivot').map(a => (
-                           <button key={a.id} onClick={() => handleLoadAnalysis(a.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between gap-2 border-b border-slate-50 last:border-0">
-                              <div className="flex flex-col min-w-0">
-                                 <span className="truncate font-medium text-slate-700">{a.name}</span>
-                                 <span className="text-[9px] text-slate-400">{primaryDataset?.id === a.datasetId ? 'Ce dataset' : 'Autre dataset'}</span>
-                              </div>
-                              <span className="text-[9px] text-slate-400 shrink-0">{new Date(a.createdAt).toLocaleDateString()}</span>
-                           </button>
-                        ))
+                        savedAnalyses.filter(a => a.type === 'pivot').map(a => {
+                           const ds = datasets.find(d => d.id === a.datasetId);
+                           const dateObj = new Date(a.createdAt);
+                           const dateStr = dateObj.toLocaleDateString();
+                           const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                           return (
+                              <button key={a.id} onClick={() => handleLoadAnalysis(a.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between gap-2 border-b border-slate-100 last:border-0">
+                                 <div className="flex flex-col min-w-0">
+                                    <span className="truncate font-bold text-slate-700">{a.name}</span>
+                                    <span className="text-[10px] text-blue-600 font-medium truncate">Dataset: {ds?.name || 'Inconnu'}</span>
+                                 </div>
+                                 <div className="flex flex-col items-end shrink-0">
+                                    <span className="text-[9px] text-slate-500 font-medium">{dateStr}</span>
+                                    <span className="text-[9px] text-slate-400">{timeStr}</span>
+                                 </div>
+                              </button>
+                           );
+                        })
                      )}
                   </div>
                )}
