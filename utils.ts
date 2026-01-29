@@ -519,7 +519,7 @@ export const formatDateLabelForDisplay = (label: string): string => {
  */
 export const detectUnit = (values: string[]): string => {
   if (values.length === 0) return '';
-  const sample = values.slice(0, 10).filter(v => v && v.trim());
+  const sample = values.filter(v => v && v.trim());
   if (sample.length === 0) return '';
 
   const getSuffix = (s: string) => {
@@ -551,7 +551,7 @@ export const detectUnit = (values: string[]): string => {
  * Amélioration : échantillonnage sur 100 lignes et meilleure détection des booléens
  */
 export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean' | 'date' => {
-  const sample = values.slice(0, 100).filter(v => v && v.trim() !== '');
+  const sample = values.filter(v => v && v.trim() !== '');
   if (sample.length === 0) return 'text';
 
   let numberCount = 0;
