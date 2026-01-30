@@ -185,7 +185,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       <div id="pivot-export-container" className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-w-0 overflow-hidden relative">
          {isCalculating && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
-               <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+               <Loader2 className="w-10 h-10 text-brand-600 animate-spin" />
                <span className="text-sm font-bold text-slate-600">Calcul en cours...</span>
             </div>
          )}
@@ -219,7 +219,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                              type="text"
                                              value={columnLabels[`group_${field}`] || field}
                                              autoFocus
-                                             className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                             className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
                                              onClick={(e) => e.stopPropagation()}
                                              onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value }))}
                                              onBlur={() => setEditingColumn(null)}
@@ -234,7 +234,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     )}
                                     {idx === 0 && renderSortIcon('label')}
                                  </div>
-                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
+                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
                               </th>
                            );
                         })}
@@ -243,7 +243,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            return (
                               <React.Fragment key={source.id}>
                                  <th
-                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : source.id === temporalConfig.referenceSourceId ? 'bg-brand-100 text-brand-700 hover:bg-brand-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width }}
                                     onClick={() => {
                                        if (isEditMode) setEditingColumn(source.id);
@@ -257,7 +257,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 type="text"
                                                 value={columnLabels[source.id] || source.label}
                                                 autoFocus
-                                                className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                                className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
@@ -267,7 +267,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        </span>
                                        {renderSortIcon(source.id)}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, source.id, 120)} />
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, source.id, 120)} />
                                  </th>
                                  {showVariations && source.id !== temporalConfig.referenceSourceId && (
                                     <th className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700">Δ</th>
@@ -282,7 +282,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                         const isSubtotal = result.isSubtotal || false;
                         const subtotalLevel = result.subtotalLevel || 0;
                         return (
-                           <tr key={result.groupKey} className={isSubtotal ? `bg-slate-50 font-bold border-t border-slate-200` : 'hover:bg-blue-50/30'}>
+                           <tr key={result.groupKey} className={isSubtotal ? `bg-slate-50 font-bold border-t border-slate-200` : 'hover:bg-brand-50/30'}>
                               {(() => {
                                  const labels = result.groupLabel.split('\x1F');
                                  const numFields = rowFields.length;
@@ -310,7 +310,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const width = columnWidths[source.id] || 120;
                                  return (
                                     <React.Fragment key={source.id}>
-                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`} style={{ width, minWidth: width }} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
+                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-brand-100 overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-brand-50/30' : ''}`} style={{ width, minWidth: width }} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
                                           {formatCurrency(value)}
                                        </td>
                                        {showVariations && source.id !== temporalConfig.referenceSourceId && (
@@ -356,7 +356,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 type="text"
                                                 value={columnLabels[`row_${field}`] || field}
                                                 autoFocus
-                                                className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                                className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
@@ -371,7 +371,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        )}
                                        {idx === 0 && renderSortIcon('label')}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
                                  </th>
                               );
                            })}
@@ -389,7 +389,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  <th
                                     key={col}
                                     title={col.replace('\x1F', '-') + formulaTitle}
-                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : isDiff || isPct ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
+                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : isDiff || isPct ? 'bg-brand-50 text-brand-700 hover:bg-brand-100' : 'text-slate-500 hover:bg-slate-100'}`}
                                     style={{ width, minWidth: width }}
                                     onClick={() => {
                                        if (isEditMode) setEditingColumn(col);
@@ -403,7 +403,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 type="text"
                                                 value={columnLabels[col] || displayLabel}
                                                 autoFocus
-                                                className="w-full px-1 py-0.5 text-[10px] border border-blue-300 rounded text-slate-900"
+                                                className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
@@ -427,7 +427,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        )}
                                        {renderSortIcon(col)}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, col, 120)} />
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, col, 120)} />
                                  </th>
                               );
                            })}
@@ -443,7 +443,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  <div className="flex items-center justify-end relative">
                                     Total
                                     {renderSortIcon('value')}
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, 'Grand Total', 150)} />
+                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, 'Grand Total', 150)} />
                                  </div>
                               </th>
                            )}
@@ -454,7 +454,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                         {virtualItems.map((virtualRow: any) => {
                            const row = pivotData.displayRows[virtualRow.index];
                            return (
-                              <tr key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-blue-50/30'}`}>
+                              <tr key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
                                  {rowFields.map((field, cIdx) => {
                                     const width = columnWidths[`row_${field}`] || 150;
                                     const left = rowFields.slice(0, cIdx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
@@ -517,7 +517,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     return (
                                        <td
                                           key={col}
-                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-blue-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-blue-100 ring-1 ring-blue-400' : 'hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'hover:bg-blue-100'}`}
+                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
                                        style={{ width, minWidth: width, ...customStyle }}
                                           onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
                                        >
@@ -527,7 +527,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  })}
                                  {showTotalCol && (
                                     <td
-                                       className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`}
+                                       className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-brand-100 ring-1 ring-brand-400' : 'bg-slate-50 hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'bg-slate-50 hover:bg-brand-100'}`}
                                        onClick={() => {
                                           const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal;
                                           handleDrilldown(row.keys, 'Total', value, '');

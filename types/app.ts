@@ -21,7 +21,7 @@ export interface UIPrefs {
   sidebarWidth: number;
   theme: 'light' | 'dark';
   style: 'classic' | 'material' | 'glass';
-  colorPalette: 'blue' | 'indigo' | 'emerald' | 'rose' | 'amber';
+  colorPalette: 'blue' | 'indigo' | 'emerald' | 'rose' | 'amber' | 'slate' | 'teal' | 'violet' | 'orange';
 }
 
 export interface AppState {

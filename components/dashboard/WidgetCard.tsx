@@ -36,7 +36,7 @@ export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
    const colSpan = widget.size === 'full' ? 'md:col-span-2 lg:col-span-4' : widget.size === 'lg' ? 'md:col-span-2 lg:col-span-3' : widget.size === 'md' ? 'md:col-span-2' : 'col-span-1';
    const heightClass = widget.height === 'sm' ? 'h-32' : widget.height === 'lg' ? 'h-96' : widget.height === 'xl' ? 'h-[500px]' : 'h-64';
    const isText = widget.type === 'text';
-   const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white';
+   const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-brand-50 border-brand-200' : 'bg-white';
    const borderClass = widget.style?.borderColor || 'border-slate-200';
    const widthClass = widget.style?.borderWidth === '0' ? 'border-0' : widget.style?.borderWidth === '2' ? 'border-2' : widget.style?.borderWidth === '4' ? 'border-4' : 'border';
 
@@ -48,7 +48,7 @@ export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
          onDragOver={handleDragOver}
          onDrop={(e) => handleDrop(e, index)}
       >
-         <div id={`widget-container-${widget.id}`} className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-blue-100 border-blue-300 cursor-move' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
+         <div id={`widget-container-${widget.id}`} className={`${bgColor} rounded-lg ${widthClass} ${borderClass} ${isEditMode ? 'ring-2 ring-brand-100 border-brand-300 cursor-move' : ''} shadow-sm p-4 flex flex-col ${heightClass} relative group transition-all`}>
 
             {!isEditMode && (
                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -86,8 +86,8 @@ export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
                      <button onClick={() => updateDashboardWidget(widget.id, { size: widget.size === 'full' ? 'sm' : widget.size === 'lg' ? 'full' : widget.size === 'md' ? 'lg' : 'md' })} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="Changer largeur"><Move className="w-3 h-3" /></button>
                   </div>
                   <div className="w-px bg-slate-200 mx-0.5"></div>
-                  <button onClick={() => duplicateDashboardWidget(widget.id)} className="p-1 hover:bg-blue-50 rounded text-blue-600"><Copy className="w-3 h-3" /></button>
-                  <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-blue-50 rounded text-blue-600"><Settings className="w-3 h-3" /></button>
+                  <button onClick={() => duplicateDashboardWidget(widget.id)} className="p-1 hover:bg-brand-50 rounded text-brand-600"><Copy className="w-3 h-3" /></button>
+                  <button onClick={() => openEditWidget(widget)} className="p-1 hover:bg-brand-50 rounded text-brand-600"><Settings className="w-3 h-3" /></button>
                   <button onClick={() => removeDashboardWidget(widget.id)} className="p-1 hover:bg-red-50 rounded text-red-600"><Trash2 className="w-3 h-3" /></button>
                </div>
             )}

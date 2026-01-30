@@ -618,10 +618,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[95vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-brand-50 to-purple-50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-brand-100 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-brand-600" />
             </div>
             <div>
               <h2 className="font-bold text-slate-800">Visualisation graphique</h2>
@@ -634,7 +634,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenInAnalytics}
-              className="px-3 py-1.5 text-sm bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2 shadow-sm"
+              className="px-3 py-1.5 text-sm bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-lg hover:from-purple-700 hover:to-brand-700 transition-all flex items-center gap-2 shadow-sm"
             >
               <ExternalLink className="w-4 h-4" />
               Ouvrir dans Analytics
@@ -656,7 +656,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             <select
               value={selectedChartType}
               onChange={(e) => setSelectedChartType(e.target.value as ChartType)}
-              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
             >
               {chartTypeOptions.map((type) => {
                 const config = getChartTypeConfig(type);
@@ -677,7 +677,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               <select
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
               >
                 <option value={0}>Tout afficher</option>
                 <option value={5}>Top 5</option>
@@ -695,7 +695,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               <select
                 value={hierarchyLevel === undefined ? '' : hierarchyLevel}
                 onChange={(e) => setHierarchyLevel(e.target.value === '' ? undefined : Number(e.target.value))}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
               >
                 <option value="">Tous les niveaux</option>
                 {Array.from({ length: availableLevels }, (_, i) => (
@@ -715,7 +715,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'name' | 'value' | 'none')}
-                  className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                 >
                   <option value="value">Valeur</option>
                   <option value="name">Nom</option>
@@ -729,7 +729,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   <select
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                    className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                   >
                     <option value="desc">Décroissant</option>
                     <option value="asc">Croissant</option>
@@ -745,7 +745,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             <select
               value={colorMode}
               onChange={(e) => setColorMode(e.target.value as ColorMode)}
-              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
             >
               <option value="multi">Plusieurs couleurs</option>
               <option value="single">Couleur unique</option>
@@ -760,7 +760,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               <select
                 value={colorPalette}
                 onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
               >
                 <option value="default">Défaut</option>
                 <option value="pastel">Pastel</option>
@@ -811,15 +811,15 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
           {/* Badge suggestion */}
           <div className="ml-auto flex items-center gap-3">
-             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-50 border border-brand-100 rounded-lg shadow-sm">
                 <input
                    type="checkbox"
                    id="auto-update-modal"
                    checked={updateMode === 'latest'}
                    onChange={e => setUpdateMode(e.target.checked ? 'latest' : 'fixed')}
-                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                   className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
                 />
-                <label htmlFor="auto-update-modal" className="text-xs font-bold text-blue-800 cursor-pointer select-none">
+                <label htmlFor="auto-update-modal" className="text-xs font-bold text-brand-800 cursor-pointer select-none">
                    Mise à jour automatique
                 </label>
              </div>
@@ -858,7 +858,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             {/* Create Widget Button */}
             <button
               onClick={handleCreateWidget}
-              className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1 border border-blue-300"
+              className="px-3 py-1.5 text-xs bg-brand-100 text-brand-700 rounded-lg hover:bg-brand-200 transition-colors flex items-center gap-1 border border-brand-300"
               title="Ajouter ce graphique au tableau de bord"
             >
               <PlusSquare className="w-3 h-3" />
@@ -880,31 +880,31 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 <div className="absolute bottom-full right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
                   <button
                     onClick={handleExportHTML}
-                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700 border-b border-slate-100"
                   >
                     HTML
                   </button>
                   <button
                     onClick={handleExportPNG}
-                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700 border-b border-slate-100"
                   >
                     PNG (Haute résolution)
                   </button>
                   <button
                     onClick={() => handleExportPDF('adaptive')}
-                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700 border-b border-slate-100"
                   >
                     PDF (Adaptatif)
                   </button>
                   <button
                     onClick={() => handleExportPDF('A4')}
-                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700 border-b border-slate-100"
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700 border-b border-slate-100"
                   >
                     PDF (A4)
                   </button>
                   <button
                     onClick={handleExportXLSX}
-                    className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 text-slate-700"
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700"
                   >
                     XLSX (Excel)
                   </button>

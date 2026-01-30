@@ -410,7 +410,7 @@ export const Import: React.FC = () => {
                id="import-date"
                value={date}
                onChange={(e) => setDate(e.target.value)}
-               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5"
+               className="block w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2.5"
                required
              />
           </Card>
@@ -425,7 +425,7 @@ export const Import: React.FC = () => {
                 <div className="flex items-center gap-2">
                    <Settings2 className="w-3 h-3 text-slate-400" />
                    <select 
-                      className="text-xs bg-slate-50 border border-slate-200 rounded py-0.5 px-1 text-slate-600 focus:ring-blue-500"
+                      className="text-xs bg-slate-50 border border-slate-200 rounded py-0.5 px-1 text-slate-600 focus:ring-brand-500"
                       value={fileEncoding}
                       onChange={(e) => setFileEncoding(e.target.value as any)}
                       title="Forcer l'encodage si les accents sont incorrects"
@@ -439,7 +439,7 @@ export const Import: React.FC = () => {
              
              <div 
                 className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200
-                   ${isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}
+                   ${isDragging ? 'border-brand-500 bg-brand-50 scale-[1.02]' : 'border-slate-300 hover:border-brand-400 hover:bg-slate-50'}
                 `}
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
@@ -448,13 +448,13 @@ export const Import: React.FC = () => {
              >
                 {isProcessingFile ? (
                    <div className="animate-pulse flex flex-col items-center">
-                      <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3" />
-                      <span className="text-blue-600 font-medium">Lecture du fichier...</span>
+                      <div className="w-10 h-10 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-3" />
+                      <span className="text-brand-600 font-medium">Lecture du fichier...</span>
                    </div>
                 ) : (
                    <>
                       <div className="p-4 bg-white rounded-full shadow-sm mb-3">
-                         <UploadCloud className="w-8 h-8 text-blue-600" />
+                         <UploadCloud className="w-8 h-8 text-brand-600" />
                       </div>
                       <h3 className="text-sm font-bold text-slate-700">Cliquez ou glissez un fichier ici</h3>
                       <p className="text-xs text-slate-500 mt-1">Supporte .xlsx, .xls, .csv, .txt</p>
@@ -481,7 +481,7 @@ export const Import: React.FC = () => {
            </div>
            <textarea
              id="paste-area"
-             className="flex-1 w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs font-mono p-3 resize-none"
+             className="flex-1 w-full rounded-md border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-xs font-mono p-3 resize-none"
              placeholder={`Alternative : Copiez ici les données de votre tableau Excel...\nHeader 1 \t Header 2\nVal 1 \t Val 2`}
              value={text}
              onChange={(e) => setText(e.target.value)}
@@ -539,16 +539,16 @@ export const Import: React.FC = () => {
         )}
 
         {/* Choix du Dataset Cible */}
-        <Card className="p-6 border-blue-200 bg-blue-50">
+        <Card className="p-6 border-brand-200 bg-brand-50">
            <div className="flex justify-between items-start">
-              <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-bold text-brand-900 mb-4 flex items-center gap-2">
                 <Database className="w-5 h-5" />
                 Destination de l'import
               </h3>
               
               {/* Date Editing in Step 2 */}
-              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-md shadow-sm border border-blue-100">
-                 <label htmlFor="step2-date" className="text-xs font-bold text-blue-800">Date d'extraction :</label>
+              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-md shadow-sm border border-brand-100">
+                 <label htmlFor="step2-date" className="text-xs font-bold text-brand-700">Date d'extraction :</label>
                  <input
                    type="date"
                    id="step2-date"
@@ -556,7 +556,7 @@ export const Import: React.FC = () => {
                    onChange={(e) => setDate(e.target.value)}
                    className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 font-medium p-0 w-32"
                  />
-                 <Edit2 className="w-3 h-3 text-blue-400" />
+                 <Edit2 className="w-3 h-3 text-brand-400" />
               </div>
            </div>
            
@@ -569,14 +569,14 @@ export const Import: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <label className={`relative flex items-start p-4 cursor-pointer rounded-lg border-2 transition-all ${targetDatasetId === 'NEW' ? 'border-blue-500 bg-white shadow-md' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
+                 <label className={`relative flex items-start p-4 cursor-pointer rounded-lg border-2 transition-all ${targetDatasetId === 'NEW' ? 'border-brand-500 bg-white shadow-md' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
                     <input 
                        type="radio" 
                        name="targetDS" 
                        value="NEW" 
                        checked={targetDatasetId === 'NEW'} 
                        onChange={() => setTargetDatasetId('NEW')}
-                       className="mt-1 h-4 w-4 text-blue-600 border-gray-300 bg-white focus:ring-blue-500"
+                       className="mt-1 h-4 w-4 text-brand-600 border-gray-300 bg-white focus:ring-brand-500"
                     />
                     <div className="ml-3 w-full">
                        <span className="block text-sm font-medium text-slate-900">Créer une nouvelle typologie</span>
@@ -584,7 +584,7 @@ export const Import: React.FC = () => {
                           <input 
                             type="text" 
                             placeholder="Nom du tableau (ex: Ventes 2025)"
-                            className="mt-2 block w-full rounded-md border-slate-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                            className="mt-2 block w-full rounded-md border-slate-300 bg-white shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2"
                             value={newDatasetName}
                             onChange={(e) => setNewDatasetName(e.target.value)}
                             autoFocus
@@ -594,19 +594,19 @@ export const Import: React.FC = () => {
                  </label>
 
                  {datasets.length > 0 && (
-                    <label className={`relative flex items-start p-4 cursor-pointer rounded-lg border-2 transition-all ${targetDatasetId !== 'NEW' ? 'border-blue-500 bg-white shadow-md' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
+                    <label className={`relative flex items-start p-4 cursor-pointer rounded-lg border-2 transition-all ${targetDatasetId !== 'NEW' ? 'border-brand-500 bg-white shadow-md' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
                        <input 
                           type="radio" 
                           name="targetDS" 
                           value="EXISTING_FALLBACK"
                           checked={targetDatasetId !== 'NEW'} 
                           onChange={() => setTargetDatasetId(detectedDatasetId || datasets[0].id)}
-                          className="mt-1 h-4 w-4 text-blue-600 border-gray-300 bg-white focus:ring-blue-500"
+                          className="mt-1 h-4 w-4 text-brand-600 border-gray-300 bg-white focus:ring-brand-500"
                        />
                        <div className="ml-3 w-full">
                           <span className="block text-sm font-medium text-slate-900">Ajouter à une typologie existante</span>
                           <select 
-                             className="mt-2 block w-full rounded-md border-slate-300 shadow-sm bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 disabled:opacity-50"
+                             className="mt-2 block w-full rounded-md border-slate-300 shadow-sm bg-white focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 disabled:opacity-50"
                              value={targetDatasetId !== 'NEW' ? targetDatasetId : ''}
                              onChange={(e) => setTargetDatasetId(e.target.value)}
                              disabled={targetDatasetId === 'NEW'}
@@ -689,7 +689,7 @@ export const Import: React.FC = () => {
                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                      <FileSpreadsheet className="w-4 h-4" /> Prévisualisation
                  </h4>
-                 <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded-full">
+                 <span className="bg-brand-100 text-brand-700 text-xs font-bold px-2 py-0.5 rounded-full">
                     {rawData.totalRows.toLocaleString()} lignes
                  </span>
               </div>
@@ -697,7 +697,7 @@ export const Import: React.FC = () => {
               <div className="flex items-center gap-2 text-xs">
                  <span className="text-slate-500">Lignes par page :</span>
                  <select 
-                    className="bg-white border border-slate-300 rounded px-2 py-1 text-slate-700 text-xs focus:ring-blue-500 focus:border-blue-500"
+                    className="bg-white border border-slate-300 rounded px-2 py-1 text-slate-700 text-xs focus:ring-brand-500 focus:border-brand-500"
                     value={rowsPerPage}
                     onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPreviewPage(1); }}
                  >
@@ -752,7 +752,7 @@ export const Import: React.FC = () => {
                       <th 
                         key={idx} 
                         className={`px-4 py-3 text-left w-64 min-w-[220px] border-b-2 transition-colors cursor-pointer relative group
-                           ${isSelected ? 'bg-purple-50 border-purple-500' : (isMapped ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-slate-200')}
+                           ${isSelected ? 'bg-purple-50 border-purple-500' : (isMapped ? 'border-brand-500 bg-brand-50' : 'border-transparent hover:bg-slate-200')}
                         `}
                         onClick={() => setSelectedColIndex(idx)}
                       >
@@ -781,13 +781,13 @@ export const Import: React.FC = () => {
                           {targetDatasetId === 'NEW' ? (
                             <input 
                                 type="text"
-                                className="block w-full rounded-md border-slate-300 text-sm bg-white text-slate-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5"
+                                className="block w-full rounded-md border-slate-300 text-sm bg-white text-slate-900 focus:border-brand-500 focus:ring-brand-500 shadow-sm p-1.5"
                                 value={mapping[idx] || header}
                                 onChange={(e) => handleMappingChange(idx, e.target.value)}
                             />
                           ) : (
                             <select
-                                className={`block w-full rounded-md border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500 shadow-sm p-1.5 ${isMapped ? 'bg-white font-medium text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500'}`}
+                                className={`block w-full rounded-md border-slate-300 text-sm focus:border-brand-500 focus:ring-brand-500 shadow-sm p-1.5 ${isMapped ? 'bg-white font-medium text-brand-700 border-brand-300' : 'bg-slate-50 text-slate-500'}`}
                                 value={mapping[idx] || 'ignore'}
                                 onChange={(e) => handleMappingChange(idx, e.target.value)}
                             >
@@ -796,7 +796,7 @@ export const Import: React.FC = () => {
                                   {availableFields.map(f => <option key={f} value={f}>{f}</option>)}
                                 </optgroup>
                                 <optgroup label="Nouveau champ">
-                                  <option value={header} className="text-blue-600 font-bold">+ Ajouter "{header}"</option>
+                                  <option value={header} className="text-brand-600 font-bold">+ Ajouter "{header}"</option>
                                 </optgroup>
                             </select>
                           )}
@@ -807,7 +807,7 @@ export const Import: React.FC = () => {
                            <div className="bg-white border border-slate-200 rounded p-2 space-y-2 shadow-sm" onClick={e => e.stopPropagation()}>
                               <div className="flex gap-1">
                                  <select
-                                    className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-blue-500"
+                                    className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-brand-500"
                                     value={tempFieldConfigs[mappedVal]?.type || 'text'}
                                     onChange={(e) => handleConfigChange(mappedVal, 'type', e.target.value)}
                                  >
@@ -824,7 +824,7 @@ export const Import: React.FC = () => {
                                     <div className="flex gap-1">
                                        <input
                                           type="text"
-                                          className="block w-1/2 text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-blue-500"
+                                          className="block w-1/2 text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-brand-500"
                                           placeholder="Unité (€)"
                                           value={tempFieldConfigs[mappedVal]?.unit || ''}
                                           onChange={(e) => handleConfigChange(mappedVal, 'unit', e.target.value)}
@@ -833,7 +833,7 @@ export const Import: React.FC = () => {
                                           type="number"
                                           min="0"
                                           max="5"
-                                          className="block w-1/2 text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-blue-500"
+                                          className="block w-1/2 text-xs border-slate-200 rounded bg-white p-1 placeholder-slate-300 focus:ring-1 focus:ring-brand-500"
                                           placeholder="Décim."
                                           value={tempFieldConfigs[mappedVal]?.decimalPlaces !== undefined ? tempFieldConfigs[mappedVal]?.decimalPlaces : ''}
                                           onChange={(e) => handleConfigChange(mappedVal, 'decimalPlaces', e.target.value)}
@@ -842,7 +842,7 @@ export const Import: React.FC = () => {
                                     </div>
                                     
                                     <select
-                                        className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-blue-500 text-slate-600"
+                                        className="block w-full text-xs border-slate-200 rounded bg-slate-50 py-1 focus:ring-1 focus:ring-brand-500 text-slate-600"
                                         value={tempFieldConfigs[mappedVal]?.displayScale || 'none'}
                                         onChange={(e) => handleConfigChange(mappedVal, 'displayScale', e.target.value)}
                                         title="Échelle d'affichage"
