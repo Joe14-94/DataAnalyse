@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
 import { APP_VERSION, db, generateId } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 
@@ -13,10 +13,9 @@ import { ReferentialProvider, useReferentials } from './ReferentialContext';
 import { BudgetProvider, useBudget } from './BudgetContext';
 import { ForecastProvider, useForecast } from './ForecastContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
-import { PipelineProvider, usePipeline } from './PipelineContext';
 
 // Explicitly export hooks to avoid re-export issues
-export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useBudget, useForecast, useSettings, usePipeline };
+export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useBudget, useForecast, useSettings };
 
 // OLD KEY for migration (keep for fallback)
 const LEGACY_STORAGE_KEY = 'app_data_v4_global';
@@ -37,7 +36,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [financeReferentials, setFinanceReferentials] = useState<FinanceReferentials>({}); // NEW
   const [budgetModule, setBudgetModule] = useState<BudgetModule>({ budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
   const [forecastModule, setForecastModule] = useState<ForecastModule>({ forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
-  const [pipelineModule, setPipelineModule] = useState<PipelineModule>({ pipelines: [], executionResults: {} }); // NEW - Pipeline Module
   const [uiPrefs, setUiPrefs] = useState<any>(undefined); // NEW
 
   const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +66,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setFinanceReferentials(dbData.financeReferentials || {}); // NEW
           setBudgetModule(dbData.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
           setForecastModule(dbData.forecastModule || { forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
-          setPipelineModule(dbData.pipelineModule || { pipelines: [], executionResults: {} }); // NEW - Pipeline Module
           if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs); // NEW
 
           if (dbData.currentDatasetId) {
@@ -131,7 +128,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         financeReferentials,
         budgetModule,
         forecastModule,
-        pipelineModule,
         uiPrefs
       };
 
@@ -141,7 +137,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, pipelineModule, uiPrefs, isLoading]);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs, isLoading]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -214,16 +210,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   }, []);
 
-  const updateCalculatedField = useCallback((datasetId: string, fieldId: string, updates: Partial<CalculatedField>) => {
-    setDatasets(prev => prev.map(d => {
-      if (d.id !== datasetId) return d;
-      return {
-        ...d,
-        calculatedFields: (d.calculatedFields || []).map(f => f.id === fieldId ? { ...f, ...updates } : f)
-      };
-    }));
-  }, []);
-
   const renameDatasetField = useCallback((datasetId: string, oldName: string, newName: string) => {
     if (oldName === newName || !newName.trim()) return;
 
@@ -283,23 +269,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- BATCH ACTIONS ---
   const addBatch = useCallback((datasetId: string, date: string, rows: any[]) => {
     setAllBatches(prev => {
-      // Logic: overwrite existing batch for the same dataset and date
+      // Si un batch existe déjà pour ce dataset et cette date, on le remplace
       const existingIdx = prev.findIndex(b => b.datasetId === datasetId && b.date === date);
-
       const newBatch: ImportBatch = {
-        id: generateId(),
+        id: existingIdx >= 0 ? prev[existingIdx].id : generateId(),
         datasetId,
         date,
         createdAt: Date.now(),
         rows
       };
 
-      if (existingIdx !== -1) {
+      if (existingIdx >= 0) {
         const next = [...prev];
         next[existingIdx] = newBatch;
         return next;
       }
-
       return [...prev, newBatch];
     });
   }, []);
@@ -468,10 +452,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSavedAnalyses(prev => [...prev, newAnalysis]);
   }, []);
 
-  const updateAnalysis = useCallback((id: string, updates: Partial<SavedAnalysis>) => {
-    setSavedAnalyses(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
-  }, []);
-
   const deleteAnalysis = useCallback((id: string) => {
     setSavedAnalyses(prev => prev.filter(a => a.id !== id));
   }, []);
@@ -533,64 +513,43 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setForecastModule(module);
   }, []);
 
-  const updatePipelineModule = useCallback((module: PipelineModule) => {
-    setPipelineModule(module);
-  }, []);
-
-  const getBackupJson = useCallback((keys?: (keyof AppState)[]) => {
-    const fullState: AppState = {
+  const getBackupJson = useCallback(() => {
+    const state: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
       lastPivotState, lastAnalyticsState, companyLogo,
-      hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, pipelineModule, uiPrefs
+      hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs
     };
+    return createBackupJson(state);
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, uiPrefs]);
 
-    if (!keys) return createBackupJson(fullState);
-
-    const partialState: any = { version: APP_VERSION };
-    keys.forEach(k => {
-      partialState[k] = (fullState as any)[k];
-    });
-
-    return createBackupJson(partialState);
-  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, pipelineModule, uiPrefs]);
-
-  const importBackup = useCallback(async (jsonData: string, keys?: (keyof AppState)[]) => {
+  const importBackup = useCallback(async (jsonData: string) => {
     try {
       const parsed = JSON.parse(jsonData);
-
-      const shouldImport = (key: keyof AppState) => !keys || keys.includes(key);
-
-      if (shouldImport('datasets') && parsed.datasets) setDatasets(parsed.datasets);
-      if (shouldImport('batches') && parsed.batches) setAllBatches(parsed.batches);
-      if (shouldImport('savedMappings') && parsed.savedMappings) setSavedMappings(parsed.savedMappings);
-      if (shouldImport('dashboardWidgets') && parsed.dashboardWidgets) setDashboardWidgets(parsed.dashboardWidgets);
-      if (shouldImport('savedAnalyses') && parsed.savedAnalyses) setSavedAnalyses(parsed.savedAnalyses);
-      if (shouldImport('lastPivotState') && parsed.lastPivotState) setLastPivotState(parsed.lastPivotState);
-      if (shouldImport('lastAnalyticsState') && parsed.lastAnalyticsState) setLastAnalyticsState(parsed.lastAnalyticsState);
-      if (shouldImport('companyLogo') && parsed.companyLogo) setCompanyLogo(parsed.companyLogo);
-      if (shouldImport('hasSeenOnboarding') && parsed.hasSeenOnboarding !== undefined) setHasSeenOnboarding(!!parsed.hasSeenOnboarding);
-      if (shouldImport('financeReferentials') && parsed.financeReferentials) setFinanceReferentials(parsed.financeReferentials);
-      if (shouldImport('budgetModule') && parsed.budgetModule) setBudgetModule(parsed.budgetModule);
-      if (shouldImport('forecastModule') && parsed.forecastModule) setForecastModule(parsed.forecastModule);
-      if (shouldImport('pipelineModule') && parsed.pipelineModule) setPipelineModule(parsed.pipelineModule);
-      if (shouldImport('uiPrefs') && parsed.uiPrefs) setUiPrefs(parsed.uiPrefs);
-
-      if (shouldImport('currentDatasetId')) {
-        if (parsed.currentDatasetId && (parsed.datasets || datasets).find((d: Dataset) => d.id === parsed.currentDatasetId)) {
-          setCurrentDatasetId(parsed.currentDatasetId);
-        } else if (parsed.datasets && parsed.datasets.length > 0) {
-          setCurrentDatasetId(parsed.datasets[0].id);
-        }
+      if (!parsed.datasets || !Array.isArray(parsed.datasets)) {
+        throw new Error("Format invalide");
       }
+      setDatasets(parsed.datasets);
+      setAllBatches(parsed.batches || []);
+      setSavedMappings(parsed.savedMappings || {});
+      setDashboardWidgets(parsed.dashboardWidgets || []);
+      setSavedAnalyses(parsed.savedAnalyses || []);
+      setLastPivotState(parsed.lastPivotState || null);
+      setLastAnalyticsState(parsed.lastAnalyticsState || null);
+      setCompanyLogo(parsed.companyLogo); // NEW
+      setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
+      setFinanceReferentials(parsed.financeReferentials || {}); // NEW
+      setBudgetModule(parsed.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
+      if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
 
-      // To persist accurately, we should really load the current state, merge with parsed, then save.
-      // But db.save(parsed) might overwrite everything if parsed is partial.
-      // Let's fix that.
-      const currentState = await db.load();
-      const mergedState = { ...currentState, ...parsed };
-      await db.save(mergedState);
-
+      if (parsed.currentDatasetId && parsed.datasets.find((d: Dataset) => d.id === parsed.currentDatasetId)) {
+        setCurrentDatasetId(parsed.currentDatasetId);
+      } else if (parsed.datasets.length > 0) {
+        setCurrentDatasetId(parsed.datasets[0].id);
+      } else {
+        setCurrentDatasetId(null);
+      }
+      await db.save(parsed);
       return true;
     } catch (e) {
       console.error(e);
@@ -608,17 +567,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
-              <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
-                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField }}>
+              <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, clearDatasetBatches, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
+                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
                       {children}
                     </AnalyticsContext.Provider>
                   </WidgetContext.Provider>
                 </BatchContext.Provider>
-                </DatasetContext.Provider>
-              </PipelineProvider>
+              </DatasetContext.Provider>
             </ForecastProvider>
           </BudgetProvider>
         </ReferentialProvider>

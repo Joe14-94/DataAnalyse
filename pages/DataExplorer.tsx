@@ -431,7 +431,19 @@ export const DataExplorer: React.FC = () => {
             }
          }
       }
-      return rows;
+
+      // BOLT OPTIMIZATION: Pre-calculate search index for O(N) global search
+      return rows.map(row => {
+         let searchStr = "";
+         for (const k in row) {
+            if (k.startsWith('_') && k !== '_importDate') continue;
+            const v = row[k];
+            if (v !== null && v !== undefined && v !== '') {
+               searchStr += String(v) + " ";
+            }
+         }
+         return { ...row, _searchIndex: searchStr.toLowerCase() };
+      });
    }, [currentDataset, batches, blendingConfig, datasets]);
 
    const displayFields = useMemo(() => {
@@ -449,11 +461,12 @@ export const DataExplorer: React.FC = () => {
    }, [currentDataset, blendingConfig, datasets]);
 
    const processedRows = useMemo(() => {
-      let data = [...allRows];
+      let data = allRows;
 
       if (searchTerm.trim()) {
          const lowerTerm = searchTerm.toLowerCase();
-         data = data.filter(row => Object.values(row).some((val: any) => String(val).toLowerCase().includes(lowerTerm)));
+         // BOLT OPTIMIZATION: Use pre-calculated search index (O(N) instead of O(N*M))
+         data = data.filter(row => row._searchIndex.includes(lowerTerm));
       }
 
       Object.entries(columnFilters).forEach(([key, filterValue]) => {
@@ -504,26 +517,45 @@ export const DataExplorer: React.FC = () => {
    const columnStats = useMemo(() => {
       if (!showOutliers || !currentDataset || processedRows.length === 0) return {};
 
-      const stats: Record<string, { mean: number, stdDev: number }> = {};
+      // BOLT OPTIMIZATION: Calculate all stats in a single pass over data
+      const statsAccumulator: Record<string, { sum: number, sumSq: number, count: number }> = {};
       const fieldsToCheck = [...displayFields, ...(currentDataset.calculatedFields?.map(f => f.name) || [])];
 
-      fieldsToCheck.forEach(field => {
+      const numericFields = fieldsToCheck.filter(field => {
          const config = currentDataset.fieldConfigs?.[field];
          const calcField = currentDataset.calculatedFields?.find(f => f.name === field);
-         // Only process numeric fields
-         if (config?.type === 'number' || calcField?.outputType === 'number') {
-            const values = processedRows.map(r => parseSmartNumber(r[field])).filter(n => !isNaN(n));
-            if (values.length > 1) {
-               const mean = values.reduce((a, b) => a + b, 0) / values.length;
-               const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / values.length;
-               const stdDev = Math.sqrt(variance);
-               if (stdDev > 0) {
-                  stats[field] = { mean, stdDev };
-               }
+         return config?.type === 'number' || calcField?.outputType === 'number';
+      });
+
+      if (numericFields.length === 0) return {};
+
+      numericFields.forEach(f => statsAccumulator[f] = { sum: 0, sumSq: 0, count: 0 });
+
+      processedRows.forEach(row => {
+         numericFields.forEach(field => {
+            const val = row[field];
+            const num = parseSmartNumber(val);
+            if (!isNaN(num) && val !== '' && val !== null && val !== undefined) {
+               statsAccumulator[field].sum += num;
+               statsAccumulator[field].sumSq += num * num;
+               statsAccumulator[field].count++;
+            }
+         });
+      });
+
+      const finalStats: Record<string, { mean: number, stdDev: number }> = {};
+      numericFields.forEach(field => {
+         const { sum, sumSq, count } = statsAccumulator[field];
+         if (count > 1) {
+            const mean = sum / count;
+            const variance = (sumSq / count) - (mean * mean);
+            const stdDev = Math.sqrt(Math.max(0, variance));
+            if (stdDev > 0) {
+               finalStats[field] = { mean, stdDev };
             }
          }
       });
-      return stats;
+      return finalStats;
    }, [processedRows, showOutliers, displayFields, currentDataset]);
 
    // --- DISTRIBUTION CHART DATA ---
@@ -584,12 +616,20 @@ export const DataExplorer: React.FC = () => {
    }, [selectedRow, trackingKey, batches, currentDataset]);
 
    const getCellStyle = (fieldName: string, value: any) => {
+      // BOLT OPTIMIZATION: Cache numeric value to avoid repeated parsing
+      let cachedNum: number | null = null;
+      const getNumericValue = () => {
+         if (cachedNum !== null) return cachedNum;
+         cachedNum = parseSmartNumber(value);
+         return cachedNum;
+      };
+
       // 1. Check Outliers (Prioritaire)
       if (showOutliers) {
          const stats = columnStats[fieldName];
          if (stats) {
-            const numVal = parseSmartNumber(value);
-            if (!isNaN(numVal)) {
+            const numVal = getNumericValue();
+            if (!isNaN(numVal) && value !== '' && value !== null) {
                const zScore = (numVal - stats.mean) / stats.stdDev;
                if (Math.abs(zScore) > 2.5) {
                   return 'bg-red-100 text-red-800 font-bold border border-red-300 ring-2 ring-red-400 ring-opacity-50'; // Highlighting effect
@@ -603,11 +643,13 @@ export const DataExplorer: React.FC = () => {
       const rules = currentDataset.fieldConfigs[fieldName]?.conditionalFormatting;
       if (!rules || rules.length === 0) return '';
       for (const rule of rules) {
-         const numValue = parseSmartNumber(value);
          const targetValue = Number(rule.value);
          let match = false;
-         if (rule.operator === 'gt') match = numValue > targetValue;
-         if (rule.operator === 'lt') match = numValue < targetValue;
+         if (rule.operator === 'gt' || rule.operator === 'lt') {
+            const numValue = getNumericValue();
+            if (rule.operator === 'gt') match = numValue > targetValue;
+            if (rule.operator === 'lt') match = numValue < targetValue;
+         }
          if (rule.operator === 'eq') match = String(value) == String(rule.value);
          if (rule.operator === 'contains') match = String(value).toLowerCase().includes(String(rule.value).toLowerCase());
          if (rule.operator === 'empty') match = !value || value === '';

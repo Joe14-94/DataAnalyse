@@ -93,6 +93,7 @@ export const PivotTable: React.FC = () => {
 
     // VIRTUALIZATION
     const parentRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
 
     // --- HOOKS ---
     const {
@@ -191,6 +192,16 @@ export const PivotTable: React.FC = () => {
             return { id: src.id, name: ds.name, isPrimary: src.isPrimary, fields, color: src.color };
         }).filter(Boolean);
     }, [sources, datasets]);
+
+    // Sync scroll
+    useEffect(() => {
+        const parent = parentRef.current;
+        const footer = footerRef.current;
+        if (!parent || !footer) return;
+        const handleScroll = () => { footer.scrollLeft = parent.scrollLeft; };
+        parent.addEventListener('scroll', handleScroll);
+        return () => parent.removeEventListener('scroll', handleScroll);
+    }, [pivotData]);
 
     const rowVirtualizer = useVirtualizer({
         count: pivotData ? pivotData.displayRows.length : 0,
