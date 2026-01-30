@@ -666,13 +666,84 @@ export const Settings: React.FC = () => {
 
                   {/* DESIGN SYSTEM CONFIGURATION (NOUVEAU) */}
                   <Card
-                     title="Design System & Typographie"
+                     title="Design System & Personnalisation"
                      icon={<Palette className="w-5 h-5 text-brand-600" />}
                   >
                      <div className="space-y-8">
-                        <p className="text-sm text-slate-600">
-                           Personnalisez l'affichage global de l'application. Ces réglages s'appliquent à tous les tableaux et menus pour garantir une cohérence visuelle.
+                        <p className="text-sm text-txt-secondary">
+                           Personnalisez l'affichage global de l'application. Ces réglages s'appliquent à tous les composants pour garantir une cohérence visuelle.
                         </p>
+
+                        {/* Thème et Style */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           {/* Theme Selection */}
+                           <div className="space-y-3">
+                              <label className="text-sm font-bold text-txt-main block">Thème de l'interface</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                 {[
+                                    { id: 'light', name: 'Clair', icon: CheckCircle2 },
+                                    { id: 'dark', name: 'Sombre', icon: CheckCircle2 }
+                                 ].map(t => (
+                                    <button
+                                       key={t.id}
+                                       onClick={() => updateUIPrefs({ theme: t.id as any })}
+                                       className={`p-3 text-left border rounded-lg transition-all flex items-center justify-between ${uiPrefs.theme === t.id ? 'border-brand-600 bg-brand-50' : 'border-border-default hover:border-txt-muted bg-surface'}`}
+                                    >
+                                       <span className={`text-sm font-bold ${uiPrefs.theme === t.id ? 'text-brand-700' : 'text-txt-main'}`}>{t.name}</span>
+                                       {uiPrefs.theme === t.id && <Check className="w-4 h-4 text-brand-600" />}
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+
+                           {/* Style Selection */}
+                           <div className="space-y-3">
+                              <label className="text-sm font-bold text-txt-main block">Style visuel</label>
+                              <div className="grid grid-cols-3 gap-2">
+                                 {[
+                                    { id: 'classic', name: 'Classique' },
+                                    { id: 'material', name: 'Material' },
+                                    { id: 'glass', name: 'Glass' }
+                                 ].map(s => (
+                                    <button
+                                       key={s.id}
+                                       onClick={() => updateUIPrefs({ style: s.id as any })}
+                                       className={`p-2 text-center border rounded-lg transition-all ${uiPrefs.style === s.id ? 'border-brand-600 bg-brand-50' : 'border-border-default hover:border-txt-muted bg-surface'}`}
+                                    >
+                                       <div className={`text-xs font-bold ${uiPrefs.style === s.id ? 'text-brand-700' : 'text-txt-main'}`}>{s.name}</div>
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* Color Ambiance */}
+                        <div className="space-y-3">
+                           <label className="text-sm font-bold text-txt-main block">Ambiance colorimétrique</label>
+                           <div className="flex flex-wrap gap-3">
+                              {[
+                                 { id: 'blue', color: '#2563eb', name: 'Océan' },
+                                 { id: 'indigo', color: '#4f46e5', name: 'Royal' },
+                                 { id: 'emerald', color: '#059669', name: 'Forêt' },
+                                 { id: 'rose', color: '#e11d48', name: 'Framboise' },
+                                 { id: 'amber', color: '#d97706', name: 'Solaire' }
+                              ].map(p => (
+                                 <button
+                                    key={p.id}
+                                    onClick={() => updateUIPrefs({ colorPalette: p.id as any })}
+                                    className={`group flex flex-col items-center gap-2 p-2 rounded-xl transition-all ${uiPrefs.colorPalette === p.id ? 'bg-brand-50 ring-2 ring-brand-600' : 'hover:bg-canvas'}`}
+                                 >
+                                    <div
+                                       className="w-10 h-10 rounded-full shadow-inner border-2 border-white"
+                                       style={{ backgroundColor: p.color }}
+                                    />
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${uiPrefs.colorPalette === p.id ? 'text-brand-700' : 'text-txt-muted'}`}>
+                                       {p.name}
+                                    </span>
+                                 </button>
+                              ))}
+                           </div>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                            {/* Font Size */}
