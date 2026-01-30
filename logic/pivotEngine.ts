@@ -65,6 +65,10 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       return { ...m, valUnit };
   });
 
+  // BOLT OPTIMIZATION: Pre-calculate metric metadata once
+  const hasAvgMetric = metricConfigs.some(m => m.aggType === 'avg');
+  const numMetrics = metricConfigs.length;
+
   // Optimisation 1.1 : Pré-calcul des valeurs de filtres
   // BOLT MEASUREMENT: Using Set for 'in' filters reduces complexity from O(N*M) to O(N+M)
   // For 10k rows and 100 filter items, this saves ~1M operations per pivot calculation.
@@ -90,28 +94,36 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
     }
 
     // 1.3 Extraction Clé Colonne (UPDATED FOR MULTI COLS)
+    // BOLT OPTIMIZATION: Reduce array/string allocations by using explicit loop and string building
     let colKey = 'ALL';
     if (colFields && colFields.length > 0) {
-       const keyParts = colFields.map(field => {
-           let v = row[field];
-           if (v === undefined || v === null) v = '(Vide)';
-           else v = String(v);
-           // Apply grouping to any field (safe as getGroupedLabel returns val if not date)
-           return getGroupedLabel(v, colGrouping);
-       });
-       colKey = keyParts.join(' - ');
+       if (colFields.length === 1 && colGrouping === 'none') {
+           const v = row[colFields[0]];
+           colKey = v !== undefined && v !== null ? String(v) : '(Vide)';
+       } else {
+           let keyParts = "";
+           for (let j = 0; j < colFields.length; j++) {
+               let v = row[colFields[j]];
+               let label = v !== undefined && v !== null ? String(v) : '(Vide)';
+               if (colGrouping !== 'none') label = getGroupedLabel(label, colGrouping);
+               keyParts += (j === 0 ? "" : " - ") + label;
+           }
+           colKey = keyParts;
+       }
        colHeadersSet.add(colKey);
     } else {
        colHeadersSet.add('ALL');
     }
 
     // 1.4 Extraction Métriques
-    const metricVals = metricConfigs.map(mc => {
-        if (mc.aggType === 'count' || mc.aggType === 'list') return 0;
-        return parseSmartNumber(row[mc.field], mc.valUnit);
-    });
-
-    const rawVals = metricConfigs.map(mc => row[mc.field]);
+    // BOLT OPTIMIZATION: Combine metric extraction into single pass and avoid .map()
+    const metricVals = new Array(numMetrics);
+    const rawVals = new Array(numMetrics);
+    for (let j = 0; j < numMetrics; j++) {
+        const mc = metricConfigs[j];
+        rawVals[j] = row[mc.field];
+        metricVals[j] = (mc.aggType === 'count' || mc.aggType === 'list') ? 0 : parseSmartNumber(rawVals[j], mc.valUnit);
+    }
 
     optimizedRows.push({
        rowKeys,
@@ -141,43 +153,46 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           const row = groupRows[i];
           const colKey = row.colKey;
 
-          if (metricConfigs.some(mc => mc.aggType === 'avg')) {
+          // BOLT OPTIMIZATION: Avoid repetitive .some() call inside loop
+          if (hasAvgMetric) {
               stats.count++;
           }
 
-          metricConfigs.forEach((mc, mIdx) => {
+          // BOLT OPTIMIZATION: Get colMetricVals once per row instead of once per metric
+          let colMetricVals = stats.colMetrics.get(colKey);
+          if (!colMetricVals) {
+              colMetricVals = new Array(numMetrics);
+              for (let j = 0; j < numMetrics; j++) {
+                  const m = metricConfigs[j];
+                  colMetricVals[j] = (m.aggType === 'min' ? Infinity : m.aggType === 'max' ? -Infinity : (m.aggType === 'list' ? new Set() : 0));
+              }
+              stats.colMetrics.set(colKey, colMetricVals);
+          }
+
+          // BOLT OPTIMIZATION: Use standard for loop for metrics aggregation to avoid closure overhead
+          for (let mIdx = 0; mIdx < numMetrics; mIdx++) {
+              const mc = metricConfigs[mIdx];
               const val = mc.aggType === 'count' ? 1 : row.metricVals[mIdx];
+              const aggType = mc.aggType;
               
               // 2.1 Mise à jour Totaux Ligne
-              if (mc.aggType === 'sum' || mc.aggType === 'count' || mc.aggType === 'avg') {
+              if (aggType === 'sum' || aggType === 'count' || aggType === 'avg') {
                   stats.rowTotalMetrics[mIdx] += val;
-              } else if (mc.aggType === 'min') {
-                  if (val < stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
-              } else if (mc.aggType === 'max') {
-                  if (val > stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
-              } else if (mc.aggType === 'list') {
-                  if (row.rawVals[mIdx]) stats.rowTotalMetrics[mIdx].add(String(row.rawVals[mIdx]));
-              }
-
-              // 2.2 Mise à jour Métriques Colonne
-              let colMetricVals = stats.colMetrics.get(colKey);
-              if (!colMetricVals) {
-                  colMetricVals = metricConfigs.map(m => (m.aggType === 'min' ? Infinity : m.aggType === 'max' ? -Infinity : (m.aggType === 'list' ? new Set() : 0)));
-                  stats.colMetrics.set(colKey, colMetricVals);
-              }
-
-              if (mc.aggType === 'sum' || mc.aggType === 'count' || mc.aggType === 'avg') {
                   colMetricVals[mIdx] += val;
-              } else if (mc.aggType === 'min') {
+              } else if (aggType === 'min') {
+                  if (val < stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
                   if (val < colMetricVals[mIdx]) colMetricVals[mIdx] = val;
-              } else if (mc.aggType === 'max') {
+              } else if (aggType === 'max') {
+                  if (val > stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
                   if (val > colMetricVals[mIdx]) colMetricVals[mIdx] = val;
-              } else if (mc.aggType === 'list') {
+              } else if (aggType === 'list') {
                   if (row.rawVals[mIdx]) {
-                      colMetricVals[mIdx].add(String(row.rawVals[mIdx]));
+                      const strVal = String(row.rawVals[mIdx]);
+                      stats.rowTotalMetrics[mIdx].add(strVal);
+                      colMetricVals[mIdx].add(strVal);
                   }
               }
-          });
+          }
 
           stats.colCounts.set(colKey, (stats.colCounts.get(colKey) || 0) + 1);
       }
