@@ -3,6 +3,7 @@ import React from 'react';
 import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
+import { formatCurrency } from '../../utils/temporalComparison';
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
@@ -131,8 +132,8 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         {idx === rowFields.length - 1 ? 'Total' : ''}
                      </td>
                   ))}
-                  {pivotData.colHeaders.map((col: string) => {
-                     const val = pivotData.colTotals[col];
+                  {pivotData?.colHeaders.map((col: string) => {
+                     const val = pivotData?.colTotals[col];
                      const { metric, isPct } = getMetricInfoFromCol(col);
                      const metricLabel = metric?.label || (metric?.field ? `${metric.field} (${metric.aggType})` : '');
                      const customStyle = getCellFormatting(col, val, metricLabel);
@@ -154,7 +155,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         </td>
                      );
                   })}
-                  {showTotalCol && (
+                  {showTotalCol && pivotData && (
                      <td
                         className="px-2 py-2 text-right bg-slate-200 border-l border-slate-300 truncate"
                         style={{

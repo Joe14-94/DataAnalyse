@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, evaluateFormula, generateId, parseSmartNumber, formatNumberValue } from '../utils';
+import { formatDateFr, evaluateFormula, generateId, parseSmartNumber, formatNumberValue, getGroupedLabel } from '../utils';
 import { Button } from '../components/ui/Button';
 import { CalculatedField, ConditionalRule, FieldConfig } from '../types';
 import {
    Search, Download, Database, Table2,
    Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X,
    History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-   FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren, BarChart2
+   FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren, BarChart2, Info
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -490,7 +490,7 @@ export const DataExplorer: React.FC = () => {
                   if (key === '_batchId') return String(val) === String(targetVal);
 
                   const valStr = String(val ?? '').toLowerCase();
-                  const config = currentDataset.fieldConfigs?.[key];
+                  const config = currentDataset?.fieldConfigs?.[key];
 
                   if (isExact) {
                      if (valStr === lowerFilter) return true;

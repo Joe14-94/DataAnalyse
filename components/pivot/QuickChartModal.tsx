@@ -300,7 +300,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                    );
                 }
 
-                return null;
+                return <div />;
               })()}
             </ResponsiveContainer>
           )}
