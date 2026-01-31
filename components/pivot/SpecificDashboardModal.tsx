@@ -135,7 +135,7 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                     <div className="flex-1 bg-slate-100 overflow-y-auto p-8 custom-scrollbar">
                         <div className="max-w-3xl mx-auto">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[600px] flex flex-col overflow-hidden">
-                                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-brand-500 to-indigo-600 text-white group relative">
+                                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-brand-500 to-brand-600 text-white group relative">
                                     {editingId === 'title' ? (
                                         <div className="flex gap-2">
                                             <input

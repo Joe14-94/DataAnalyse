@@ -86,7 +86,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                <Edit3 className={`w-3 h-3 ${isEditMode ? 'animate-pulse' : ''}`} /> {isEditMode ? 'Édition : ON' : 'Mode Édition'}
             </button>
 
-            <button onClick={openCalcModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50">
+            <button onClick={openCalcModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50">
                <Calculator className="w-3 h-3" /> Colonne calculée
             </button>
 

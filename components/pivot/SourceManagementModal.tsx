@@ -28,7 +28,7 @@ const SOURCE_COLORS = ['blue', 'indigo', 'purple', 'pink', 'teal', 'orange'];
 
 const SOURCE_COLOR_CLASSES: Record<string, { border: string, text: string, bg: string }> = {
     blue: { border: 'border-brand-500', text: 'text-brand-700', bg: 'bg-brand-50' },
-    indigo: { border: 'border-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' },
+    indigo: { border: 'border-brand-500', text: 'text-brand-700', bg: 'bg-brand-50' },
     purple: { border: 'border-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
     pink: { border: 'border-pink-500', text: 'text-pink-700', bg: 'bg-pink-50' },
     teal: { border: 'border-teal-500', text: 'text-teal-700', bg: 'bg-teal-50' },
@@ -192,7 +192,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                                     {src.isPrimary ? (
                                                         <Database className="w-4 h-4 text-brand-600" />
                                                     ) : (
-                                                        <LinkIcon className="w-4 h-4 text-indigo-600" />
+                                                        <LinkIcon className="w-4 h-4 text-brand-600" />
                                                     )}
                                                     <span className={`font-bold ${colorClasses.text}`}>
                                                         {ds.name} {src.isPrimary && '(Principal)'}

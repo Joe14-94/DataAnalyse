@@ -89,7 +89,7 @@ export const Help: React.FC = () => {
                 <Card>
                   <div className="p-6">
                     <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                      <History className="w-5 h-5 text-indigo-500" /> Version 2026-01-29-01
+                      <History className="w-5 h-5 text-brand-500" /> Version 2026-01-29-01
                     </h2>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       Cette mise à jour majeure consolide les capacités d'analyse multi-dimensionnelle et renforce
@@ -182,7 +182,7 @@ export const Help: React.FC = () => {
                 </p>
               </Card>
 
-              <Card title="4. Export & Partage" icon={<ArrowRightLeft className="w-5 h-5 text-indigo-600" />}>
+              <Card title="4. Export & Partage" icon={<ArrowRightLeft className="w-5 h-5 text-brand-600" />}>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Exportez vos résultats vers Excel, PDF ou image. Partagez vos configurations avec vos
                   collègues en exportant uniquement la structure de votre analyse.
@@ -234,7 +234,7 @@ export const Help: React.FC = () => {
 
           <TabsContent value="functions">
             <div className="space-y-6">
-              <Card title="Assistant de Calculs" icon={<Calculator className="w-5 h-5 text-indigo-600" />}>
+              <Card title="Assistant de Calculs" icon={<Calculator className="w-5 h-5 text-brand-600" />}>
                 <p className="text-xs text-slate-600 leading-relaxed mb-4">
                   DataScope supporte un large éventail de fonctions pour enrichir vos données.
                   L'assistant de création vous aide à construire vos formules sans erreur.

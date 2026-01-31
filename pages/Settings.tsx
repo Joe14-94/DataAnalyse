@@ -723,7 +723,7 @@ export const Settings: React.FC = () => {
                   </Card>
 
                   {/* GESTION DES ANALYSES SAUVEGARDÉES (NOUVEAU) */}
-                  <Card title="Gestion des analyses sauvegardées" icon={<LayoutIcon className="w-5 h-5 text-indigo-600" />}>
+                  <Card title="Gestion des analyses sauvegardées" icon={<LayoutIcon className="w-5 h-5 text-brand-600" />}>
                      <div className="space-y-4">
                         <p className="text-sm text-slate-600">
                            Retrouvez et gérez ici tous les Tableaux Croisés Dynamiques (TCD) que vous avez sauvegardés.
@@ -742,7 +742,7 @@ export const Settings: React.FC = () => {
                                  return (
                                     <div key={analysis.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors group">
                                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                                          <div className="p-2 bg-indigo-50 rounded text-indigo-600 mt-0.5">
+                                          <div className="p-2 bg-brand-50 rounded text-brand-600 mt-0.5">
                                              <Table2 className="w-5 h-5" />
                                           </div>
                                           <div className="flex-1 min-w-0">
@@ -750,7 +750,7 @@ export const Settings: React.FC = () => {
                                                 <div className="flex items-center gap-2">
                                                    <input
                                                       type="text"
-                                                      className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none w-full max-w-[250px]"
+                                                      className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none w-full max-w-[250px]"
                                                       value={editAnalysisName}
                                                       onChange={(e) => setEditAnalysisName(e.target.value)}
                                                       autoFocus
@@ -953,9 +953,9 @@ export const Settings: React.FC = () => {
                      </div>
                   </Card>
 
-                  <Card title="Jeu de données de test" className="border-indigo-100">
+                  <Card title="Jeu de données de test" className="border-brand-100">
                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-full text-indigo-600">
+                        <div className="p-2 bg-brand-50 rounded-full text-brand-600">
                            <Database className="w-5 h-5" />
                         </div>
                         <div className="flex-1">

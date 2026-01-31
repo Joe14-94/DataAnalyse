@@ -96,19 +96,23 @@ export const SettingsProvider: React.FC<{
 
         // Theme specific variables
         if (uiPrefs.theme === 'dark') {
-            root.style.setProperty('--canvas', '#0f172a'); // slate-950
-            root.style.setProperty('--surface', '#1e293b'); // slate-800
+            // Material dark uses a slightly different background for depth
+            const darkCanvas = uiPrefs.style === 'material' ? '#0b0f1a' : '#0f172a';
+            root.style.setProperty('--canvas', uiPrefs.style === 'glass' ? 'rgba(15, 23, 42, 0.8)' : darkCanvas);
+            root.style.setProperty('--surface', uiPrefs.style === 'glass' ? 'rgba(30, 41, 59, 0.6)' : '#1e293b');
             root.style.setProperty('--txt-main', '#f8fafc'); // slate-50
             root.style.setProperty('--txt-secondary', '#cbd5e1'); // slate-300
-            root.style.setProperty('--txt-muted', '#64748b'); // slate-500
-            root.style.setProperty('--border-default', '#334155'); // slate-700
+            root.style.setProperty('--txt-muted', '#94a3b8'); // slate-400
+            root.style.setProperty('--border-default', uiPrefs.style === 'glass' ? 'rgba(255, 255, 255, 0.1)' : '#334155');
         } else {
-            root.style.setProperty('--canvas', '#f8fafc'); // slate-50
-            root.style.setProperty('--surface', '#ffffff');
+            // Material light uses a gray background to make white cards pop
+            const lightCanvas = uiPrefs.style === 'material' ? '#f1f5f9' : '#f8fafc';
+            root.style.setProperty('--canvas', uiPrefs.style === 'glass' ? 'rgba(248, 250, 252, 0.8)' : lightCanvas);
+            root.style.setProperty('--surface', uiPrefs.style === 'glass' ? 'rgba(255, 255, 255, 0.6)' : '#ffffff');
             root.style.setProperty('--txt-main', '#1e293b'); // slate-800
             root.style.setProperty('--txt-secondary', '#475569'); // slate-600
-            root.style.setProperty('--txt-muted', '#94a3b8'); // slate-400
-            root.style.setProperty('--border-default', '#e2e8f0'); // slate-200
+            root.style.setProperty('--txt-muted', '#64748b'); // slate-500
+            root.style.setProperty('--border-default', uiPrefs.style === 'glass' ? 'rgba(0, 0, 0, 0.05)' : '#e2e8f0');
         }
     }, [uiPrefs]);
 

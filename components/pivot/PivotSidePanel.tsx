@@ -102,14 +102,14 @@ const FieldChip: React.FC<{
        >
            <div className="flex items-center gap-1 overflow-hidden flex-1">
                <GripVertical className={`w-2.5 h-2.5 flex-shrink-0 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
-               {isCalculated && <Calculator className="w-2.5 h-2.5 text-indigo-500 flex-shrink-0" />}
+               {isCalculated && <Calculator className="w-2.5 h-2.5 text-brand-500 flex-shrink-0" />}
                <span className="truncate" title={field}>{displayLabel}</span>
            </div>
            <div className="flex items-center gap-0.5">
                {onEdit && (
                    <button
                        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                       className="p-0.5 hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 rounded transition-colors"
+                       className="p-0.5 hover:bg-brand-50 text-brand-400 hover:text-brand-600 rounded transition-colors"
                        title="Modifier"
                    >
                        <Plus className="w-2.5 h-2.5" />
@@ -204,7 +204,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       <div ref={panelRef} className="xl:w-72 flex-shrink-0 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
          {/* 1. DATA SOURCES STACK */}
          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
-            <div className="p-2 bg-gradient-to-r from-brand-50 to-indigo-50 border-b border-brand-200">
+            <div className="p-2 bg-gradient-to-r from-brand-50 to-brand-50 border-b border-brand-200">
                <h3 className="text-sm font-bold text-slate-800 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                      <Database className="w-3.5 h-3.5 text-brand-600" />
@@ -219,7 +219,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             {!isDataSourcesPanelCollapsed && (
                <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
                   {sources.length === 0 ? (
-                     <div className="text-center p-6 border-2 border-dashed border-brand-300 rounded-lg bg-gradient-to-br from-brand-50 to-indigo-50">
+                     <div className="text-center p-6 border-2 border-dashed border-brand-300 rounded-lg bg-gradient-to-br from-brand-50 to-brand-50">
                         <Database className="w-10 h-10 mx-auto text-brand-400 mb-2" />
                         <p className="text-xs text-slate-500 mb-2">Sélectionnez une source de données</p>
                         <button onClick={startAddSource} className="w-full py-2 bg-brand-600 text-white text-xs font-bold rounded-lg hover:bg-brand-700">
@@ -404,7 +404,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
          {!isFieldsPanelCollapsed && !isTemporalMode && sources.length > 0 && (
             <div
                onMouseDown={handleMouseDown}
-               className="h-1.5 hover:h-2 bg-slate-200 hover:bg-indigo-400 cursor-row-resize transition-all rounded-full mx-12 -my-1 z-10 flex items-center justify-center group"
+               className="h-1.5 hover:h-2 bg-slate-200 hover:bg-brand-400 cursor-row-resize transition-all rounded-full mx-12 -my-1 z-10 flex items-center justify-center group"
                title="Redimensionner les zones"
             >
                <div className="w-8 h-0.5 bg-slate-400 rounded-full group-hover:bg-white opacity-50 group-hover:opacity-100"></div>
@@ -529,7 +529,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
                         <div className="flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)</div>
                         {openCalcModal && (
-                           <button onClick={openCalcModal} className="p-0.5 hover:bg-indigo-50 text-indigo-500 rounded transition-colors" title="Ajouter un champ calculé">
+                           <button onClick={openCalcModal} className="p-0.5 hover:bg-brand-50 text-brand-500 rounded transition-colors" title="Ajouter un champ calculé">
                               <Plus className="w-2.5 h-2.5" />
                            </button>
                         )}
@@ -579,9 +579,9 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
          <div className="p-1.5 bg-slate-50 rounded border border-slate-200 text-xs flex flex-col gap-1">
             <button
                onClick={props.openFormattingModal}
-               className="flex items-center gap-2 w-full px-2 py-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 hover:border-indigo-400 transition-all font-bold mb-1"
+               className="flex items-center gap-2 w-full px-2 py-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 hover:border-brand-400 transition-all font-bold mb-1"
             >
-               <Palette className="w-3.5 h-3.5 text-indigo-500" />
+               <Palette className="w-3.5 h-3.5 text-brand-500" />
                Mise en forme
             </button>
             <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />

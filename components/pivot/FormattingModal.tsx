@@ -95,7 +95,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
         {/* Header */}
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+            <div className="p-2 bg-brand-100 text-brand-600 rounded-lg">
               <Palette className="w-5 h-5" />
             </div>
             <div>
@@ -112,13 +112,13 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
         <div className="flex border-b border-slate-200 px-4 pt-2 gap-4">
           <button
             onClick={() => setActiveTab('manual')}
-            className={`px-4 py-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'manual' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`px-4 py-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'manual' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
             Mise en forme manuelle
           </button>
           <button
             onClick={() => setActiveTab('conditional')}
-            className={`px-4 py-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'conditional' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`px-4 py-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'conditional' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
             Mise en forme conditionnelle
           </button>
@@ -133,7 +133,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                   <Info className="w-4 h-4 text-brand-500" />
                   Règles de style fixes
                 </h4>
-                <Button onClick={addStyleRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={addStyleRule} size="sm" className="bg-brand-600 hover:bg-brand-700">
                   <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
                 </Button>
               </div>
@@ -193,7 +193,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                           <span className="text-xs font-bold text-slate-500">Gras:</span>
                           <button
                             onClick={() => updateStyle(rule.id, { fontWeight: rule.style.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                            className={`p-1.5 rounded border transition-all ${rule.style.fontWeight === 'bold' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
+                            className={`p-1.5 rounded border transition-all ${rule.style.fontWeight === 'bold' ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
                           >
                             B
                           </button>
@@ -202,7 +202,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                           <span className="text-xs font-bold text-slate-500">Italique:</span>
                           <button
                             onClick={() => updateStyle(rule.id, { fontStyle: rule.style.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                            className={`p-1.5 rounded border transition-all ${rule.style.fontStyle === 'italic' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
+                            className={`p-1.5 rounded border transition-all ${rule.style.fontStyle === 'italic' ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
                           >
                             I
                           </button>
@@ -221,7 +221,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                               >
                                 {rule.style.backgroundColor === c.value && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                                    <Check className="w-3 h-3 text-indigo-600" />
+                                    <Check className="w-3 h-3 text-brand-600" />
                                   </div>
                                 )}
                               </button>
@@ -253,7 +253,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                   <AlertCircle className="w-4 h-4 text-amber-500" />
                   Règles basées sur les valeurs
                 </h4>
-                <Button onClick={addConditionalRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={addConditionalRule} size="sm" className="bg-brand-600 hover:bg-brand-700">
                   <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
                 </Button>
               </div>
@@ -334,7 +334,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                                >
                                  {rule.style.backgroundColor === c.value && (
                                    <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                                     <Check className="w-3 h-3 text-indigo-600" />
+                                     <Check className="w-3 h-3 text-brand-600" />
                                    </div>
                                  )}
                                </button>
@@ -363,7 +363,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
           <Button variant="outline" onClick={onClose}>Annuler</Button>
-          <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700">Enregistrer les règles</Button>
+          <Button onClick={onClose} className="bg-brand-600 hover:bg-brand-700">Enregistrer les règles</Button>
         </div>
       </div>
     </div>

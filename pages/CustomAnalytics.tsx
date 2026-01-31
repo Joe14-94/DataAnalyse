@@ -619,7 +619,7 @@ export const CustomAnalytics: React.FC = () => {
                      <tr>
                         <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
                         <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Total</th>
-                        {showForecast && <th className="px-4 py-2 text-right text-xs font-bold text-indigo-500 uppercase">Prévision</th>}
+                        {showForecast && <th className="px-4 py-2 text-right text-xs font-bold text-brand-500 uppercase">Prévision</th>}
                         {trendData.series.map(s => (
                            <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">{s}</th>
                         ))}
@@ -627,10 +627,10 @@ export const CustomAnalytics: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                      {trendData.data.map((row: any, idx: number) => (
-                        <tr key={idx} className={`hover:bg-slate-50 ${row.date === 'prediction' ? 'bg-indigo-50/50 italic' : ''}`}>
+                        <tr key={idx} className={`hover:bg-slate-50 ${row.date === 'prediction' ? 'bg-brand-50/50 italic' : ''}`}>
                            <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.displayDate}</td>
                            <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total !== null ? row.total.toLocaleString() : '-'}</td>
-                           {showForecast && <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">{row.forecast?.toLocaleString()}</td>}
+                           {showForecast && <td className="px-4 py-2 text-sm text-brand-600 text-right font-bold">{row.forecast?.toLocaleString()}</td>}
                            {trendData.series.map(s => (
                               <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>
                            ))}
@@ -1058,7 +1058,7 @@ export const CustomAnalytics: React.FC = () => {
 
                           {/* Operator Selector */}
                           <select 
-                             className="w-full bg-white border border-slate-200 rounded px-1 py-1 font-medium text-indigo-700"
+                             className="w-full bg-white border border-slate-200 rounded px-1 py-1 font-medium text-brand-700"
                              value={filter.operator || 'in'}
                              onChange={(e) => updateFilter(idx, { operator: e.target.value as any })}
                           >
@@ -1199,11 +1199,11 @@ export const CustomAnalytics: React.FC = () => {
 
                     {mode === 'trend' && (
                        <label className="flex items-center gap-2 cursor-pointer animate-in fade-in">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${showForecast ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 bg-white'}`}>
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${showForecast ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
                              {showForecast && <Check className="w-3 h-3" />}
                           </div>
                           <input type="checkbox" className="hidden" checked={showForecast} onChange={() => setShowForecast(!showForecast)} />
-                          <span className="text-xs text-indigo-700 font-bold">Projection (Tendance)</span>
+                          <span className="text-xs text-brand-700 font-bold">Projection (Tendance)</span>
                        </label>
                     )}
                  </div>

@@ -99,9 +99,9 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-[80vw] h-[80vh] overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50 flex-shrink-0">
+                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-brand-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
-                        <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
+                        <div className="bg-brand-600 p-1.5 rounded-lg text-white">
                             <Calculator className="w-5 h-5" />
                         </div>
                         <div>
@@ -120,7 +120,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
                                 <input
                                     type="text"
-                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all focus:border-indigo-500"
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none shadow-sm transition-all focus:border-brand-500"
                                     placeholder="Ex: Taux de marge, % Réalisation"
                                     value={name}
                                     onChange={e => setName(e.target.value)}
@@ -135,7 +135,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                 <div className="relative group">
                                     <textarea
                                         ref={textareaRef}
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none h-40 shadow-sm transition-all focus:border-indigo-500 bg-slate-50 focus:bg-white"
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none h-40 shadow-sm transition-all focus:border-brand-500 bg-slate-50 focus:bg-white"
                                         placeholder="Utilisez les noms de champs entre crochets []"
                                         value={formula}
                                         onChange={e => setFormula(e.target.value)}
@@ -150,7 +150,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Type de résultat</label>
                                     <select
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-brand-500 outline-none"
                                         value={outputType}
                                         onChange={e => setOutputType(e.target.value as any)}
                                     >
@@ -164,7 +164,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Unité</label>
                                         <input
                                             type="text"
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-brand-500 outline-none"
                                             placeholder="Ex: €, %"
                                             value={unit}
                                             onChange={e => setUnit(e.target.value)}
@@ -177,7 +177,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         {/* Middle Column: Fields (span 5) */}
                         <div className="lg:col-span-5 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
                             <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
-                                <Database className="w-3.5 h-3.5 text-indigo-600" />
+                                <Database className="w-3.5 h-3.5 text-brand-600" />
                                 <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Champs</span>
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 custom-scrollbar min-h-[300px]">
@@ -187,10 +187,10 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             key={f}
                                             title={f}
                                             onClick={() => insertIntoFormula(`[${f}]`)}
-                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
+                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 hover:border-brand-300 hover:bg-brand-50 transition-all flex items-center justify-between"
                                         >
                                             <span className="truncate flex-1 font-medium">{f}</span>
-                                            <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
+                                            <Plus className="w-3 h-3 text-slate-300 group-hover:text-brand-500" />
                                         </button>
                                     ))}
                                 </div>
@@ -200,7 +200,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         {/* Right Column: Functions (span 3) */}
                         <div className="lg:col-span-3 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
                             <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
-                                <FunctionSquare className="w-3.5 h-3.5 text-indigo-600" />
+                                <FunctionSquare className="w-3.5 h-3.5 text-brand-600" />
                                 <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Fonctions</span>
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
@@ -209,11 +209,11 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         <button
                                             key={fn.name}
                                             onClick={() => insertIntoFormula(`${fn.name}(`)}
-                                            className="w-full text-left px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
+                                            className="w-full text-left px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-brand-300 hover:bg-brand-50 transition-all group"
                                         >
                                             <div className="flex justify-between items-center mb-0.5">
-                                                <span className="text-[11px] font-bold text-indigo-700 font-mono">{fn.name}</span>
-                                                <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
+                                                <span className="text-[11px] font-bold text-brand-700 font-mono">{fn.name}</span>
+                                                <Plus className="w-3 h-3 text-slate-300 group-hover:text-brand-500" />
                                             </div>
                                             <div className="text-[9px] text-slate-400 font-mono mb-1">{fn.syntax}</div>
                                             <div className="text-[9px] text-slate-500 leading-tight">{fn.desc}</div>
@@ -244,7 +244,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                     <Button
                         onClick={handleSave}
                         disabled={!name || !formula || !!previewResult?.error}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 shadow-md text-white font-bold"
+                        className="flex-1 bg-brand-600 hover:bg-brand-700 shadow-md text-white font-bold"
                     >
                         {initialField ? <Check className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                         {initialField ? 'Enregistrer les modifications' : 'Créer le champ'}

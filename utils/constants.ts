@@ -3,7 +3,7 @@ export const CHART_COLORS = ['#64748b', '#60a5fa', '#34d399', '#f87171', '#a78bf
 
 export const BORDER_COLORS = [
    { label: 'Gris', class: 'border-slate-200', bg: 'bg-slate-200' },
-   { label: 'Bleu', class: 'border-blue-200', bg: 'bg-blue-200' },
+   { label: 'Bleu', class: 'border-brand-200', bg: 'bg-brand-200' },
    { label: 'Rouge', class: 'border-red-200', bg: 'bg-red-200' },
    { label: 'Vert', class: 'border-green-200', bg: 'bg-green-200' },
    { label: 'Orange', class: 'border-amber-200', bg: 'bg-amber-200' },
@@ -20,16 +20,16 @@ export const SOURCE_COLORS = ['blue', 'indigo', 'purple', 'pink', 'teal', 'orang
 
 export const SOURCE_COLOR_CLASSES: Record<string, { border: string, text: string, bg: string, hover: string }> = {
     blue: {
-        border: 'border-blue-500',
-        text: 'text-blue-700',
-        bg: 'bg-blue-50',
-        hover: 'hover:border-blue-400'
+        border: 'border-brand-500',
+        text: 'text-brand-700',
+        bg: 'bg-brand-50',
+        hover: 'hover:border-brand-400'
     },
     indigo: {
-        border: 'border-indigo-500',
-        text: 'text-indigo-700',
-        bg: 'bg-indigo-50',
-        hover: 'hover:border-indigo-400'
+        border: 'border-brand-500',
+        text: 'text-brand-700',
+        bg: 'bg-brand-50',
+        hover: 'hover:border-brand-400'
     },
     purple: {
         border: 'border-purple-500',
