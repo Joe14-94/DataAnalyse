@@ -22,29 +22,10 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-sm">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-500 text-sm text-center p-1">{data.error}</div>;
 
-   // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélection rapide
-   if (widget.type === 'chart' && (widget.config.pivotChart || data.isSelectionChart)) {
-      let colors, chartData, unit, seriesName;
-
-      if (data.isSelectionChart) {
-         const items = data.items || [];
-         chartData = items.map((item: any) => ({
-            name: item.label,
-            value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0
-         }));
-         unit = '';
-         seriesName = 'Valeur';
-         const colorCount = chartData.length || 10;
-         colors = getChartColors(colorCount, widget.config.colorPalette || 'vibrant');
-      } else {
-         colors = data.colors;
-         chartData = data.data;
-         unit = data.unit;
-         seriesName = data.seriesName;
-      }
-
-      const { pivotChart } = widget.config;
-      const chartType = pivotChart?.chartType || widget.config.chartType || 'pie';
+   // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
+   if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
+      const { colors, data: chartData, unit, seriesName } = data;
+      const chartType = widget.config.pivotChart ? widget.config.pivotChart.chartType : widget.config.chartType;
 
       if (!chartData || chartData.length === 0) {
          return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;

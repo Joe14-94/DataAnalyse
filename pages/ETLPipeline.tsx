@@ -573,7 +573,7 @@ export const ETLPipeline: React.FC = () => {
                                 placeholder="Nom du pipeline..."
                             />
                         </div>
-                        <Button onClick={handleSavePipeline} className="bg-emerald-600 hover:bg-emerald-700">
+                        <Button onClick={handleSavePipeline}>
                             <Save className="w-4 h-4 mr-2" />
                             Sauvegarder
                         </Button>

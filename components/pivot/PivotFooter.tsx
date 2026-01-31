@@ -56,7 +56,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    };
 
    const getCellFormatting = (col: string, value: any, metricLabel: string) => {
-      return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, true);
+      return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, 'grandTotal');
    };
 
    const formatOutput = (val: string | number, metric?: any) => {
@@ -121,7 +121,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            <div className="flex flex-col gap-0.5">
                               {Object.entries(pivotData.grandTotal).map(([label, v], idx) => {
                                  const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === label);
-                                 const metricStyle = getCellFormatting('Total', v, label);
+                                 const metricStyle = getCellStyle([], 'Total', v, label, styleRules, conditionalRules, 'grandTotal');
                                  return (
                                     <div key={idx} className="text-[9px] whitespace-nowrap" style={metricStyle}>
                                        <span className="text-slate-500 font-medium mr-1">{label}:</span>
