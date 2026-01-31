@@ -10,6 +10,7 @@ interface ModalProps {
   footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
   icon?: React.ReactNode;
+  closeLabel?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -19,7 +20,8 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   maxWidth = '2xl',
-  icon
+  icon,
+  closeLabel = 'Fermer'
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +51,12 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={typeof title === 'string' ? 'modal-title' : undefined}
+    >
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
@@ -64,14 +71,15 @@ export const Modal: React.FC<ModalProps> = ({
             {icon && <div className="text-brand-600">{icon}</div>}
             {title && (
               typeof title === 'string' ? (
-                <h3 className="font-bold text-lg text-txt-main">{title}</h3>
+                <h3 id="modal-title" className="font-bold text-lg text-txt-main">{title}</h3>
               ) : title
             )}
           </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-canvas rounded-lg transition-colors text-txt-secondary hover:text-txt-main"
-            title="Fermer"
+            title={closeLabel}
+            aria-label={closeLabel}
           >
             <X className="w-5 h-5" />
           </button>
