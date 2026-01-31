@@ -594,7 +594,7 @@ export const PivotTable: React.FC = () => {
                                 <span className="text-xs font-bold uppercase tracking-wider">Sélection de mise en forme : Cliquez sur une cellule, ligne ou colonne</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsFormattingSelectionMode(false); setIsFormattingModalOpen(true); }}>Annuler</Button>
+                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsFormattingSelectionMode(null); setIsFormattingModalOpen(true); }}>Annuler</Button>
                             </div>
                         </div>
                     )}

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Palette, AlertCircle, Check, Info } from 'lucide-react';
+import { X, Plus, Trash2, Palette, AlertCircle, Check, Info, MousePointerClick } from 'lucide-react';
 import { PivotStyleRule, ConditionalFormattingRule, PivotMetric } from '../../types/pivot';
 import { Button } from '../ui/Button';
 
@@ -33,7 +33,7 @@ const COLORS = [
 ];
 
 export const FormattingModal: React.FC<FormattingModalProps> = ({
-  isOpen, onClose, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields, additionalLabels = []
+  isOpen, onClose, onStartSelection, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields, additionalLabels = []
 }) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'conditional'>('manual');
 
