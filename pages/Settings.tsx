@@ -3,17 +3,18 @@ import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText } from 'lucide-react';
-import { APP_VERSION, runSelfDiagnostics } from '../utils';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText, History } from 'lucide-react';
+import { APP_VERSION, runSelfDiagnostics, formatDateFr } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { DiagnosticSuite, Dataset, UIPrefs, AppState } from '../types';
 import { useSettings } from '../context/SettingsContext';
 import { Palette, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
 import { useReferentials } from '../context/ReferentialContext';
 import { BackupRestoreModal } from '../components/settings/BackupRestoreModal';
+import { Modal } from '../components/ui/Modal';
 
 export const Settings: React.FC = () => {
-   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis } = useData();
+   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis, deleteBatch } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
    const {
       chartsOfAccounts,
@@ -63,6 +64,9 @@ export const Settings: React.FC = () => {
    // Chart of accounts viewer/editor modal
    const [viewingChartId, setViewingChartId] = useState<string | null>(null);
    const [searchAccountQuery, setSearchAccountQuery] = useState('');
+
+   // Versions management state
+   const [viewingDatasetVersionsId, setViewingDatasetVersionsId] = useState<string | null>(null);
 
    // Chart renaming state
    const [editingChartId, setEditingChartId] = useState<string | null>(null);
@@ -881,6 +885,15 @@ export const Settings: React.FC = () => {
                                              <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="text-brand-600 hover:bg-brand-50 border-brand-200"
+                                                onClick={() => setViewingDatasetVersionsId(ds.id)}
+                                             >
+                                                <History className="w-4 h-4 mr-2" />
+                                                Gérer les imports
+                                             </Button>
+                                             <Button
+                                                variant="outline"
+                                                size="sm"
                                                 className="text-slate-600 hover:bg-slate-50 border-slate-200"
                                                 onClick={() => startEditing(ds)}
                                              >
@@ -1013,6 +1026,79 @@ export const Settings: React.FC = () => {
                <p>© 2025 - Application interne</p>
             </div>
          </div>
+
+         {/* Modal: Gérer les versions d'un dataset */}
+         {viewingDatasetVersionsId && (() => {
+            const ds = datasets.find(d => d.id === viewingDatasetVersionsId);
+            const dsBatches = batches.filter(b => b.datasetId === viewingDatasetVersionsId)
+                                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            return (
+               <Modal
+                  isOpen={!!viewingDatasetVersionsId}
+                  onClose={() => setViewingDatasetVersionsId(null)}
+                  title={`Gérer les imports : ${ds?.name}`}
+                  icon={<History className="w-6 h-6 text-brand-600" />}
+                  maxWidth="2xl"
+               >
+                  <div className="space-y-4">
+                     <p className="text-sm text-slate-600 mb-4">
+                        Liste de toutes les versions de données importées pour cette typologie.
+                        Vous pouvez supprimer des imports spécifiques pour corriger des erreurs ou alléger le stockage.
+                     </p>
+
+                     <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-left text-sm">
+                           <thead className="bg-slate-50 border-b border-slate-200">
+                              <tr>
+                                 <th className="px-4 py-3 font-bold text-slate-700">Date d'import</th>
+                                 <th className="px-4 py-3 font-bold text-slate-700">Lignes</th>
+                                 <th className="px-4 py-3 font-bold text-slate-700">Créé le</th>
+                                 <th className="px-4 py-3 text-right font-bold text-slate-700">Actions</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-slate-100 bg-white">
+                              {dsBatches.length === 0 ? (
+                                 <tr>
+                                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic">
+                                       Aucun import trouvé pour cette typologie.
+                                    </td>
+                                 </tr>
+                              ) : (
+                                 dsBatches.map(batch => (
+                                    <tr key={batch.id} className="hover:bg-slate-50 transition-colors">
+                                       <td className="px-4 py-3 font-medium text-slate-900">{formatDateFr(batch.date)}</td>
+                                       <td className="px-4 py-3 text-slate-600">{batch.rows.length}</td>
+                                       <td className="px-4 py-3 text-slate-500 text-xs">{new Date(batch.createdAt).toLocaleString('fr-FR')}</td>
+                                       <td className="px-4 py-3 text-right">
+                                          <button
+                                             onClick={() => {
+                                                if (window.confirm(`Supprimer définitivement l'import du ${formatDateFr(batch.date)} ?`)) {
+                                                   deleteBatch(batch.id);
+                                                }
+                                             }}
+                                             className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                                             title="Supprimer cette version"
+                                          >
+                                             <Trash2 className="w-4 h-4" />
+                                          </button>
+                                       </td>
+                                    </tr>
+                                 ))
+                              )}
+                           </tbody>
+                        </table>
+                     </div>
+
+                     <div className="flex justify-end pt-4">
+                        <Button variant="outline" onClick={() => setViewingDatasetVersionsId(null)}>
+                           Fermer
+                        </Button>
+                     </div>
+                  </div>
+               </Modal>
+            );
+         })()}
 
          {/* Modal: Créer un axe analytique */}
          {showAxisModal && (
