@@ -70,8 +70,8 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
             ))}
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
-            <Info className="w-3.5 h-3.5 text-blue-500" />
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-brand-50 px-3 py-1.5 rounded-full border border-brand-100">
+            <Info className="w-3.5 h-3.5 text-brand-500" />
             Le graphique s'adapte automatiquement à votre sélection
           </div>
         </div>

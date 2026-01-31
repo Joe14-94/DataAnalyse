@@ -558,13 +558,13 @@ export const Budget: React.FC = () => {
                         <div className="space-y-6">
                             {/* Quick Stats */}
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <Card className="border-l-4 border-l-blue-500">
+                                <Card className="border-l-4 border-l-brand-500">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <div className="text-sm text-slate-600 font-bold">Total Budgets</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{budgets.length}</div>
                                         </div>
-                                        <FileText className="w-8 h-8 text-blue-500" />
+                                        <FileText className="w-8 h-8 text-brand-500" />
                                     </div>
                                 </Card>
                                 <Card className="border-l-4 border-l-green-500">
@@ -634,7 +634,7 @@ export const Budget: React.FC = () => {
                                             const activeVersion = budget.versions.find(v => v.id === budget.activeVersionId);
                                             const statusColors = {
                                                 draft: 'bg-gray-100 text-gray-700',
-                                                submitted: 'bg-blue-100 text-blue-700',
+                                                submitted: 'bg-brand-100 text-brand-700',
                                                 validated: 'bg-green-100 text-green-700',
                                                 rejected: 'bg-red-100 text-red-700',
                                                 locked: 'bg-purple-100 text-purple-700'
@@ -680,7 +680,7 @@ export const Budget: React.FC = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="text-blue-600 border-blue-200"
+                                                                className="text-brand-600 border-brand-200"
                                                                 onClick={() => handleSelectBudget(budget.id)}
                                                             >
                                                                 <Eye className="w-4 h-4 mr-2" />
@@ -778,7 +778,7 @@ export const Budget: React.FC = () => {
                                             {selectedBudget?.versions.map(version => {
                                                 const statusColors = {
                                                     draft: 'bg-gray-100 text-gray-700 border-gray-300',
-                                                    submitted: 'bg-blue-100 text-blue-700 border-blue-300',
+                                                    submitted: 'bg-brand-100 text-brand-700 border-brand-300',
                                                     validated: 'bg-green-100 text-green-700 border-green-300',
                                                     rejected: 'bg-red-100 text-red-700 border-red-300',
                                                     locked: 'bg-purple-100 text-purple-700 border-purple-300'
@@ -842,7 +842,7 @@ export const Budget: React.FC = () => {
                                                         size="sm"
                                                         onClick={() => setShowImportModal(true)}
                                                         disabled={selectedBudget?.isLocked || selectedVersion.status !== 'draft'}
-                                                        className="text-blue-600 border-blue-200"
+                                                        className="text-brand-600 border-brand-200"
                                                     >
                                                         <Upload className="w-4 h-4 mr-2" />
                                                         Importer
@@ -1038,9 +1038,9 @@ export const Budget: React.FC = () => {
                                                         <p className="text-sm text-slate-600 mb-4">
                                                             Importez un fichier Excel (.xlsx, .xls) ou CSV (.csv) contenant les lignes budgétaires.
                                                         </p>
-                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                                                            <h4 className="text-sm font-bold text-blue-900 mb-2">Format attendu :</h4>
-                                                            <ul className="text-xs text-blue-800 space-y-1">
+                                                        <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-4">
+                                                            <h4 className="text-sm font-bold text-brand-900 mb-2">Format attendu :</h4>
+                                                            <ul className="text-xs text-brand-800 space-y-1">
                                                                 <li>• Colonne 1: Code compte (ex: 601000)</li>
                                                                 <li>• Colonne 2: Libellé (ex: Achats de matières premières)</li>
                                                                 <li>• Colonnes suivantes: Périodes (Jan 2025, Fév 2025, etc.)</li>
@@ -1246,7 +1246,7 @@ export const Budget: React.FC = () => {
                                                 <div className="mt-6">
                                                     {/* Summary */}
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                                        <Card className="border-l-4 border-l-blue-500">
+                                                        <Card className="border-l-4 border-l-brand-500">
                                                             <div className="text-sm text-slate-600 font-bold">
                                                                 Total {comparison.version1.name}
                                                             </div>
@@ -1386,7 +1386,7 @@ export const Budget: React.FC = () => {
                                                         <div className="flex-1">
                                                             <div className="flex items-center gap-3 mb-2">
                                                                 <h4 className="font-bold text-slate-800">{budget.name}</h4>
-                                                                <span className="text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">
+                                                                <span className="text-xs font-bold px-2 py-1 rounded bg-brand-100 text-brand-700">
                                                                     {version.name}
                                                                 </span>
                                                             </div>
@@ -1501,7 +1501,7 @@ export const Budget: React.FC = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="text-blue-600 border-blue-200"
+                                                                className="text-brand-600 border-brand-200"
                                                                 onClick={() => {
                                                                     if (version.lines.length === 0) {
                                                                         alert('Impossible de soumettre un budget vide.');
@@ -1578,7 +1578,7 @@ export const Budget: React.FC = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="text-blue-600 border-blue-200"
+                                                                className="text-brand-600 border-brand-200"
                                                                 onClick={() => handleSelectBudget(budget.id)}
                                                             >
                                                                 <Eye className="w-4 h-4 mr-2" />
@@ -1734,7 +1734,7 @@ export const Budget: React.FC = () => {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="text-blue-600 border-blue-200"
+                                                        className="text-brand-600 border-brand-200"
                                                         onClick={() => handleEditTemplate(template.id)}
                                                     >
                                                         <Edit2 className="w-4 h-4" />
@@ -2008,16 +2008,16 @@ export const Budget: React.FC = () => {
                                             Importez vos valeurs d'axe depuis un fichier Excel (.xlsx) ou CSV
                                         </p>
 
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                            <p className="text-xs text-blue-800 font-bold mb-2">Format attendu :</p>
-                                            <ul className="text-xs text-blue-700 space-y-1">
+                                        <div className="bg-brand-50 border border-brand-200 rounded-lg p-3">
+                                            <p className="text-xs text-brand-800 font-bold mb-2">Format attendu :</p>
+                                            <ul className="text-xs text-brand-700 space-y-1">
                                                 <li>• Colonne "Catégorie" : Catégorie (niveau 1)</li>
                                                 <li>• Colonne "Sous-catégorie" : Sous-catégorie (niveau 2)</li>
                                                 <li>• Colonne "Code" : Code de la valeur (requis)</li>
                                                 <li>• Colonne "Libellé" : Nom de la valeur (requis)</li>
                                                 <li>• Colonnes optionnelles : Code Parent, Responsable, Email Responsable</li>
                                             </ul>
-                                            <p className="text-xs text-blue-600 mt-2 italic">
+                                            <p className="text-xs text-brand-600 mt-2 italic">
                                                 💡 Structure hiérarchique : Catégorie → Sous-catégorie → Code → Libellé
                                             </p>
                                         </div>
@@ -2148,8 +2148,8 @@ export const Budget: React.FC = () => {
                                             const latestVersion = sourceBudget?.versions[sourceBudget.versions.length - 1];
                                             const lineCount = latestVersion?.lines.length || 0;
                                             return lineCount > 0 && (
-                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                    <p className="text-sm text-blue-800">
+                                                <div className="bg-brand-50 border border-brand-200 rounded-lg p-3">
+                                                    <p className="text-sm text-brand-800">
                                                         ℹ️ Ce modèle inclura les {lineCount} comptes du budget sélectionné
                                                     </p>
                                                 </div>
@@ -2254,8 +2254,8 @@ export const Budget: React.FC = () => {
                                         {editingTemplateId && (() => {
                                             const template = templates.find(t => t.id === editingTemplateId);
                                             return template && (
-                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                    <p className="text-sm text-blue-800">
+                                                <div className="bg-brand-50 border border-brand-200 rounded-lg p-3">
+                                                    <p className="text-sm text-brand-800">
                                                         ℹ️ Ce modèle contient {template.accountCodes.length} comptes
                                                     </p>
                                                 </div>

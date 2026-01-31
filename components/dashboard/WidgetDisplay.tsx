@@ -205,7 +205,7 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
       const style = widget.config.textStyle || {};
       const align = style.align || 'left';
       const size = style.size === 'large' ? 'text-lg' : style.size === 'xl' ? 'text-2xl' : 'text-sm';
-      const color = style.color === 'primary' ? 'text-blue-600' : style.color === 'muted' ? 'text-slate-400' : 'text-slate-800';
+      const color = style.color === 'primary' ? 'text-brand-600' : style.color === 'muted' ? 'text-slate-400' : 'text-slate-800';
       return <div className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: align }}>{widget.config.textContent || '...'}</div>;
    }
 
@@ -234,7 +234,7 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                      <span>{Math.round(progress)}% / {target.toLocaleString()}</span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                     <div className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${progress}%` }} />
+                     <div className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-brand-600'}`} style={{ width: `${progress}%` }} />
                   </div>
                </div>
             ) : (style === 'trend' || showTrend) && (
@@ -254,12 +254,12 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
          <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {current.map((item: any, idx: number) => (
                <div key={idx} className="flex flex-col gap-0.5 cursor-pointer group" onClick={() => widget.config.dimension && setDashboardFilter(widget.config.dimension, item.name)}>
-                  <div className="flex justify-between text-xs group-hover:text-blue-600 transition-colors">
+                  <div className="flex justify-between text-xs group-hover:text-brand-600 transition-colors">
                      <span className="font-bold text-slate-800 truncate pr-2">{idx + 1}. {item.name}</span>
                      <span className="text-slate-500 font-mono">{item.value.toLocaleString()} {unit}</span>
                   </div>
                   <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-blue-500 rounded-full opacity-80" style={{ width: `${(item.value / max) * 100}%` }} />
+                     <div className="h-full bg-brand-500 rounded-full opacity-80" style={{ width: `${(item.value / max) * 100}%` }} />
                   </div>
                </div>
             ))}

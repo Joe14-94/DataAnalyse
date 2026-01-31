@@ -48,9 +48,9 @@ Toutes les pages et composants doivent utiliser les classes Tailwind standards p
 
 ### Palette Principale
 
-- **Primaire (Bleu)** : `blue-50` à `blue-900`
-  - Boutons principaux : `bg-blue-600 hover:bg-blue-700`
-  - Texte accentué : `text-blue-600`
+- **Primaire (Dynamique)** : `brand-50` à `brand-900` (dépend de l'ambiance choisie)
+  - Boutons principaux : `bg-brand-600 hover:bg-brand-700`
+  - Texte accentué : `text-brand-600`
 
 - **Secondaire (Indigo/Violet)** : `indigo-50` à `indigo-900`, `purple-50` à `purple-900`
   - Accents secondaires
@@ -67,7 +67,7 @@ Toutes les pages et composants doivent utiliser les classes Tailwind standards p
 - **Succès** : `green-50` à `green-900`
 - **Avertissement** : `amber-50` à `amber-900`
 - **Erreur** : `red-50` à `red-900`
-- **Info** : `blue-50` à `blue-900`
+- **Info** : `brand-50` à `brand-900` (ou `blue-` si fixe)
 
 ## Espacement
 
@@ -90,7 +90,7 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 
 ```tsx
 // Bouton primaire
-<button className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded hover:bg-blue-700">
+<button className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded hover:bg-brand-700">
   Action
 </button>
 
@@ -100,7 +100,7 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 </button>
 
 // Bouton petit
-<button className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">
+<button className="px-2 py-1 bg-brand-600 text-white text-xs font-bold rounded hover:bg-brand-700">
   Action
 </button>
 ```
@@ -125,7 +125,7 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 // Input
 <input
   type="text"
-  className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
   placeholder="Entrez une valeur"
 />
 
@@ -161,7 +161,7 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 
 ### Bordures
 - Standard : `border border-slate-200`
-- Accentuée : `border-2 border-blue-300`
+- Accentuée : `border-2 border-brand-300`
 - Arrondie standard : `rounded` ou `rounded-lg`
 - Très arrondie : `rounded-xl`
 
@@ -176,7 +176,7 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 Toujours ajouter des transitions pour une meilleure UX:
 
 ```tsx
-<button className="... transition-colors hover:bg-blue-700">
+<button className="... transition-colors hover:bg-brand-700">
   Bouton avec transition
 </button>
 

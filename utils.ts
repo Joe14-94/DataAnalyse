@@ -350,8 +350,8 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
     str = str.replace(unitRegex, '');
   }
 
-  // Supprimer les espaces d'abord
-  str = str.replace(/\s/g, '').replace(/\u00A0/g, '');
+  // BOLT OPTIMIZATION: Single regex pass for space removal
+  str = str.replace(/[\s\u00A0]/g, '');
 
   // Détection du format français vs anglais
   const lastCommaPos = str.lastIndexOf(',');
@@ -886,32 +886,37 @@ interface Token {
   value: string;
 }
 
+// BOLT OPTIMIZATION: Global cache for tokenized formulas to avoid repeated parsing
+const FORMULA_CACHE = new Map<string, Token[]>();
+
 class FormulaParser {
   private pos = 0;
-  private tokens: Token[] = [];
-  private row: any = {};
+  private tokens: Token[];
+  private row: any;
 
-  constructor(formula: string, row: any) {
+  constructor(tokens: Token[], row: any) {
+    this.tokens = tokens;
     this.row = row;
-    this.tokens = this.tokenize(formula);
   }
 
   private error(message: string): never {
     throw new Error(`Erreur de formule: ${message}`);
   }
 
-  private tokenize(input: string): Token[] {
+  public static tokenize(input: string): Token[] {
     const tokens: Token[] = [];
     let cursor = 0;
 
     while (cursor < input.length) {
       const char = input[cursor];
 
-      if (/\s/.test(char)) { cursor++; continue; }
+      // BOLT OPTIMIZATION: Faster whitespace check (including non-breaking space for FR format)
+      if (char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\u00A0') { cursor++; continue; }
 
-      if (/[0-9]/.test(char)) {
+      // BOLT OPTIMIZATION: Faster digit check
+      if (char >= '0' && char <= '9') {
         let val = '';
-        while (cursor < input.length && /[0-9.]/.test(input[cursor])) val += input[cursor++];
+        while (cursor < input.length && ((input[cursor] >= '0' && input[cursor] <= '9') || input[cursor] === '.')) val += input[cursor++];
         tokens.push({ type: 'NUMBER', value: val });
         continue;
       }
@@ -941,9 +946,9 @@ class FormulaParser {
         continue;
       }
 
-      if (/[a-zA-Z]/.test(char)) {
+      if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')) {
         let val = '';
-        while (cursor < input.length && /[a-zA-Z0-9_]/.test(input[cursor])) val += input[cursor++];
+        while (cursor < input.length && ((input[cursor] >= 'a' && input[cursor] <= 'z') || (input[cursor] >= 'A' && input[cursor] <= 'Z') || (input[cursor] >= '0' && input[cursor] <= '9') || input[cursor] === '_')) val += input[cursor++];
         tokens.push({ type: 'IDENTIFIER', value: val.toUpperCase() });
         continue;
       }
@@ -1117,13 +1122,19 @@ class FormulaParser {
 
 /**
  * Évalue une formule de manière sécurisée sans utiliser eval() ni new Function()
- * Remplace l'ancienne implémentation vulnérable.
+ * BOLT OPTIMIZATION: Uses a global cache for tokenized formulas to improve performance in loops.
  */
 export const evaluateFormula = (row: any, formula: string): number | string | null => {
   if (!formula || !formula.trim()) return null;
 
   try {
-    const parser = new FormulaParser(formula, row);
+    let tokens = FORMULA_CACHE.get(formula);
+    if (!tokens) {
+      tokens = FormulaParser.tokenize(formula);
+      FORMULA_CACHE.set(formula, tokens);
+    }
+
+    const parser = new FormulaParser(tokens, row);
     const result = parser.evaluate();
 
     // Nettoyage résultat final

@@ -204,10 +204,10 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       <div ref={panelRef} className="xl:w-72 flex-shrink-0 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
          {/* 1. DATA SOURCES STACK */}
          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
-            <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+            <div className="p-2 bg-gradient-to-r from-brand-50 to-indigo-50 border-b border-brand-200">
                <h3 className="text-sm font-bold text-slate-800 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                     <Database className="w-3.5 h-3.5 text-blue-600" />
+                     <Database className="w-3.5 h-3.5 text-brand-600" />
                      Sources de données
                   </div>
                   <button onClick={() => setIsDataSourcesPanelCollapsed(!isDataSourcesPanelCollapsed)} className="text-slate-500 hover:text-slate-700 transition-colors">
@@ -219,10 +219,10 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             {!isDataSourcesPanelCollapsed && (
                <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
                   {sources.length === 0 ? (
-                     <div className="text-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
-                        <Database className="w-10 h-10 mx-auto text-blue-400 mb-2" />
+                     <div className="text-center p-6 border-2 border-dashed border-brand-300 rounded-lg bg-gradient-to-br from-brand-50 to-indigo-50">
+                        <Database className="w-10 h-10 mx-auto text-brand-400 mb-2" />
                         <p className="text-xs text-slate-500 mb-2">Sélectionnez une source de données</p>
-                        <button onClick={startAddSource} className="w-full py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700">
+                        <button onClick={startAddSource} className="w-full py-2 bg-brand-600 text-white text-xs font-bold rounded-lg hover:bg-brand-700">
                            + Définir source principale
                         </button>
                      </div>
@@ -253,7 +253,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                               </div>
                            );
                         })}
-                        <button onClick={startAddSource} className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-500 hover:text-blue-600 hover:border-blue-400 text-xs font-bold flex items-center justify-center gap-1">
+                        <button onClick={startAddSource} className="w-full py-1 border-2 border-dashed border-slate-300 rounded text-slate-500 hover:text-brand-600 hover:border-brand-400 text-xs font-bold flex items-center justify-center gap-1">
                            <Plus className="w-3 h-3" /> Gérer les sources
                         </button>
                      </div>
@@ -264,7 +264,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
          {/* 2. TEMPORAL COMPARISON CONFIG */}
          {isTemporalMode && (
-            <div className="bg-white rounded-lg border border-blue-300 shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: isTemporalConfigPanelCollapsed ? '40px' : 'none' }}>
+            <div className="bg-white rounded-lg border border-brand-300 shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: isTemporalConfigPanelCollapsed ? '40px' : 'none' }}>
                <div className="p-2 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center justify-between gap-2">
                      <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-purple-600" /> Configuration</div>
@@ -284,11 +284,11 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                               <label className="text-xs font-bold text-slate-600 mb-1 block">Regrouper par</label>
                               <div className="space-y-1 mb-2">
                                  {rowFields.map((field, idx) => (
-                                    <div key={field} className="flex items-center gap-1 bg-blue-50 border border-blue-300 rounded px-1.5 py-0.5">
-                                       <span className="text-xs font-medium text-blue-700 flex-1">{field}</span>
+                                    <div key={field} className="flex items-center gap-1 bg-brand-50 border border-brand-300 rounded px-1.5 py-0.5">
+                                       <span className="text-xs font-medium text-brand-700 flex-1">{field}</span>
                                        <div className="flex items-center gap-0.5">
-                                          <button onClick={() => { if (idx > 0) { const n = [...rowFields]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; setRowFields(n); } }} disabled={idx === 0} className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
-                                          <button onClick={() => { if (idx < rowFields.length - 1) { const n = [...rowFields]; [n[idx + 1], n[idx]] = [n[idx], n[idx + 1]]; setRowFields(n); } }} disabled={idx === rowFields.length - 1} className="p-0.5 text-blue-600 hover:bg-blue-200 rounded disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
+                                          <button onClick={() => { if (idx > 0) { const n = [...rowFields]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; setRowFields(n); } }} disabled={idx === 0} className="p-0.5 text-brand-600 hover:bg-brand-200 rounded disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
+                                          <button onClick={() => { if (idx < rowFields.length - 1) { const n = [...rowFields]; [n[idx + 1], n[idx]] = [n[idx], n[idx + 1]]; setRowFields(n); } }} disabled={idx === rowFields.length - 1} className="p-0.5 text-brand-600 hover:bg-brand-200 rounded disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
                                           <button onClick={() => setRowFields(rowFields.filter(f => f !== field))} className="p-0.5 text-red-500 hover:bg-red-100 rounded"><X className="w-3 h-3" /></button>
                                        </div>
                                     </div>
@@ -415,7 +415,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
          {!isTemporalMode && (
             <div ref={dropZonesRef} className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div className="grid grid-cols-2 gap-2 min-h-0" style={{ height: `${dropZonesHeight}px` }}>
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
                      <div className="space-y-2">
                         {filters.map((f, idx) => {
@@ -476,7 +476,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                         })}
                      </div>
                   </div>
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Table2 className="w-2 h-2" /> Colonnes</div>
                      <div className="space-y-1">
                         {colFields.map(f => {
@@ -501,14 +501,14 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                {/* INTERNAL SPLITTER FOR DROP ZONES */}
                <div
                   onMouseDown={handleDropZonesMouseDown}
-                  className="h-1 bg-slate-100 hover:bg-blue-400 cursor-row-resize transition-all rounded-full mx-8 -my-1.5 z-10 flex items-center justify-center group"
+                  className="h-1 bg-slate-100 hover:bg-brand-400 cursor-row-resize transition-all rounded-full mx-8 -my-1.5 z-10 flex items-center justify-center group"
                   title="Redimensionner les zones de dépôt"
                >
                   <div className="w-4 h-0.5 bg-slate-300 rounded-full group-hover:bg-white opacity-50 group-hover:opacity-100"></div>
                </div>
 
                <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Layers className="w-2 h-2" /> Lignes</div>
                      {rowFields.map(f => {
                         const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
@@ -525,7 +525,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                         );
                      })}
                   </div>
-                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
+                  <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
                         <div className="flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)</div>
                         {openCalcModal && (
@@ -556,7 +556,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                           n[idx] = { ...n[idx], aggType: t as any };
                                           setMetrics(n);
                                        }}
-                                       className={`px-0.5 py-0.5 text-[8px] uppercase rounded border ${m.aggType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                       className={`px-0.5 py-0.5 text-[8px] uppercase rounded border ${m.aggType === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-500 border-slate-200'}`}
                                     >
                                        {t.substring(0, 3)}
                                     </button>
@@ -586,7 +586,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             </button>
             <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
             <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
-            {(isTemporalMode || colFields.length > 0) && <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-blue-700 font-bold" />}
+            {(isTemporalMode || colFields.length > 0) && <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-brand-700 font-bold" />}
          </div>
       </div>
    );

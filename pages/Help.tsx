@@ -56,7 +56,7 @@ export const Help: React.FC = () => {
                     </h2>
                     <div className="space-y-4">
                       <div className="flex gap-4 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
-                        <div className="p-2 bg-blue-50 rounded-lg text-blue-600 h-fit">
+                        <div className="p-2 bg-brand-50 rounded-lg text-brand-600 h-fit">
                           <Filter className="w-5 h-5" />
                         </div>
                         <div>
@@ -138,7 +138,7 @@ export const Help: React.FC = () => {
 
           <TabsContent value="guide">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card title="1. Importation & Mapping" icon={<Download className="w-5 h-5 text-blue-600" />}>
+              <Card title="1. Importation & Mapping" icon={<Download className="w-5 h-5 text-brand-600" />}>
                 <div className="space-y-3">
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Glissez vos fichiers CSV ou Excel dans la zone d'import. Le système détecte automatiquement les colonnes.

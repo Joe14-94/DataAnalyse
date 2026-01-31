@@ -43,7 +43,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onC
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-blue-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-brand-300 focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
       >
         <span className="truncate text-slate-700">
           {selected.length === 0 
@@ -60,7 +60,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onC
         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
           <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
              <span className="text-xs font-bold text-slate-500 uppercase">Options</span>
-             <button onClick={handleSelectAll} className="text-xs text-blue-600 hover:underline">
+             <button onClick={handleSelectAll} className="text-xs text-brand-600 hover:underline">
                 {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
              </button>
           </div>
@@ -73,9 +73,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onC
                   <div key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer" onClick={() => handleToggle(option)}>
                      <div 
                         className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center mr-2 transition-colors 
-                        ${isChecked ? 'bg-white border-blue-600' : 'bg-white border-slate-300'}`}
+                        ${isChecked ? 'bg-white border-brand-600' : 'bg-white border-slate-300'}`}
                       >
-                        {isChecked && <Check className="w-3 h-3 text-blue-600" strokeWidth={3} />}
+                        {isChecked && <Check className="w-3 h-3 text-brand-600" strokeWidth={3} />}
                      </div>
                      <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
                   </div>

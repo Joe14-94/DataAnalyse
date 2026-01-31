@@ -3,17 +3,18 @@ import React, { useRef, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText } from 'lucide-react';
-import { APP_VERSION, runSelfDiagnostics } from '../utils';
+import { Download, Upload, Trash2, ShieldAlert, WifiOff, Database, PlayCircle, Table2, Calendar, Stethoscope, CheckCircle2, XCircle, AlertTriangle, Edit2, Check, X, Building2, GitBranch, CalendarDays, Users, Plus, FileText, History } from 'lucide-react';
+import { APP_VERSION, runSelfDiagnostics, formatDateFr } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { DiagnosticSuite, Dataset, UIPrefs, AppState } from '../types';
 import { useSettings } from '../context/SettingsContext';
 import { Palette, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
 import { useReferentials } from '../context/ReferentialContext';
 import { BackupRestoreModal } from '../components/settings/BackupRestoreModal';
+import { Modal } from '../components/ui/Modal';
 
 export const Settings: React.FC = () => {
-   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis } = useData();
+   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis, deleteBatch } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
    const {
       chartsOfAccounts,
@@ -63,6 +64,9 @@ export const Settings: React.FC = () => {
    // Chart of accounts viewer/editor modal
    const [viewingChartId, setViewingChartId] = useState<string | null>(null);
    const [searchAccountQuery, setSearchAccountQuery] = useState('');
+
+   // Versions management state
+   const [viewingDatasetVersionsId, setViewingDatasetVersionsId] = useState<string | null>(null);
 
    // Chart renaming state
    const [editingChartId, setEditingChartId] = useState<string | null>(null);
@@ -381,7 +385,7 @@ export const Settings: React.FC = () => {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => importPCGTemplate()}
-                                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                          className="text-brand-600 border-brand-200 hover:bg-brand-50"
                                        >
                                           <FileText className="w-4 h-4 mr-2" />
                                           Importer PCG
@@ -465,7 +469,7 @@ export const Settings: React.FC = () => {
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() => handleViewChart(chart.id)}
-                                                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                                            className="text-brand-600 border-brand-200 hover:bg-brand-50"
                                                          >
                                                             <Edit2 className="w-4 h-4 mr-2" />
                                                             Voir
@@ -558,7 +562,7 @@ export const Settings: React.FC = () => {
                                     </div>
                                  )}
 
-                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                 <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 text-sm text-brand-800">
                                     <p className="font-bold mb-1">💡 Prochaine étape</p>
                                     <p>Interface de création et gestion d'axes analytiques (centres de coûts, projets, BU, etc.) à venir.</p>
                                  </div>
@@ -605,7 +609,7 @@ export const Settings: React.FC = () => {
                                     </div>
                                  )}
 
-                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                 <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 text-sm text-brand-800">
                                     <p className="font-bold mb-1">💡 Prochaine étape</p>
                                     <p>Interface de gestion des exercices, périodes mensuelles, clôtures périodiques et 13ème période à venir.</p>
                                  </div>
@@ -654,7 +658,7 @@ export const Settings: React.FC = () => {
                                     })}
                                  </div>
 
-                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                 <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 text-sm text-brand-800">
                                     <p className="font-bold mb-1">💡 Prochaine étape</p>
                                     <p>Interface CRUD complète pour la gestion des tiers, produits et employés à venir.</p>
                                  </div>
@@ -664,193 +668,6 @@ export const Settings: React.FC = () => {
                      </div>
                   </Card>
 
-                  {/* DESIGN SYSTEM CONFIGURATION (NOUVEAU) */}
-                  <Card
-                     title="Design System & Personnalisation"
-                     icon={<Palette className="w-5 h-5 text-brand-600" />}
-                  >
-                     <div className="space-y-8">
-                        <p className="text-sm text-txt-secondary">
-                           Personnalisez l'affichage global de l'application. Ces réglages s'appliquent à tous les composants pour garantir une cohérence visuelle.
-                        </p>
-
-                        {/* Thème et Style */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           {/* Theme Selection */}
-                           <div className="space-y-3">
-                              <label className="text-sm font-bold text-txt-main block">Thème de l'interface</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                 {[
-                                    { id: 'light', name: 'Clair', icon: CheckCircle2 },
-                                    { id: 'dark', name: 'Sombre', icon: CheckCircle2 }
-                                 ].map(t => (
-                                    <button
-                                       key={t.id}
-                                       onClick={() => updateUIPrefs({ theme: t.id as any })}
-                                       className={`p-3 text-left border rounded-lg transition-all flex items-center justify-between ${uiPrefs.theme === t.id ? 'border-brand-600 bg-brand-50' : 'border-border-default hover:border-txt-muted bg-surface'}`}
-                                    >
-                                       <span className={`text-sm font-bold ${uiPrefs.theme === t.id ? 'text-brand-700' : 'text-txt-main'}`}>{t.name}</span>
-                                       {uiPrefs.theme === t.id && <Check className="w-4 h-4 text-brand-600" />}
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-
-                           {/* Style Selection */}
-                           <div className="space-y-3">
-                              <label className="text-sm font-bold text-txt-main block">Style visuel</label>
-                              <div className="grid grid-cols-3 gap-2">
-                                 {[
-                                    { id: 'classic', name: 'Classique' },
-                                    { id: 'material', name: 'Material' },
-                                    { id: 'glass', name: 'Glass' }
-                                 ].map(s => (
-                                    <button
-                                       key={s.id}
-                                       onClick={() => updateUIPrefs({ style: s.id as any })}
-                                       className={`p-2 text-center border rounded-lg transition-all ${uiPrefs.style === s.id ? 'border-brand-600 bg-brand-50' : 'border-border-default hover:border-txt-muted bg-surface'}`}
-                                    >
-                                       <div className={`text-xs font-bold ${uiPrefs.style === s.id ? 'text-brand-700' : 'text-txt-main'}`}>{s.name}</div>
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-                        </div>
-
-                        {/* Color Ambiance */}
-                        <div className="space-y-3">
-                           <label className="text-sm font-bold text-txt-main block">Ambiance colorimétrique</label>
-                           <div className="flex flex-wrap gap-3">
-                              {[
-                                 { id: 'blue', color: '#2563eb', name: 'Océan' },
-                                 { id: 'indigo', color: '#4f46e5', name: 'Royal' },
-                                 { id: 'emerald', color: '#059669', name: 'Forêt' },
-                                 { id: 'rose', color: '#e11d48', name: 'Framboise' },
-                                 { id: 'amber', color: '#d97706', name: 'Solaire' }
-                              ].map(p => (
-                                 <button
-                                    key={p.id}
-                                    onClick={() => updateUIPrefs({ colorPalette: p.id as any })}
-                                    className={`group flex flex-col items-center gap-2 p-2 rounded-xl transition-all ${uiPrefs.colorPalette === p.id ? 'bg-brand-50 ring-2 ring-brand-600' : 'hover:bg-canvas'}`}
-                                 >
-                                    <div
-                                       className="w-10 h-10 rounded-full shadow-inner border-2 border-white"
-                                       style={{ backgroundColor: p.color }}
-                                    />
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${uiPrefs.colorPalette === p.id ? 'text-brand-700' : 'text-txt-muted'}`}>
-                                       {p.name}
-                                    </span>
-                                 </button>
-                              ))}
-                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           {/* Font Size */}
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center">
-                                 <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                    <Type className="w-4 h-4 text-slate-400" /> Taille de police
-                                 </label>
-                                 <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">{uiPrefs.fontSize}px</span>
-                              </div>
-                              <input
-                                 type="range"
-                                 min="8"
-                                 max="18"
-                                 step="1"
-                                 value={uiPrefs.fontSize}
-                                 onChange={(e) => updateUIPrefs({ fontSize: parseInt(e.target.value) })}
-                                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
-                              />
-                              <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
-                                 <span>Ultra (8px)</span>
-                                 <span>Large (18px)</span>
-                              </div>
-                           </div>
-
-                           {/* Sidebar Width */}
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center">
-                                 <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                    <LayoutIcon className="w-4 h-4 text-slate-400" /> Largeur menu
-                                 </label>
-                                 <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">{uiPrefs.sidebarWidth}px</span>
-                              </div>
-                              <input
-                                 type="range"
-                                 min="140"
-                                 max="300"
-                                 step="4"
-                                 value={uiPrefs.sidebarWidth}
-                                 onChange={(e) => updateUIPrefs({ sidebarWidth: parseInt(e.target.value) })}
-                                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
-                              />
-                              <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
-                                 <span>Étroit</span>
-                                 <span>Large</span>
-                              </div>
-                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           {/* Font Family */}
-                           <div className="space-y-3">
-                              <label className="text-sm font-bold text-slate-800 block">Identité visuelle (Police)</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                 {[
-                                    { id: 'inter', name: 'Inter (Pro)', fontClass: 'font-inter' },
-                                    { id: 'outfit', name: 'Outfit (Modern)', fontClass: 'font-outfit' },
-                                    { id: 'sans', name: 'System Sans', fontClass: 'font-sans' },
-                                    { id: 'mono', name: 'Fira Mono', fontClass: 'font-mono' }
-                                 ].map(f => (
-                                    <button
-                                       key={f.id}
-                                       onClick={() => updateUIPrefs({ fontFamily: f.id as any })}
-                                       className={`p-3 text-left border rounded-lg transition-all ${uiPrefs.fontFamily === f.id ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
-                                    >
-                                       <div className={`text-sm font-bold ${f.fontClass} truncate`}>{f.name}</div>
-                                       <div className="text-xs text-slate-400 mt-1">L'application complète</div>
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-
-                           {/* Density / Presets */}
-                           <div className="space-y-3">
-                              <label className="text-sm font-bold text-slate-800 block">Densité d'affichage</label>
-                              <div className="space-y-2">
-                                 {[
-                                    { id: 'ultra', name: 'Mode Expert (8-10px)', desc: 'Densité maximale pour TCD massif', size: 10, sw: 160 },
-                                    { id: 'compact', name: 'Mode Compact (11-12px)', desc: 'Équilibre productivité/lisibilité', size: 12, sw: 192 },
-                                    { id: 'comfortable', name: 'Mode Confort (13-14px)', desc: 'Lisibilité aérée et fluide', size: 14, sw: 240 }
-                                 ].map(p => (
-                                    <button
-                                       key={p.id}
-                                       onClick={() => updateUIPrefs({ density: p.id as any, fontSize: p.size, sidebarWidth: p.sw })}
-                                       className={`w-full p-2.5 text-left border rounded-lg flex items-center gap-3 transition-all ${uiPrefs.density === p.id ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
-                                    >
-                                       <div className={`p-1.5 rounded-md ${uiPrefs.density === p.id ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                          <Maximize2 className="w-3.5 h-3.5" />
-                                       </div>
-                                       <div className="flex-1">
-                                          <div className="text-xs font-bold text-slate-800">{p.name}</div>
-                                          <div className="text-xs text-slate-400 uppercase font-bold tracking-tight">{p.desc}</div>
-                                       </div>
-                                       {uiPrefs.density === p.id && <Check className="w-4 h-4 text-brand-600" />}
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-slate-100 flex justify-end">
-                           <Button variant="ghost" onClick={resetUIPrefs} className="text-slate-500 hover:text-slate-800">
-                              <RotateCcw className="w-4 h-4 mr-2" /> Réinitialiser le style par défaut
-                           </Button>
-                        </div>
-                     </div>
-                  </Card>
 
                   {/* DIAGNOSTICS & COMPLIANCE (NOUVEAU) */}
                   <Card title="Centre de Conformité & Diagnostic">
@@ -1020,7 +837,7 @@ export const Settings: React.FC = () => {
                                  return (
                                     <div key={ds.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors group">
                                        <div className="flex items-start gap-3 flex-1">
-                                          <div className="p-2 bg-blue-50 rounded text-blue-600 mt-0.5">
+                                          <div className="p-2 bg-brand-50 rounded text-brand-600 mt-0.5">
                                              <Table2 className="w-5 h-5" />
                                           </div>
                                           <div className="flex-1">
@@ -1028,7 +845,7 @@ export const Settings: React.FC = () => {
                                                 <div className="flex items-center gap-2">
                                                    <input
                                                       type="text"
-                                                      className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-full max-w-[250px]"
+                                                      className="border border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none w-full max-w-[250px]"
                                                       value={editName}
                                                       onChange={(e) => setEditName(e.target.value)}
                                                       autoFocus
@@ -1068,6 +885,15 @@ export const Settings: React.FC = () => {
                                              <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="text-brand-600 hover:bg-brand-50 border-brand-200"
+                                                onClick={() => setViewingDatasetVersionsId(ds.id)}
+                                             >
+                                                <History className="w-4 h-4 mr-2" />
+                                                Gérer les imports
+                                             </Button>
+                                             <Button
+                                                variant="outline"
+                                                size="sm"
                                                 className="text-slate-600 hover:bg-slate-50 border-slate-200"
                                                 onClick={() => startEditing(ds)}
                                              >
@@ -1093,14 +919,14 @@ export const Settings: React.FC = () => {
                      </div>
                   </Card>
 
-                  <Card title="Confidentialité & stockage" className="border-blue-200 bg-blue-50">
-                     <div className="flex items-start gap-4 text-blue-900">
+                  <Card title="Confidentialité & stockage" className="border-brand-200 bg-brand-50">
+                     <div className="flex items-start gap-4 text-brand-900">
                         <div className="p-2 bg-white rounded-full shadow-sm">
-                           <WifiOff className="w-6 h-6 text-blue-600" />
+                           <WifiOff className="w-6 h-6 text-brand-600" />
                         </div>
                         <div>
                            <p className="font-bold text-lg">Mode 100% local</p>
-                           <p className="mt-1 text-blue-800 text-sm leading-relaxed">
+                           <p className="mt-1 text-brand-800 text-sm leading-relaxed">
                               Cette application s'exécute exclusivement dans votre navigateur.
                               Aucune donnée n'est transmise vers un serveur externe ou le cloud.
                               Vos informations sont stockées dans la mémoire locale de votre poste.
@@ -1201,6 +1027,79 @@ export const Settings: React.FC = () => {
             </div>
          </div>
 
+         {/* Modal: Gérer les versions d'un dataset */}
+         {viewingDatasetVersionsId && (() => {
+            const ds = datasets.find(d => d.id === viewingDatasetVersionsId);
+            const dsBatches = batches.filter(b => b.datasetId === viewingDatasetVersionsId)
+                                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            return (
+               <Modal
+                  isOpen={!!viewingDatasetVersionsId}
+                  onClose={() => setViewingDatasetVersionsId(null)}
+                  title={`Gérer les imports : ${ds?.name}`}
+                  icon={<History className="w-6 h-6 text-brand-600" />}
+                  maxWidth="2xl"
+               >
+                  <div className="space-y-4">
+                     <p className="text-sm text-slate-600 mb-4">
+                        Liste de toutes les versions de données importées pour cette typologie.
+                        Vous pouvez supprimer des imports spécifiques pour corriger des erreurs ou alléger le stockage.
+                     </p>
+
+                     <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-left text-sm">
+                           <thead className="bg-slate-50 border-b border-slate-200">
+                              <tr>
+                                 <th className="px-4 py-3 font-bold text-slate-700">Date d'import</th>
+                                 <th className="px-4 py-3 font-bold text-slate-700">Lignes</th>
+                                 <th className="px-4 py-3 font-bold text-slate-700">Créé le</th>
+                                 <th className="px-4 py-3 text-right font-bold text-slate-700">Actions</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-slate-100 bg-white">
+                              {dsBatches.length === 0 ? (
+                                 <tr>
+                                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic">
+                                       Aucun import trouvé pour cette typologie.
+                                    </td>
+                                 </tr>
+                              ) : (
+                                 dsBatches.map(batch => (
+                                    <tr key={batch.id} className="hover:bg-slate-50 transition-colors">
+                                       <td className="px-4 py-3 font-medium text-slate-900">{formatDateFr(batch.date)}</td>
+                                       <td className="px-4 py-3 text-slate-600">{batch.rows.length}</td>
+                                       <td className="px-4 py-3 text-slate-500 text-xs">{new Date(batch.createdAt).toLocaleString('fr-FR')}</td>
+                                       <td className="px-4 py-3 text-right">
+                                          <button
+                                             onClick={() => {
+                                                if (window.confirm(`Supprimer définitivement l'import du ${formatDateFr(batch.date)} ?`)) {
+                                                   deleteBatch(batch.id);
+                                                }
+                                             }}
+                                             className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                                             title="Supprimer cette version"
+                                          >
+                                             <Trash2 className="w-4 h-4" />
+                                          </button>
+                                       </td>
+                                    </tr>
+                                 ))
+                              )}
+                           </tbody>
+                        </table>
+                     </div>
+
+                     <div className="flex justify-end pt-4">
+                        <Button variant="outline" onClick={() => setViewingDatasetVersionsId(null)}>
+                           Fermer
+                        </Button>
+                     </div>
+                  </div>
+               </Modal>
+            );
+         })()}
+
          {/* Modal: Créer un axe analytique */}
          {showAxisModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAxisModal(false)}>
@@ -1298,7 +1197,7 @@ export const Settings: React.FC = () => {
                            onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })}
                         />
                      </div>
-                     <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-800">
+                     <div className="bg-brand-50 border border-brand-200 rounded p-3 text-xs text-brand-800">
                         <p className="font-bold">💡 Info</p>
                         <p>Les périodes mensuelles seront générées automatiquement entre les dates sélectionnées.</p>
                      </div>
@@ -1424,7 +1323,7 @@ export const Settings: React.FC = () => {
 
                      {/* Footer */}
                      <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                        <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 text-sm text-brand-800">
                            <p className="font-bold mb-1">💡 Fonctionnalités à venir</p>
                            <p>L'édition individuelle des comptes, l'ajout/suppression de comptes, et l'association aux données importées seront disponibles prochainement.</p>
                         </div>

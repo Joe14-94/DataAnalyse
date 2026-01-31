@@ -771,7 +771,7 @@ export const DataExplorer: React.FC = () => {
             <div className="flex flex-col gap-2">
                <div className="flex items-center gap-4">
                   <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                     <Table2 className="w-6 h-6 text-slate-500" />
+                     <Table2 className="w-6 h-6 text-brand-600" />
                      Données
                   </h2>
                   {/* DATASET SELECTOR IN HEADER */}
@@ -814,7 +814,7 @@ export const DataExplorer: React.FC = () => {
                   </div>
                   <input
                      type="text"
-                     className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md bg-white placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+                     className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md bg-white placeholder-slate-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-all"
                      placeholder="Recherche globale..."
                      value={searchTerm}
                      onChange={(e) => setSearchTerm(e.target.value)}
@@ -825,7 +825,7 @@ export const DataExplorer: React.FC = () => {
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
-               <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-blue-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
+               <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
                <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
@@ -843,19 +843,19 @@ export const DataExplorer: React.FC = () => {
 
          {/* EDIT MODE TOOLBAR */}
          {isEditMode && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-sm flex items-center justify-between animate-in slide-in-from-top duration-300">
+            <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 shadow-sm flex items-center justify-between animate-in slide-in-from-top duration-300">
                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-full text-blue-600">
+                  <div className="p-2 bg-brand-100 rounded-full text-brand-600">
                      <GitCommit className="w-5 h-5" />
                   </div>
                   <div>
-                     <p className="text-sm font-bold text-blue-900">Mode Édition Activé</p>
-                     <p className="text-xs text-blue-700">Modifiez les cellules directement dans le tableau. Les changements ne sont pas encore enregistrés.</p>
+                     <p className="text-sm font-bold text-brand-900">Mode Édition Activé</p>
+                     <p className="text-xs text-brand-700">Modifiez les cellules directement dans le tableau. Les changements ne sont pas encore enregistrés.</p>
                   </div>
                </div>
                <div className="flex gap-3">
                   <Button variant="outline" onClick={handleCancelEdits}>Annuler</Button>
-                  <Button variant="primary" onClick={handleSaveEdits} className="bg-blue-600 hover:bg-blue-700 shadow-md">
+                  <Button variant="primary" onClick={handleSaveEdits} className="bg-brand-600 hover:bg-brand-700 shadow-md">
                      Enregistrer les modifications ({Object.values(pendingChanges).reduce((acc, curr) => acc + Object.keys(curr).length, 0)} lignes)
                   </Button>
                </div>
@@ -964,10 +964,10 @@ export const DataExplorer: React.FC = () => {
                            <div className="flex items-center gap-2 justify-between">
                               <div className="flex items-center gap-2">
                                  <span>Date d'import</span>
-                                 {sortConfig?.key === '_importDate' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                                 {sortConfig?.key === '_importDate' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                               </div>
                               <div
-                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                  onMouseDown={(e) => handleResizeStart(e, '_importDate', columnWidths['_importDate'] || 140)}
                               />
                            </div>
@@ -976,7 +976,7 @@ export const DataExplorer: React.FC = () => {
                            <div className="flex items-center gap-2 justify-between">
                               <span>Id</span>
                               <div
-                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                  onMouseDown={(e) => handleResizeStart(e, 'id', columnWidths['id'] || 120)}
                               />
                            </div>
@@ -995,10 +995,10 @@ export const DataExplorer: React.FC = () => {
                                        {isCalcDrawerOpen && <MousePointerClick className="w-3 h-3 text-indigo-500" />}
                                        {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
                                        <span>{field}</span>
-                                       {!isCalcDrawerOpen && (sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
+                                       {!isCalcDrawerOpen && (sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
                                     </div>
                                     <div
-                                       className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                       className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                        onMouseDown={(e) => handleResizeStart(e, field, colWidth)}
                                        onClick={(e) => e.stopPropagation()}
                                     />
@@ -1030,10 +1030,10 @@ export const DataExplorer: React.FC = () => {
                      {showFilters && (
                         <tr className="bg-slate-50">
                            <th className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
-                              <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre date..." value={columnFilters['_importDate'] || ''} onChange={(e) => handleColumnFilterChange('_importDate', e.target.value)} />
+                              <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-brand-500 font-normal" placeholder="Filtre date..." value={columnFilters['_importDate'] || ''} onChange={(e) => handleColumnFilterChange('_importDate', e.target.value)} />
                            </th>
                            <th className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
-                              <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder="Filtre Id..." value={columnFilters['id'] || ''} onChange={(e) => handleColumnFilterChange('id', e.target.value)} />
+                              <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-brand-500 font-normal" placeholder="Filtre Id..." value={columnFilters['id'] || ''} onChange={(e) => handleColumnFilterChange('id', e.target.value)} />
                            </th>
                            {displayFields.map(field => {
                               const fieldConfig = currentDataset.fieldConfigs?.[field];
@@ -1042,7 +1042,7 @@ export const DataExplorer: React.FC = () => {
                               const colWidth = columnWidths[field] || defaultWidth;
                               return (
                                  <th key={`filter-${field}`} className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
-                                    <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-blue-500 font-normal" placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`} value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')} onChange={(e) => handleColumnFilterChange(field, e.target.value)} />
+                                    <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-brand-500 font-normal" placeholder={columnFilters[field] === '__EMPTY__' ? "(Vide)" : `Filtre ${field}...`} value={columnFilters[field] === '__EMPTY__' ? '' : (columnFilters[field] || '')} onChange={(e) => handleColumnFilterChange(field, e.target.value)} />
                                  </th>
                               );
                            })}
@@ -1074,10 +1074,10 @@ export const DataExplorer: React.FC = () => {
                         return (
                            <tr
                               key={virtualRow.key}
-                              className="hover:bg-blue-50 transition-colors cursor-pointer group"
+                              className="hover:bg-brand-50 transition-colors cursor-pointer group"
                               onClick={() => handleRowClick(row)}
                            >
-                              <td className={`px-6 py-2 whitespace-nowrap text-sm text-slate-500 font-mono group-hover:text-blue-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
+                              <td className={`px-6 py-2 whitespace-nowrap text-sm text-slate-500 font-mono group-hover:text-brand-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['_importDate'] || 140, minWidth: 140, maxWidth: columnWidths['_importDate'] || 140 }}>
                                  {formatDateFr(row._importDate)}
                               </td>
                               <td className={`px-6 py-2 whitespace-nowrap text-sm text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
@@ -1104,7 +1104,7 @@ export const DataExplorer: React.FC = () => {
                                        {isEditMode && !isBlended ? (
                                           <input
                                              type="text"
-                                             className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+                                             className="w-full px-2 py-1 text-sm border border-brand-300 rounded focus:ring-1 focus:ring-brand-500 bg-white"
                                              value={val ?? ''}
                                              onChange={(e) => handleCellEdit(row._batchId, row.id, field, e.target.value)}
                                              onClick={(e) => e.stopPropagation()}
@@ -1291,14 +1291,14 @@ export const DataExplorer: React.FC = () => {
                                     <option value="text-slate-900">Texte Noir</option>
                                     <option value="text-red-600">Texte Rouge</option>
                                     <option value="text-green-600">Texte Vert</option>
-                                    <option value="text-blue-600">Texte Bleu</option>
+                                    <option value="text-brand-600">Texte Bleu</option>
                                     <option value="text-orange-600">Texte Orange</option>
                                  </select>
                                  <select className="p-2 text-xs border-purple-200 rounded focus:ring-purple-500" value={newRule.style?.backgroundColor} onChange={e => setNewRule({ ...newRule, style: { ...newRule.style, backgroundColor: e.target.value } })}>
                                     <option value="">Fond (Aucun)</option>
                                     <option value="bg-red-100">Fond Rouge</option>
                                     <option value="bg-green-100">Fond Vert</option>
-                                    <option value="bg-blue-100">Fond Bleu</option>
+                                    <option value="bg-brand-100">Fond Bleu</option>
                                     <option value="bg-yellow-100">Fond Jaune</option>
                                  </select>
                               </div>
@@ -1437,10 +1437,10 @@ export const DataExplorer: React.FC = () => {
                         )}
 
                         {/* Info box */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="bg-brand-50 border border-brand-200 rounded-lg p-4">
                            <div className="flex gap-3">
-                              <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div className="text-xs text-blue-800 space-y-1">
+                              <AlertTriangle className="w-5 h-5 text-brand-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-xs text-brand-800 space-y-1">
                                  <p className="font-bold">Comment ça fonctionne ?</p>
                                  <p>Cette fonction va chercher les valeurs dans le dataset source en utilisant les clés de jointure, et ajouter une nouvelle colonne à vos données actuelles.</p>
                                  <p className="font-semibold mt-2">⚠️ Cette opération modifie définitivement votre dataset.</p>
@@ -1468,13 +1468,13 @@ export const DataExplorer: React.FC = () => {
          {isDrawerOpen && selectedRow && (
             <div className="fixed inset-y-0 right-0 w-full md:w-[600px] bg-white shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-slate-200">
                <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-start">
-                  <div><div className="flex items-center gap-2 mb-1"><History className="w-5 h-5 text-blue-600" /><h3 className="text-lg font-bold text-slate-800">Fiche Détail & Historique</h3></div><p className="text-xs text-slate-500">Suivi de l'entité via la clé : <strong className="text-slate-700">{trackingKey}</strong></p></div>
+                  <div><div className="flex items-center gap-2 mb-1"><History className="w-5 h-5 text-brand-600" /><h3 className="text-lg font-bold text-slate-800">Fiche Détail & Historique</h3></div><p className="text-xs text-slate-500">Suivi de l'entité via la clé : <strong className="text-slate-700">{trackingKey}</strong></p></div>
                   <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white rounded-full p-1 shadow-sm border border-slate-200"><X className="w-5 h-5" /></button>
                </div>
-               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-blue-500 focus:border-blue-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
+               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-brand-500 focus:border-brand-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/50 space-y-8">
                   <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                     <div className="bg-blue-50/50 px-4 py-2 border-b border-blue-100 flex justify-between items-center"><span className="text-xs font-bold text-blue-800 uppercase tracking-wider">État Actuel</span><span className="text-xs bg-white px-2 py-0.5 rounded-full border border-blue-200 text-blue-600 font-mono">{formatDateFr(selectedRow._importDate)}</span></div>
+                     <div className="bg-brand-50 px-4 py-2 border-b border-brand-100 flex justify-between items-center"><span className="text-xs font-bold text-brand-700 uppercase tracking-wider">État Actuel</span><span className="text-xs bg-white px-2 py-0.5 rounded-full border border-brand-200 text-brand-600 font-mono">{formatDateFr(selectedRow._importDate)}</span></div>
                      <div className="p-4 grid grid-cols-2 gap-4">
                         {Object.entries(selectedRow).filter(([k]) => !k.startsWith('_') && k !== 'id').map(([key, val]) => (
                            <div key={key} className="space-y-1"><dt className="text-xs font-medium text-slate-400 uppercase">{key}</dt><dd className="text-sm font-medium text-slate-800 break-words bg-slate-50 p-2 rounded border border-slate-100">{val !== undefined && val !== null && val !== '' ? String(val) : <span className="text-slate-300 italic">Vide</span>}</dd></div>
