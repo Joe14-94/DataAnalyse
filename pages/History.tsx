@@ -12,11 +12,6 @@ export const History: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const navigate = useNavigate();
 
-  // Reset selection when dataset changes
-  useEffect(() => {
-    setSelectedBatchId('');
-  }, [currentDataset?.id]);
-
   // Default to latest batch if available
   useEffect(() => {
     if (!selectedBatchId && batches.length > 0) {
@@ -24,11 +19,12 @@ export const History: React.FC = () => {
     }
   }, [batches, selectedBatchId]);
 
-  const currentBatch = batches.find(b => b.id === selectedBatchId);
-  const fields = currentDataset ? currentDataset.fields : [];
+  const currentBatch = useMemo(() => batches.find(b => b.id === selectedBatchId), [batches, selectedBatchId]);
+  const batchDataset = useMemo(() => datasets.find(d => d.id === currentBatch?.datasetId), [datasets, currentBatch]);
+  const fields = batchDataset ? batchDataset.fields : [];
 
   const handleExportCSV = () => {
-    if (!currentBatch) return;
+    if (!currentBatch || !batchDataset) return;
     const headers = ['Id', ...fields];
     const csvContent = [
       headers.join(';'),
@@ -61,7 +57,7 @@ export const History: React.FC = () => {
     // Safer download
     const link = document.createElement('a');
     link.href = url;
-    link.download = `export_${currentDataset?.name}_${currentBatch.date}.csv`;
+    link.download = `export_${batchDataset.name}_${currentBatch.date}.csv`;
     link.style.display = 'none';
     link.target = '_blank';
     document.body.appendChild(link);
@@ -73,31 +69,6 @@ export const History: React.FC = () => {
     }, 100);
   };
 
-  if (!currentDataset) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-center bg-white rounded-lg border border-dashed border-slate-300 m-4">
-        <Database className="w-12 h-12 text-slate-300 mb-4" />
-        <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
-        <div className="mt-4">
-          <select
-            className="appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
-            value=""
-            onChange={(e) => {
-              if (e.target.value === '__NEW__') navigate('/import');
-              else switchDataset(e.target.value);
-            }}
-          >
-            <option value="" disabled>Choisir une typologie</option>
-            {datasets.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-            <option disabled>──────────</option>
-            <option value="__NEW__">+ Nouvelle typologie...</option>
-          </select>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
@@ -134,14 +105,22 @@ export const History: React.FC = () => {
               className="block w-full pl-2 pr-8 py-1 text-sm border-0 focus:ring-0 text-slate-700 bg-white focus:outline-none"
               style={{ backgroundColor: '#ffffff', color: '#334155' }}
               value={selectedBatchId}
-              onChange={(e) => setSelectedBatchId(e.target.value)}
+              onChange={(e) => {
+                 const bid = e.target.value;
+                 setSelectedBatchId(bid);
+                 const batch = batches.find(b => b.id === bid);
+                 if (batch) switchDataset(batch.datasetId);
+              }}
             >
               {batches.length === 0 && <option value="">Aucun historique</option>}
-              {batches.map(b => (
-                <option key={b.id} value={b.id}>
-                  Import du {formatDateFr(b.date)} ({b.rows.length} lignes)
-                </option>
-              ))}
+              {batches.map(b => {
+                const ds = datasets.find(d => d.id === b.datasetId);
+                return (
+                  <option key={b.id} value={b.id}>
+                    {ds ? `[${ds.name}] ` : ''}Import du {formatDateFr(b.date)} ({b.rows.length} lignes)
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>
@@ -149,7 +128,10 @@ export const History: React.FC = () => {
         {currentBatch ? (
           <Card>
             <div className="flex justify-between items-center border-b border-slate-100 p-4 bg-slate-50">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                <div className="text-sm text-slate-500">
+                  Typologie: <span className="font-semibold text-brand-600">{batchDataset?.name}</span>
+                </div>
                 <div className="text-sm text-slate-500">
                   Date: <span className="font-semibold text-slate-900">{formatDateFr(currentBatch.date)}</span>
                 </div>
