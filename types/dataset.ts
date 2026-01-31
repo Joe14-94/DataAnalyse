@@ -28,12 +28,22 @@ export interface CalculatedField {
   unit?: string;
 }
 
+export interface EnrichmentConfig {
+  id: string;
+  targetDatasetId: string;
+  primaryKey: string;
+  secondaryKey: string;
+  columnsToAdd: string[];
+  newColumnName: string;
+}
+
 export interface Dataset {
   id: string;
   name: string;
   fields: string[];
   fieldConfigs?: Record<string, FieldConfig>;
   calculatedFields?: CalculatedField[];
+  enrichmentConfigs?: EnrichmentConfig[];
   createdAt: number;
 }
 

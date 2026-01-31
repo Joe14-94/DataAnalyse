@@ -688,7 +688,7 @@ export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean 
 
 // --- EXPORT FUNCTION (PDF/HTML) ---
 export const exportView = async (
-  format: 'pdf' | 'html',
+  format: 'pdf' | 'html' | 'png',
   elementId: string,
   title: string,
   logo?: string,
@@ -703,7 +703,7 @@ export const exportView = async (
   const timestamp = new Date().toISOString().split('T')[0];
   const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${timestamp}`;
 
-  if (format === 'pdf') {
+  if (format === 'pdf' || format === 'png') {
     try {
       // 1. Clone element to remove scrollbars and show full content
       const clone = element.cloneNode(true) as HTMLElement;
@@ -814,12 +814,22 @@ export const exportView = async (
         }
       }
 
-      pdf.addImage(imgData, 'PNG', margin, startY + 5, finalRenderWidth, finalRenderHeight);
-      pdf.save(`${filename}.pdf`);
+      if (format === 'pdf') {
+        pdf.addImage(imgData, 'PNG', margin, startY + 5, finalRenderWidth, finalRenderHeight);
+        pdf.save(`${filename}.pdf`);
+      } else {
+        // format === 'png'
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = `${filename}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
     } catch (err) {
-      console.error('PDF Export Error', err);
-      alert('Erreur lors de la génération du PDF');
+      console.error('Export Error', err);
+      alert('Erreur lors de la génération de l\'export');
     }
   }
 

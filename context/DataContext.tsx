@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule } from '../types';
-import { APP_VERSION, db, generateId } from '../utils';
+import { APP_VERSION, db, generateId, evaluateFormula } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
@@ -282,15 +282,57 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // --- BATCH ACTIONS ---
   const addBatch = useCallback((datasetId: string, date: string, rows: any[]) => {
+    // Apply automatic enrichments and calculated fields if configured for this dataset
+    const dataset = datasets.find(d => d.id === datasetId);
+    let processedRows = rows;
+
+    if (dataset) {
+      // 1. Apply Enrichment Configs
+      if (dataset.enrichmentConfigs && dataset.enrichmentConfigs.length > 0) {
+        dataset.enrichmentConfigs.forEach(config => {
+          // Get target dataset's latest batch
+          const targetBatches = batches.filter(b => b.datasetId === config.targetDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          if (targetBatches.length > 0) {
+            const targetBatch = targetBatches[targetBatches.length - 1];
+            const lookupMap = new Map<string, any>();
+            targetBatch.rows.forEach(row => {
+              const key = String(row[config.secondaryKey]).trim();
+              if (key) lookupMap.set(key, row);
+            });
+
+            processedRows = processedRows.map(row => {
+              const key = String(row[config.primaryKey]).trim();
+              const matchedRow = lookupMap.get(key);
+              const val = matchedRow
+                ? (config.columnsToAdd.length === 1 ? matchedRow[config.columnsToAdd[0]] : config.columnsToAdd.map(col => matchedRow[col]).join(' | '))
+                : null;
+              return { ...row, [config.newColumnName]: val };
+            });
+          }
+        });
+      }
+
+      // 2. Apply Calculated Fields (Store them for better performance)
+      if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+        processedRows = processedRows.map(row => {
+          const enrichedRow = { ...row };
+          dataset.calculatedFields?.forEach(cf => {
+             enrichedRow[cf.name] = evaluateFormula(enrichedRow, cf.formula);
+          });
+          return enrichedRow;
+        });
+      }
+    }
+
     const newBatch: ImportBatch = {
       id: generateId(),
       datasetId,
       date,
       createdAt: Date.now(),
-      rows
+      rows: processedRows
     };
     setAllBatches(prev => [...prev, newBatch]);
-  }, []);
+  }, [datasets, batches]);
 
   const deleteBatch = useCallback((id: string) => {
     setAllBatches(prev => prev.filter(b => b.id !== id));
@@ -326,6 +368,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (targetBatches.length === 0) return false;
 
     const targetBatch = targetBatches[targetBatches.length - 1];
+
+    // Save configuration to dataset for future imports
+    setDatasets(prev => prev.map(d => {
+       if (d.id !== datasetId) return d;
+       const newConfig = { id: generateId(), targetDatasetId, primaryKey, secondaryKey, columnsToAdd, newColumnName };
+       return {
+          ...d,
+          enrichmentConfigs: [...(d.enrichmentConfigs || []), newConfig]
+       };
+    }));
 
     // Create lookup map
     const lookupMap = new Map<string, any>();

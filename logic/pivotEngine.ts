@@ -106,7 +106,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                let v = row[colFields[j]];
                let label = v !== undefined && v !== null ? String(v) : '(Vide)';
                if (colGrouping !== 'none') label = getGroupedLabel(label, colGrouping);
-               keyParts += (j === 0 ? "" : " - ") + label;
+               keyParts += (j === 0 ? "" : "\x1F") + label;
            }
            colKey = keyParts;
        }
@@ -232,7 +232,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           if (typeof valTotal === 'number') rawTotalVal = valTotal;
           else if (mc.aggType === 'list' && stats.rowTotalMetrics[mIdx] instanceof Set) rawTotalVal = (stats.rowTotalMetrics[mIdx] as Set<string>).size;
 
-          rawMetrics.set(`TOTAL \x1F ${metricLabel}`, rawTotalVal);
+          rawMetrics.set(`TOTAL\x1F${metricLabel}`, rawTotalVal);
 
           if (mIdx === 0) {
               rawRowTotal = rawTotalVal;
@@ -267,7 +267,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               }
 
               const fullKey = colFields.length > 0
-                ? (metricConfigs.length > 1 ? `${h} \x1F ${metricLabel}` : h)
+                ? (metricConfigs.length > 1 ? `${h}\x1F${metricLabel}` : h)
                 : metricLabel;
               finalMetrics[fullKey] = val;
               rawMetrics.set(fullKey, rawColVal);
@@ -289,8 +289,8 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                 const h = headers[i];
                 const prevH = headers[i-1];
 
-                const currKey = metricConfigs.length > 1 ? `${h} \x1F ${metricLabel}` : h;
-                const prevKey = metricConfigs.length > 1 ? `${prevH} \x1F ${metricLabel}` : prevH;
+                const currKey = metricConfigs.length > 1 ? `${h}\x1F${metricLabel}` : h;
+                const prevKey = metricConfigs.length > 1 ? `${prevH}\x1F${metricLabel}` : prevH;
 
                 const currVal = Number(finalMetrics[currKey] || 0);
                 const prevVal = Number(finalMetrics[prevKey] || 0);
@@ -300,8 +300,8 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                 if (prevVal !== 0) pct = (diff / Math.abs(prevVal)) * 100;
 
                 if (metricConfigs.length > 1) {
-                    finalMetrics[`${h} \x1F ${metricLabel}_DIFF`] = diff;
-                    finalMetrics[`${h} \x1F ${metricLabel}_PCT`] = pct;
+                    finalMetrics[`${h}\x1F${metricLabel}_DIFF`] = diff;
+                    finalMetrics[`${h}\x1F${metricLabel}_PCT`] = pct;
                 } else {
                     finalMetrics[`${h}_DIFF`] = diff;
                     finalMetrics[`${h}_PCT`] = pct;
