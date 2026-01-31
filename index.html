@@ -24,9 +24,12 @@
               50: 'var(--brand-50)',
               100: 'var(--brand-100)',
               200: 'var(--brand-200)',
+              300: 'var(--brand-300)',
+              400: 'var(--brand-400)',
               500: 'var(--brand-500)',
               600: 'var(--brand-600)',
               700: 'var(--brand-700)',
+              800: 'var(--brand-800)',
               900: 'var(--brand-900)',
             },
             // Semantic Colors
@@ -126,21 +129,98 @@
 
     /* MATERIAL STYLE */
     html.style-material {
-      --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
-      --card-radius: 0.75rem;
+      --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --card-radius: 1rem;
+      --canvas: #f6f6f8;
     }
 
     /* GLASS STYLE */
+    html.style-glass {
+      --card-radius: 1.5rem;
+      --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    }
+
+    html.style-glass body {
+      background: fixed;
+      background-image: linear-gradient(135deg, var(--canvas) 0%, var(--brand-50) 100%);
+    }
+
     html.style-glass .bg-surface {
-      background-color: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background-color: rgba(255, 255, 255, 0.45) !important;
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.5) !important;
     }
 
     html.dark.style-glass .bg-surface {
-      background-color: rgba(30, 41, 59, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: rgba(15, 23, 42, 0.45) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Glass Sidebar Specific */
+    html.style-glass aside {
+      background-color: rgba(255, 255, 255, 0.3) !important;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    html.dark.style-glass aside {
+      background-color: rgba(15, 23, 42, 0.3) !important;
+    }
+
+    /* Animated background for glass style */
+    .glass-blobs {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    html.style-glass .glass-blobs {
+      display: block;
+    }
+
+    .blob {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: var(--brand-200);
+      filter: blur(80px);
+      border-radius: 50%;
+      opacity: 0.3;
+      animation: move 25s infinite alternate ease-in-out;
+    }
+
+    .blob-2 {
+      background: var(--brand-500);
+      width: 400px;
+      height: 400px;
+      right: -100px;
+      top: -100px;
+      animation-duration: 30s;
+      animation-delay: -5s;
+      opacity: 0.2;
+    }
+
+    .blob-3 {
+      background: var(--brand-100);
+      width: 300px;
+      height: 300px;
+      left: 20%;
+      bottom: -50px;
+      animation-duration: 20s;
+      animation-delay: -10s;
+      opacity: 0.25;
+    }
+
+    @keyframes move {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(100px, 100px) scale(1.2); }
     }
 
     html {
@@ -211,6 +291,11 @@
 </head>
 
 <body class="bg-canvas text-txt-main antialiased">
+  <div class="glass-blobs">
+    <div class="blob"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
   <div id="root"></div>
   <!-- Point d'entrée pour Vite -->
   <script type="module" src="/index.tsx"></script>

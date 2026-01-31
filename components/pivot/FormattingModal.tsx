@@ -130,7 +130,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <Info className="w-4 h-4 text-blue-500" />
+                  <Info className="w-4 h-4 text-brand-500" />
                   Règles de style fixes
                 </h4>
                 <Button onClick={addStyleRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">

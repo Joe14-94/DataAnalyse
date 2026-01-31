@@ -25,7 +25,7 @@ interface WidgetDrawerProps {
 const LivePreview: React.FC<{ widget: DashboardWidget, globalDateRange: any }> = ({ widget, globalDateRange }) => {
    const data = useWidgetData(widget, globalDateRange);
    const isText = widget.type === 'text';
-   const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-blue-50 border-blue-200' : 'bg-white';
+   const bgColor = isText && widget.config.textStyle?.color === 'primary' ? 'bg-brand-50 border-brand-200' : 'bg-white';
    const borderClass = widget.style?.borderColor || 'border-slate-200';
    const widthVal = widget.style?.borderWidth || '1';
    const widthClass = widthVal === '0' ? 'border-0' : widthVal === '2' ? 'border-2' : widthVal === '4' ? 'border-4' : 'border';
@@ -77,7 +77,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
       <div className="fixed inset-0 z-50 flex bg-slate-900/10 backdrop-blur-sm animate-in fade-in duration-200">
          <div className="flex-1 flex flex-col overflow-hidden relative border-r border-slate-200">
             <div className="absolute top-4 left-4 bg-white/80 backdrop-blur rounded-full px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm border border-slate-200 flex items-center gap-2 z-10">
-               <Eye className="w-3 h-3 text-blue-600" /> Aperçu temps réel
+               <Eye className="w-3 h-3 text-brand-600" /> Aperçu temps réel
             </div>
             <div className="flex-1 overflow-auto flex items-center justify-center p-8">
                <div className={`w-full transition-all duration-300 ${tempWidget.size === 'full' ? 'max-w-full' : 'max-w-[500px]'}`} style={{ height: tempWidget.height === 'xl' ? '500px' : '256px' }}>
@@ -111,7 +111,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                            <button
                               key={t.id}
                               onClick={() => setTempWidget({ ...tempWidget, type: t.id as WidgetType })}
-                              className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${isSelected ? 'bg-blue-50 text-blue-700 border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                              className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${isSelected ? 'bg-brand-50 text-brand-700 border-brand-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                            >
                               <Icon className="w-6 h-6" /><span className="font-bold text-xs">{t.label}</span>
                            </button>
@@ -160,15 +160,15 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                         </div>
 
                         {tempWidget.config?.pivotChart && (
-                           <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                           <div className="flex items-center gap-3 p-3 bg-brand-50 border border-brand-100 rounded-lg">
                               <input
                                  type="checkbox"
                                  id="auto-update-mode"
                                  checked={tempWidget.config.pivotChart.updateMode === 'latest'}
                                  onChange={e => updateConfig({ updateMode: e.target.checked ? 'latest' : 'fixed' })}
-                                 className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                 className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
                               />
-                              <label htmlFor="auto-update-mode" className="text-xs font-bold text-blue-800 cursor-pointer select-none">
+                              <label htmlFor="auto-update-mode" className="text-xs font-bold text-brand-800 cursor-pointer select-none">
                                  Mise à jour automatique (derniers imports)
                               </label>
                            </div>
@@ -181,7 +181,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-6">
                   <div className="space-y-3">
                      <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                        <PaintBucket className="w-4 h-4 text-blue-600" /> Style du conteneur
+                        <PaintBucket className="w-4 h-4 text-brand-600" /> Style du conteneur
                      </div>
                      <div>
                         <Label>Couleur de bordure</Label>
@@ -190,7 +190,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                               <button
                                  key={c.class}
                                  onClick={() => setTempWidget({ ...tempWidget, style: { ...tempWidget.style, borderColor: c.class } })}
-                                 className={`w-8 h-8 rounded-full border-2 ${c.bg} transition-transform hover:scale-110 ${(tempWidget.style?.borderColor || 'border-slate-200') === c.class ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'border-transparent'}`}
+                                 className={`w-8 h-8 rounded-full border-2 ${c.bg} transition-transform hover:scale-110 ${(tempWidget.style?.borderColor || 'border-slate-200') === c.class ? 'ring-2 ring-offset-2 ring-brand-500 scale-110' : 'border-transparent'}`}
                                  title={c.label}
                               />
                            ))}
@@ -201,7 +201,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                   {tempWidget.type === 'chart' && (
                      <div className="space-y-4 pt-4 border-t border-slate-200">
                         <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                           <Palette className="w-4 h-4 text-blue-600" /> Couleurs du graphique
+                           <Palette className="w-4 h-4 text-brand-600" /> Couleurs du graphique
                         </div>
 
                         <div>

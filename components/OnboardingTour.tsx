@@ -18,7 +18,7 @@ const STEPS: Step[] = [
     title: "Bienvenue sur DataScope !",
     content: "Une solution 100% locale pour analyser et visualiser vos données Excel et CSV sans serveur.",
     position: 'center',
-    icon: <Database className="w-8 h-8 text-blue-500" />
+    icon: <Database className="w-8 h-8 text-brand-500" />
   },
   {
     targetId: 'tour-dataset-selector',
@@ -31,7 +31,7 @@ const STEPS: Step[] = [
     title: "Importation",
     content: "Alimentez vos tableaux en important vos fichiers Excel/CSV via glisser-déposer.",
     position: 'right',
-    icon: <Upload className="w-5 h-5 text-blue-500" />
+    icon: <Upload className="w-5 h-5 text-brand-500" />
   },
   {
     targetId: 'tour-nav-dashboard',
@@ -44,7 +44,7 @@ const STEPS: Step[] = [
     title: "Analyses Avancées",
     content: "Créez des graphiques sur mesure et sauvegardez vos vues pour plus tard.",
     position: 'right',
-    icon: <PieChart className="w-5 h-5 text-blue-500" />
+    icon: <PieChart className="w-5 h-5 text-brand-500" />
   }
 ];
 
@@ -152,7 +152,7 @@ export const OnboardingTour: React.FC = () => {
       >
          <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3">
-               {stepData.icon && <div className="p-2 bg-blue-50 rounded-full">{stepData.icon}</div>}
+               {stepData.icon && <div className="p-2 bg-brand-50 rounded-full">{stepData.icon}</div>}
                <h3 className="font-bold text-slate-800 text-lg">{stepData.title}</h3>
             </div>
             <div className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">

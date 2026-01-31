@@ -19,7 +19,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
          {/* DATE RANGE PICKER (GLOBAL) */}
          <div className="flex items-center gap-2 border-r border-slate-100 pr-4 mr-2">
-            <div className="bg-blue-50 p-2 rounded text-blue-600">
+            <div className="bg-brand-50 p-2 rounded text-brand-600">
                <CalendarRange className="w-4 h-4" />
             </div>
             <div className="flex items-center gap-2">
@@ -27,7 +27,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   <label className="text-xs font-bold text-slate-400 uppercase">Début</label>
                   <input
                      type="date"
-                     className="text-sm border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
+                     className="text-sm border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-brand-500 focus:border-brand-500"
                      value={globalDateRange.start}
                      onChange={(e) => setGlobalDateRange({ ...globalDateRange, start: e.target.value })}
                   />
@@ -37,7 +37,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                   <label className="text-xs font-bold text-slate-400 uppercase">Fin</label>
                   <input
                      type="date"
-                     className="text-sm border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-blue-500 focus:border-blue-500"
+                     className="text-sm border border-slate-200 rounded p-1 text-slate-700 bg-white focus:ring-brand-500 focus:border-brand-500"
                      value={globalDateRange.end}
                      onChange={(e) => setGlobalDateRange({ ...globalDateRange, end: e.target.value })}
                   />
@@ -57,14 +57,14 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
          {/* DRILL DOWN FILTERS */}
          {Object.keys(dashboardFilters).length > 0 ? (
             <div className="flex flex-wrap items-center gap-2 flex-1">
-               <div className="text-xs font-bold text-blue-700 flex items-center mr-2">
+               <div className="text-xs font-bold text-brand-700 flex items-center mr-2">
                   <Filter className="w-3 h-3 mr-1" /> Filtres actifs :
                </div>
                {Object.entries(dashboardFilters).map(([field, value]) => (
-                  <Badge key={field} variant="brand" className="bg-blue-50 border-blue-200 shadow-sm pl-2 pr-1 py-1 flex items-center gap-1">
-                     <span className="text-blue-400">{field}:</span>
-                     <span className="font-bold text-blue-900">{String(value)}</span>
-                     <button onClick={() => setDashboardFilter(field, null)} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                  <Badge key={field} variant="brand" className="bg-brand-50 border-brand-200 shadow-sm pl-2 pr-1 py-1 flex items-center gap-1">
+                     <span className="text-brand-400">{field}:</span>
+                     <span className="font-bold text-brand-900">{String(value)}</span>
+                     <button onClick={() => setDashboardFilter(field, null)} className="ml-1 hover:bg-brand-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
                   </Badge>
                ))}
                <button onClick={clearDashboardFilters} className="ml-auto text-xs text-slate-400 hover:text-red-600 font-medium flex items-center px-2 py-1 hover:bg-red-50 rounded transition-colors">

@@ -27,7 +27,7 @@ interface SourceManagementModalProps {
 const SOURCE_COLORS = ['blue', 'indigo', 'purple', 'pink', 'teal', 'orange'];
 
 const SOURCE_COLOR_CLASSES: Record<string, { border: string, text: string, bg: string }> = {
-    blue: { border: 'border-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
+    blue: { border: 'border-brand-500', text: 'text-brand-700', bg: 'bg-brand-50' },
     indigo: { border: 'border-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' },
     purple: { border: 'border-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
     pink: { border: 'border-pink-500', text: 'text-pink-700', bg: 'bg-pink-50' },
@@ -155,7 +155,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-200">
                     <div className="flex items-center gap-3">
-                        <Database className="w-6 h-6 text-blue-600" />
+                        <Database className="w-6 h-6 text-brand-600" />
                         <h2 className="text-xl font-bold text-slate-800">Gérer les sources de données</h2>
                     </div>
                     <button
@@ -190,7 +190,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     {src.isPrimary ? (
-                                                        <Database className="w-4 h-4 text-blue-600" />
+                                                        <Database className="w-4 h-4 text-brand-600" />
                                                     ) : (
                                                         <LinkIcon className="w-4 h-4 text-indigo-600" />
                                                     )}
@@ -235,7 +235,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                     {!isAddingSource ? (
                         <button
                             onClick={() => setIsAddingSource(true)}
-                            className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 font-medium"
+                            className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:text-brand-600 hover:border-brand-400 hover:bg-brand-50 transition-colors flex items-center justify-center gap-2 font-medium"
                         >
                             <Plus className="w-5 h-5" />
                             {localSources.length === 0 ? 'Définir la source principale' : 'Ajouter une source'}
@@ -249,7 +249,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                             <div>
                                 <label className="block text-xs font-medium text-slate-600 mb-1">Dataset</label>
                                 <select
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     value={newSource.targetId}
                                     onChange={e => setNewSource({ ...newSource, targetId: e.target.value })}
                                 >
@@ -265,7 +265,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                     <div>
                                         <label className="block text-xs font-medium text-slate-600 mb-1">Type de jointure</label>
                                         <select
-                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                             value={newSource.joinType}
                                             onChange={e => setNewSource({ ...newSource, joinType: e.target.value as 'left' | 'inner' })}
                                         >
@@ -278,7 +278,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 mb-1">Clé principale</label>
                                             <select
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                                 value={newSource.key1}
                                                 onChange={e => setNewSource({ ...newSource, key1: e.target.value })}
                                             >
@@ -291,7 +291,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 mb-1">Clé cible</label>
                                             <select
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                                 value={newSource.key2}
                                                 onChange={e => setNewSource({ ...newSource, key2: e.target.value })}
                                             >
@@ -346,7 +346,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                 <button
                                     onClick={handleAddSource}
                                     disabled={!newSource.targetId || (localSources.length > 0 && (!newSource.key1 || !newSource.key2))}
-                                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                                    className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                 >
                                     <Check className="w-4 h-4" />
                                     Ajouter
@@ -377,7 +377,7 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                         </button>
                         <button
                             onClick={handleValidate}
-                            className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            className="px-6 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium"
                         >
                             Valider
                         </button>

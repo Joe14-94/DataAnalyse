@@ -80,7 +80,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-blue-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-brand-300 focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
       >
         <span className="truncate text-slate-700">
           {selected.length === 0 
@@ -97,7 +97,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
           <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
              <span className="text-xs font-bold text-slate-500 uppercase">Options</span>
-             <button onClick={handleSelectAll} className="text-xs text-blue-600 hover:underline">
+             <button onClick={handleSelectAll} className="text-xs text-brand-600 hover:underline">
                 {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
              </button>
           </div>
@@ -108,7 +108,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
                 <label key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer">
                    <input
                       type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3 mr-2"
+                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-3 w-3 mr-2"
                       checked={selected.includes(option)}
                       onChange={() => handleToggle(option)}
                    />
@@ -837,13 +837,13 @@ export const CustomAnalytics: React.FC = () => {
         <div className="flex p-1 bg-slate-100 rounded-lg self-center">
            <button
               onClick={() => setMode('snapshot')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'snapshot' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'snapshot' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
            >
               Analyse Instantanée
            </button>
            <button
               onClick={() => setMode('trend')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'trend' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'trend' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
            >
               Évolution Temporelle
            </button>
@@ -855,7 +855,7 @@ export const CustomAnalytics: React.FC = () => {
              {/* Load Saved Views */}
              <div className="relative">
                 <select
-                    className="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 pr-8 min-w-[130px]"
+                    className="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2 pr-8 min-w-[130px]"
                     onChange={(e) => { if (e.target.value) handleLoadAnalysis(e.target.value); e.target.value = ""; }}
                     defaultValue=""
                 >
@@ -867,13 +867,13 @@ export const CustomAnalytics: React.FC = () => {
 
              {/* Save View Button */}
              {!isSaving ? (
-                 <button onClick={() => setIsSaving(true)} className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50" title="Enregistrer cette vue">
+                 <button onClick={() => setIsSaving(true)} className="p-2 text-slate-500 hover:text-brand-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50" title="Enregistrer cette vue">
                     <Save className="w-5 h-5" />
                  </button>
              ) : (
-                 <div className="flex items-center gap-1 animate-in fade-in bg-white border border-blue-300 rounded-md p-0.5">
+                 <div className="flex items-center gap-1 animate-in fade-in bg-white border border-brand-300 rounded-md p-0.5">
                     <input type="text" className="p-1.5 text-xs border-none focus:ring-0 w-32 bg-transparent text-slate-900" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
-                    <button onClick={handleSaveAnalysis} className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700"><Check className="w-3 h-3" /></button>
+                    <button onClick={handleSaveAnalysis} className="p-1 bg-brand-600 text-white rounded hover:bg-brand-700"><Check className="w-3 h-3" /></button>
                     <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300"><X className="w-3 h-3" /></button>
                  </div>
              )}
@@ -884,7 +884,7 @@ export const CustomAnalytics: React.FC = () => {
              <div className="relative">
                 <button
                    onClick={() => setShowExportMenu(!showExportMenu)}
-                   className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50 flex items-center gap-1"
+                   className="p-2 text-slate-500 hover:text-brand-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50 flex items-center gap-1"
                    title="Exporter"
                 >
                    <FileDown className="w-5 h-5" />
@@ -920,7 +920,7 @@ export const CustomAnalytics: React.FC = () => {
 
              <button
                 onClick={handleExportToDashboard}
-                className="p-2 text-slate-500 hover:text-blue-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
+                className="p-2 text-slate-500 hover:text-brand-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
                 title="Ajouter au tableau de bord"
             >
                 <LayoutDashboard className="w-5 h-5" />
@@ -929,7 +929,7 @@ export const CustomAnalytics: React.FC = () => {
            {mode === 'snapshot' ? (
               <div className="flex items-center gap-2 w-full xl:w-auto ml-2">
                  <select 
-                    className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-blue-500 focus:border-blue-500 block p-2 min-w-[200px]"
+                    className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2 min-w-[200px]"
                     value={selectedBatchId}
                     onChange={(e) => setSelectedBatchId(e.target.value)}
                   >
@@ -965,7 +965,7 @@ export const CustomAnalytics: React.FC = () => {
               <span>Configuration</span>
               <button 
                 onClick={() => setFilters([])} 
-                className="text-xs text-blue-600 hover:underline disabled:text-slate-400"
+                className="text-xs text-brand-600 hover:underline disabled:text-slate-400"
                 disabled={filters.length === 0}
               >
                 Reset Filtres
@@ -980,7 +980,7 @@ export const CustomAnalytics: React.FC = () => {
                     1. {mode === 'snapshot' ? 'Axe Analyse (X)' : 'Séries à suivre'}
                  </label>
                  <select 
-                    className="w-full mb-2 p-2.5 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full mb-2 p-2.5 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500"
                     value={dimension}
                     onChange={(e) => setDimension(e.target.value)}
                  >
@@ -991,21 +991,21 @@ export const CustomAnalytics: React.FC = () => {
                  <div className="grid grid-cols-3 gap-2">
                     <button 
                        onClick={() => setMetric('count')}
-                       className={`flex flex-col items-center justify-center py-2 px-1 text-xs font-medium rounded border transition-colors ${metric === 'count' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-200 text-slate-500'}`}
+                       className={`flex flex-col items-center justify-center py-2 px-1 text-xs font-medium rounded border transition-colors ${metric === 'count' ? 'bg-brand-50 border-brand-500 text-brand-700' : 'bg-white border-slate-200 text-slate-500'}`}
                     >
                        <Check className={`w-3 h-3 mb-1 ${metric === 'count' ? 'opacity-100' : 'opacity-0'}`} />
                        Compte
                     </button>
                     <button 
                        onClick={() => setMetric('distinct')}
-                       className={`flex flex-col items-center justify-center py-2 px-1 text-xs font-medium rounded border transition-colors ${metric === 'distinct' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-200 text-slate-500'}`}
+                       className={`flex flex-col items-center justify-center py-2 px-1 text-xs font-medium rounded border transition-colors ${metric === 'distinct' ? 'bg-brand-50 border-brand-500 text-brand-700' : 'bg-white border-slate-200 text-slate-500'}`}
                     >
                        <Filter className={`w-3 h-3 mb-1 ${metric === 'distinct' ? 'opacity-100' : 'opacity-0'}`} />
                        Distinct
                     </button>
                     <button 
                        onClick={() => setMetric('sum')}
-                       className={`flex flex-col items-center justify-center py-2 px-1 text-xs font-medium rounded border transition-colors ${metric === 'sum' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-200 text-slate-500'}`}
+                       className={`flex flex-col items-center justify-center py-2 px-1 text-xs font-medium rounded border transition-colors ${metric === 'sum' ? 'bg-brand-50 border-brand-500 text-brand-700' : 'bg-white border-slate-200 text-slate-500'}`}
                     >
                        <Calculator className={`w-3 h-3 mb-1 ${metric === 'sum' ? 'opacity-100' : 'opacity-0'}`} />
                        Somme
@@ -1018,7 +1018,7 @@ export const CustomAnalytics: React.FC = () => {
                        <label className="block text-xs font-bold text-slate-600 mb-1">Champ à additionner :</label>
                        {numericFields.length > 0 ? (
                           <select 
-                             className="w-full p-1.5 bg-white border border-slate-300 text-slate-800 text-xs rounded focus:ring-blue-500 focus:border-blue-500"
+                             className="w-full p-1.5 bg-white border border-slate-300 text-slate-800 text-xs rounded focus:ring-brand-500 focus:border-brand-500"
                              value={valueField}
                              onChange={(e) => setValueField(e.target.value)}
                           >
@@ -1090,7 +1090,7 @@ export const CustomAnalytics: React.FC = () => {
                        </div>
                     ))}
                  </div>
-                 <button onClick={addFilter} className="text-xs text-blue-600 flex items-center hover:text-blue-800 font-medium border border-dashed border-blue-300 rounded w-full justify-center py-1.5 hover:bg-blue-50">
+                 <button onClick={addFilter} className="text-xs text-brand-600 flex items-center hover:text-brand-800 font-medium border border-dashed border-brand-300 rounded w-full justify-center py-1.5 hover:bg-brand-50">
                     <Filter className="w-3 h-3 mr-1" /> Ajouter un filtre
                  </button>
               </div>
@@ -1181,7 +1181,7 @@ export const CustomAnalytics: React.FC = () => {
                  <div className="space-y-2">
                     {mode === 'snapshot' && (
                        <label className="flex items-center gap-2 cursor-pointer">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${isCumulative ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 bg-white'}`}>
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${isCumulative ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
                              {isCumulative && <Check className="w-3 h-3" />}
                           </div>
                           <input type="checkbox" className="hidden" checked={isCumulative} onChange={() => setIsCumulative(!isCumulative)} />
@@ -1190,7 +1190,7 @@ export const CustomAnalytics: React.FC = () => {
                     )}
 
                     <label className="flex items-center gap-2 cursor-pointer">
-                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${showTable ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 bg-white'}`}>
+                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${showTable ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
                           {showTable && <Check className="w-3 h-3" />}
                        </div>
                        <input type="checkbox" className="hidden" checked={showTable} onChange={() => setShowTable(!showTable)} />

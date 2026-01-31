@@ -235,7 +235,7 @@ export const Forecast: React.FC = () => {
                                     {forecasts.length}
                                 </div>
                             </Card>
-                            <Card className="border-l-4 border-l-blue-500">
+                            <Card className="border-l-4 border-l-brand-500">
                                 <div className="text-sm text-slate-600 font-bold">Rolling Forecasts</div>
                                 <div className="text-2xl font-bold text-slate-800 mt-1">
                                     {forecasts.filter(f => f.isRolling).length}
@@ -317,7 +317,7 @@ export const Forecast: React.FC = () => {
                                     const activeVersion = forecast.versions.find(v => v.id === forecast.activeVersionId);
                                     const statusColors = {
                                         draft: 'bg-gray-100 text-gray-700',
-                                        submitted: 'bg-blue-100 text-blue-700',
+                                        submitted: 'bg-brand-100 text-brand-700',
                                         validated: 'bg-green-100 text-green-700',
                                         locked: 'bg-purple-100 text-purple-700'
                                     };
@@ -329,7 +329,7 @@ export const Forecast: React.FC = () => {
                                                     <h3 className="font-bold text-slate-800 mb-1">
                                                         {forecast.name}
                                                         {forecast.isRolling && (
-                                                            <RefreshCw className="w-4 h-4 text-blue-600 inline-block ml-2" />
+                                                            <RefreshCw className="w-4 h-4 text-brand-600 inline-block ml-2" />
                                                         )}
                                                     </h3>
                                                     <div className="flex items-center gap-2 text-xs text-slate-600">
@@ -367,7 +367,7 @@ export const Forecast: React.FC = () => {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="flex-1 text-blue-600 border-blue-200"
+                                                    className="flex-1 text-brand-600 border-brand-200"
                                                     onClick={() => handleSelectForecast(forecast.id)}
                                                 >
                                                     <Eye className="w-4 h-4 mr-2" />
@@ -441,7 +441,7 @@ export const Forecast: React.FC = () => {
                                         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                             {selectedForecast.name}
                                             {selectedForecast.isRolling && (
-                                                <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 font-bold">
+                                                <span className="text-xs px-2 py-1 rounded bg-brand-100 text-brand-700 font-bold">
                                                     ROLLING
                                                 </span>
                                             )}
@@ -464,7 +464,7 @@ export const Forecast: React.FC = () => {
                                 {selectedForecast.versions.map(version => {
                                     const statusColors = {
                                         draft: 'bg-gray-100 text-gray-700 border-gray-300',
-                                        submitted: 'bg-blue-100 text-blue-700 border-blue-300',
+                                        submitted: 'bg-brand-100 text-brand-700 border-brand-300',
                                         validated: 'bg-green-100 text-green-700 border-green-300',
                                         locked: 'bg-purple-100 text-purple-700 border-purple-300'
                                     };
@@ -915,7 +915,7 @@ export const Forecast: React.FC = () => {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="text-blue-600 border-blue-200"
+                                                            className="text-brand-600 border-brand-200"
                                                         >
                                                             <Eye className="w-4 h-4 mr-2" />
                                                             Voir
@@ -956,7 +956,7 @@ export const Forecast: React.FC = () => {
                                         Tendance + Saisonnalité
                                     </div>
                                 </Card>
-                                <Card className="border-l-4 border-l-blue-500">
+                                <Card className="border-l-4 border-l-brand-500">
                                     <div className="text-sm text-slate-600 font-bold">Confiance</div>
                                     <div className="text-lg font-bold text-slate-800 mt-1">
                                         95%
@@ -1021,14 +1021,14 @@ export const Forecast: React.FC = () => {
                 {activeTab === 'reconciliation' && (
                     <Card title="Réconciliation Forecast vs Réalisé" icon={<BarChart3 className="w-5 h-5 text-brand-600" />}>
                         <div className="space-y-6">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="bg-brand-50 border border-brand-200 rounded-lg p-4">
                                 <div className="flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                    <AlertCircle className="w-5 h-5 text-brand-600 mt-0.5" />
                                     <div>
-                                        <h4 className="font-bold text-blue-900 mb-1">
+                                        <h4 className="font-bold text-brand-900 mb-1">
                                             Analyse des écarts
                                         </h4>
-                                        <p className="text-sm text-blue-800">
+                                        <p className="text-sm text-brand-800">
                                             Comparez vos prévisions avec les réalisations pour améliorer la précision de vos futurs forecasts.
                                         </p>
                                     </div>

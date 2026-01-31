@@ -493,7 +493,7 @@ export const PivotTable: React.FC = () => {
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm relative">
                     {isSelectionMode && (
-                        <div className="absolute top-0 left-0 right-0 z-20 bg-blue-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                        <div className="absolute top-0 left-0 right-0 z-20 bg-brand-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
                             <div className="flex items-center gap-2 px-2">
                                 <MousePointerClick className="w-4 h-4 animate-pulse" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Mode sélection : Cliquez sur une cellule pour l'ajouter</span>
@@ -501,7 +501,7 @@ export const PivotTable: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <span className="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] font-black border border-white/30">{specificDashboardItems.length} CELLULES</span>
                                 <Button size="sm" className="bg-indigo-500 text-white font-black hover:bg-indigo-400 py-1 shadow-sm border-none" onClick={() => setIsQuickChartModalOpen(true)} disabled={specificDashboardItems.length === 0}>Visualiser</Button>
-                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-blue-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Créer Rapport</Button>
+                                <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-brand-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Créer Rapport</Button>
                                 <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsSelectionMode(false); setSpecificDashboardItems([]); }}>Annuler</Button>
                                 <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => setSpecificDashboardItems([])} disabled={specificDashboardItems.length === 0}>Vider</Button>
                             </div>
