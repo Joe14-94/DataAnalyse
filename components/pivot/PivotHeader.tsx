@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, MousePointerClick } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -27,6 +27,7 @@ interface PivotHeaderProps {
    openCalcModal: () => void;
    openFormattingModal: () => void;
    openSpecificDashboardModal: () => void;
+   onStartManualChartSelection?: () => void;
    selectedItemsCount?: number;
    searchTerm: string;
    setSearchTerm: (v: string) => void;
@@ -37,7 +38,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
-   openCalcModal, openFormattingModal, openSpecificDashboardModal, selectedItemsCount = 0,
+   openCalcModal, openFormattingModal, openSpecificDashboardModal, onStartManualChartSelection, selectedItemsCount = 0,
    searchTerm, setSearchTerm
 }) => {
    return (
@@ -104,9 +105,19 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                )}
             </button>
 
-            <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50">
-               <PieChart className="w-3 h-3" /> Graphique
-            </button>
+            <div className="relative group">
+               <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50">
+                  <PieChart className="w-3 h-3" /> Graphique
+               </button>
+               <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 hidden group-hover:block">
+                  <button onClick={handleToChart} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
+                     <Layout className="w-3 h-3 text-brand-500" /> Automatique (Tout le tableau)
+                  </button>
+                  <button onClick={onStartManualChartSelection} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
+                     <MousePointerClick className="w-3 h-3 text-brand-500" /> Sélection manuelle de cellules
+                  </button>
+               </div>
+            </div>
 
             <div className="relative">
                <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={!primaryDataset} className="px-3 py-1.5 text-xs text-slate-600 hover:text-brand-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50">

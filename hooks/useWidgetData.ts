@@ -16,6 +16,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
    return useMemo(() => {
       if (widget.type === 'text') return { text: widget.config.textContent, style: widget.config.textStyle };
       if (widget.type === 'report') return { items: widget.config.reportItems || [] };
+      if (widget.type === 'chart' && widget.config.reportItems) return { items: widget.config.reportItems, isSelectionChart: true };
 
       // NOUVEAU : Gérer les widgets basés sur des graphiques TCD (Pivot)
       if (widget.config.pivotChart) {
