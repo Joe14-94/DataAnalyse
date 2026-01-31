@@ -67,7 +67,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
 
    return (
       <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
-         <table className="min-w-full divide-y divide-slate-200 border-collapse w-full">
+         <table className="min-w-full divide-y divide-slate-200 border-collapse w-full" style={{ tableLayout: 'fixed' }}>
             <tbody className="font-bold">
                <tr>
                   {rowFields.map((field, idx) => (

@@ -149,7 +149,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
          {isTemporalMode && temporalResults.length > 0 && temporalConfig ? (
             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar w-full relative">
-               <table className="min-w-full divide-y divide-slate-200 border-collapse">
+               <table className="min-w-full divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                   <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                      <tr>
                         {rowFields.map((field: string, idx: number) => {
@@ -165,7 +165,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  key={field}
                                  title={calcField ? `Formule: ${calcField.formula}` : undefined}
                                  className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer transition-colors group relative ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                 style={{ width, minWidth: width, ...headerStyle }}
+                                 style={{ width, minWidth: width, maxWidth: width, ...headerStyle }}
                                  onClick={() => {
                                     if (isEditMode) setEditingColumn(`group_${field}`);
                                     else if (idx === 0) handleHeaderClick('label');
@@ -193,7 +193,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     )}
                                     {idx === 0 && renderSortIcon('label')}
                                  </div>
-                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
+                                 <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
                               </th>
                            );
                         })}
@@ -204,7 +204,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               <React.Fragment key={source.id}>
                                  <th
                                     className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                    style={{ width, minWidth: width, ...headerStyle }}
+                                    style={{ width, minWidth: width, maxWidth: width, ...headerStyle }}
                                     onClick={() => {
                                        if (isEditMode) setEditingColumn(source.id);
                                        else handleHeaderClick(source.id);
@@ -227,10 +227,10 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        </span>
                                        {renderSortIcon(source.id)}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, source.id, 120)} />
+                                    <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, source.id, 120)} />
                                  </th>
                                  {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                    <th className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700">Δ</th>
+                                    <th className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>Δ</th>
                                  )}
                               </React.Fragment>
                            );
@@ -256,7 +256,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        <td
                                           key={gIdx}
                                           className={`px-2 py-1 text-xs border-r border-slate-100 whitespace-nowrap overflow-hidden truncate sticky left-0 z-10 bg-white ${isSubtotal ? 'font-bold bg-slate-50' : ''}`}
-                                          style={isSubtotal && gIdx === subtotalLevel ? { left: `${left}px` } : { width, minWidth: width, left: `${left}px` }}
+                                          style={isSubtotal && gIdx === subtotalLevel ? { left: `${left}px` } : { width, minWidth: width, maxWidth: width, left: `${left}px` }}
                                           colSpan={isSubtotal && gIdx === subtotalLevel ? numFields - subtotalLevel : 1}
                                        >
                                           {(!isSubtotal || gIdx <= subtotalLevel) ? (gIdx === subtotalLevel && isSubtotal ? `Total ${label}` : label) : ''}
@@ -271,11 +271,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), source.id, value, source.label);
                                  return (
                                     <React.Fragment key={source.id}>
-                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`} style={{ width, minWidth: width, ...customStyle }} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
+                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`} style={{ width, minWidth: width, maxWidth: width, ...customStyle }} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
                                           {formatCurrency(value)}
                                        </td>
                                        {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                          <td className={`px-2 py-1 text-[10px] text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: 60, minWidth: 60 }}>
+                                          <td className={`px-2 py-1 text-[10px] text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
                                              {temporalConfig.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatCurrency(delta.value) : '-')}
                                           </td>
                                        )}
@@ -291,7 +291,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
          ) : pivotData ? (
             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
                <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                  <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full">
+                  <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full" style={{ tableLayout: 'fixed' }}>
                      <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                         <tr>
                            {rowFields.map((field, idx) => {
@@ -305,7 +305,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     key={field}
                                     title={calcField ? `Formule: ${calcField.formula}` : undefined}
                                     className={`px-2 py-1.5 text-left text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap sticky left-0 z-20 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                    style={{ width, minWidth: width, left: `${left}px`, ...headerStyle }}
+                                    style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
                                     onClick={() => {
                                        if (isEditMode) setEditingColumn(`row_${field}`);
                                        else if (idx === 0) handleHeaderClick('label');
@@ -333,7 +333,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        )}
                                        {idx === 0 && renderSortIcon('label')}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
+                                    <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
                                  </th>
                               );
                            })}
@@ -354,7 +354,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     key={col}
                                     title={col.replace('\x1F', '-') + formulaTitle}
                                     className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 whitespace-nowrap cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : isDiff || isPct ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
-                                    style={{ width, minWidth: width, ...headerStyle }}
+                                    style={{ width, minWidth: width, maxWidth: width, ...headerStyle }}
                                     onClick={() => {
                                        if (isEditMode) setEditingColumn(col);
                                        else handleHeaderClick(col);
@@ -391,7 +391,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        )}
                                        {renderSortIcon(col)}
                                     </div>
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, col, 120)} />
+                                    <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, col, 120)} />
                                  </th>
                               );
                            })}
@@ -400,14 +400,15 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  className="px-2 py-1.5 text-right text-xs font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap cursor-pointer group"
                                  style={{
                                     width: columnWidths['Grand Total'] || 150,
-                                    minWidth: columnWidths['Grand Total'] || 150
+                                    minWidth: columnWidths['Grand Total'] || 150,
+                                    maxWidth: columnWidths['Grand Total'] || 150
                                  }}
                                  onClick={() => handleHeaderClick('value')}
                               >
                                  <div className="flex items-center justify-end relative">
                                     Total
                                     {renderSortIcon('value')}
-                                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 group-hover:bg-slate-300 transition-colors" onMouseDown={(e) => onResizeStart(e, 'Grand Total', 150)} />
+                                    <div className="absolute -right-2 top-0 bottom-0 w-4 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, 'Grand Total', 150)} />
                                  </div>
                               </th>
                            )}
@@ -430,7 +431,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                              <td
                                                 key={cIdx}
                                                 className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50/30 overflow-hidden truncate sticky left-0 z-10"
-                                                style={{ width, minWidth: width, left: `${left}px`, ...headerStyle }}
+                                          style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
                                              >
                                                 {row.keys[cIdx]}
                                              </td>
@@ -454,7 +455,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        <td
                                           key={cIdx}
                                           className="px-2 py-1 text-xs text-slate-700 border-r border-slate-100 whitespace-nowrap overflow-hidden truncate sticky left-0 z-10 bg-white"
-                                          style={{ width, minWidth: width, left: `${left}px`, ...headerStyle }}
+                                          style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
                                        >
                                           {row.keys[cIdx]}
                                        </td>
@@ -482,7 +483,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        <td
                                           key={col}
                                           className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
-                                       style={{ width, minWidth: width, ...customStyle }}
+                                       style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
                                           onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
                                        >
                                           {formatted}
@@ -492,7 +493,12 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  {showTotalCol && (
                                     <td
                                        className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`}
-                                       style={getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '')}
+                                       style={{
+                                          width: columnWidths['Grand Total'] || 150,
+                                          minWidth: columnWidths['Grand Total'] || 150,
+                                          maxWidth: columnWidths['Grand Total'] || 150,
+                                          ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '')
+                                       }}
                                        onClick={() => {
                                           const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal;
                                           handleDrilldown(row.keys, 'Total', value, '');

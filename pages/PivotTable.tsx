@@ -295,8 +295,39 @@ export const PivotTable: React.FC = () => {
 
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
         if (isSelectionMode) return;
-        const detailRows = blendedRows.filter(row => rowFields.every((f, i) => String(row[f] || '') === (rowKeys[i] === '(Vide)' ? '' : rowKeys[i])));
-        if (detailRows.length > 0) setDrilldownData({ rows: detailRows, title: `Détails: ${rowKeys.join(' > ')}`, fields: primaryDataset?.fields || [] });
+
+        const prefilledFilters: Record<string, string> = {};
+
+        // Filter by Row Fields
+        rowFields.forEach((field, i) => {
+            const val = rowKeys[i];
+            if (val === '(Vide)') {
+                prefilledFilters[field] = '__EMPTY__';
+            } else {
+                prefilledFilters[field] = `=${val}`;
+            }
+        });
+
+        // Filter by Column Fields
+        if (colFields.length > 0 && colLabel !== 'Total' && colLabel !== 'ALL') {
+            const colValues = colLabel.split('\x1F');
+            colFields.forEach((field, i) => {
+                const val = colValues[i];
+                if (val === undefined) return;
+                if (val === '(Vide)') {
+                    prefilledFilters[field] = '__EMPTY__';
+                } else {
+                    prefilledFilters[field] = `=${val}`;
+                }
+            });
+        }
+
+        // Filter by specific batch if selected
+        if (selectedBatchId) {
+            prefilledFilters['_batchId'] = selectedBatchId;
+        }
+
+        navigate('/data', { state: { prefilledFilters } });
     };
 
     const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
@@ -321,16 +352,23 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
-        const sourceDetails = result.details ? result.details[sourceId] : undefined;
-        const sourceLabel = temporalConfig?.sources.find(s => s.id === sourceId)?.label || sourceId;
+        const prefilledFilters: Record<string, string> = {};
+        const rowKeys = result.groupLabel.split('\x1F');
 
-        if (sourceDetails) {
-            setDrilldownData({
-                rows: sourceDetails,
-                title: `Détails: ${result.groupLabel.replace(/\x1F/g, ' > ')} (${sourceLabel})`,
-                fields: primaryDataset?.fields || []
-            });
-        }
+        // Filter by Row Fields
+        rowFields.forEach((field, i) => {
+            const val = rowKeys[i];
+            if (val === '(Vide)') {
+                prefilledFilters[field] = '__EMPTY__';
+            } else {
+                prefilledFilters[field] = `=${val}`;
+            }
+        });
+
+        // Target the specific batch
+        prefilledFilters['_batchId'] = sourceId;
+
+        navigate('/data', { state: { prefilledFilters } });
     };
 
     const handleLoadAnalysis = (id: string) => {

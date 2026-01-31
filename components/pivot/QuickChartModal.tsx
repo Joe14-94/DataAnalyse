@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info, Download, FileSpreadsheet, FileText, Image as ImageIcon, Plus } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as ReLineChart, Line,
@@ -9,6 +9,10 @@ import {
 import { SpecificDashboardItem } from '../../types';
 import { Button } from '../ui/Button';
 import { SOURCE_COLORS } from '../../utils/constants';
+import { useData } from '../../context/DataContext';
+import { exportView } from '../../utils';
+import * as XLSX from 'xlsx';
+import { useNavigate } from 'react-router-dom';
 
 interface QuickChartModalProps {
   isOpen: boolean;
@@ -19,6 +23,8 @@ interface QuickChartModalProps {
 type ChartType = 'pie' | 'bar' | 'line' | 'treemap';
 
 export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClose, items }) => {
+  const { addDashboardWidget, companyLogo } = useData();
+  const navigate = useNavigate();
   const [chartType, setChartType] = useState<ChartType>('pie');
 
   const chartData = useMemo(() => {
@@ -29,11 +35,40 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
     }));
   }, [items]);
 
+  const handleExportXLSX = () => {
+    const data = items.map(item => ({
+      'Chemin': item.rowPath.join(' > '),
+      'Colonne': item.colLabel,
+      'Métrique': item.metricLabel,
+      'Valeur': item.value
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Données Sélection');
+    XLSX.writeFile(wb, `Export_Selection_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleAddToDashboard = () => {
+    addDashboardWidget({
+      title: `Graphique de sélection (${items.length} cellules)`,
+      type: 'chart',
+      size: 'lg',
+      height: 'md',
+      config: {
+        chartType: chartType === 'pie' ? 'pie' : chartType === 'bar' ? 'bar' : chartType === 'line' ? 'line' : 'treemap',
+        reportItems: items
+      }
+    });
+    alert("Graphique ajouté au tableau de bord !");
+    onClose();
+    navigate('/');
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+      <div id="quick-chart-modal-container" className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -51,8 +86,8 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Toolbar */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-lg">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap bg-white">
+          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-lg shadow-inner">
             {[
               { id: 'pie', label: 'Secteurs', icon: PieIcon },
               { id: 'bar', label: 'Barres', icon: BarChart3 },
@@ -77,7 +112,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Chart Area */}
-        <div className="flex-1 p-8 min-h-0 bg-gradient-to-b from-white to-slate-50/30">
+        <div id="quick-chart-render-area" className="flex-1 p-8 min-h-0 bg-white">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400">
               <BarChart3 className="w-16 h-16 mb-4 opacity-20" />
@@ -158,10 +193,53 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-100 flex justify-end bg-slate-50/30">
-          <Button onClick={onClose} className="px-8 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95">
-            Fermer l'aperçu
-          </Button>
+        <div className="p-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <Button
+               variant="outline"
+               size="sm"
+               onClick={() => exportView('pdf', 'quick-chart-render-area', 'Export Graphique', companyLogo, 'A4')}
+               className="text-slate-600 border-slate-200 hover:bg-white"
+            >
+               <FileText className="w-4 h-4 mr-2 text-red-500" /> PDF
+            </Button>
+            <Button
+               variant="outline"
+               size="sm"
+               onClick={handleExportXLSX}
+               className="text-slate-600 border-slate-200 hover:bg-white"
+            >
+               <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" /> Excel
+            </Button>
+            <Button
+               variant="outline"
+               size="sm"
+               onClick={() => exportView('png', 'quick-chart-render-area', 'Export Graphique', companyLogo)}
+               className="text-slate-600 border-slate-200 hover:bg-white"
+            >
+               <ImageIcon className="w-4 h-4 mr-2 text-blue-500" /> PNG
+            </Button>
+            <Button
+               variant="outline"
+               size="sm"
+               onClick={() => exportView('html', 'quick-chart-render-area', 'Export Graphique', companyLogo)}
+               className="text-slate-600 border-slate-200 hover:bg-white"
+            >
+               <FileText className="w-4 h-4 mr-2 text-orange-500" /> HTML
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+               onClick={handleAddToDashboard}
+               className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95"
+            >
+               <Plus className="w-4 h-4 mr-2" /> Créer un Widget Dashboard
+            </Button>
+            <Button onClick={onClose} variant="secondary" className="px-8 font-bold rounded-xl">
+               Fermer
+            </Button>
+          </div>
         </div>
       </div>
     </div>
