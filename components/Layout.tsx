@@ -177,7 +177,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="flex-1 h-full relative overflow-hidden bg-canvas">
         {children}
         <div className="absolute bottom-1 right-2 text-[9px] text-slate-400 pointer-events-none z-[60] font-medium bg-white/50 px-1 rounded shadow-sm">
-           v{APP_VERSION} | 29/01/2026
+           v{APP_VERSION} | 31/01/2026
         </div>
       </main>
     </div>

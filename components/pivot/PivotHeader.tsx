@@ -1,12 +1,13 @@
 
-import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, MousePointerClick } from 'lucide-react';
+import React, { useState } from 'react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, ChevronDown, MousePointerClick } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
    isTemporalMode: boolean;
    setIsTemporalMode: (v: boolean) => void;
    handleToChart: () => void;
+   setIsSelectionMode: (v: boolean) => void;
    primaryDataset: Dataset | null;
    datasets: Dataset[];
    showExportMenu: boolean;
@@ -27,7 +28,6 @@ interface PivotHeaderProps {
    openCalcModal: () => void;
    openFormattingModal: () => void;
    openSpecificDashboardModal: () => void;
-   onStartManualChartSelection?: () => void;
    selectedItemsCount?: number;
    searchTerm: string;
    setSearchTerm: (v: string) => void;
@@ -38,9 +38,11 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
-   openCalcModal, openFormattingModal, openSpecificDashboardModal, onStartManualChartSelection, selectedItemsCount = 0,
-   searchTerm, setSearchTerm
+   openCalcModal, openFormattingModal, openSpecificDashboardModal, selectedItemsCount = 0,
+   searchTerm, setSearchTerm, setIsSelectionMode
 }) => {
+   const [showChartMenu, setShowChartMenu] = useState(false);
+
    return (
       <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-2 shrink-0">
          <div className="flex items-center gap-2">
@@ -105,18 +107,30 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                )}
             </button>
 
-            <div className="relative group">
-               <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50">
-                  <PieChart className="w-3 h-3" /> Graphique
+            <div className="relative">
+               <button
+                  onClick={() => setShowChartMenu(!showChartMenu)}
+                  disabled={!primaryDataset}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50"
+               >
+                  <PieChart className="w-3 h-3" /> Graphique <ChevronDown className="w-3 h-3 ml-1" />
                </button>
-               <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 hidden group-hover:block">
-                  <button onClick={handleToChart} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
-                     <Layout className="w-3 h-3 text-brand-500" /> Automatique (Tout le tableau)
-                  </button>
-                  <button onClick={onStartManualChartSelection} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2">
-                     <MousePointerClick className="w-3 h-3 text-brand-500" /> Sélection manuelle de cellules
-                  </button>
-               </div>
+               {showChartMenu && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                     <button
+                        onClick={() => { handleToChart(); setShowChartMenu(false); }}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                     >
+                        <Table2 className="w-3 h-3 text-brand-600" /> Automatique (Table complète)
+                     </button>
+                     <button
+                        onClick={() => { setIsSelectionMode(true); setShowChartMenu(false); }}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                     >
+                        <MousePointerClick className="w-3 h-3 text-indigo-600" /> Sélective (Choix manuel)
+                     </button>
+                  </div>
+               )}
             </div>
 
             <div className="relative">

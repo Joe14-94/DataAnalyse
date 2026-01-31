@@ -2,7 +2,7 @@
 
 Ce document liste l'ensemble des fonctionnalités implémentées et maintenues dans l'application DataScope. Il sert de base pour la vérification de conformité (QA) lors des mises à jour.
 
-**Version actuelle** : 202511-146
+**Version actuelle** : 2026-01-31-147
 
 ---
 

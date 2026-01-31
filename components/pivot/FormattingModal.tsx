@@ -7,7 +7,6 @@ import { Button } from '../ui/Button';
 interface FormattingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartSelection?: (mode: 'manual' | 'conditional') => void;
   styleRules: PivotStyleRule[];
   setStyleRules: (rules: PivotStyleRule[]) => void;
   conditionalRules: ConditionalFormattingRule[];
@@ -16,6 +15,7 @@ interface FormattingModalProps {
   rowFields: string[];
   colFields: string[];
   additionalLabels?: string[];
+  onStartSelection?: (ruleId: string, type: 'style' | 'conditional') => void;
 }
 
 const COLORS = [
@@ -33,7 +33,7 @@ const COLORS = [
 ];
 
 export const FormattingModal: React.FC<FormattingModalProps> = ({
-  isOpen, onClose, onStartSelection, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields, additionalLabels = []
+  isOpen, onClose, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields, additionalLabels = [], onStartSelection
 }) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'conditional'>('manual');
 
@@ -69,7 +69,6 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
       id: Math.random().toString(36).substr(2, 9),
       operator: 'gt',
       value: 0,
-      scope: 'all',
       style: { backgroundColor: '#dcfce7', textColor: '#166534' }
     };
     setConditionalRules([...conditionalRules, newRule]);
@@ -92,6 +91,12 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
 
   const metricLabels = [...metrics.map(m => m.label || `${m.field} (${m.aggType})`), ...additionalLabels];
   const rowColLabels = [...rowFields, ...colFields];
+
+  const SCOPE_OPTIONS = [
+    { label: 'Toutes les cellules', value: 'all' },
+    { label: 'Données uniquement', value: 'data' },
+    { label: 'Totaux uniquement', value: 'totals' },
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
@@ -137,14 +142,9 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                   <Info className="w-4 h-4 text-brand-500" />
                   Règles de style fixes
                 </h4>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onStartSelection?.('manual')} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-                    <MousePointerClick className="w-4 h-4 mr-2" /> Sélectionner dans le tableau
-                  </Button>
-                  <Button onClick={addStyleRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-                    <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
-                  </Button>
-                </div>
+                <Button onClick={addStyleRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                  <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
+                </Button>
               </div>
 
               {styleRules.length === 0 ? (
@@ -167,7 +167,18 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                             <option value="metric">Métriques</option>
                             <option value="row">Lignes spécifiques</option>
                             <option value="col">Colonnes spécifiques</option>
-                            <option value="cell">Cellule spécifique</option>
+                            <option value="cell">Cellule unique</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500">Périmètre:</span>
+                          <select
+                            className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
+                            value={rule.scope || 'all'}
+                            onChange={(e) => updateStyleRule(rule.id, { scope: e.target.value as any })}
+                          >
+                            {SCOPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                         </div>
 
@@ -183,8 +194,24 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                               {metricLabels.map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
                           ) : rule.targetType === 'cell' ? (
-                            <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded flex-1">
-                               {rule.targetRowPath?.join(' > ')} | {rule.targetColLabel}
+                            <div className="flex-1 flex gap-2">
+                              <input
+                                type="text"
+                                className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1 font-mono"
+                                placeholder="Cliquez sur une cellule..."
+                                value={rule.targetKey || ''}
+                                onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
+                                readOnly
+                              />
+                              <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() => onStartSelection?.(rule.id, 'style')}
+                                  className="shrink-0"
+                                  title="Sélectionner dans le TCD"
+                              >
+                                  <MousePointerClick className="w-3 h-3" />
+                              </Button>
                             </div>
                           ) : (
                             <div className="flex-1 flex gap-2">
@@ -193,9 +220,18 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                                     value={rowColLabels.includes(rule.targetKey || '') ? rule.targetKey : ''}
                                     onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
                                 >
-                                    <option value="">Sélectionner...</option>
+                                    <option value="">Liste...</option>
                                     {rowColLabels.map(l => <option key={l} value={l}>{l}</option>)}
                                 </select>
+                                <Button
+                                    size="xs"
+                                    variant="outline"
+                                    onClick={() => onStartSelection?.(rule.id, 'style')}
+                                    className="shrink-0"
+                                    title="Sélectionner directement dans le TCD"
+                                >
+                                    <MousePointerClick className="w-3 h-3" />
+                                </Button>
                                 <input
                                     type="text"
                                     className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1"
@@ -277,14 +313,9 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                   <AlertCircle className="w-4 h-4 text-amber-500" />
                   Règles basées sur les valeurs
                 </h4>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onStartSelection?.('conditional')} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-                    <MousePointerClick className="w-4 h-4 mr-2" /> Sélectionner dans le tableau
-                  </Button>
-                  <Button onClick={addConditionalRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-                    <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
-                  </Button>
-                </div>
+                <Button onClick={addConditionalRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                  <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
+                </Button>
               </div>
 
               {conditionalRules.length === 0 ? (
@@ -298,19 +329,6 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                     <div key={rule.id} className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col gap-4">
                       <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500">Appliquer à:</span>
-                          <select
-                            className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
-                            value={rule.scope || 'all'}
-                            onChange={(e) => updateConditionalRule(rule.id, { scope: e.target.value as any })}
-                          >
-                            <option value="all">Données + Totaux</option>
-                            <option value="data">Données seulement</option>
-                            <option value="totals">Totaux seulement</option>
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
                           <span className="text-xs font-bold text-slate-500">Si:</span>
                           <select
                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
@@ -319,6 +337,17 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                           >
                             <option value="">Toutes les métriques</option>
                             {metricLabels.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500">Périmètre:</span>
+                          <select
+                            className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
+                            value={rule.scope || 'all'}
+                            onChange={(e) => updateConditionalRule(rule.id, { scope: e.target.value as any })}
+                          >
+                            {SCOPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                         </div>
 

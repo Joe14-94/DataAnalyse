@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { MousePointerClick } from 'lucide-react';
+import { MousePointerClick, Palette } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
@@ -67,7 +67,7 @@ export const PivotTable: React.FC = () => {
     const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
     const [isQuickChartModalOpen, setIsQuickChartModalOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
-    const [isFormattingSelectionMode, setIsFormattingSelectionMode] = useState<'manual' | 'conditional' | null>(null);
+    const [formattingSelectionRule, setFormattingSelectionRule] = useState<{id: string, type: 'style' | 'conditional'} | null>(null);
     const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
@@ -332,41 +332,17 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
-        if (isFormattingSelectionMode) {
-            if (isFormattingSelectionMode === 'manual') {
-                let targetType: 'row' | 'col' | 'cell' = 'cell';
-                let targetKey = '';
+        if (formattingSelectionRule) {
+            const targetKey = colLabel === '' ? (rowKeys[rowKeys.length - 1] || '') : (rowKeys.length === 0 ? colLabel : `${rowKeys.join('\x1F')}|${colLabel}`);
 
-                if (rowKeys.length > 0 && colLabel === '') {
-                    targetType = 'row';
-                    targetKey = rowKeys[0];
-                } else if (rowKeys.length === 0 && colLabel !== '') {
-                    targetType = 'col';
-                    targetKey = colLabel;
-                }
-
-                const newRule: PivotStyleRule = {
-                    id: generateId(),
-                    targetType,
-                    targetKey: targetType === 'cell' ? '' : targetKey,
-                    targetRowPath: targetType === 'cell' ? rowKeys : undefined,
-                    targetColLabel: targetType === 'cell' ? colLabel : undefined,
-                    style: { fontWeight: 'bold', backgroundColor: '#dbeafe' }
-                };
-                setStyleRules(prev => [...prev, newRule]);
-            } else {
-                const newRule: ConditionalFormattingRule = {
-                    id: generateId(),
-                    targetRowPath: rowKeys,
-                    targetColLabel: colLabel,
-                    operator: 'gt',
-                    value: 0,
-                    style: { fontWeight: 'bold', backgroundColor: '#dbeafe' }
-                };
-                setConditionalRules(prev => [...prev, newRule]);
+            if (formattingSelectionRule.type === 'style') {
+                setStyleRules(prev => prev.map(r => r.id === formattingSelectionRule.id ? {
+                    ...r,
+                    targetKey,
+                    targetType: colLabel === '' ? 'row' : (rowKeys.length === 0 ? 'col' : 'cell')
+                } : r));
             }
-
-            setIsFormattingSelectionMode(null);
+            setFormattingSelectionRule(null);
             setIsFormattingModalOpen(true);
             return;
         }
@@ -543,6 +519,7 @@ export const PivotTable: React.FC = () => {
         <div className="h-full flex flex-col p-2 gap-2 relative bg-slate-50">
             <PivotHeader
                isTemporalMode={isTemporalMode} setIsTemporalMode={setIsTemporalMode} handleToChart={() => setIsChartModalOpen(true)}
+               setIsSelectionMode={setIsSelectionMode}
                primaryDataset={primaryDataset} datasets={datasets} showExportMenu={showExportMenu} setShowExportMenu={setShowExportMenu}
                handleExport={handleExport} handleExportSpreadsheet={handleExportSpreadsheet} showLoadMenu={showLoadMenu} setShowLoadMenu={setShowLoadMenu}
                savedAnalyses={savedAnalyses} handleLoadAnalysis={handleLoadAnalysis} isSaving={isSaving} setIsSaving={setIsSaving}
@@ -551,7 +528,6 @@ export const PivotTable: React.FC = () => {
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
                openFormattingModal={() => setIsFormattingModalOpen(true)}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
-               onStartManualChartSelection={() => setIsSelectionMode(true)}
                selectedItemsCount={specificDashboardItems.length}
                searchTerm={searchTerm}
                setSearchTerm={setSearchTerm}
@@ -587,21 +563,21 @@ export const PivotTable: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    {isFormattingSelectionMode && (
+                    {formattingSelectionRule && (
                         <div className="absolute top-0 left-0 right-0 z-20 bg-indigo-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
                             <div className="flex items-center gap-2 px-2">
-                                <MousePointerClick className="w-4 h-4 animate-pulse" />
-                                <span className="text-xs font-bold uppercase tracking-wider">Sélection de mise en forme : Cliquez sur une cellule, ligne ou colonne</span>
+                                <Palette className="w-4 h-4 animate-pulse" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Mise en forme : Cliquez sur une ligne, colonne ou cellule pour l'affecter à la règle</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsFormattingSelectionMode(null); setIsFormattingModalOpen(true); }}>Annuler</Button>
+                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setFormattingSelectionRule(null); setIsFormattingModalOpen(true); }}>Annuler</Button>
                             </div>
                         </div>
                     )}
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, colFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
-                       isSelectionMode, selectedItems: specificDashboardItems, isEditMode,
+                       isSelectionMode, isFormattingSelectionMode: !!formattingSelectionRule, selectedItems: specificDashboardItems, isEditMode,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,
                        styleRules, conditionalRules,
@@ -648,10 +624,6 @@ export const PivotTable: React.FC = () => {
             <FormattingModal
                 isOpen={isFormattingModalOpen}
                 onClose={() => setIsFormattingModalOpen(false)}
-                onStartSelection={(mode) => {
-                    setIsFormattingModalOpen(false);
-                    setIsFormattingSelectionMode(mode);
-                }}
                 styleRules={styleRules}
                 setStyleRules={setStyleRules}
                 conditionalRules={conditionalRules}
@@ -660,6 +632,10 @@ export const PivotTable: React.FC = () => {
                 rowFields={rowFields}
                 colFields={colFields}
                 additionalLabels={isTemporalMode ? temporalConfig?.sources.map(s => s.label) : []}
+                onStartSelection={(ruleId, type) => {
+                    setFormattingSelectionRule({ id: ruleId, type });
+                    setIsFormattingModalOpen(false);
+                }}
             />
 
             <SpecificDashboardModal

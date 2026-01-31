@@ -775,21 +775,54 @@ export const DataExplorer: React.FC = () => {
                      Données
                   </h2>
                   {/* DATASET SELECTOR IN HEADER */}
-                  <select
-                     className="appearance-none bg-white border border-slate-300 text-slate-800 font-bold text-sm rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
-                     value={currentDatasetId || ''}
-                     onChange={(e) => {
-                        if (e.target.value === '__NEW__') navigate('/import');
-                        else switchDataset(e.target.value);
-                     }}
-                  >
-                     {datasets.length === 0 && <option value="">Aucun tableau</option>}
-                     {datasets.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                     ))}
-                     <option disabled>──────────</option>
-                     <option value="__NEW__">+ Nouvelle typologie...</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                     <select
+                        className="appearance-none bg-white border border-slate-300 text-slate-800 font-bold text-sm rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                        value={currentDatasetId || ''}
+                        onChange={(e) => {
+                           if (e.target.value === '__NEW__') navigate('/import');
+                           else switchDataset(e.target.value);
+                        }}
+                     >
+                        {datasets.length === 0 && <option value="">Aucun tableau</option>}
+                        {datasets.map(d => (
+                           <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                        <option disabled>──────────</option>
+                        <option value="__NEW__">+ Nouvelle typologie...</option>
+                     </select>
+
+                     {currentDataset && (
+                        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-md border border-slate-200">
+                           <History className="w-3.5 h-3.5 text-slate-500 ml-1" />
+                           <select
+                              className="bg-transparent border-none text-xs font-bold text-slate-600 focus:ring-0 py-0.5 pl-1 pr-6 cursor-pointer"
+                              value={activeBatchFilter || 'all'}
+                              onChange={(e) => {
+                                 const val = e.target.value;
+                                 if (val === 'all') {
+                                    const newFilters = { ...columnFilters };
+                                    delete newFilters['_batchId'];
+                                    setColumnFilters(newFilters);
+                                 } else {
+                                    handleColumnFilterChange('_batchId', `=${val}`);
+                                 }
+                              }}
+                           >
+                              <option value="all">Toutes les versions</option>
+                              {batches
+                                 .filter(b => b.datasetId === currentDataset.id)
+                                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                 .map(b => (
+                                    <option key={b.id} value={b.id}>
+                                       Import du {formatDateFr(b.date)}
+                                    </option>
+                                 ))
+                              }
+                           </select>
+                        </div>
+                     )}
+                  </div>
                </div>
 
                <div className="text-sm text-slate-500 flex flex-col sm:flex-row sm:items-center gap-2">
