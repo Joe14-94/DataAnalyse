@@ -15,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup, reorderDatasetFields } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -64,6 +64,9 @@ export const DataExplorer: React.FC = () => {
 
    // DATA BLENDING STATE
    const [blendingConfig, setBlendingConfig] = useState<any>(null);
+
+   // COLUMN REORDERING STATE
+   const [isColumnDrawerOpen, setIsColumnDrawerOpen] = useState(false);
 
    // VIRTUALIZATION REFS
    const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -485,6 +488,20 @@ export const DataExplorer: React.FC = () => {
                data = data.filter(row => {
                   const val = row[key];
                   if (key === '_batchId') return String(val) === String(targetVal);
+
+                  const valStr = String(val ?? '').toLowerCase();
+                  const config = currentDataset.fieldConfigs?.[key];
+
+                  if (isExact) {
+                     if (valStr === lowerFilter) return true;
+                     // Support for Date groupings from TCD Drilldown
+                     if (config?.type === 'date' || key.toLowerCase().includes('date')) {
+                        if (getGroupedLabel(valStr, 'month').toLowerCase() === lowerFilter) return true;
+                        if (getGroupedLabel(valStr, 'year').toLowerCase() === lowerFilter) return true;
+                        if (getGroupedLabel(valStr, 'quarter').toLowerCase() === lowerFilter) return true;
+                     }
+                  }
+
                   if (key === '_importDate') {
                      const dateStr = val as string;
                      if (isExact) return dateStr === targetVal || formatDateFr(dateStr) === targetVal;
@@ -492,7 +509,7 @@ export const DataExplorer: React.FC = () => {
                      if (dateStr.includes(lowerFilter)) return true;
                      return false;
                   }
-                  const valStr = String(val ?? '').toLowerCase();
+
                   return isExact ? valStr === lowerFilter : valStr.includes(lowerFilter);
                });
             }
@@ -860,6 +877,7 @@ export const DataExplorer: React.FC = () => {
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
                <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
+               <Button variant={isColumnDrawerOpen ? "primary" : "secondary"} onClick={() => setIsColumnDrawerOpen(!isColumnDrawerOpen)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Colonnes</span></Button>
                <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
                {(Object.keys(columnFilters).length > 0 || searchTerm) && (
@@ -955,6 +973,18 @@ export const DataExplorer: React.FC = () => {
                      )}
 
                      <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
+                        {currentDataset.calculatedFields?.some(f => f.name === selectedCol) && (
+                           <Button
+                              size="sm"
+                              className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200 shadow-sm text-xs font-semibold"
+                              onClick={() => {
+                                 const field = currentDataset.calculatedFields?.find(f => f.name === selectedCol);
+                                 if (field) handleEditCalculatedField(field);
+                              }}
+                           >
+                              <Calculator className="w-3 h-3 mr-1" /> Modifier Formule
+                           </Button>
+                        )}
                         <Button onClick={handleDeleteColumn} size="sm" className="bg-red-600 hover:bg-red-700 text-white border border-red-700 shadow-sm text-xs font-semibold"><Trash2 className="w-3 h-3 mr-1" /> Supprimer</Button>
                         <Button onClick={() => setSelectedCol(null)} size="sm" className="bg-teal-600 text-white hover:bg-teal-700 shadow-sm text-xs">Terminer</Button>
                      </div>
@@ -1550,6 +1580,77 @@ export const DataExplorer: React.FC = () => {
                   </div>
                </div>
             </div>
+         )}
+
+         {/* COLUMN REORDERING DRAWER */}
+         {isColumnDrawerOpen && currentDataset && (
+            <>
+               <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsColumnDrawerOpen(false)} />
+               <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-slate-200">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                     <div>
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                           <Columns className="w-5 h-5 text-brand-600" /> Gestion des colonnes
+                        </h3>
+                        <p className="text-sm text-slate-500">Réorganisez l'ordre d'affichage</p>
+                     </div>
+                     <button onClick={() => setIsColumnDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-white rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                     </button>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 border-b border-amber-100 flex gap-3">
+                     <Info className="w-5 h-5 text-amber-600 shrink-0" />
+                     <p className="text-xs text-amber-800 font-medium">
+                        Utilisez les flèches pour changer l'ordre. Cet ordre sera conservé dans toutes les vues utilisant ce dataset.
+                     </p>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">
+                     {currentDataset.fields.map((field, idx) => (
+                        <div
+                           key={field}
+                           className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg hover:border-brand-300 transition-all group"
+                        >
+                           <div className="flex flex-col gap-1">
+                              <button
+                                 disabled={idx === 0}
+                                 onClick={() => {
+                                    const newFields = [...currentDataset.fields];
+                                    [newFields[idx], newFields[idx-1]] = [newFields[idx-1], newFields[idx]];
+                                    reorderDatasetFields(currentDataset.id, newFields);
+                                 }}
+                                 className="text-slate-400 hover:text-brand-600 disabled:opacity-20"
+                              >
+                                 <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                 disabled={idx === currentDataset.fields.length - 1}
+                                 onClick={() => {
+                                    const newFields = [...currentDataset.fields];
+                                    [newFields[idx], newFields[idx+1]] = [newFields[idx+1], newFields[idx]];
+                                    reorderDatasetFields(currentDataset.id, newFields);
+                                 }}
+                                 className="text-slate-400 hover:text-brand-600 disabled:opacity-20"
+                              >
+                                 <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                           </div>
+                           <span className="text-sm font-medium text-slate-700 truncate flex-1">{field}</span>
+                           <div className="text-[10px] font-bold text-slate-300 uppercase px-1.5 py-0.5 border border-slate-100 rounded">
+                              Pos. {idx + 1}
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+
+                  <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+                     <Button onClick={() => setIsColumnDrawerOpen(false)} className="w-full">
+                        Fermer
+                     </Button>
+                  </div>
+               </div>
+            </>
          )}
       </div>
    );

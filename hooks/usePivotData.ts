@@ -33,6 +33,7 @@ export const usePivotData = ({
 
    const [pivotData, setPivotData] = useState<PivotResult | null>(null);
    const [temporalResults, setTemporalResults] = useState<TemporalComparisonResult[]>([]);
+   const [temporalColTotals, setTemporalColTotals] = useState<{ [sourceId: string]: number }>({});
    const [isCalculating, setIsCalculating] = useState(false);
 
    const primarySourceConfig = sources.find(s => s.isPrimary);
@@ -209,8 +210,9 @@ export const usePivotData = ({
                sortOrder
            };
 
-           const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
+           const { results, colTotals } = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
            setTemporalResults(results);
+           setTemporalColTotals(colTotals);
            setIsCalculating(false);
        }, 150);
 
@@ -221,6 +223,7 @@ export const usePivotData = ({
       blendedRows,
       pivotData,
       temporalResults,
+      temporalColTotals,
       isCalculating,
       primaryDataset,
       datasetBatches

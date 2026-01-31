@@ -99,7 +99,7 @@ export const PivotTable: React.FC = () => {
 
     // --- HOOKS ---
     const {
-       blendedRows, pivotData, temporalResults, isCalculating, primaryDataset, datasetBatches
+       blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, primaryDataset, datasetBatches
     } = usePivotData({
        sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig, searchTerm
     });
@@ -368,6 +368,9 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
+        const source = temporalConfig?.sources.find(s => s.id === sourceId);
+        if (!source) return;
+
         const prefilledFilters: Record<string, string> = {};
         const rowKeys = result.groupLabel.split('\x1F');
 
@@ -382,7 +385,7 @@ export const PivotTable: React.FC = () => {
         });
 
         // Target the specific batch
-        prefilledFilters['_batchId'] = sourceId;
+        prefilledFilters['_batchId'] = source.batchId;
 
         navigate('/data', { state: { prefilledFilters } });
     };
@@ -587,7 +590,7 @@ export const PivotTable: React.FC = () => {
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
+                       {...{ pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
                     />
                 </div>
             </div>
@@ -611,7 +614,7 @@ export const PivotTable: React.FC = () => {
                    selectedBatchId={selectedBatchId}
                 />
             )}
-            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
+            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, extra) => setTemporalConfig({ ...temporalConfig, ...extra, sources: s, referenceSourceId: r, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
             <CalculatedFieldModal
                 isOpen={isCalcModalOpen}
                 onClose={() => { setIsCalcModalOpen(false); setEditingCalcField(null); }}

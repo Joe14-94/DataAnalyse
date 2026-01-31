@@ -282,7 +282,17 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), source.id, value, source.label, isSubtotal ? 'subtotal' : 'data');
                                  return (
                                     <React.Fragment key={source.id}>
-                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`} style={{ width, minWidth: width, maxWidth: width, ...customStyle }} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
+                                       <td
+                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer hover:bg-blue-100 overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''}`}
+                                          style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
+                                          onClick={() => {
+                                             if (isSelectionMode) {
+                                                handleDrilldown(result.groupLabel.split('\x1F'), source.id, value, source.label);
+                                             } else if (!isSubtotal) {
+                                                handleTemporalDrilldown(result, source.id);
+                                             }
+                                          }}
+                                       >
                                           {formatCurrency(value)}
                                        </td>
                                        {showVariations && source.id !== temporalConfig.referenceSourceId && (

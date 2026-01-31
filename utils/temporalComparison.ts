@@ -167,7 +167,7 @@ export const calculateTemporalComparison = (
   dateColumn: string = 'Date écriture',
   showSubtotals: boolean = false,
   filters: FilterRule[] = []
-): TemporalComparisonResult[] => {
+): { results: TemporalComparisonResult[], colTotals: { [sourceId: string]: number } } => {
   const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
 
   // Préparer les filtres une seule fois
@@ -204,6 +204,8 @@ export const calculateTemporalComparison = (
 
   // Créer les résultats
   const results: TemporalComparisonResult[] = [];
+  const colTotals: { [sourceId: string]: number } = {};
+  sources.forEach(s => { colTotals[s.id] = 0; });
 
   allGroupKeys.forEach(groupKey => {
     const values: { [sourceId: string]: number } = {};
@@ -220,6 +222,17 @@ export const calculateTemporalComparison = (
         values[source.id] = group.value;
         if (!groupLabel) groupLabel = group.label;
         details[source.id] = group.details;
+
+        // Sum for column totals
+        if (aggType === 'sum' || aggType === 'count') {
+           colTotals[source.id] += group.value;
+        } else if (aggType === 'avg') {
+           colTotals[source.id] += group.value;
+        } else if (aggType === 'min') {
+           colTotals[source.id] = (colTotals[source.id] === 0 && results.length === 0) ? group.value : Math.min(colTotals[source.id], group.value);
+        } else if (aggType === 'max') {
+           colTotals[source.id] = (colTotals[source.id] === 0 && results.length === 0) ? group.value : Math.max(colTotals[source.id], group.value);
+        }
       } else {
         values[source.id] = 0;
         details[source.id] = [];
@@ -254,6 +267,13 @@ export const calculateTemporalComparison = (
       details
     });
   });
+
+  // Average calculation for totals if needed
+  if (aggType === 'avg' && results.length > 0) {
+    sources.forEach(source => {
+      colTotals[source.id] = colTotals[source.id] / results.length;
+    });
+  }
 
   // Trier les résultats
   const sortBy = (config as any).sortBy || 'label';
@@ -356,10 +376,10 @@ export const calculateTemporalComparison = (
       resultsWithSubtotals.push(result);
     });
 
-    return resultsWithSubtotals;
+    return { results: resultsWithSubtotals, colTotals };
   }
 
-  return results;
+  return { results, colTotals };
 };
 
 /**

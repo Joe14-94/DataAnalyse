@@ -10,7 +10,7 @@ interface TemporalSourceModalProps {
     primaryDataset: Dataset | null;
     batches: ImportBatch[];
     currentSources: TemporalComparisonSource[];
-    onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string) => void;
+    onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string, extraConfig?: any) => void;
 }
 
 export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
@@ -26,6 +26,14 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
     );
     const [referenceId, setReferenceId] = useState<string>(
         currentSources.find(s => s.label.includes('2024'))?.id || ''
+    );
+
+    const [comparisonMode, setComparisonMode] = useState<'mtd' | 'ytd'>(
+        'mtd'
+    );
+
+    const [comparisonMonth, setComparisonMonth] = useState<number>(
+        new Date().getMonth() + 1
     );
 
     // Initialize labels with proper format for existing sources
@@ -117,7 +125,18 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
             };
         });
 
-        onSourcesChange(sources, referenceId);
+        // Update configuration with new modes
+        const configUpdates = {
+            comparisonMode,
+            comparisonMonth,
+            periodFilter: comparisonMode === 'ytd'
+                ? { startMonth: 1, endMonth: comparisonMonth }
+                : { startMonth: comparisonMonth, endMonth: comparisonMonth }
+        };
+
+        // We need a way to pass these extra config items.
+        // Let's modify onSourcesChange signature if needed or just handle it in PivotTable.
+        onSourcesChange(sources, referenceId, configUpdates);
         onClose();
     };
 
@@ -138,7 +157,54 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    {/* New: Period Selection */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                           <Calendar className="w-4 h-4 text-brand-600" />
+                           Période de comparaison
+                        </h3>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Mode de cumul</label>
+                                <div className="flex bg-slate-100 p-1 rounded-lg">
+                                    <button
+                                        onClick={() => setComparisonMode('mtd')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${comparisonMode === 'mtd' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Mois (MTD)
+                                    </button>
+                                    <button
+                                        onClick={() => setComparisonMode('ytd')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${comparisonMode === 'ytd' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Cumul (YTD)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Mois cible</label>
+                                <select
+                                    className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-sm font-medium focus:ring-2 focus:ring-brand-500"
+                                    value={comparisonMonth}
+                                    onChange={(e) => setComparisonMonth(parseInt(e.target.value))}
+                                >
+                                    {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, i) => (
+                                        <option key={i+1} value={i+1}>{m}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <p className="mt-3 text-[10px] text-slate-500 italic">
+                            {comparisonMode === 'ytd'
+                                ? "Compare les données du 1er janvier jusqu'au mois sélectionné."
+                                : "Compare uniquement les données du mois sélectionné."}
+                        </p>
+                    </div>
+
                     {/* Instructions */}
                     <div className="bg-brand-50 border border-brand-200 rounded-lg p-3">
                         <p className="text-sm text-slate-700">
