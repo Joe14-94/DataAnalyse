@@ -51,6 +51,7 @@ export interface PivotResult {
   displayRows: PivotRow[];
   colTotals: Record<string, number | string>;
   grandTotal: number | string | Record<string, number | string>;
+  temporalColTotals?: Record<string, number>;
 }
 
 export interface PivotJoin {
@@ -113,6 +114,7 @@ export interface TemporalComparisonSource {
 export interface TemporalComparisonConfig {
   sources: TemporalComparisonSource[];
   referenceSourceId: string;
+  comparisonMode?: 'mtd' | 'ytd'; // MTD = Month to Date (single period), YTD = Year to Date (cumulative)
   periodFilter: {
     startMonth: number;
     endMonth: number;

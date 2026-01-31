@@ -93,7 +93,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
 
             const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
-            const results = calculateTemporalComparison(sourceDataMap, {
+            const { results } = calculateTemporalComparison(sourceDataMap, {
                ...tc,
                groupByFields: pc.rowFields,
                valueField: pc.valField,

@@ -209,8 +209,15 @@ export const usePivotData = ({
                sortOrder
            };
 
-           const results = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
+           const { results, colTotals } = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
            setTemporalResults(results);
+           setPivotData(prev => ({
+               colHeaders: temporalConfig.sources.map(s => s.label),
+               displayRows: [],
+               colTotals: {},
+               grandTotal: 0,
+               temporalColTotals: colTotals
+           }));
            setIsCalculating(false);
        }, 150);
 

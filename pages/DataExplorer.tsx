@@ -15,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup, reorderDatasetFields } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -39,6 +39,7 @@ export const DataExplorer: React.FC = () => {
    // HISTORY & RECONCILIATION STATE
    const [selectedRow, setSelectedRow] = useState<any | null>(null);
    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+   const [isColsDrawerOpen, setIsColsDrawerOpen] = useState(false);
    const [trackingKey, setTrackingKey] = useState<string>('');
 
    // CALCULATED FIELDS UI STATE (DRAWER)
@@ -319,6 +320,20 @@ export const DataExplorer: React.FC = () => {
       if (!currentDataset || !selectedCol || !renamingValue.trim() || selectedCol === renamingValue) return;
       renameDatasetField(currentDataset.id, selectedCol, renamingValue);
       setSelectedCol(renamingValue);
+   };
+
+   const handleMoveColumn = (field: string, direction: 'up' | 'down') => {
+       if (!currentDataset) return;
+       const fields = [...currentDataset.fields];
+       const idx = fields.indexOf(field);
+       if (idx === -1) return;
+
+       if (direction === 'up' && idx > 0) {
+           [fields[idx], fields[idx - 1]] = [fields[idx - 1], fields[idx]];
+       } else if (direction === 'down' && idx < fields.length - 1) {
+           [fields[idx], fields[idx + 1]] = [fields[idx + 1], fields[idx]];
+       }
+       reorderDatasetFields(currentDataset.id, fields);
    };
 
    const handleDeleteColumn = () => {
@@ -826,6 +841,7 @@ export const DataExplorer: React.FC = () => {
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
                <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
+               <Button variant={isColsDrawerOpen ? "primary" : "secondary"} onClick={() => setIsColsDrawerOpen(!isColsDrawerOpen)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Colonnes</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
                <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
@@ -1142,6 +1158,53 @@ export const DataExplorer: React.FC = () => {
                   </tbody>
                </table>
             </div>
+
+            {/* COLUMN MANAGEMENT DRAWER */}
+            {isColsDrawerOpen && (
+               <>
+                  <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsColsDrawerOpen(false)} />
+                  <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-slate-200">
+                     <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <div>
+                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Columns className="w-4 h-4 text-brand-600" /> Ordre des colonnes</h3>
+                           <p className="text-xs text-slate-500 mt-1">Réorganisez les colonnes de votre dataset</p>
+                        </div>
+                        <button onClick={() => setIsColsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                     </div>
+                     <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                        <div className="space-y-2">
+                           {currentDataset.fields.map((field, idx) => (
+                              <div key={field} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-brand-400 transition-colors group">
+                                 <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-slate-400 w-4">{idx + 1}</span>
+                                    <span className="text-sm font-medium text-slate-700">{field}</span>
+                                 </div>
+                                 <div className="flex items-center gap-1">
+                                    <button
+                                       onClick={() => handleMoveColumn(field, 'up')}
+                                       disabled={idx === 0}
+                                       className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-brand-600 disabled:opacity-30"
+                                    >
+                                       <ArrowUp className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                       onClick={() => handleMoveColumn(field, 'down')}
+                                       disabled={idx === currentDataset.fields.length - 1}
+                                       className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-brand-600 disabled:opacity-30"
+                                    >
+                                       <ArrowDown className="w-4 h-4" />
+                                    </button>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+                     <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+                        <Button variant="primary" onClick={() => setIsColsDrawerOpen(false)}>Fermer</Button>
+                     </div>
+                  </div>
+               </>
+            )}
 
             {/* CALCULATED FIELDS DRAWER */}
             {isCalcDrawerOpen && (

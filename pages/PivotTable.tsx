@@ -295,7 +295,7 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
-        if (isSelectionMode) return;
+        if (isSelectionMode || isFormattingSelectionMode) return;
 
         const prefilledFilters: Record<string, string> = {};
 
@@ -315,8 +315,14 @@ export const PivotTable: React.FC = () => {
             colFields.forEach((field, i) => {
                 const val = colValues[i];
                 if (val === undefined) return;
+
                 if (val === '(Vide)') {
                     prefilledFilters[field] = '__EMPTY__';
+                } else if (colGrouping !== 'none') {
+                    // For grouped dates, we use a 'contains' approach or period match
+                    // In Data Explorer, we don't have a direct period operator yet
+                    // But we can send the prefix. E.g. "2024-01" matches "2024-01-15"
+                    prefilledFilters[field] = val; // without '=' it's a 'contains'
                 } else {
                     prefilledFilters[field] = `=${val}`;
                 }
@@ -392,6 +398,33 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
+        const value = result.values[sourceId] || 0;
+        const source = temporalConfig?.sources.find(s => s.id === sourceId);
+        const colLabel = source?.label || sourceId;
+
+        if (isFormattingSelectionMode) {
+            handleCellClick(result.groupLabel.split('\x1F'), colLabel, value, '');
+            return;
+        }
+
+        if (isSelectionMode) {
+            const id = generateId();
+            const rowKeys = result.groupLabel.split('\x1F');
+            const label = `${rowKeys[rowKeys.length - 1]} - ${colLabel}`;
+
+            const newItem: SpecificDashboardItem = {
+                id,
+                label,
+                value,
+                rowPath: rowKeys,
+                colLabel,
+                metricLabel: ''
+            };
+
+            setSpecificDashboardItems(prev => [...prev, newItem]);
+            return;
+        }
+
         const prefilledFilters: Record<string, string> = {};
         const rowKeys = result.groupLabel.split('\x1F');
 
@@ -406,7 +439,9 @@ export const PivotTable: React.FC = () => {
         });
 
         // Target the specific batch
-        prefilledFilters['_batchId'] = sourceId;
+        // Extract real batchId from sourceId (temp_BATCHID)
+        const batchId = sourceId.startsWith('temp_') ? sourceId.replace('temp_', '') : sourceId;
+        prefilledFilters['_batchId'] = batchId;
 
         navigate('/data', { state: { prefilledFilters } });
     };
@@ -611,7 +646,7 @@ export const PivotTable: React.FC = () => {
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
+                       {...{ pivotData, isTemporalMode, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
                     />
                 </div>
             </div>
@@ -635,7 +670,25 @@ export const PivotTable: React.FC = () => {
                    selectedBatchId={selectedBatchId}
                 />
             )}
-            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
+            <TemporalSourceModal
+                isOpen={isTemporalSourceModalOpen}
+                onClose={() => setIsTemporalSourceModalOpen(false)}
+                primaryDataset={primaryDataset || null}
+                batches={batches}
+                currentSources={temporalConfig?.sources || []}
+                currentMode={temporalConfig?.comparisonMode || 'mtd'}
+                onSourcesChange={(s, r, m) => setTemporalConfig({
+                    ...temporalConfig,
+                    sources: s,
+                    referenceSourceId: r,
+                    comparisonMode: m,
+                    periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 },
+                    deltaFormat: temporalConfig?.deltaFormat || 'value',
+                    groupByFields: rowFields,
+                    valueField: valField,
+                    aggType: aggType as any
+                })}
+            />
             <CalculatedFieldModal
                 isOpen={isCalcModalOpen}
                 onClose={() => { setIsCalcModalOpen(false); setEditingCalcField(null); }}

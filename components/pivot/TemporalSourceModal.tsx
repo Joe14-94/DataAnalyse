@@ -10,7 +10,8 @@ interface TemporalSourceModalProps {
     primaryDataset: Dataset | null;
     batches: ImportBatch[];
     currentSources: TemporalComparisonSource[];
-    onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string) => void;
+    currentMode?: 'mtd' | 'ytd';
+    onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string, mode: 'mtd' | 'ytd') => void;
 }
 
 export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
@@ -19,11 +20,13 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
     primaryDataset,
     batches,
     currentSources,
+    currentMode = 'mtd',
     onSourcesChange
 }) => {
     const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>(
         currentSources.map(s => s.batchId)
     );
+    const [mode, setMode] = useState<'mtd' | 'ytd'>(currentMode);
     const [referenceId, setReferenceId] = useState<string>(
         currentSources.find(s => s.label.includes('2024'))?.id || ''
     );
@@ -117,7 +120,7 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
             };
         });
 
-        onSourcesChange(sources, referenceId);
+        onSourcesChange(sources, referenceId, mode);
         onClose();
     };
 
@@ -146,6 +149,27 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                             <strong>2.</strong> Nommez chaque source (ex: "2024", "2025", "Budget 2026")<br />
                             <strong>3.</strong> Choisissez la source de référence pour calculer les écarts
                         </p>
+                    </div>
+
+                    {/* Mode Selection */}
+                    <div className="space-y-2">
+                        <h3 className="text-sm font-bold text-slate-700">Mode de comparaison</h3>
+                        <div className="flex gap-4">
+                            <label className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all flex flex-col gap-1 ${mode === 'mtd' ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <div className="flex items-center gap-2">
+                                    <input type="radio" name="mode" checked={mode === 'mtd'} onChange={() => setMode('mtd')} className="w-4 h-4 text-brand-600" />
+                                    <span className="text-sm font-bold text-slate-800">Mensuel (MTD)</span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 ml-6">Compare les données pour la plage de mois sélectionnée uniquement.</p>
+                            </label>
+                            <label className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all flex flex-col gap-1 ${mode === 'ytd' ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <div className="flex items-center gap-2">
+                                    <input type="radio" name="mode" checked={mode === 'ytd'} onChange={() => setMode('ytd')} className="w-4 h-4 text-brand-600" />
+                                    <span className="text-sm font-bold text-slate-800">Cumulé (YTD)</span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 ml-6">Cumule les données de Janvier jusqu'au dernier mois de la plage sélectionnée.</p>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Dataset Info */}

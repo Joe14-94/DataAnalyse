@@ -69,7 +69,8 @@ export const filterDataByPeriod = (
   data: DataRow[],
   dateColumn: string,
   startMonth: number,
-  endMonth: number
+  endMonth: number,
+  comparisonMode: 'mtd' | 'ytd' = 'mtd'
 ): DataRow[] => {
   return data.filter(row => {
     const dateValue = row[dateColumn];
@@ -78,7 +79,13 @@ export const filterDataByPeriod = (
 
     const month = date.getMonth() + 1; // 0-indexed to 1-indexed
 
-    // Filtrage par période
+    if (comparisonMode === 'ytd') {
+        // En mode YTD, on prend de Janvier (1) jusqu'au mois de fin (endMonth)
+        // Note: startMonth est ignoré ou utilisé comme référence de "jusqu'à" si on préfère
+        return month >= 1 && month <= endMonth;
+    }
+
+    // Filtrage par période standard (MTD ou plage)
     if (startMonth <= endMonth) {
       // Période normale (ex: janvier à avril)
       return month >= startMonth && month <= endMonth;
@@ -167,8 +174,8 @@ export const calculateTemporalComparison = (
   dateColumn: string = 'Date écriture',
   showSubtotals: boolean = false,
   filters: FilterRule[] = []
-): TemporalComparisonResult[] => {
-  const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
+): { results: TemporalComparisonResult[], colTotals: Record<string, number> } => {
+  const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType, comparisonMode = 'mtd' } = config;
 
   // Préparer les filtres une seule fois
   const preparedFilters = prepareFilters(filters);
@@ -188,7 +195,8 @@ export const calculateTemporalComparison = (
       sourceData,
       dateColumn,
       periodFilter.startMonth,
-      periodFilter.endMonth
+      periodFilter.endMonth,
+      comparisonMode
     ).filter(row => applyPreparedFilters(row, preparedFilters));
 
     // Agréger
@@ -253,6 +261,12 @@ export const calculateTemporalComparison = (
       deltas,
       details
     });
+  });
+
+  // Calculer les totaux de colonnes (avant les sous-totaux pour éviter les doubles comptages)
+  const colTotals: Record<string, number> = {};
+  sources.forEach(source => {
+    colTotals[source.id] = results.reduce((sum, r) => sum + (r.values[source.id] || 0), 0);
   });
 
   // Trier les résultats
@@ -356,10 +370,10 @@ export const calculateTemporalComparison = (
       resultsWithSubtotals.push(result);
     });
 
-    return resultsWithSubtotals;
+    return { results: resultsWithSubtotals, colTotals };
   }
 
-  return results;
+  return { results, colTotals };
 };
 
 /**
