@@ -678,7 +678,7 @@ export const Settings: React.FC = () => {
                         </p>
 
                         <div className="flex items-center gap-4">
-                           <Button onClick={handleRunDiagnostics} disabled={isRunningDiag} className="bg-emerald-600 hover:bg-emerald-700">
+                           <Button onClick={handleRunDiagnostics} disabled={isRunningDiag}>
                               {isRunningDiag ? (
                                  <>Exécution en cours...</>
                               ) : (

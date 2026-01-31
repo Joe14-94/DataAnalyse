@@ -67,6 +67,7 @@ export const PivotTable: React.FC = () => {
     const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
     const [isQuickChartModalOpen, setIsQuickChartModalOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [formattingSelectionRule, setFormattingSelectionRule] = useState<{id: string, type: 'style' | 'conditional'} | null>(null);
     const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
@@ -331,6 +332,21 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
+        if (formattingSelectionRule) {
+            const targetKey = colLabel === '' ? (rowKeys[rowKeys.length - 1] || '') : (rowKeys.length === 0 ? colLabel : `${rowKeys.join('\x1F')}|${colLabel}`);
+
+            if (formattingSelectionRule.type === 'style') {
+                setStyleRules(prev => prev.map(r => r.id === formattingSelectionRule.id ? {
+                    ...r,
+                    targetKey,
+                    targetType: colLabel === '' ? 'row' : (rowKeys.length === 0 ? 'col' : 'cell')
+                } : r));
+            }
+            setFormattingSelectionRule(null);
+            setIsFormattingModalOpen(true);
+            return;
+        }
+
         if (!isSelectionMode) {
             handleDrilldown(rowKeys, colLabel);
             return;
@@ -503,6 +519,7 @@ export const PivotTable: React.FC = () => {
         <div className="h-full flex flex-col p-2 gap-2 relative bg-slate-50">
             <PivotHeader
                isTemporalMode={isTemporalMode} setIsTemporalMode={setIsTemporalMode} handleToChart={() => setIsChartModalOpen(true)}
+               setIsSelectionMode={setIsSelectionMode}
                primaryDataset={primaryDataset} datasets={datasets} showExportMenu={showExportMenu} setShowExportMenu={setShowExportMenu}
                handleExport={handleExport} handleExportSpreadsheet={handleExportSpreadsheet} showLoadMenu={showLoadMenu} setShowLoadMenu={setShowLoadMenu}
                savedAnalyses={savedAnalyses} handleLoadAnalysis={handleLoadAnalysis} isSaving={isSaving} setIsSaving={setIsSaving}
@@ -546,10 +563,21 @@ export const PivotTable: React.FC = () => {
                             </div>
                         </div>
                     )}
+                    {formattingSelectionRule && (
+                        <div className="absolute top-0 left-0 right-0 z-20 bg-indigo-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                            <div className="flex items-center gap-2 px-2">
+                                <Palette className="w-4 h-4 animate-pulse" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Mise en forme : Cliquez sur une ligne, colonne ou cellule pour l'affecter à la règle</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setFormattingSelectionRule(null); setIsFormattingModalOpen(true); }}>Annuler</Button>
+                            </div>
+                        </div>
+                    )}
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, colFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
-                       isSelectionMode, selectedItems: specificDashboardItems, isEditMode,
+                       isSelectionMode, isFormattingSelectionMode: !!formattingSelectionRule, selectedItems: specificDashboardItems, isEditMode,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,
                        styleRules, conditionalRules,
@@ -604,6 +632,10 @@ export const PivotTable: React.FC = () => {
                 rowFields={rowFields}
                 colFields={colFields}
                 additionalLabels={isTemporalMode ? temporalConfig?.sources.map(s => s.label) : []}
+                onStartSelection={(ruleId, type) => {
+                    setFormattingSelectionRule({ id: ruleId, type });
+                    setIsFormattingModalOpen(false);
+                }}
             />
 
             <SpecificDashboardModal

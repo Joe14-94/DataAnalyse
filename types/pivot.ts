@@ -75,6 +75,7 @@ export interface PivotStyleRule {
   id: string;
   targetType: 'row' | 'col' | 'metric' | 'cell';
   targetKey?: string; // row name, col name or metric label
+  scope?: 'data' | 'totals' | 'all';
   style: {
     textColor?: string;
     backgroundColor?: string;
@@ -86,6 +87,7 @@ export interface PivotStyleRule {
 export interface ConditionalFormattingRule {
   id: string;
   metricLabel?: string; // If undefined, applies to all metrics
+  scope?: 'data' | 'totals' | 'all';
   operator: 'gt' | 'lt' | 'eq' | 'between' | 'contains';
   value: number | string;
   value2?: number; // For between

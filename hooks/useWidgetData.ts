@@ -17,6 +17,22 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       if (widget.type === 'text') return { text: widget.config.textContent, style: widget.config.textStyle };
       if (widget.type === 'report') return { items: widget.config.reportItems || [] };
 
+      // Gérer les widgets de graphiques basés sur une sélection TCD (reportItems)
+      if (widget.type === 'chart' && widget.config.reportItems && !widget.config.source) {
+         const items = widget.config.reportItems;
+         const chartData = items.map(item => ({
+            name: item.label,
+            value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
+            fullLabel: `${item.rowPath.join(' > ')} | ${item.colLabel}`
+         }));
+         return {
+            data: chartData,
+            isSelective: true,
+            unit: '', // On pourrait essayer de déduire l'unité
+            colors: getChartColorsForWidget(widget.config, chartData.length)
+         };
+      }
+
       // NOUVEAU : Gérer les widgets basés sur des graphiques TCD (Pivot)
       if (widget.config.pivotChart) {
          const { pivotChart } = widget.config;

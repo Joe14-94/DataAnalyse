@@ -1,12 +1,13 @@
 
-import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette } from 'lucide-react';
+import React, { useState } from 'react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, ChevronDown, MousePointerClick } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
    isTemporalMode: boolean;
    setIsTemporalMode: (v: boolean) => void;
    handleToChart: () => void;
+   setIsSelectionMode: (v: boolean) => void;
    primaryDataset: Dataset | null;
    datasets: Dataset[];
    showExportMenu: boolean;
@@ -38,8 +39,10 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
    openCalcModal, openFormattingModal, openSpecificDashboardModal, selectedItemsCount = 0,
-   searchTerm, setSearchTerm
+   searchTerm, setSearchTerm, setIsSelectionMode
 }) => {
+   const [showChartMenu, setShowChartMenu] = useState(false);
+
    return (
       <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-2 shrink-0">
          <div className="flex items-center gap-2">
@@ -104,9 +107,31 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                )}
             </button>
 
-            <button onClick={handleToChart} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50">
-               <PieChart className="w-3 h-3" /> Graphique
-            </button>
+            <div className="relative">
+               <button
+                  onClick={() => setShowChartMenu(!showChartMenu)}
+                  disabled={!primaryDataset}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 disabled:opacity-50"
+               >
+                  <PieChart className="w-3 h-3" /> Graphique <ChevronDown className="w-3 h-3 ml-1" />
+               </button>
+               {showChartMenu && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                     <button
+                        onClick={() => { handleToChart(); setShowChartMenu(false); }}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                     >
+                        <Table2 className="w-3 h-3 text-brand-600" /> Automatique (Table complète)
+                     </button>
+                     <button
+                        onClick={() => { setIsSelectionMode(true); setShowChartMenu(false); }}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                     >
+                        <MousePointerClick className="w-3 h-3 text-indigo-600" /> Sélective (Choix manuel)
+                     </button>
+                  </div>
+               )}
+            </div>
 
             <div className="relative">
                <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={!primaryDataset} className="px-3 py-1.5 text-xs text-slate-600 hover:text-brand-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50">

@@ -109,18 +109,43 @@ export const History: React.FC = () => {
                  const bid = e.target.value;
                  setSelectedBatchId(bid);
                  const batch = batches.find(b => b.id === bid);
-                 if (batch) switchDataset(batch.datasetId);
+                 if (batch && batch.datasetId !== currentDatasetId) switchDataset(batch.datasetId);
               }}
             >
               {batches.length === 0 && <option value="">Aucun historique</option>}
-              {batches.map(b => {
-                const ds = datasets.find(d => d.id === b.datasetId);
-                return (
-                  <option key={b.id} value={b.id}>
-                    {ds ? `[${ds.name}] ` : ''}Import du {formatDateFr(b.date)} ({b.rows.length} lignes)
-                  </option>
-                );
-              })}
+
+              {/* Priorité au dataset actuel */}
+              {currentDatasetId && batches.some(b => b.datasetId === currentDatasetId) && (
+                 <optgroup label={`Versions : ${datasets.find(d => d.id === currentDatasetId)?.name}`}>
+                   {batches
+                     .filter(b => b.datasetId === currentDatasetId)
+                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                     .map(b => (
+                       <option key={b.id} value={b.id}>
+                         Import du {formatDateFr(b.date)} ({b.rows.length} lignes)
+                       </option>
+                     ))
+                   }
+                 </optgroup>
+              )}
+
+              {/* Autres datasets */}
+              {batches.some(b => b.datasetId !== currentDatasetId) && (
+                 <optgroup label="Autres typologies">
+                   {batches
+                     .filter(b => b.datasetId !== currentDatasetId)
+                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                     .map(b => {
+                       const ds = datasets.find(d => d.id === b.datasetId);
+                       return (
+                         <option key={b.id} value={b.id}>
+                           {ds ? `[${ds.name}] ` : ''}Import du {formatDateFr(b.date)}
+                         </option>
+                       );
+                     })
+                   }
+                 </optgroup>
+              )}
             </select>
           </div>
         </div>
