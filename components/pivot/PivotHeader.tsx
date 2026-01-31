@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3 } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -25,6 +25,7 @@ interface PivotHeaderProps {
    setAnalysisName: (v: string) => void;
    handleSaveAnalysis: () => void;
    openCalcModal: () => void;
+   openFormattingModal: () => void;
    openSpecificDashboardModal: () => void;
    selectedItemsCount?: number;
    searchTerm: string;
@@ -36,7 +37,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
-   openCalcModal, openSpecificDashboardModal, selectedItemsCount = 0,
+   openCalcModal, openFormattingModal, openSpecificDashboardModal, selectedItemsCount = 0,
    searchTerm, setSearchTerm
 }) => {
    return (
@@ -88,6 +89,10 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
 
             <button onClick={openCalcModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50">
                <Calculator className="w-3 h-3" /> Colonne calculée
+            </button>
+
+            <button onClick={openFormattingModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-300 disabled:opacity-50">
+               <Palette className="w-3 h-3 text-indigo-500" /> Mise en forme
             </button>
 
             <button onClick={openSpecificDashboardModal} disabled={!primaryDataset} className="relative flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">

@@ -14,6 +14,7 @@ interface FormattingModalProps {
   metrics: PivotMetric[];
   rowFields: string[];
   colFields: string[];
+  additionalLabels?: string[];
 }
 
 const COLORS = [
@@ -31,7 +32,7 @@ const COLORS = [
 ];
 
 export const FormattingModal: React.FC<FormattingModalProps> = ({
-  isOpen, onClose, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields
+  isOpen, onClose, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields, additionalLabels = []
 }) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'conditional'>('manual');
 
@@ -87,7 +88,8 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
     }
   };
 
-  const metricLabels = metrics.map(m => m.label || `${m.field} (${m.aggType})`);
+  const metricLabels = [...metrics.map(m => m.label || `${m.field} (${m.aggType})`), ...additionalLabels];
+  const rowColLabels = [...rowFields, ...colFields];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
@@ -173,13 +175,23 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                               {metricLabels.map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
                           ) : (
-                            <input
-                              type="text"
-                              className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1"
-                              placeholder="Nom de la ligne/colonne..."
-                              value={rule.targetKey || ''}
-                              onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
-                            />
+                            <div className="flex-1 flex gap-2">
+                                <select
+                                    className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-32"
+                                    value={rowColLabels.includes(rule.targetKey || '') ? rule.targetKey : ''}
+                                    onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
+                                >
+                                    <option value="">Sélectionner...</option>
+                                    {rowColLabels.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                                <input
+                                    type="text"
+                                    className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1"
+                                    placeholder="Ou saisir manuellement..."
+                                    value={rule.targetKey || ''}
+                                    onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
+                                />
+                            </div>
                           )}
                         </div>
 
@@ -210,8 +222,8 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
 
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-bold text-slate-500">Couleurs:</span>
-                          <div className="flex gap-1">
-                            {COLORS.slice(0, 6).map(c => (
+                          <div className="flex gap-1 flex-wrap max-w-[200px]">
+                            {COLORS.map(c => (
                               <button
                                 key={c.value}
                                 onClick={() => updateStyle(rule.id, { backgroundColor: c.value, textColor: c.text })}
