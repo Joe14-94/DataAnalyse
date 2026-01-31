@@ -471,6 +471,7 @@ export const PivotTable: React.FC = () => {
                isEditMode={isEditMode} setIsEditMode={setIsEditMode}
                analysisName={analysisName} setAnalysisName={setAnalysisName} handleSaveAnalysis={handleSaveAnalysis}
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
+               openFormattingModal={() => setIsFormattingModalOpen(true)}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
                selectedItemsCount={specificDashboardItems.length}
                searchTerm={searchTerm}
@@ -564,6 +565,7 @@ export const PivotTable: React.FC = () => {
                 metrics={metrics}
                 rowFields={rowFields}
                 colFields={colFields}
+                additionalLabels={isTemporalMode ? temporalConfig?.sources.map(s => s.label) : []}
             />
 
             <SpecificDashboardModal
