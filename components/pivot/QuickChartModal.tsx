@@ -26,6 +26,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
   const { addDashboardWidget, companyLogo } = useData();
   const navigate = useNavigate();
   const [chartType, setChartType] = useState<ChartType>('pie');
+  const [widgetTitle, setWidgetTitle] = useState('');
 
   const chartData = useMemo(() => {
     return items.map(item => ({
@@ -50,7 +51,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
 
   const handleAddToDashboard = () => {
     addDashboardWidget({
-      title: `Graphique de sélection (${items.length} cellules)`,
+      title: widgetTitle || `Graphique de sélection (${items.length} cellules)`,
       type: 'chart',
       size: 'lg',
       height: 'md',
@@ -230,6 +231,15 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
           </div>
 
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 mr-4 border-r border-slate-200 pr-4">
+               <input
+                  type="text"
+                  placeholder="Titre du widget..."
+                  className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none w-48"
+                  value={widgetTitle}
+                  onChange={(e) => setWidgetTitle(e.target.value)}
+               />
+            </div>
             <Button
                onClick={handleAddToDashboard}
                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95"

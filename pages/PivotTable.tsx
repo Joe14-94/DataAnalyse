@@ -67,6 +67,7 @@ export const PivotTable: React.FC = () => {
     const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
     const [isQuickChartModalOpen, setIsQuickChartModalOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [isFormattingSelectionMode, setIsFormattingSelectionMode] = useState<'manual' | 'conditional' | null>(null);
     const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
     const [columnLabels, setColumnLabels] = useState<Record<string, string>>({});
@@ -331,6 +332,45 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
+        if (isFormattingSelectionMode) {
+            if (isFormattingSelectionMode === 'manual') {
+                let targetType: 'row' | 'col' | 'cell' = 'cell';
+                let targetKey = '';
+
+                if (rowKeys.length > 0 && colLabel === '') {
+                    targetType = 'row';
+                    targetKey = rowKeys[0];
+                } else if (rowKeys.length === 0 && colLabel !== '') {
+                    targetType = 'col';
+                    targetKey = colLabel;
+                }
+
+                const newRule: PivotStyleRule = {
+                    id: generateId(),
+                    targetType,
+                    targetKey: targetType === 'cell' ? '' : targetKey,
+                    targetRowPath: targetType === 'cell' ? rowKeys : undefined,
+                    targetColLabel: targetType === 'cell' ? colLabel : undefined,
+                    style: { fontWeight: 'bold', backgroundColor: '#dbeafe' }
+                };
+                setStyleRules(prev => [...prev, newRule]);
+            } else {
+                const newRule: ConditionalFormattingRule = {
+                    id: generateId(),
+                    targetRowPath: rowKeys,
+                    targetColLabel: colLabel,
+                    operator: 'gt',
+                    value: 0,
+                    style: { fontWeight: 'bold', backgroundColor: '#dbeafe' }
+                };
+                setConditionalRules(prev => [...prev, newRule]);
+            }
+
+            setIsFormattingSelectionMode(null);
+            setIsFormattingModalOpen(true);
+            return;
+        }
+
         if (!isSelectionMode) {
             handleDrilldown(rowKeys, colLabel);
             return;
@@ -511,6 +551,7 @@ export const PivotTable: React.FC = () => {
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
                openFormattingModal={() => setIsFormattingModalOpen(true)}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
+               onStartManualChartSelection={() => setIsSelectionMode(true)}
                selectedItemsCount={specificDashboardItems.length}
                searchTerm={searchTerm}
                setSearchTerm={setSearchTerm}
@@ -543,6 +584,17 @@ export const PivotTable: React.FC = () => {
                                 <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-brand-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Créer Rapport</Button>
                                 <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsSelectionMode(false); setSpecificDashboardItems([]); }}>Annuler</Button>
                                 <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => setSpecificDashboardItems([])} disabled={specificDashboardItems.length === 0}>Vider</Button>
+                            </div>
+                        </div>
+                    )}
+                    {isFormattingSelectionMode && (
+                        <div className="absolute top-0 left-0 right-0 z-20 bg-indigo-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                            <div className="flex items-center gap-2 px-2">
+                                <MousePointerClick className="w-4 h-4 animate-pulse" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Sélection de mise en forme : Cliquez sur une cellule, ligne ou colonne</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsFormattingSelectionMode(false); setIsFormattingModalOpen(true); }}>Annuler</Button>
                             </div>
                         </div>
                     )}
@@ -596,6 +648,10 @@ export const PivotTable: React.FC = () => {
             <FormattingModal
                 isOpen={isFormattingModalOpen}
                 onClose={() => setIsFormattingModalOpen(false)}
+                onStartSelection={(mode) => {
+                    setIsFormattingModalOpen(false);
+                    setIsFormattingSelectionMode(mode);
+                }}
                 styleRules={styleRules}
                 setStyleRules={setStyleRules}
                 conditionalRules={conditionalRules}

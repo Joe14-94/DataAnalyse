@@ -56,7 +56,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    };
 
    const getCellFormatting = (col: string, value: any, metricLabel: string) => {
-      return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules);
+      return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, true);
    };
 
    const formatOutput = (val: string | number, metric?: any) => {

@@ -75,6 +75,8 @@ export interface PivotStyleRule {
   id: string;
   targetType: 'row' | 'col' | 'metric' | 'cell';
   targetKey?: string; // row name, col name or metric label
+  targetRowPath?: string[]; // For 'cell' targetType
+  targetColLabel?: string; // For 'cell' targetType
   style: {
     textColor?: string;
     backgroundColor?: string;
@@ -86,6 +88,9 @@ export interface PivotStyleRule {
 export interface ConditionalFormattingRule {
   id: string;
   metricLabel?: string; // If undefined, applies to all metrics
+  scope?: 'data' | 'totals' | 'all'; // Scope of application
+  targetRowPath?: string[]; // Selection-based: specific row path
+  targetColLabel?: string; // Selection-based: specific col
   operator: 'gt' | 'lt' | 'eq' | 'between' | 'contains';
   value: number | string;
   value2?: number; // For between
