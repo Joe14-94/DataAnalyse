@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
-import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule } from '../types';
+import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, db, generateId, evaluateFormula } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 
@@ -32,6 +32,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
   const [lastPivotState, setLastPivotState] = useState<PivotState | null>(null);
   const [lastAnalyticsState, setLastAnalyticsState] = useState<AnalyticsState | null>(null);
+  const [lastDataExplorerState, setLastDataExplorerState] = useState<DataExplorerState | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | undefined>(undefined); // NEW
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(false); // NEW
   const [financeReferentials, setFinanceReferentials] = useState<FinanceReferentials>({}); // NEW
@@ -68,6 +69,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSavedAnalyses(dbData.savedAnalyses || []);
           setLastPivotState(dbData.lastPivotState || null);
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
+          setLastDataExplorerState(dbData.lastDataExplorerState || null);
           setCompanyLogo(dbData.companyLogo); // NEW
           setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
           setFinanceReferentials(dbData.financeReferentials || {}); // NEW
@@ -92,6 +94,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSavedAnalyses(parsed.savedAnalyses || []);
             setLastPivotState(parsed.lastPivotState || null);
             setLastAnalyticsState(parsed.lastAnalyticsState || null);
+            setLastDataExplorerState(parsed.lastDataExplorerState || null);
             setCompanyLogo(parsed.companyLogo); // NEW
             setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
             setFinanceReferentials(parsed.financeReferentials || {}); // NEW
@@ -131,6 +134,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentDatasetId,
         lastPivotState,
         lastAnalyticsState,
+        lastDataExplorerState,
         companyLogo,
         hasSeenOnboarding,
         financeReferentials,
@@ -532,6 +536,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLastAnalyticsState(state);
   }, []);
 
+  const saveDataExplorerState = useCallback((state: DataExplorerState | null) => {
+    setLastDataExplorerState(state);
+  }, []);
+
   // --- PERSISTENCE ACTIONS ---
   const clearAll = useCallback(async () => {
     setDatasets([]);
@@ -589,7 +597,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fullState: AppState = {
       datasets, batches, dashboardWidgets, savedAnalyses,
       version: APP_VERSION, savedMappings, currentDatasetId,
-      lastPivotState, lastAnalyticsState, companyLogo,
+      lastPivotState, lastAnalyticsState, lastDataExplorerState, companyLogo,
       hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, pipelineModule, uiPrefs
     };
 
@@ -616,6 +624,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (shouldImport('savedAnalyses') && parsed.savedAnalyses) setSavedAnalyses(parsed.savedAnalyses);
       if (shouldImport('lastPivotState') && parsed.lastPivotState) setLastPivotState(parsed.lastPivotState);
       if (shouldImport('lastAnalyticsState') && parsed.lastAnalyticsState) setLastAnalyticsState(parsed.lastAnalyticsState);
+      if (shouldImport('lastDataExplorerState') && parsed.lastDataExplorerState) setLastDataExplorerState(parsed.lastDataExplorerState);
       if (shouldImport('companyLogo') && parsed.companyLogo) setCompanyLogo(parsed.companyLogo);
       if (shouldImport('hasSeenOnboarding') && parsed.hasSeenOnboarding !== undefined) setHasSeenOnboarding(!!parsed.hasSeenOnboarding);
       if (shouldImport('financeReferentials') && parsed.financeReferentials) setFinanceReferentials(parsed.financeReferentials);
@@ -660,7 +669,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState }}>
+                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState }}>
                       {children}
                     </AnalyticsContext.Provider>
                   </WidgetContext.Provider>
