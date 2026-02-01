@@ -199,21 +199,6 @@ export const transformPivotToChartData = (
     return dataPoint;
   });
 
-  // Normalisation pour les graphiques en 100%
-  if (chartType === 'percent-bar' || chartType === 'percent-column') {
-    chartData = chartData.map(point => {
-      const newPoint = { ...point };
-      const keys = Object.keys(point).filter(k => k !== 'name');
-      const total = keys.reduce((sum, k) => sum + Math.abs(point[k] || 0), 0);
-
-      if (total > 0) {
-        keys.forEach(k => {
-          newPoint[k] = (Math.abs(point[k] || 0) / total) * 100;
-        });
-      }
-      return newPoint;
-    });
-  }
 
   // Tri des données
   if (sortBy === 'name') {

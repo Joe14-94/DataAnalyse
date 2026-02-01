@@ -6,7 +6,8 @@ import * as XLSX from 'xlsx';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  Cell, Treemap, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  Cell, Treemap, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  LabelList
 } from 'recharts';
 import { TreemapContent } from '../ui/TreemapContent';
 import {
@@ -369,16 +370,25 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       case 'stacked-bar':
       case 'percent-bar': {
         const isStacked = selectedChartType === 'stacked-bar' || selectedChartType === 'percent-bar';
+        const isPercent = selectedChartType === 'percent-bar';
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ ...chartMargin, left: 140 }}>
+            <BarChart data={chartData} layout="vertical" margin={{ ...chartMargin, left: 140 }} stackOffset={isPercent ? 'expand' : undefined}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-              <XAxis type="number" stroke="#94a3b8" fontSize={11} hide={selectedChartType === 'percent-bar'} domain={selectedChartType === 'percent-bar' ? [0, 100] : [0, 'auto']} />
+              <XAxis
+                type="number"
+                stroke="#94a3b8"
+                fontSize={11}
+                domain={isPercent ? [0, 1] : [0, 'auto']}
+                tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined}
+              />
               <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 10 }} stroke="#94a3b8" />
-              <Tooltip content={<CustomTooltip />} formatter={(val: any) => selectedChartType === 'percent-bar' ? `${Number(val).toFixed(1)}%` : val} />
+              <Tooltip content={<CustomTooltip />} />
               {metadata.isMultiSeries || isStacked ? (
                 metadata.seriesNames.map((series, idx) => (
-                  <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0} />
+                  <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0}>
+                    {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? formatChartValue(val, pivotConfig) : ''} style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none' }} />}
+                  </Bar>
                 ))
               ) : (
                 <Bar dataKey="value" fill={colors[0]} radius={[0, 4, 4, 0]}>
@@ -397,16 +407,24 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       case 'stacked-column':
       case 'percent-column': {
         const isStacked = selectedChartType === 'stacked-column' || selectedChartType === 'percent-column';
+        const isPercent = selectedChartType === 'percent-column';
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="horizontal" margin={chartMargin}>
+            <BarChart data={chartData} layout="horizontal" margin={chartMargin} stackOffset={isPercent ? 'expand' : undefined}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} />
-              <YAxis stroke="#94a3b8" fontSize={11} hide={selectedChartType === 'percent-column'} domain={selectedChartType === 'percent-column' ? [0, 100] : [0, 'auto']} />
-              <Tooltip content={<CustomTooltip />} formatter={(val: any) => selectedChartType === 'percent-column' ? `${Number(val).toFixed(1)}%` : val} />
+              <YAxis
+                stroke="#94a3b8"
+                fontSize={11}
+                domain={isPercent ? [0, 1] : [0, 'auto']}
+                tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined}
+              />
+              <Tooltip content={<CustomTooltip />} />
               {metadata.isMultiSeries || isStacked ? (
                 metadata.seriesNames.map((series, idx) => (
-                  <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0} />
+                  <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0}>
+                    {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? formatChartValue(val, pivotConfig) : ''} style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none' }} />}
+                  </Bar>
                 ))
               ) : (
                 <Bar dataKey="value" fill={colors[0]} radius={[4, 4, 0, 0]}>

@@ -202,10 +202,14 @@ export const PivotTable: React.FC = () => {
         const parent = parentRef.current;
         const footer = footerRef.current;
         if (!parent || !footer) return;
-        const handleScroll = () => { footer.scrollLeft = parent.scrollLeft; };
+        const handleScroll = () => {
+            if (footer && parent) {
+                footer.scrollLeft = parent.scrollLeft;
+            }
+        };
         parent.addEventListener('scroll', handleScroll);
         return () => parent.removeEventListener('scroll', handleScroll);
-    }, [pivotData]);
+    }, [pivotData, temporalResults, isTemporalMode]);
 
     const rowVirtualizer = useVirtualizer({
         count: pivotData ? pivotData.displayRows.length : 0,
