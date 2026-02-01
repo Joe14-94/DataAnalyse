@@ -280,6 +280,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const delta = result.deltas[source.id];
                                  const width = columnWidths[source.id] || 120;
                                  const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), source.id, value, source.label, isSubtotal ? 'subtotal' : 'data');
+                                 const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), source.label);
+
                                  return (
                                     <React.Fragment key={source.id}>
                                        <td

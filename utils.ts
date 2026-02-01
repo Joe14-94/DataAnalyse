@@ -409,10 +409,18 @@ export const formatNumberValue = (value: number | string, config?: FieldConfig):
   }) + fullSuffix;
 };
 
+// BOLT OPTIMIZATION: Global cache for grouped labels to avoid redundant date parsing
+const GROUPED_LABEL_CACHE = new Map<string, string>();
+
 // Logique de regroupement de date pour le TCD et les Diagnostics
 export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarter' | 'month') => {
   if (!val || val === '(Vide)' || grouping === 'none') return val;
 
+  const cacheKey = `${grouping}:${val}`;
+  const cached = GROUPED_LABEL_CACHE.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  let result = val;
   try {
     let d: Date;
 
@@ -462,20 +470,20 @@ export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarte
     }
 
     if (grouping === 'year') {
-      return d.getFullYear().toString();
-    }
-    if (grouping === 'quarter') {
+      result = d.getFullYear().toString();
+    } else if (grouping === 'quarter') {
       const q = Math.floor(d.getMonth() / 3) + 1;
-      return `${d.getFullYear()}-T${q}`;
-    }
-    if (grouping === 'month') {
+      result = `${d.getFullYear()}-T${q}`;
+    } else if (grouping === 'month') {
       // ISO format pour le tri correct, formaté ensuite si besoin
-      return d.toISOString().slice(0, 7); // YYYY-MM
+      result = d.toISOString().slice(0, 7); // YYYY-MM
     }
   } catch (e) {
-    return val;
+    result = val;
   }
-  return val;
+
+  GROUPED_LABEL_CACHE.set(cacheKey, result);
+  return result;
 };
 
 /**
@@ -548,10 +556,18 @@ export const detectUnit = (values: string[]): string => {
 
 /**
  * Détecte le type de colonne le plus probable
- * Amélioration : échantillonnage sur 100 lignes et meilleure détection des booléens
+ * BOLT OPTIMIZATION: Sampling on 100 lines and avoid O(N) filter() for large datasets.
  */
 export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean' | 'date' => {
-  const sample = values.filter(v => v && v.trim() !== '');
+  // BOLT OPTIMIZATION: Use a limited sample for performance on large datasets
+  const sample: string[] = [];
+  for (let i = 0; i < values.length && sample.length < 100; i++) {
+    const v = values[i];
+    if (v && v.trim() !== '') {
+      sample.push(v);
+    }
+  }
+
   if (sample.length === 0) return 'text';
 
   let numberCount = 0;
