@@ -13,6 +13,8 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@azure/msal-browser": "^3.30.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@tanstack/react-virtual": "^3.13.18",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240405.0",
+    "@microsoft/microsoft-graph-types": "^2.43.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",

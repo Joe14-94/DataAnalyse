@@ -1,0 +1,418 @@
+/**
+ * Service d'intégration Microsoft 365 (OneDrive / SharePoint)
+ *
+ * POC - Proof of Concept
+ *
+ * Fonctionnalités:
+ * - Authentification via MSAL (Microsoft Authentication Library)
+ * - Upload/Download de backups vers OneDrive
+ * - Liste des backups disponibles
+ * - Génération de liens de partage
+ *
+ * Sécurité:
+ * - OAuth 2.0 avec PKCE (Proof Key for Code Exchange)
+ * - Tokens stockés de manière sécurisée par MSAL
+ * - Scopes minimaux requis
+ */
+
+import {
+  PublicClientApplication,
+  AccountInfo,
+  AuthenticationResult,
+  InteractionRequiredAuthError,
+  BrowserCacheLocation
+} from '@azure/msal-browser';
+import { Client } from '@microsoft/microsoft-graph-client';
+import type { DriveItem } from '@microsoft/microsoft-graph-types';
+import type { AppState } from '../types';
+
+// Configuration MSAL
+// IMPORTANT: Ces valeurs doivent être configurées dans les variables d'environnement
+const getClientId = (): string => {
+  // @ts-ignore - Vite env types
+  return import.meta.env?.VITE_O365_CLIENT_ID || 'YOUR_CLIENT_ID_HERE';
+};
+
+const MSAL_CONFIG = {
+  auth: {
+    // Client ID de l'application Azure AD (à configurer)
+    // Pour le POC, utiliser une valeur par défaut ou demander configuration
+    clientId: getClientId(),
+    authority: 'https://login.microsoftonline.com/common',
+    redirectUri: window.location.origin,
+    postLogoutRedirectUri: window.location.origin,
+  },
+  cache: {
+    cacheLocation: BrowserCacheLocation.LocalStorage,
+    storeAuthStateInCookie: false, // Set to true for IE11/Edge
+  },
+};
+
+// Permissions Microsoft Graph nécessaires
+const LOGIN_SCOPES = [
+  'User.Read',           // Lire le profil utilisateur
+  'Files.ReadWrite',     // Accès OneDrive en lecture/écriture
+];
+
+// Nom du dossier dans OneDrive pour stocker les backups
+const BACKUP_FOLDER = 'DataScope_Backups';
+
+/**
+ * Types personnalisés
+ */
+export interface O365User {
+  displayName: string;
+  email: string;
+  id: string;
+}
+
+export interface BackupMetadata {
+  id: string;
+  name: string;
+  size: number;
+  createdDateTime: string;
+  lastModifiedDateTime: string;
+  downloadUrl?: string;
+}
+
+export interface O365ServiceState {
+  isAuthenticated: boolean;
+  user: O365User | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Service principal O365
+ */
+class O365Service {
+  private msalInstance: PublicClientApplication | null = null;
+  private graphClient: Client | null = null;
+  private currentAccount: AccountInfo | null = null;
+  private initPromise: Promise<void> | null = null;
+
+  /**
+   * Initialise l'instance MSAL (appelé automatiquement lors du premier usage)
+   */
+  private async initialize(): Promise<void> {
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = (async () => {
+      try {
+        this.msalInstance = new PublicClientApplication(MSAL_CONFIG);
+        await this.msalInstance.initialize();
+
+        // Vérifier si un utilisateur est déjà connecté
+        const accounts = this.msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          this.currentAccount = accounts[0];
+          await this.initializeGraphClient();
+        }
+      } catch (error) {
+        console.error('[O365Service] Initialization failed:', error);
+        throw new Error('Impossible d\'initialiser le service Microsoft 365');
+      }
+    })();
+
+    return this.initPromise;
+  }
+
+  /**
+   * Initialise le client Microsoft Graph
+   */
+  private async initializeGraphClient(): Promise<void> {
+    if (!this.msalInstance || !this.currentAccount) {
+      throw new Error('Non authentifié');
+    }
+
+    this.graphClient = Client.init({
+      authProvider: async (done) => {
+        try {
+          const token = await this.getAccessToken();
+          done(null, token);
+        } catch (error) {
+          done(error as Error, null);
+        }
+      },
+    });
+  }
+
+  /**
+   * Obtient un access token (avec refresh automatique si expiré)
+   */
+  private async getAccessToken(): Promise<string> {
+    if (!this.msalInstance || !this.currentAccount) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      // Essayer d'obtenir le token silencieusement (depuis le cache)
+      const response = await this.msalInstance.acquireTokenSilent({
+        scopes: LOGIN_SCOPES,
+        account: this.currentAccount,
+      });
+      return response.accessToken;
+    } catch (error) {
+      if (error instanceof InteractionRequiredAuthError) {
+        // Si le token est expiré, demander une nouvelle authentification
+        const response = await this.msalInstance.acquireTokenPopup({
+          scopes: LOGIN_SCOPES,
+        });
+        return response.accessToken;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Vérifie si l'utilisateur est authentifié
+   */
+  async isAuthenticated(): Promise<boolean> {
+    await this.initialize();
+    return this.currentAccount !== null;
+  }
+
+  /**
+   * Récupère les informations de l'utilisateur connecté
+   */
+  async getCurrentUser(): Promise<O365User | null> {
+    if (!this.currentAccount) {
+      return null;
+    }
+
+    return {
+      displayName: this.currentAccount.name || 'Utilisateur',
+      email: this.currentAccount.username,
+      id: this.currentAccount.localAccountId,
+    };
+  }
+
+  /**
+   * Connexion interactive via popup
+   */
+  async login(): Promise<O365User> {
+    await this.initialize();
+
+    if (!this.msalInstance) {
+      throw new Error('Service non initialisé');
+    }
+
+    try {
+      const response: AuthenticationResult = await this.msalInstance.loginPopup({
+        scopes: LOGIN_SCOPES,
+        prompt: 'select_account',
+      });
+
+      this.currentAccount = response.account;
+      await this.initializeGraphClient();
+
+      return {
+        displayName: response.account.name || 'Utilisateur',
+        email: response.account.username,
+        id: response.account.localAccountId,
+      };
+    } catch (error) {
+      console.error('[O365Service] Login failed:', error);
+      throw new Error('Échec de la connexion Microsoft 365');
+    }
+  }
+
+  /**
+   * Déconnexion
+   */
+  async logout(): Promise<void> {
+    if (!this.msalInstance || !this.currentAccount) {
+      return;
+    }
+
+    try {
+      await this.msalInstance.logoutPopup({
+        account: this.currentAccount,
+      });
+      this.currentAccount = null;
+      this.graphClient = null;
+    } catch (error) {
+      console.error('[O365Service] Logout failed:', error);
+      throw new Error('Échec de la déconnexion');
+    }
+  }
+
+  /**
+   * Crée le dossier de backup dans OneDrive s'il n'existe pas
+   */
+  private async ensureBackupFolder(): Promise<void> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      // Vérifier si le dossier existe
+      await this.graphClient
+        .api(`/me/drive/root:/${BACKUP_FOLDER}`)
+        .get();
+    } catch (error: any) {
+      if (error.statusCode === 404) {
+        // Le dossier n'existe pas, le créer
+        await this.graphClient
+          .api('/me/drive/root/children')
+          .post({
+            name: BACKUP_FOLDER,
+            folder: {},
+            '@microsoft.graph.conflictBehavior': 'rename',
+          });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Sauvegarde un backup dans OneDrive
+   */
+  async saveBackupToOneDrive(
+    filename: string,
+    data: Partial<AppState>
+  ): Promise<void> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      await this.ensureBackupFolder();
+
+      // Convertir les données en JSON
+      const jsonContent = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+
+      // Ajouter timestamp si pas déjà présent dans le nom
+      const timestampedFilename = filename.includes('_')
+        ? filename
+        : `${filename.replace('.json', '')}_${new Date().toISOString().split('T')[0]}.json`;
+
+      // Upload vers OneDrive
+      // Pour les fichiers < 4MB, utiliser PUT simple
+      if (blob.size < 4 * 1024 * 1024) {
+        await this.graphClient
+          .api(`/me/drive/root:/${BACKUP_FOLDER}/${timestampedFilename}:/content`)
+          .put(blob);
+      } else {
+        // Pour les gros fichiers, utiliser upload session (non implémenté dans POC)
+        throw new Error('Fichier trop volumineux (max 4MB pour le POC)');
+      }
+    } catch (error) {
+      console.error('[O365Service] Save backup failed:', error);
+      throw new Error('Échec de la sauvegarde sur OneDrive');
+    }
+  }
+
+  /**
+   * Liste les backups disponibles dans OneDrive
+   */
+  async listBackups(): Promise<BackupMetadata[]> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      await this.ensureBackupFolder();
+
+      const response = await this.graphClient
+        .api(`/me/drive/root:/${BACKUP_FOLDER}:/children`)
+        .filter("endsWith(name, '.json')")
+        .orderby('lastModifiedDateTime desc')
+        .top(50) // Limiter à 50 backups récents
+        .get();
+
+      const items: DriveItem[] = response.value || [];
+
+      return items.map((item) => ({
+        id: item.id!,
+        name: item.name!,
+        size: item.size!,
+        createdDateTime: item.createdDateTime!,
+        lastModifiedDateTime: item.lastModifiedDateTime!,
+        downloadUrl: (item as any)['@microsoft.graph.downloadUrl'],
+      }));
+    } catch (error) {
+      console.error('[O365Service] List backups failed:', error);
+      throw new Error('Impossible de lister les backups OneDrive');
+    }
+  }
+
+  /**
+   * Télécharge un backup depuis OneDrive
+   */
+  async loadBackupFromOneDrive(fileId: string): Promise<Partial<AppState>> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      // Obtenir le contenu du fichier
+      const response = await this.graphClient
+        .api(`/me/drive/items/${fileId}/content`)
+        .get();
+
+      // Le contenu est retourné directement comme objet JSON
+      return response as Partial<AppState>;
+    } catch (error) {
+      console.error('[O365Service] Load backup failed:', error);
+      throw new Error('Échec du chargement du backup depuis OneDrive');
+    }
+  }
+
+  /**
+   * Supprime un backup de OneDrive
+   */
+  async deleteBackup(fileId: string): Promise<void> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      await this.graphClient
+        .api(`/me/drive/items/${fileId}`)
+        .delete();
+    } catch (error) {
+      console.error('[O365Service] Delete backup failed:', error);
+      throw new Error('Échec de la suppression du backup');
+    }
+  }
+
+  /**
+   * Crée un lien de partage pour un backup (lecture seule)
+   */
+  async createShareLink(fileId: string, scope: 'anonymous' | 'organization' = 'organization'): Promise<string> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      const response = await this.graphClient
+        .api(`/me/drive/items/${fileId}/createLink`)
+        .post({
+          type: 'view', // Lecture seule
+          scope: scope,
+        });
+
+      return response.link.webUrl;
+    } catch (error) {
+      console.error('[O365Service] Create share link failed:', error);
+      throw new Error('Échec de la création du lien de partage');
+    }
+  }
+
+  /**
+   * Vérifie si la configuration est valide
+   */
+  isConfigured(): boolean {
+    return MSAL_CONFIG.auth.clientId !== 'YOUR_CLIENT_ID_HERE' &&
+           MSAL_CONFIG.auth.clientId.length > 0;
+  }
+}
+
+// Export singleton
+export const o365Service = new O365Service();
+export default o365Service;
