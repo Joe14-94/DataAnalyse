@@ -153,8 +153,18 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                      <div className="space-y-3">
                         <div>
                            <Label>Source de données</Label>
-                           <Select value={tempWidget.config?.source?.datasetId || ''} onChange={e => setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, source: { datasetId: e.target.value, mode: 'latest' } } })}>
+                           <Select
+                              value={tempWidget.config?.source?.mode === 'temporal' ? 'temporal' : (tempWidget.config?.source?.datasetId || '')}
+                              onChange={e => {
+                                 const val = e.target.value;
+                                 if (val === 'temporal') return;
+                                 setTempWidget({ ...tempWidget, config: { ...tempWidget.config!, source: { datasetId: val, mode: 'latest' } } });
+                              }}
+                           >
                               <option value="">-- Choisir une source --</option>
+                              {tempWidget.config?.source?.mode === 'temporal' && (
+                                 <option value="temporal">Comparaison Temporelle (Multi-sources)</option>
+                              )}
                               {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                            </Select>
                         </div>
@@ -169,7 +179,9 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                  className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
                               />
                               <label htmlFor="auto-update-mode" className="text-xs font-bold text-brand-800 cursor-pointer select-none">
-                                 Mise à jour automatique (derniers imports)
+                                 {tempWidget.config?.source?.mode === 'temporal'
+                                    ? "Mise à jour automatique des périodes"
+                                    : "Mise à jour automatique (derniers imports)"}
                               </label>
                            </div>
                         )}

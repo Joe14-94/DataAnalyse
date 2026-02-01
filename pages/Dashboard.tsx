@@ -74,7 +74,7 @@ export const Dashboard: React.FC = () => {
 
    const handleSaveWidget = () => {
       if (!tempWidget.title) return;
-      if (tempWidget.type !== 'text' && !tempWidget.config?.source?.datasetId) return;
+      if (tempWidget.type !== 'text' && !tempWidget.config?.source?.datasetId && tempWidget.config?.source?.mode !== 'temporal') return;
       if (editingWidgetId) updateDashboardWidget(editingWidgetId, tempWidget);
       else addDashboardWidget(tempWidget as any);
       setShowWidgetDrawer(false);

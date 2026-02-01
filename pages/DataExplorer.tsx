@@ -281,12 +281,28 @@ export const DataExplorer: React.FC = () => {
       if (!currentDataset || !newField.name || !newField.formula) return;
 
       if (editingFieldId) {
+         const oldField = currentDataset.calculatedFields?.find(f => f.id === editingFieldId);
+         const oldName = oldField?.name;
+         const newName = newField.name;
+
          updateCalculatedField(currentDataset.id, editingFieldId, {
             name: newField.name,
             formula: newField.formula,
             outputType: newField.outputType as any,
             unit: newField.unit
          });
+
+         // Update local state references if name changed
+         if (oldName && newName && oldName !== newName) {
+            if (sortConfig?.key === oldName) setSortConfig({ ...sortConfig, key: newName });
+            if (columnFilters[oldName]) {
+               const newFilters = { ...columnFilters };
+               newFilters[newName] = newFilters[oldName];
+               delete newFilters[oldName];
+               setColumnFilters(newFilters);
+            }
+            if (selectedCol === oldName) setSelectedCol(newName);
+         }
       } else {
          const field: CalculatedField = {
             id: generateId(),
@@ -347,7 +363,22 @@ export const DataExplorer: React.FC = () => {
 
    const handleRenameColumn = () => {
       if (!currentDataset || !selectedCol || !renamingValue.trim() || selectedCol === renamingValue) return;
-      renameDatasetField(currentDataset.id, selectedCol, renamingValue);
+
+      const calcField = currentDataset.calculatedFields?.find(f => f.name === selectedCol);
+      if (calcField) {
+         updateCalculatedField(currentDataset.id, calcField.id, { name: renamingValue });
+
+         // Update local state references
+         if (sortConfig?.key === selectedCol) setSortConfig({ ...sortConfig, key: renamingValue });
+         if (columnFilters[selectedCol]) {
+            const newFilters = { ...columnFilters };
+            newFilters[renamingValue] = newFilters[selectedCol];
+            delete newFilters[selectedCol];
+            setColumnFilters(newFilters);
+         }
+      } else {
+         renameDatasetField(currentDataset.id, selectedCol, renamingValue);
+      }
       setSelectedCol(renamingValue);
    };
 
@@ -1149,9 +1180,10 @@ export const DataExplorer: React.FC = () => {
                                  const val = row[cf.name];
                                  const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
+                                 const config = currentDataset.fieldConfigs?.[cf.name] || { type: 'number', unit: cf.unit };
                                  return (
                                     <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
-                                       {val !== undefined && val !== null ? <span>{formatNumberValue(val, { type: 'number', unit: cf.unit })}</span> : <span className="text-indigo-200">-</span>}
+                                       {val !== undefined && val !== null ? <span>{formatNumberValue(val, config)}</span> : <span className="text-indigo-200">-</span>}
                                     </td>
                                  );
                               })}

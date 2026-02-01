@@ -20,17 +20,37 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       // Gérer les widgets de graphiques basés sur une sélection TCD (reportItems)
       if (widget.type === 'chart' && widget.config.reportItems && !widget.config.source) {
          const items = widget.config.reportItems;
-         const chartData = items.map(item => ({
-            name: item.label,
-            value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
-            size: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
-            fullLabel: `${item.rowPath.join(' > ')} | ${item.colLabel}`
-         }));
+         const chartType = widget.config.chartType;
+         const isStackedSingleBar = ['stacked-bar', 'stacked-column', 'percent-bar', 'percent-column'].includes(chartType as string);
+
+         let chartData;
+         let colorCount = items.length;
+
+         if (isStackedSingleBar) {
+            const singleGroup: any = { name: 'Sélection', value: 0 };
+            items.forEach(item => {
+               const val = typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0;
+               const segmentLabel = `${item.rowPath.join(' > ')} | ${item.colLabel}`;
+               singleGroup[segmentLabel] = val;
+               singleGroup.value += val;
+            });
+            chartData = [singleGroup];
+            colorCount = items.length;
+         } else {
+            chartData = items.map(item => ({
+               name: item.label,
+               value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
+               size: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
+               fullLabel: `${item.rowPath.join(' > ')} | ${item.colLabel}`
+            }));
+            colorCount = chartData.length;
+         }
+
          return {
             data: chartData,
             isSelective: true,
             unit: '', // On pourrait essayer de déduire l'unité
-            colors: getChartColorsForWidget(widget.config, chartData.length)
+            colors: getChartColorsForWidget(widget.config, colorCount)
          };
       }
 
@@ -43,7 +63,9 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          const datasetId = widget.config.source?.datasetId;
          const dataset = allDatasets.find(d => d.id === datasetId);
-         if (!dataset) return { error: 'Jeu de données introuvable' };
+
+         // In temporal mode, we might allow missing dataset if we have enough info in temporalComparison
+         if (!dataset && widget.config.source?.mode !== 'temporal') return { error: 'Jeu de données introuvable' };
 
          const dsBatches = getEffectiveBatches(batches, datasetId, globalDateRange);
          if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
@@ -56,7 +78,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
-         if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+         if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
             baseRows = baseRows.map(r => {
                const enriched = { ...r };
                dataset.calculatedFields?.forEach(cf => {
@@ -67,7 +89,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          }
 
          // Appliquer les filtres du TCD
-         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
+         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset!);
 
          let pivotResult: any = null;
 
@@ -94,7 +116,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                if (batch) {
                   // Enrichissement calculé si nécessaire
                   let rows = batch.rows;
-                  if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+                  if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
                      rows = rows.map(r => {
                         const enriched = { ...r };
                         dataset.calculatedFields?.forEach(cf => {
@@ -104,11 +126,11 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                      });
                   }
                   // Appliquer les filtres TCD sur chaque source
-                  sourceDataMap.set(source.id, applyPivotFilters(rows, pc.filters, dataset));
+                  sourceDataMap.set(source.id, applyPivotFilters(rows, pc.filters, dataset!));
                }
             });
 
-            const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
+            const dateColumn = dataset ? (detectDateColumn(dataset.fields) || 'Date écriture') : 'Date écriture';
             const { results } = calculateTemporalComparison(sourceDataMap, {
                ...tc,
                groupByFields: pc.rowFields,
@@ -197,7 +219,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          return {
             data: chartData,
             colors,
-            unit: dataset.fieldConfigs?.[pc.valField]?.unit || '',
+            unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
             seriesName: pc.valField,
             seriesCount,
             isPivot: true
