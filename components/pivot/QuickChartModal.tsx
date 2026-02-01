@@ -43,6 +43,20 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
   const [gradientEnd, setGradientEnd] = useState<string>('#10b981');
 
   const chartData = useMemo(() => {
+    const isStackedSingleBar = ['stacked-bar', 'stacked-column', 'percent-bar', 'percent-column'].includes(chartType);
+
+    if (isStackedSingleBar) {
+      const singleGroup: any = { name: 'Sélection', value: 0 };
+      items.forEach(item => {
+        const val = typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0;
+        const segmentLabel = `${item.rowPath.join(' > ')} | ${item.colLabel}`;
+        singleGroup[segmentLabel] = val;
+        singleGroup.value += val;
+        singleGroup.size = singleGroup.value;
+      });
+      return [singleGroup];
+    }
+
     // Regrouper par rowPath pour permettre le multi-séries (empilé, etc.)
     const groups = new Map<string, any>();
     items.forEach(item => {
@@ -52,7 +66,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
       }
       const group = groups.get(rowKey);
       const val = typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0;
-      group[item.colLabel] = val;
+      group[item.colLabel] = (group[item.colLabel] || 0) + val;
       group.value += val;
       group.size = group.value;
     });
@@ -65,9 +79,15 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
 
   const seriesNames = useMemo(() => {
     const names = new Set<string>();
-    items.forEach(item => names.add(item.colLabel));
+    const isStackedSingleBar = ['stacked-bar', 'stacked-column', 'percent-bar', 'percent-column'].includes(chartType);
+
+    if (isStackedSingleBar) {
+      items.forEach(item => names.add(`${item.rowPath.join(' > ')} | ${item.colLabel}`));
+    } else {
+      items.forEach(item => names.add(item.colLabel));
+    }
     return Array.from(names);
-  }, [items]);
+  }, [items, chartType]);
 
   const colors = useMemo(() => {
     const count = Math.max(seriesNames.length, chartData.length, 1);

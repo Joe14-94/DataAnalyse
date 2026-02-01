@@ -16,7 +16,7 @@ export interface SecondarySourceConfig {
 
 export interface WidgetSource {
   datasetId: string;
-  mode: 'latest' | 'specific';
+  mode: 'latest' | 'specific' | 'temporal';
   batchId?: string;
 }
 

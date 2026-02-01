@@ -271,8 +271,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           chartType: selectedChartType,
           source: {
             datasetId: currentDatasetId,
-            mode: (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
-            batchId: updateMode === 'fixed' ? selectedBatchId : undefined
+            mode: isTemporalMode ? 'temporal' as const : (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
+            batchId: (!isTemporalMode && updateMode === 'fixed') ? selectedBatchId : undefined
           },
           pivotChart: {
             pivotConfig: {

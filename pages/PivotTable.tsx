@@ -471,10 +471,26 @@ export const PivotTable: React.FC = () => {
         if (!primaryDataset) return;
 
         if (editingCalcField) {
+            const oldName = editingCalcField.name;
+            const newName = field.name || oldName;
+
             updateCalculatedField(primaryDataset.id, editingCalcField.id, field);
-            // Update metrics if name changed
-            if (field.name && field.name !== editingCalcField.name) {
-                setMetrics(prev => prev.map(m => m.field === editingCalcField.name ? { ...m, field: field.name! } : m));
+
+            // Update all references in TCD if name changed
+            if (newName !== oldName) {
+                setMetrics(prev => prev.map(m => m.field === oldName ? { ...m, field: newName } : m));
+                if (valField === oldName) setValField(newName);
+                setRowFields(prev => prev.map(f => f === oldName ? newName : f));
+                setColFields(prev => prev.map(f => f === oldName ? newName : f));
+                setFilters(prev => prev.map(f => f.field === oldName ? { ...f, field: newName } : f));
+
+                // Update column labels if any
+                if (columnLabels[oldName]) {
+                    const newLabels = { ...columnLabels };
+                    newLabels[newName] = newLabels[oldName];
+                    delete newLabels[oldName];
+                    setColumnLabels(newLabels);
+                }
             }
         } else {
             const id = generateId();
