@@ -368,6 +368,44 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
+        const source = temporalConfig?.sources.find(s => s.id === sourceId);
+        const value = result.values[sourceId] || 0;
+        const label = source?.label || sourceId;
+
+        if (formattingSelectionRule) {
+            const rowKeys = result.groupLabel.split('\x1F');
+            const targetKey = `${rowKeys.join('\x1F')}|${label}`;
+
+            if (formattingSelectionRule.type === 'style') {
+                setStyleRules(prev => prev.map(r => r.id === formattingSelectionRule.id ? {
+                    ...r,
+                    targetKey,
+                    targetType: 'cell'
+                } : r));
+            }
+            setFormattingSelectionRule(null);
+            setIsFormattingModalOpen(true);
+            return;
+        }
+
+        if (isSelectionMode) {
+            const id = generateId();
+            const rowKeys = result.groupLabel.split('\x1F');
+            const displayLabel = `${rowKeys[rowKeys.length - 1]} - ${label}`;
+
+            const newItem: SpecificDashboardItem = {
+                id,
+                label: displayLabel,
+                value,
+                rowPath: rowKeys,
+                colLabel: label,
+                metricLabel: label
+            };
+
+            setSpecificDashboardItems(prev => [...prev, newItem]);
+            return;
+        }
+
         const prefilledFilters: Record<string, string> = {};
         const rowKeys = result.groupLabel.split('\x1F');
 
@@ -382,7 +420,11 @@ export const PivotTable: React.FC = () => {
         });
 
         // Target the specific batch
-        prefilledFilters['_batchId'] = sourceId;
+        if (source) {
+            prefilledFilters['_batchId'] = `=${source.batchId}`;
+        } else {
+            prefilledFilters['_batchId'] = `=${sourceId}`;
+        }
 
         navigate('/data', { state: { prefilledFilters } });
     };
@@ -549,7 +591,7 @@ export const PivotTable: React.FC = () => {
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm relative">
                     {isSelectionMode && (
-                        <div className="absolute top-0 left-0 right-0 z-20 bg-brand-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                        <div className="absolute top-0 left-0 right-0 z-50 bg-brand-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
                             <div className="flex items-center gap-2 px-2">
                                 <MousePointerClick className="w-4 h-4 animate-pulse" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Mode sélection : Cliquez sur une cellule pour l'ajouter</span>
@@ -564,7 +606,7 @@ export const PivotTable: React.FC = () => {
                         </div>
                     )}
                     {formattingSelectionRule && (
-                        <div className="absolute top-0 left-0 right-0 z-20 bg-indigo-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
+                        <div className="absolute top-0 left-0 right-0 z-50 bg-indigo-600 text-white p-2 flex justify-between items-center shadow-md animate-in slide-in-from-top">
                             <div className="flex items-center gap-2 px-2">
                                 <Palette className="w-4 h-4 animate-pulse" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Mise en forme : Cliquez sur une ligne, colonne ou cellule pour l'affecter à la règle</span>
