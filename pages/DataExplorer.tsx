@@ -15,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup, reorderDatasetFields } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup, reorderDatasetFields, lastDataExplorerState, saveDataExplorerState } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -134,6 +134,36 @@ export const DataExplorer: React.FC = () => {
          setRenamingValue(selectedCol);
       }
    }, [selectedCol]);
+
+   // --- Initialization (Restore State) ---
+   useEffect(() => {
+      if (lastDataExplorerState && currentDataset && lastDataExplorerState.datasetId === currentDataset.id) {
+         setSearchTerm(lastDataExplorerState.searchTerm || '');
+         setSortConfig(lastDataExplorerState.sortConfig || null);
+         setShowFilters(lastDataExplorerState.showFilters || false);
+         setColumnFilters(lastDataExplorerState.columnFilters || {});
+         setColumnWidths(lastDataExplorerState.columnWidths || {});
+         setShowColumnBorders(lastDataExplorerState.showColumnBorders !== undefined ? lastDataExplorerState.showColumnBorders : true);
+         if (lastDataExplorerState.trackingKey) setTrackingKey(lastDataExplorerState.trackingKey);
+         if (lastDataExplorerState.blendingConfig) setBlendingConfig(lastDataExplorerState.blendingConfig);
+      }
+   }, [currentDataset]);
+
+   // --- Save State ---
+   useEffect(() => {
+      if (!currentDataset) return;
+      saveDataExplorerState({
+         datasetId: currentDataset.id,
+         searchTerm,
+         sortConfig,
+         columnFilters,
+         showFilters,
+         columnWidths,
+         showColumnBorders,
+         trackingKey,
+         blendingConfig
+      });
+   }, [currentDataset, searchTerm, sortConfig, columnFilters, showFilters, columnWidths, showColumnBorders, trackingKey, blendingConfig]);
 
    // --- Handlers ---
 

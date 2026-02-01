@@ -124,6 +124,7 @@ export const PivotTable: React.FC = () => {
             setSortBy(c.sortBy || 'label');
             setSortOrder(c.sortOrder || 'asc');
             if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
+            if (c.searchTerm) setSearchTerm(c.searchTerm);
             setIsTemporalMode(c.isTemporalMode || false);
             setTemporalConfig(c.temporalComparison || null);
             if (c.columnLabels) setColumnLabels(c.columnLabels);
@@ -157,10 +158,11 @@ export const PivotTable: React.FC = () => {
                 columnWidths,
                 columnLabels,
                 styleRules,
-                conditionalRules
+                conditionalRules,
+                searchTerm
             } as any
         });
-    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig, columnWidths, columnLabels, styleRules, conditionalRules]);
+    }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig, columnWidths, columnLabels, styleRules, conditionalRules, searchTerm]);
 
     useEffect(() => {
         if (isLoading || !isInitialized) return;
