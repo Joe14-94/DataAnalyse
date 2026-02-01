@@ -21,7 +21,7 @@ interface QuickChartModalProps {
   items: SpecificDashboardItem[];
 }
 
-type QuickChartType = 'pie' | 'donut' | 'bar' | 'column' | 'line' | 'area' | 'treemap' | 'radar';
+type QuickChartType = 'pie' | 'donut' | 'bar' | 'column' | 'line' | 'area' | 'treemap' | 'radar' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'stacked-area';
 type ColorMode = 'multi' | 'single' | 'gradient';
 type ColorPalette = 'default' | 'vibrant' | 'pastel';
 
@@ -42,16 +42,49 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
   const [gradientEnd, setGradientEnd] = useState<string>('#10b981');
 
   const chartData = useMemo(() => {
-    return items.map(item => ({
-      name: item.label,
-      value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
-      size: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
-      fullLabel: `${item.rowPath.join(' > ')} | ${item.colLabel}`
-    }));
+    // Regrouper par rowPath pour permettre le multi-séries (empilé, etc.)
+    const groups = new Map<string, any>();
+    items.forEach(item => {
+      const rowKey = item.rowPath.join(' > ') || '(Total)';
+      if (!groups.has(rowKey)) {
+        groups.set(rowKey, { name: rowKey, value: 0 });
+      }
+      const group = groups.get(rowKey);
+      const val = typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0;
+      group[item.colLabel] = val;
+      group.value += val;
+      group.size = group.value;
+    });
+
+    let data = Array.from(groups.values());
+
+    // Normalisation pour les graphiques en 100%
+    if (chartType === 'percent-bar' || chartType === 'percent-column') {
+      data = data.map(point => {
+        const newPoint = { ...point };
+        const keys = Object.keys(point).filter(k => !['name', 'value', 'size'].includes(k));
+        const total = keys.reduce((sum, k) => sum + Math.abs(point[k] || 0), 0);
+
+        if (total > 0) {
+          keys.forEach(k => {
+            newPoint[k] = (Math.abs(point[k] || 0) / total) * 100;
+          });
+        }
+        return newPoint;
+      });
+    }
+
+    return data;
+  }, [items, chartType]);
+
+  const seriesNames = useMemo(() => {
+    const names = new Set<string>();
+    items.forEach(item => names.add(item.colLabel));
+    return Array.from(names);
   }, [items]);
 
   const colors = useMemo(() => {
-    const count = Math.max(chartData.length, 1);
+    const count = Math.max(seriesNames.length, chartData.length, 1);
     if (colorMode === 'single') return Array(count).fill(singleColor);
     if (colorMode === 'gradient') return generateGradient(gradientStart, gradientEnd, count);
     return getChartColors(count, colorPalette);
@@ -123,10 +156,15 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
             >
               <option value="column">Barres verticales</option>
               <option value="bar">Barres horizontales</option>
+              <option value="stacked-column">Colonnes empilées</option>
+              <option value="stacked-bar">Barres empilées</option>
+              <option value="percent-column">Colonnes 100%</option>
+              <option value="percent-bar">Barres 100%</option>
               <option value="pie">Secteurs</option>
               <option value="donut">Anneau</option>
               <option value="line">Lignes</option>
               <option value="area">Aires</option>
+              <option value="stacked-area">Aires empilées</option>
               <option value="radar">Radar</option>
               <option value="treemap">Treemap</option>
             </select>
@@ -218,34 +256,51 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                    );
                 }
 
-                if (chartType === 'column') {
+                const isStacked = ['stacked-column', 'stacked-bar', 'stacked-area', 'percent-column', 'percent-bar'].includes(chartType);
+                const isPercent = ['percent-column', 'percent-bar'].includes(chartType);
+
+                if (chartType === 'column' || chartType === 'stacked-column' || chartType === 'percent-column') {
                    return (
                       <BarChart data={chartData} margin={margin}>
                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} interval={0} />
-                         <YAxis stroke="#94a3b8" fontSize={10} />
+                         <YAxis stroke="#94a3b8" fontSize={10} domain={isPercent ? [0, 100] : [0, 'auto']} hide={isPercent} />
                          <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                            {chartData.map((entry: any, index: number) => (
-                               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                            ))}
-                         </Bar>
+                         {seriesNames.length > 1 || isStacked ? (
+                            seriesNames.map((series, idx) => (
+                               <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0} />
+                            ))
+                         ) : (
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                               {chartData.map((entry: any, index: number) => (
+                                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                               ))}
+                            </Bar>
+                         )}
+                         {(seriesNames.length > 1 || isStacked) && <Legend wrapperStyle={{ fontSize: '11px' }} />}
                       </BarChart>
                    );
                 }
 
-                if (chartType === 'bar') {
+                if (chartType === 'bar' || chartType === 'stacked-bar' || chartType === 'percent-bar') {
                    return (
                       <BarChart data={chartData} layout="vertical" margin={{ ...margin, left: 100 }}>
                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                         <XAxis type="number" stroke="#94a3b8" fontSize={10} />
+                         <XAxis type="number" stroke="#94a3b8" fontSize={10} domain={isPercent ? [0, 100] : [0, 'auto']} hide={isPercent} />
                          <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 9 }} stroke="#94a3b8" />
                          <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                            {chartData.map((entry: any, index: number) => (
-                               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                            ))}
-                         </Bar>
+                         {seriesNames.length > 1 || isStacked ? (
+                            seriesNames.map((series, idx) => (
+                               <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0} />
+                            ))
+                         ) : (
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                               {chartData.map((entry: any, index: number) => (
+                                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                               ))}
+                            </Bar>
+                         )}
+                         {(seriesNames.length > 1 || isStacked) && <Legend wrapperStyle={{ fontSize: '11px' }} />}
                       </BarChart>
                    );
                 }
@@ -257,19 +312,37 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} interval={0} />
                          <YAxis stroke="#94a3b8" fontSize={10} />
                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                         <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={3} dot={{ r: 4, fill: colors[0], stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                         {seriesNames.length > 1 ? (
+                            <>
+                               <Legend wrapperStyle={{ fontSize: '11px' }} />
+                               {seriesNames.map((series, idx) => (
+                                  <Line key={series} type="monotone" dataKey={series} stroke={colors[idx % colors.length]} strokeWidth={3} dot={{ r: 4, fill: colors[idx % colors.length], stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                               ))}
+                            </>
+                         ) : (
+                            <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={3} dot={{ r: 4, fill: colors[0], stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                         )}
                       </ReLineChart>
                    );
                 }
 
-                if (chartType === 'area') {
+                if (chartType === 'area' || chartType === 'stacked-area') {
                    return (
                       <AreaChart data={chartData} margin={margin}>
                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} interval={0} />
                          <YAxis stroke="#94a3b8" fontSize={10} />
                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                         <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.4} strokeWidth={2} />
+                         {seriesNames.length > 1 || isStacked ? (
+                            <>
+                               <Legend wrapperStyle={{ fontSize: '11px' }} />
+                               {seriesNames.map((series, idx) => (
+                                  <Area key={series} type="monotone" dataKey={series} stackId={isStacked ? 'a' : undefined} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.4} strokeWidth={2} />
+                               ))}
+                            </>
+                         ) : (
+                            <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.4} strokeWidth={2} />
+                         )}
                       </AreaChart>
                    );
                 }
@@ -281,7 +354,16 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                          <PolarAngleAxis dataKey="name" tick={{ fontSize: 9 }} />
                          <PolarRadiusAxis tick={{ fontSize: 9 }} />
                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                         <Radar name="Valeur" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.6} />
+                         {seriesNames.length > 1 ? (
+                            <>
+                               <Legend wrapperStyle={{ fontSize: '11px' }} />
+                               {seriesNames.map((series, idx) => (
+                                  <Radar key={series} name={series} dataKey={series} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.6} />
+                               ))}
+                            </>
+                         ) : (
+                            <Radar name="Valeur" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.6} />
+                         )}
                       </RadarChart>
                    );
                 }
