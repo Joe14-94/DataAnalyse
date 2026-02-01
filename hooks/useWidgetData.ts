@@ -78,7 +78,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
-         if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+         if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
             baseRows = baseRows.map(r => {
                const enriched = { ...r };
                dataset.calculatedFields?.forEach(cf => {
@@ -116,7 +116,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                if (batch) {
                   // Enrichissement calculé si nécessaire
                   let rows = batch.rows;
-                  if (dataset.calculatedFields && dataset.calculatedFields.length > 0) {
+                  if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
                      rows = rows.map(r => {
                         const enriched = { ...r };
                         dataset.calculatedFields?.forEach(cf => {
@@ -219,7 +219,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          return {
             data: chartData,
             colors,
-            unit: dataset.fieldConfigs?.[pc.valField]?.unit || '',
+            unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
             seriesName: pc.valField,
             seriesCount,
             isPivot: true
