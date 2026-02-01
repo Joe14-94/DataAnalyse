@@ -45,15 +45,87 @@ export const O365Section: React.FC<O365SectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [backups, setBackups] = useState<BackupMetadata[]>([]);
   const [showBackupsModal, setShowBackupsModal] = useState(false);
-  const [isConfigured, setIsConfigured] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(false);
+
+  // Configuration Client ID
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [savedClientId, setSavedClientId] = useState<string | null>(null);
 
   // Vérifier l'état d'authentification au montage
   useEffect(() => {
     checkAuthStatus();
+    loadSavedClientId();
   }, []);
+
+  // Charger le Client ID sauvegardé depuis localStorage
+  const loadSavedClientId = () => {
+    try {
+      const saved = localStorage.getItem('datascope_o365_client_id');
+      if (saved) {
+        setSavedClientId(saved);
+        setIsConfigured(true);
+        setClientIdInput(saved);
+      } else {
+        setIsConfigured(false);
+      }
+    } catch (err) {
+      console.error('[O365Section] Load client ID failed:', err);
+    }
+  };
+
+  // Sauvegarder le Client ID dans localStorage et recharger MSAL
+  const handleSaveClientId = () => {
+    if (!clientIdInput || clientIdInput.trim().length === 0) {
+      setError('Veuillez entrer un Client ID valide');
+      return;
+    }
+
+    try {
+      localStorage.setItem('datascope_o365_client_id', clientIdInput.trim());
+      setSavedClientId(clientIdInput.trim());
+      setIsConfigured(true);
+      setShowConfigModal(false);
+      setError(null);
+
+      alert('✅ Client ID sauvegardé ! Rechargez la page pour appliquer les changements.');
+      // Note: Il faudrait recharger MSAL ici, mais pour simplifier on demande un reload
+      window.location.reload();
+    } catch (err) {
+      console.error('[O365Section] Save client ID failed:', err);
+      setError('Échec de la sauvegarde du Client ID');
+    }
+  };
+
+  // Supprimer la configuration O365
+  const handleRemoveConfig = () => {
+    if (!confirm('Supprimer la configuration Microsoft 365 ? Vous devrez entrer à nouveau le Client ID.')) {
+      return;
+    }
+
+    try {
+      localStorage.removeItem('datascope_o365_client_id');
+      setSavedClientId(null);
+      setIsConfigured(false);
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setClientIdInput('');
+
+      alert('✅ Configuration supprimée');
+    } catch (err) {
+      console.error('[O365Section] Remove config failed:', err);
+      setError('Échec de la suppression de la configuration');
+    }
+  };
 
   const checkAuthStatus = async () => {
     try {
+      // Vérifier d'abord si le Client ID est configuré
+      if (!savedClientId) {
+        setIsConfigured(false);
+        return;
+      }
+
       const configured = o365Service.isConfigured();
       setIsConfigured(configured);
 
@@ -228,27 +300,115 @@ export const O365Section: React.FC<O365SectionProps> = ({
   // Si pas configuré, afficher message d'information
   if (!isConfigured) {
     return (
-      <Card className="p-6 border-2 border-dashed border-border-default">
-        <div className="flex items-start gap-3">
-          <Info className="w-6 h-6 text-brand-600 flex-shrink-0 mt-1" />
-          <div>
-            <h3 className="text-lg font-bold mb-2">
-              Intégration Microsoft 365 (POC)
-            </h3>
-            <p className="text-sm text-txt-secondary mb-4">
-              Cette fonctionnalité nécessite une configuration Azure AD.
-            </p>
-            <div className="bg-surface p-4 rounded-lg text-xs font-mono">
-              <p className="mb-2">Pour activer cette fonctionnalité :</p>
-              <ol className="list-decimal list-inside space-y-1 text-txt-muted">
-                <li>Créer une App Registration dans Azure AD</li>
-                <li>Configurer la variable VITE_O365_CLIENT_ID</li>
-                <li>Ajouter les permissions : User.Read, Files.ReadWrite</li>
-              </ol>
+      <>
+        <Card className="p-6 border-2 border-dashed border-border-default">
+          <div className="flex items-start gap-3">
+            <Info className="w-6 h-6 text-brand-600 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="text-lg font-bold mb-2">
+                Intégration Microsoft 365 (POC)
+              </h3>
+              <p className="text-sm text-txt-secondary mb-4">
+                Cette fonctionnalité nécessite la configuration du Client ID Azure AD de votre entreprise.
+              </p>
+              <div className="bg-surface p-4 rounded-lg text-xs mb-4">
+                <p className="mb-2 font-medium">Pour activer cette fonctionnalité :</p>
+                <ol className="list-decimal list-inside space-y-1 text-txt-muted">
+                  <li>Demandez à votre service IT le <strong>Client ID</strong> de l'App Registration Azure AD</li>
+                  <li>Cliquez sur "Configurer" ci-dessous et entrez le Client ID</li>
+                  <li>Connectez-vous avec votre compte Microsoft 365</li>
+                </ol>
+              </div>
+              <Button
+                onClick={() => setShowConfigModal(true)}
+                className="bg-brand-600 hover:bg-brand-700"
+              >
+                <Cloud className="w-4 h-4 mr-2" />
+                Configurer Client ID
+              </Button>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+
+        {/* Modal de configuration */}
+        <Modal
+          isOpen={showConfigModal}
+          onClose={() => {
+            setShowConfigModal(false);
+            setError(null);
+          }}
+          maxWidth="2xl"
+          title={
+            <div>
+              <h3 className="text-xl font-bold">Configuration Microsoft 365</h3>
+              <p className="text-txt-muted text-xs font-normal">
+                Entrez le Client ID Azure AD de votre entreprise
+              </p>
+            </div>
+          }
+          icon={<Cloud className="w-6 h-6" />}
+        >
+          <div className="space-y-4">
+            {/* Erreur */}
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-red-800">{error}</div>
+              </div>
+            )}
+
+            {/* Instructions */}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-900">
+                  <p className="font-medium mb-2">Qu'est-ce que le Client ID ?</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>C'est l'identifiant de l'App Registration Azure AD de votre entreprise</li>
+                    <li>Format : GUID (ex: abc12345-1234-1234-1234-1234567890ab)</li>
+                    <li>Demandez-le à votre service IT si vous ne l'avez pas</li>
+                    <li>Il sera stocké localement dans votre navigateur</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Champ de saisie */}
+            <div>
+              <label className="block text-sm font-medium text-txt-main mb-2">
+                Client ID Azure AD
+              </label>
+              <input
+                type="text"
+                value={clientIdInput}
+                onChange={(e) => setClientIdInput(e.target.value)}
+                placeholder="abc12345-1234-1234-1234-1234567890ab"
+                className="w-full px-3 py-2 border border-border-default rounded-lg font-mono text-sm"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowConfigModal(false);
+                  setError(null);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleSaveClientId}
+                className="bg-brand-600 hover:bg-brand-700"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </>
     );
   }
 
@@ -288,6 +448,40 @@ export const O365Section: React.FC<O365SectionProps> = ({
               <Cloud className="w-4 h-4 mr-2" />
               {isLoading ? 'Connexion...' : 'Se connecter à Microsoft 365'}
             </Button>
+          </div>
+        )}
+
+        {/* Configuration Client ID */}
+        {isConfigured && savedClientId && (
+          <div className="mb-4 p-3 bg-surface border border-border-default rounded-lg">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-txt-muted mb-1">Client ID configuré</div>
+                <div className="text-sm font-mono text-txt-main truncate">{savedClientId}</div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setClientIdInput(savedClientId);
+                    setShowConfigModal(true);
+                  }}
+                  title="Modifier le Client ID"
+                >
+                  Modifier
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveConfig}
+                  className="text-red-600 hover:bg-red-50"
+                  title="Supprimer la configuration"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -413,6 +607,86 @@ export const O365Section: React.FC<O365SectionProps> = ({
           )}
         </div>
       </Modal>
+
+      {/* Modal de configuration Client ID (pour utilisateurs authentifiés) */}
+      {isConfigured && (
+        <Modal
+          isOpen={showConfigModal}
+          onClose={() => {
+            setShowConfigModal(false);
+            setError(null);
+          }}
+          maxWidth="2xl"
+          title={
+            <div>
+              <h3 className="text-xl font-bold">Modifier le Client ID</h3>
+              <p className="text-txt-muted text-xs font-normal">
+                Modifiez le Client ID Azure AD de votre entreprise
+              </p>
+            </div>
+          }
+          icon={<Cloud className="w-6 h-6" />}
+        >
+          <div className="space-y-4">
+            {/* Erreur */}
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-red-800">{error}</div>
+              </div>
+            )}
+
+            {/* Avertissement */}
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-900">
+                  <p className="font-medium mb-2">⚠️ Attention</p>
+                  <p className="text-xs">
+                    Modifier le Client ID vous déconnectera de Microsoft 365 et nécessitera
+                    une nouvelle authentification. Assurez-vous d'avoir le bon Client ID
+                    avant de continuer.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Champ de saisie */}
+            <div>
+              <label className="block text-sm font-medium text-txt-main mb-2">
+                Nouveau Client ID Azure AD
+              </label>
+              <input
+                type="text"
+                value={clientIdInput}
+                onChange={(e) => setClientIdInput(e.target.value)}
+                placeholder="abc12345-1234-1234-1234-1234567890ab"
+                className="w-full px-3 py-2 border border-border-default rounded-lg font-mono text-sm"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowConfigModal(false);
+                  setError(null);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleSaveClientId}
+                className="bg-brand-600 hover:bg-brand-700"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Enregistrer et recharger
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 };

@@ -27,17 +27,37 @@ import type { DriveItem } from '@microsoft/microsoft-graph-types';
 import type { AppState, SharePackage, ShareableContentType, ShareLinkScope, ShareMetadata, SharePermission } from '../types';
 
 // Configuration MSAL
-// IMPORTANT: Le Client ID est configuré UNE FOIS par le DÉVELOPPEUR DataScope
-// Pas par chaque utilisateur final !
+// IMPORTANT (Local-First Architecture):
+// Dans une application local-first comme DataScope, chaque entreprise a son propre tenant O365.
+// Le Client ID ne peut PAS être hardcodé car il est spécifique à chaque entreprise.
 //
-// En développement : Configurer dans .env.local (fichier non commité)
-// En production : Variable d'environnement au moment du build (Vite)
+// Solution : Chaque utilisateur configure le Client ID de son entreprise dans Settings
+// Le Client ID est stocké dans localStorage du navigateur
 //
-// Les utilisateurs finaux n'ont RIEN à configurer. Ils cliquent juste
-// "Se connecter à Microsoft 365" et acceptent les permissions OAuth.
+// Workflow :
+// 1. L'utilisateur demande à son IT le Client ID de l'App Registration Azure AD de l'entreprise
+// 2. Il l'entre dans Settings → Microsoft 365 → Configurer Client ID
+// 3. Le Client ID est sauvegardé dans localStorage
+// 4. L'utilisateur peut maintenant s'authentifier avec son compte O365 d'entreprise
 const getClientId = (): string => {
+  try {
+    const savedClientId = localStorage.getItem('datascope_o365_client_id');
+    if (savedClientId && savedClientId.trim().length > 0) {
+      return savedClientId.trim();
+    }
+  } catch (err) {
+    console.error('[O365Service] Failed to read Client ID from localStorage:', err);
+  }
+
+  // Fallback pour tests de développement uniquement
   // @ts-ignore - Vite env types
-  return import.meta.env?.VITE_O365_CLIENT_ID || 'YOUR_CLIENT_ID_HERE';
+  const envClientId = import.meta.env?.VITE_O365_CLIENT_ID;
+  if (envClientId && envClientId !== 'demo-client-id-for-ui-testing') {
+    return envClientId;
+  }
+
+  // Pas de Client ID configuré
+  return '';
 };
 
 const MSAL_CONFIG = {
@@ -564,10 +584,13 @@ class O365Service {
 
   /**
    * Vérifie si la configuration est valide
+   * Dans une application local-first, chaque utilisateur configure son propre Client ID
    */
   isConfigured(): boolean {
-    return MSAL_CONFIG.auth.clientId !== 'YOUR_CLIENT_ID_HERE' &&
-           MSAL_CONFIG.auth.clientId.length > 0;
+    const clientId = getClientId();
+    return clientId.length > 0 &&
+           clientId !== 'demo-client-id-for-ui-testing' &&
+           clientId !== 'YOUR_CLIENT_ID_HERE';
   }
 }
 

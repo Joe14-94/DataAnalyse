@@ -1,64 +1,118 @@
-# 🏗️ Architecture OAuth 2.0 - Microsoft 365
+# 🏗️ Architecture OAuth 2.0 - Microsoft 365 (Local-First)
 
-## ❓ Pourquoi faut-il créer une App Registration Azure AD ?
+## 🚨 Architecture Local-First vs SaaS : Différence Critique
 
-**Réponse courte :** C'est le protocole OAuth 2.0 qui l'exige. Mais vous (développeur) la créez **UNE SEULE FOIS**, et tous vos utilisateurs la partagent.
+### DataScope = Application LOCAL-FIRST
+
+**Cela change TOUT pour OAuth 2.0 !**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Application SaaS (ex: Trello, Notion, Slack)                   │
+│ - Hébergée sur serveur central                                  │
+│ - TOUS les utilisateurs utilisent la MÊME instance             │
+│ - OAuth Client ID : UN SEUL, hardcodé dans l'app               │
+│ - Développeur crée App Registration UNE FOIS                    │
+│ - Tous les utilisateurs partagent ce Client ID                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Application LOCAL-FIRST (DataScope)                             │
+│ - Tourne dans le navigateur de chaque utilisateur              │
+│ - Chaque ENTREPRISE a son propre tenant O365                    │
+│ - OAuth Client ID : DIFFÉRENT pour chaque entreprise           │
+│ - IT de chaque entreprise crée sa propre App Registration      │
+│ - Client ID CONFIGURÉ PAR UTILISATEUR dans Settings            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Pourquoi le Client ID ne peut PAS être hardcodé ?
+
+**Exemple concret :**
+
+```
+Entreprise A (Acme Corp)
+└─ Tenant O365 : acme.onmicrosoft.com
+└─ App Registration : "DataScope Acme"
+└─ Client ID : aaaaa-1111-2222-3333-bbbbbbbbbbbb
+
+Entreprise B (TechCorp)
+└─ Tenant O365 : techcorp.onmicrosoft.com
+└─ App Registration : "DataScope TechCorp"
+└─ Client ID : ccccc-4444-5555-6666-dddddddddddd
+
+❌ IMPOSSIBLE d'utiliser le même Client ID pour les deux !
+✅ SOLUTION : Chaque utilisateur configure le Client ID de SON entreprise
+```
 
 ---
 
-## 🎯 Le modèle correct : App Registration UNIQUE Multi-Tenant
+## 🎯 Le modèle correct : Client ID Configurable par Utilisateur
 
 ### **Ce qui se passe en réalité**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. Vous (Développeur DataScope)                             │
-│    Créez App Registration Azure AD : UNE SEULE FOIS         │
-│    Client ID obtenu : abc-123-456-789-def                   │
-│    Configuré dans .env.local (dev) ou variable d'env (prod) │
+│ 1. IT de l'Entreprise A (Acme Corp)                        │
+│    - Crée App Registration Azure AD dans le tenant Acme    │
+│    - Name : "DataScope"                                     │
+│    - Permissions : User.Read, Files.ReadWrite (Delegated)  │
+│    - Client ID obtenu : aaaaa-1111-2222-3333-bbbbbbbbbbbb  │
+│    - Communique ce Client ID aux employés (email, wiki IT) │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ 2. Application DataScope (compilée)                         │
-│    Client ID : abc-123-456-789-def (intégré dans le build)  │
-│    Permissions demandées : User.Read, Files.ReadWrite       │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ 3. Marie (utilisatrice finale - STANDARD, pas admin)        │
-│    - Ouvre DataScope                                         │
-│    - Va dans Settings                                        │
-│    - Clique "Se connecter à Microsoft 365"                  │
-│    - Popup OAuth Microsoft s'ouvre :                        │
-│      "DataScope veut accéder à votre OneDrive"             │
+│ 2. Marie (employée Acme Corp - STANDARD, pas admin)        │
+│    - Ouvre DataScope dans son navigateur                    │
+│    - Va dans Settings → Microsoft 365                       │
+│    - Voit : "Configuration requise"                         │
+│    - Clique "Configurer Client ID"                          │
+│    - Entre : aaaaa-1111-2222-3333-bbbbbbbbbbbb             │
+│    - Clique "Enregistrer"                                   │
+│    - Client ID stocké dans localStorage                     │
+│    - Page se recharge → Microsoft 365 configuré ✅         │
+│    - Clique "Se connecter à Microsoft 365"                 │
+│    - Popup OAuth Microsoft s'ouvre :                       │
+│      "DataScope (Acme Corp) veut accéder à votre OneDrive" │
 │      Permissions : User.Read, Files.ReadWrite              │
 │      [Annuler] [Accepter]                                  │
 │    - Marie clique "Accepter"                                │
-│    - Token OAuth généré → Accès OneDrive de Marie          │
+│    - Token OAuth généré → Accès OneDrive de Marie ✅       │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│ 4. Paul (utilisateur final - STANDARD, pas admin)           │
-│    - Ouvre DataScope                                         │
-│    - Va dans Settings                                        │
-│    - Clique "Se connecter à Microsoft 365"                  │
-│    - Popup OAuth Microsoft s'ouvre (MÊME App DataScope)    │
-│      "DataScope veut accéder à votre OneDrive"             │
-│      [Annuler] [Accepter]                                  │
-│    - Paul clique "Accepter"                                 │
-│    - Token OAuth généré → Accès OneDrive de Paul           │
+│ 3. IT de l'Entreprise B (TechCorp)                         │
+│    - Crée App Registration Azure AD dans le tenant TechCorp│
+│    - Name : "DataScope"                                     │
+│    - Client ID obtenu : ccccc-4444-5555-6666-dddddddddddd  │
+│    - Communique ce Client ID aux employés                   │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Paul (employé TechCorp - STANDARD, pas admin)           │
+│    - Ouvre DataScope dans son navigateur                    │
+│    - Va dans Settings → Microsoft 365                       │
+│    - Clique "Configurer Client ID"                          │
+│    - Entre : ccccc-4444-5555-6666-dddddddddddd (TechCorp) │
+│    - Enregistre → Client ID stocké dans localStorage       │
+│    - Clique "Se connecter à Microsoft 365"                 │
+│    - Popup OAuth Microsoft s'ouvre :                       │
+│      "DataScope (TechCorp) veut accéder à votre OneDrive"  │
+│    - Paul accepte → Accès OneDrive de Paul ✅              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **Résultat**
 
-- ✅ **Marie** accède UNIQUEMENT à **SON** OneDrive
-- ✅ **Paul** accède UNIQUEMENT à **SON** OneDrive
-- ✅ **Aucun des deux n'a créé quoi que ce soit**
-- ✅ **Aucun des deux n'a besoin de droits admin**
-- ✅ **Les données sont isolées** (Token de Marie ≠ Token de Paul)
-- ✅ **Pas de serveur central** DataScope
+- ✅ **Marie (Acme)** accède UNIQUEMENT à **SON** OneDrive Acme
+- ✅ **Paul (TechCorp)** accède UNIQUEMENT à **SON** OneDrive TechCorp
+- ✅ **Marie et Paul** utilisent des Client IDs DIFFÉRENTS (tenants différents)
+- ✅ **Les utilisateurs configurent** leur Client ID une seule fois dans Settings
+- ✅ **Aucun utilisateur n'a besoin de droits admin** Azure AD
+- ✅ **Les données sont isolées** (Token de Marie ≠ Token de Paul, tenants différents)
+- ✅ **Pas de serveur central** DataScope (local-first)
 - ✅ **Pas de base de données partagée**
+- ✅ **Client ID stocké localement** dans le navigateur de chaque utilisateur
 
 ---
 
@@ -257,21 +311,40 @@ env:
 
 ---
 
-## 🚀 Déploiement et rollout
+## 🚀 Déploiement et rollout (Local-First)
 
-### Scénario : Vous déployez DataScope à 100 utilisateurs
+### Scénario : Entreprise Acme Corp déploie DataScope à 100 employés
 
-1. **Vous (dev)** créez l'App Registration (15 minutes, une fois)
-2. **Vous** configurez le Client ID dans le build
-3. **Vous** déployez DataScope (avec le Client ID intégré)
-4. **Les 100 utilisateurs** :
+1. **IT Acme** crée l'App Registration Azure AD (15 minutes, une fois)
+   - Dans le tenant acme.onmicrosoft.com
+   - Configure les permissions : User.Read, Files.ReadWrite (Delegated)
+   - Obtient le Client ID : aaaaa-1111-2222-3333-bbbbbbbbbbbb
+
+2. **IT Acme** communique le Client ID aux employés :
+   - Email interne : "Pour activer O365 dans DataScope, utilisez ce Client ID : aaaaa-..."
+   - Ou page wiki IT : "Configuration DataScope → Microsoft 365"
+
+3. **Les 100 employés** (une fois) :
    - Ouvrent DataScope
-   - Vont dans Settings
+   - Vont dans Settings → Microsoft 365
+   - Cliquent "Configurer Client ID"
+   - Collent : aaaaa-1111-2222-3333-bbbbbbbbbbbb
+   - Cliquent "Enregistrer" → Page recharge
    - Cliquent "Se connecter à Microsoft 365"
    - Acceptent les permissions (1 clic)
    - C'est tout ! ✅
 
-**Temps par utilisateur : 10 secondes**
+**Temps par utilisateur : 30 secondes** (configuration unique)
+
+### Scénario : 10 entreprises utilisent DataScope
+
+Chaque entreprise suit le même processus **indépendamment** :
+- Entreprise A : IT crée App Registration → Donne Client ID A aux employés
+- Entreprise B : IT crée App Registration → Donne Client ID B aux employés
+- ...
+- Entreprise J : IT crée App Registration → Donne Client ID J aux employés
+
+**Résultat** : 10 Client IDs différents, 10 tenants isolés, 0 conflit
 
 ---
 
@@ -389,18 +462,28 @@ VITE_O365_CLIENT_ID=xyz-prod-client-id
 
 ---
 
-## 🎯 Résumé exécutif
+## 🎯 Résumé exécutif (Local-First)
 
-### **Ce que VOUS (développeur) faites : UNE FOIS**
-1. Créer App Registration Azure AD (15 minutes)
-2. Copier Client ID
-3. Configurer dans .env.local
-4. Build et déployer
+### **Ce que l'IT de CHAQUE ENTREPRISE fait : UNE FOIS (15 minutes)**
+1. Créer App Registration Azure AD dans leur tenant
+2. Copier le Client ID
+3. Communiquer le Client ID aux employés (email, wiki)
 
-### **Ce que VOS UTILISATEURS font : 10 secondes**
-1. Cliquer "Se connecter à Microsoft 365"
-2. Accepter les permissions (popup OAuth)
-3. C'est tout !
+### **Ce que CHAQUE UTILISATEUR fait : UNE FOIS (30 secondes)**
+1. Ouvrir DataScope → Settings → Microsoft 365
+2. Cliquer "Configurer Client ID"
+3. Coller le Client ID fourni par l'IT
+4. Enregistrer (page recharge)
+5. Cliquer "Se connecter à Microsoft 365"
+6. Accepter les permissions (popup OAuth)
+7. C'est tout !
+
+### **Après cette configuration unique**
+L'utilisateur peut :
+- Sauvegarder ses analyses sur OneDrive
+- Restaurer depuis OneDrive
+- Partager des dashboards avec des collègues
+- Le tout sans reconfigurer !
 
 ### **Garanties de sécurité**
 - ✅ Données isolées (Token par utilisateur)
