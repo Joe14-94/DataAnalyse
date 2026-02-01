@@ -12,9 +12,13 @@ import { Palette, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucid
 import { useReferentials } from '../context/ReferentialContext';
 import { BackupRestoreModal } from '../components/settings/BackupRestoreModal';
 import { Modal } from '../components/ui/Modal';
+import { O365Section } from '../components/settings/O365Section';
+
+// Feature flags
+const ENABLE_O365_POC = true; // POC - Intégration Microsoft 365
 
 export const Settings: React.FC = () => {
-   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis, deleteBatch } = useData();
+   const { getBackupJson, importBackup, clearAll, loadDemoData, batches, datasets, deleteDataset, updateDatasetName, savedAnalyses, deleteAnalysis, updateAnalysis, deleteBatch, savedMappings, dashboardWidgets } = useData();
    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
    const {
       chartsOfAccounts,
@@ -132,6 +136,15 @@ export const Settings: React.FC = () => {
          setRestoreFileContent(null);
       } else {
          alert('Erreur lors de la restauration.');
+      }
+   };
+
+   // Handler pour restauration depuis O365
+   const handleRestoreFromO365 = async (data: Partial<AppState>) => {
+      const jsonContent = JSON.stringify(data);
+      const success = await importBackup(jsonContent, Object.keys(data) as (keyof AppState)[]);
+      if (!success) {
+         alert('Erreur lors de la restauration depuis OneDrive.');
       }
    };
 
@@ -965,6 +978,31 @@ export const Settings: React.FC = () => {
                         </div>
                      </div>
                   </Card>
+
+                  {/* POC - Intégration Microsoft 365 */}
+                  {ENABLE_O365_POC && (
+                     <O365Section
+                        currentState={{
+                           datasets,
+                           batches,
+                           dashboardWidgets: dashboardWidgets || [],
+                           savedAnalyses: savedAnalyses || [],
+                           savedMappings: savedMappings || {},
+                           budgetModule: undefined,
+                           forecastModule: undefined,
+                           pipelineModule: undefined,
+                           financeReferentials: {
+                              chartOfAccounts: chartsOfAccounts,
+                              analyticalAxes,
+                              fiscalCalendars,
+                              masterData
+                           },
+                           uiPrefs,
+                           version: APP_VERSION
+                        }}
+                        onRestoreBackup={handleRestoreFromO365}
+                     />
+                  )}
 
                   <Card title="Jeu de données de test" className="border-indigo-100">
                      <div className="flex items-start gap-3">
