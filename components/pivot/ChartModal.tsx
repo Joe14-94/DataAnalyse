@@ -36,6 +36,7 @@ interface ChartModalProps {
   manualItems?: SpecificDashboardItem[];
   isTemporalMode?: boolean;
   temporalComparison?: TemporalComparisonConfig | null;
+  columnLabels?: Record<string, string>;
   selectedBatchId?: string;
 }
 
@@ -44,8 +45,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   onClose,
   pivotData,
   pivotConfig,
+  manualItems,
   isTemporalMode = false,
   temporalComparison = null,
+  columnLabels = {},
   selectedBatchId
 }) => {
   const navigate = useNavigate();
@@ -325,6 +328,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             },
             isTemporalMode,
             temporalComparison,
+            columnLabels,
             updateMode,
             chartType: selectedChartType,
             hierarchyLevel,

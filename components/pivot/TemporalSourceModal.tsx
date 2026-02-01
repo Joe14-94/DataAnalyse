@@ -28,9 +28,10 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
         currentSources.length > 0 ? (currentSources.find(s => s.label.includes('2024'))?.id || currentSources[0].id) : ''
     );
 
-    const [comparisonMode, setComparisonMode] = useState<'standard' | 'ytd'>(
+    const [comparisonMode, setComparisonMode] = useState<'standard' | 'ytd' | 'custom'>(
         'standard'
     );
+    const [startMonth, setStartMonth] = useState<number>(1);
     const [endMonth, setEndMonth] = useState<number>(12);
 
     // Initialize labels with proper format for existing sources
@@ -123,9 +124,10 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
         });
 
         // Update config with period
-        const periodFilter = { startMonth: comparisonMode === 'ytd' ? 1 : endMonth, endMonth };
+        const finalStartMonth = comparisonMode === 'ytd' ? 1 : (comparisonMode === 'standard' ? endMonth : startMonth);
+        const periodFilter = { startMonth: finalStartMonth, endMonth };
 
-        onSourcesChange(sources, referenceId, comparisonMode, periodFilter);
+        onSourcesChange(sources, referenceId, comparisonMode as any, periodFilter);
         onClose();
     };
 
@@ -176,12 +178,29 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                                     value={comparisonMode}
                                     onChange={(e) => setComparisonMode(e.target.value as any)}
                                 >
-                                    <option value="standard">Mois par mois</option>
+                                    <option value="standard">Mois spécifique</option>
                                     <option value="ytd">Cumul annuel (YTD)</option>
+                                    <option value="custom">Période personnalisée</option>
                                 </select>
                             </div>
+                            {comparisonMode === 'custom' && (
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-indigo-700 uppercase">Du mois de</label>
+                                    <select
+                                        className="text-sm border border-indigo-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-indigo-500"
+                                        value={startMonth}
+                                        onChange={(e) => setStartMonth(Number(e.target.value))}
+                                    >
+                                        {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, i) => (
+                                            <option key={i+1} value={i+1}>{m}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="flex flex-col gap-1">
-                                <label className="text-xs font-bold text-indigo-700 uppercase">Jusqu'au mois de</label>
+                                <label className="text-xs font-bold text-indigo-700 uppercase">
+                                    {comparisonMode === 'standard' ? 'Mois choisi' : 'Au mois de'}
+                                </label>
                                 <select
                                     className="text-sm border border-indigo-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-indigo-500"
                                     value={endMonth}
@@ -196,6 +215,8 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                         <p className="text-[10px] text-indigo-600 italic">
                             {comparisonMode === 'ytd'
                                 ? `Compare les données cumulées de Janvier à ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][endMonth-1]}.`
+                                : comparisonMode === 'custom'
+                                ? `Compare les données de ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][startMonth-1]} à ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][endMonth-1]}.`
                                 : `Compare uniquement les données du mois de ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][endMonth-1]}.`
                             }
                         </p>

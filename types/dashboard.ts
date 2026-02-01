@@ -24,6 +24,7 @@ export interface PivotChartConfig {
   pivotConfig: any; // Using any here to avoid circular dependencies if needed, or proper import
   isTemporalMode?: boolean;
   temporalComparison?: any;
+  columnLabels?: Record<string, string>;
   updateMode?: 'fixed' | 'latest';
   chartType: ChartType;
   hierarchyLevel?: number;

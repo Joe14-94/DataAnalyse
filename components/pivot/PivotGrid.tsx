@@ -156,7 +156,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
          {isTemporalMode && temporalResults.length > 0 && temporalConfig ? (
             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar w-full relative">
-               <table className="min-w-full divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
+               <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                   <thead className="sticky top-0 z-30 shadow-sm">
                      <tr className="bg-slate-50">
                         {rowFields.map((field: string, idx: number) => {
@@ -279,12 +279,17 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const value = result.values[source.id] || 0;
                                  const delta = result.deltas[source.id];
                                  const width = columnWidths[source.id] || 120;
-                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), source.id, value, source.label, isSubtotal ? 'subtotal' : 'data');
                                  const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), source.label);
+                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), source.id, value, source.label, isSubtotal ? 'subtotal' : 'data');
+
+                                 const finalStyle = { ...customStyle };
+                                 if (isSelectionMode && isSelected) {
+                                    finalStyle.backgroundColor = 'var(--brand-100)';
+                                 }
 
                                  return (
                                     <React.Fragment key={source.id}>
-                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer overflow-hidden truncate transition-all ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`} style={{ width, minWidth: width, maxWidth: width, ...customStyle }} onClick={() => !isSubtotal && handleTemporalDrilldown(result, source.id)}>
+                                       <td className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer overflow-hidden truncate transition-all ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`} style={{ width, minWidth: width, maxWidth: width, ...finalStyle }} onClick={() => handleTemporalDrilldown(result, source.id)}>
                                           {formatCurrency(value)}
                                        </td>
                                        {showVariations && source.id !== temporalConfig.referenceSourceId && (
@@ -304,7 +309,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
          ) : pivotData ? (
             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
                <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                  <table className="min-w-full divide-y divide-slate-200 border-collapse absolute top-0 left-0 w-full" style={{ tableLayout: 'fixed' }}>
+                  <table className="min-w-max divide-y divide-slate-200 border-collapse absolute top-0 left-0" style={{ tableLayout: 'fixed' }}>
                      <thead className="sticky top-0 z-30 shadow-sm">
                         <tr className="bg-slate-50">
                            {rowFields.map((field, idx) => {
@@ -481,6 +486,12 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
 
                                     const customStyle = getCellFormatting(row.keys, col, val, metricLabel, row.type);
+                                    const isSelected = isSelectionMode && isItemSelected(row.keys, col);
+
+                                    const finalStyle = { ...customStyle };
+                                    if (isSelectionMode && isSelected) {
+                                       finalStyle.backgroundColor = 'var(--brand-100)';
+                                    }
 
                                     let formatted = formatOutput(val, metric);
                                     let cellClass = "text-slate-600";
@@ -492,12 +503,12 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        if (val === 0 || val === undefined) formatted = '-';
                                        else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
                                     }
-                                    const isSelected = isSelectionMode && isItemSelected(row.keys, col);
+
                                     return (
                                        <td
                                           key={col}
-                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
-                                       style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
+                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-100 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
+                                       style={{ width, minWidth: width, maxWidth: width, ...finalStyle }}
                                           onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
                                        >
                                           {formatted}

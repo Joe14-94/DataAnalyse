@@ -28,6 +28,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          return {
             data: chartData,
             isSelective: true,
+            seriesName: 'Valeur',
             unit: '', // On pourrait essayer de déduire l'unité
             colors: getChartColorsForWidget(widget.config, chartData.length)
          };
@@ -117,6 +118,11 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
             // Formater pour transformPivotToChartData
             const colHeaders = effectiveSources.map((s: any, idx: number) => {
+               // Priorité au libellé personnalisé s'il existe
+               if (pivotChart.columnLabels && pivotChart.columnLabels[s.id]) {
+                  return pivotChart.columnLabels[s.id];
+               }
+
                if (pivotChart.updateMode === 'latest') {
                   const batch = batches.find(b => b.id === s.batchId);
                   if (batch) {
