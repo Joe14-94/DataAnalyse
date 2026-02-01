@@ -23,6 +23,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          const chartData = items.map(item => ({
             name: item.label,
             value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
+            size: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
             fullLabel: `${item.rowPath.join(' > ')} | ${item.colLabel}`
          }));
          return {

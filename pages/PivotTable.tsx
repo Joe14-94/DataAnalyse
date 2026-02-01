@@ -130,7 +130,6 @@ export const PivotTable: React.FC = () => {
             setStyleRules(c.styleRules || []);
             setConditionalRules(c.conditionalRules || []);
         } else {
-            // Si aucun TCD n'a été créé ou travaillé, on laisse les sources vides
             setSources([]);
         }
         setIsInitialized(true);
@@ -220,7 +219,6 @@ export const PivotTable: React.FC = () => {
             const newAgg = (type === 'number' ? 'sum' : 'count') as AggregationType;
             setAggType(newAgg);
 
-            // Auto-update metrics if it was empty or matches valField
             if (metrics.length === 0) {
                 setMetrics([{ field: newField, aggType: newAgg }]);
             }
@@ -289,16 +287,12 @@ export const PivotTable: React.FC = () => {
 
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
         setShowExportMenu(false);
-        // Simplified export logic here - reuse existing logic if possible or move to util
         alert("Export spreadsheet triggered");
     };
 
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
         if (isSelectionMode) return;
-
         const prefilledFilters: Record<string, string> = {};
-
-        // Filter by Row Fields
         rowFields.forEach((field, i) => {
             const val = rowKeys[i];
             if (val === '(Vide)') {
@@ -307,8 +301,6 @@ export const PivotTable: React.FC = () => {
                 prefilledFilters[field] = `=${val}`;
             }
         });
-
-        // Filter by Column Fields
         if (colFields.length > 0 && colLabel !== 'Total' && colLabel !== 'ALL') {
             const colValues = colLabel.split('\x1F');
             colFields.forEach((field, i) => {
@@ -321,19 +313,15 @@ export const PivotTable: React.FC = () => {
                 }
             });
         }
-
-        // Filter by specific batch if selected
         if (selectedBatchId) {
-            prefilledFilters['_batchId'] = selectedBatchId;
+            prefilledFilters['_batchId'] = `=${selectedBatchId}`;
         }
-
         navigate('/data', { state: { prefilledFilters } });
     };
 
     const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
         if (formattingSelectionRule) {
             const targetKey = colLabel === '' ? (rowKeys[rowKeys.length - 1] || '') : (rowKeys.length === 0 ? colLabel : `${rowKeys.join('\x1F')}|${colLabel}`);
-
             if (formattingSelectionRule.type === 'style') {
                 setStyleRules(prev => prev.map(r => r.id === formattingSelectionRule.id ? {
                     ...r,
@@ -345,24 +333,13 @@ export const PivotTable: React.FC = () => {
             setIsFormattingModalOpen(true);
             return;
         }
-
         if (!isSelectionMode) {
             handleDrilldown(rowKeys, colLabel);
             return;
         }
-
         const id = generateId();
         const label = `${rowKeys[rowKeys.length-1]} - ${colLabel}`;
-
-        const newItem: SpecificDashboardItem = {
-            id,
-            label,
-            value,
-            rowPath: rowKeys,
-            colLabel,
-            metricLabel
-        };
-
+        const newItem: SpecificDashboardItem = { id, label, value, rowPath: rowKeys, colLabel, metricLabel };
         setSpecificDashboardItems(prev => [...prev, newItem]);
     };
 
@@ -374,7 +351,6 @@ export const PivotTable: React.FC = () => {
         if (formattingSelectionRule) {
             const rowKeys = result.groupLabel.split('\x1F');
             const targetKey = `${rowKeys.join('\x1F')}|${label}`;
-
             if (formattingSelectionRule.type === 'style') {
                 setStyleRules(prev => prev.map(r => r.id === formattingSelectionRule.id ? {
                     ...r,
@@ -391,24 +367,13 @@ export const PivotTable: React.FC = () => {
             const id = generateId();
             const rowKeys = result.groupLabel.split('\x1F');
             const displayLabel = `${rowKeys[rowKeys.length - 1]} - ${label}`;
-
-            const newItem: SpecificDashboardItem = {
-                id,
-                label: displayLabel,
-                value,
-                rowPath: rowKeys,
-                colLabel: label,
-                metricLabel: label
-            };
-
+            const newItem: SpecificDashboardItem = { id, label: displayLabel, value, rowPath: rowKeys, colLabel: label, metricLabel: label };
             setSpecificDashboardItems(prev => [...prev, newItem]);
             return;
         }
 
         const prefilledFilters: Record<string, string> = {};
         const rowKeys = result.groupLabel.split('\x1F');
-
-        // Filter by Row Fields
         rowFields.forEach((field, i) => {
             const val = rowKeys[i];
             if (val === '(Vide)') {
@@ -417,14 +382,11 @@ export const PivotTable: React.FC = () => {
                 prefilledFilters[field] = `=${val}`;
             }
         });
-
-        // Target the specific batch
         if (source) {
             prefilledFilters['_batchId'] = `=${source.batchId}`;
         } else {
             prefilledFilters['_batchId'] = `=${sourceId}`;
         }
-
         navigate('/data', { state: { prefilledFilters } });
     };
 
@@ -462,23 +424,14 @@ export const PivotTable: React.FC = () => {
 
     const handleSaveCalculatedField = (field: Partial<CalculatedField>) => {
         if (!primaryDataset) return;
-
         if (editingCalcField) {
             updateCalculatedField(primaryDataset.id, editingCalcField.id, field);
-            // Update metrics if name changed
             if (field.name && field.name !== editingCalcField.name) {
                 setMetrics(prev => prev.map(m => m.field === editingCalcField.name ? { ...m, field: field.name! } : m));
             }
         } else {
             const id = generateId();
-            addCalculatedField(primaryDataset.id, {
-                id,
-                name: field.name!,
-                formula: field.formula!,
-                outputType: field.outputType || 'number',
-                unit: field.unit
-            });
-            // Auto add to metrics
+            addCalculatedField(primaryDataset.id, { id, name: field.name!, formula: field.formula!, outputType: field.outputType || 'number', unit: field.unit });
             setMetrics(prev => [...prev, { field: field.name!, aggType: 'sum' }]);
         }
         setEditingCalcField(null);
@@ -498,15 +451,7 @@ export const PivotTable: React.FC = () => {
     };
 
     const handleSaveSpecificDashboard = (title: string, items: SpecificDashboardItem[]) => {
-        addDashboardWidget({
-            title,
-            type: 'report',
-            size: 'lg',
-            height: 'lg',
-            config: {
-                reportItems: items
-            }
-        });
+        addDashboardWidget({ title, type: 'report', size: 'lg', height: 'lg', config: { reportItems: items } });
         setIsSpecificDashboardModalOpen(false);
         setSpecificDashboardItems([]);
         alert("Rapport ajouté à votre tableau de bord !");
@@ -515,24 +460,8 @@ export const PivotTable: React.FC = () => {
 
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
-            const currentTemporalComparison = temporalConfig ? {
-                ...temporalConfig,
-                groupByFields: rowFields,
-                valueField: valField,
-                aggType: aggType === 'list' ? 'sum' : aggType as any
-            } : undefined;
-
-            saveAnalysis({
-               name: analysisName, type: 'pivot', datasetId: primaryDataset.id,
-               config: {
-                   sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting,
-                   filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder,
-                   selectedBatchId, isTemporalMode,
-                   temporalComparison: currentTemporalComparison,
-                   columnLabels,
-                   columnWidths
-               }
-            });
+            const currentTemporalComparison = temporalConfig ? { ...temporalConfig, groupByFields: rowFields, valueField: valField, aggType: aggType === 'list' ? 'sum' : aggType as any } : undefined;
+            saveAnalysis({ name: analysisName, type: 'pivot', datasetId: primaryDataset.id, config: { sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, isTemporalMode, temporalComparison: currentTemporalComparison, columnLabels, columnWidths } });
             setIsSaving(false); setAnalysisName('');
         }
     };
@@ -656,7 +585,7 @@ export const PivotTable: React.FC = () => {
                    selectedBatchId={selectedBatchId}
                 />
             )}
-            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, mode, period) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, comparisonMode: mode, periodFilter: period, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
+            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, extra) => setTemporalConfig({ ...temporalConfig, ...extra, sources: s, referenceSourceId: r, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
             <CalculatedFieldModal
                 isOpen={isCalcModalOpen}
                 onClose={() => { setIsCalcModalOpen(false); setEditingCalcField(null); }}

@@ -184,7 +184,7 @@ export const calculateTemporalComparison = (
     }
 
     // Filtrer par période et par filtres personnalisés
-    const startMonth = comparisonMode === 'ytd' ? 1 : periodFilter.startMonth;
+    const startMonth = (comparisonMode === 'ytd') ? 1 : periodFilter.startMonth;
 
     const filteredData = filterDataByPeriod(
       sourceData,
@@ -206,6 +206,8 @@ export const calculateTemporalComparison = (
 
   // Créer les résultats
   const results: TemporalComparisonResult[] = [];
+  const colTotals: { [sourceId: string]: number } = {};
+  sources.forEach(s => { colTotals[s.id] = 0; });
 
   allGroupKeys.forEach(groupKey => {
     const values: { [sourceId: string]: number } = {};
@@ -222,6 +224,17 @@ export const calculateTemporalComparison = (
         values[source.id] = group.value;
         if (!groupLabel) groupLabel = group.label;
         details[source.id] = group.details;
+
+        // Sum for column totals
+        if (aggType === 'sum' || aggType === 'count') {
+           colTotals[source.id] += group.value;
+        } else if (aggType === 'avg') {
+           colTotals[source.id] += group.value;
+        } else if (aggType === 'min') {
+           colTotals[source.id] = (colTotals[source.id] === 0 && results.length === 0) ? group.value : Math.min(colTotals[source.id], group.value);
+        } else if (aggType === 'max') {
+           colTotals[source.id] = (colTotals[source.id] === 0 && results.length === 0) ? group.value : Math.max(colTotals[source.id], group.value);
+        }
       } else {
         values[source.id] = 0;
         details[source.id] = [];
@@ -257,6 +270,13 @@ export const calculateTemporalComparison = (
     });
   });
 
+  // Average calculation for totals if needed
+  if (aggType === 'avg' && results.length > 0) {
+    sources.forEach(source => {
+      colTotals[source.id] = colTotals[source.id] / results.length;
+    });
+  }
+
   // Trier les résultats
   const sortBy = (config as any).sortBy || 'label';
   const sortOrder = (config as any).sortOrder || 'asc';
@@ -269,12 +289,6 @@ export const calculateTemporalComparison = (
       const valB = b.values[sortBy] || 0;
       return sortOrder === 'asc' ? valA - valB : valB - valA;
     }
-  });
-
-  // Calculer les totaux de colonnes (avant les sous-totaux)
-  const colTotals: { [sourceId: string]: number } = {};
-  sources.forEach(source => {
-    colTotals[source.id] = results.reduce((sum, r) => sum + (r.values[source.id] || 0), 0);
   });
 
   // Générer les sous-totaux si on a plusieurs champs de regroupement ET que showSubtotals est activé

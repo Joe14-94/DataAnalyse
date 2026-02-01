@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule } from '../types';
 import { APP_VERSION, db, generateId, evaluateFormula } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
@@ -44,10 +44,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- COMPUTED ---
-  const currentDataset = datasets.find(d => d.id === currentDatasetId) || null;
-  const filteredBatches = batches
-    .filter(b => b.datasetId === currentDatasetId)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(a.date).getTime());
+  const currentDataset = useMemo(() => datasets.find(d => d.id === currentDatasetId) || null, [datasets, currentDatasetId]);
+
+  // BOLT OPTIMIZATION: Memoize filtered batches and fix sort bug (was a.date - a.date)
+  const filteredBatches = useMemo(() => {
+    if (!currentDatasetId) return [];
+    return batches
+      .filter(b => b.datasetId === currentDatasetId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [batches, currentDatasetId]);
 
   // --- LOAD & MIGRATION ---
   useEffect(() => {
@@ -624,9 +629,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // To persist accurately, we should really load the current state, merge with parsed, then save.
-      // But db.save(parsed) might overwrite everything if parsed is partial.
-      // Let's fix that.
       const currentState = await db.load();
       const mergedState = { ...currentState, ...parsed };
       await db.save(mergedState);

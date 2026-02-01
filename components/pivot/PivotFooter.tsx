@@ -3,12 +3,13 @@ import React from 'react';
 import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
+import { formatCurrency } from '../../utils/temporalComparison';
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
    isTemporalMode?: boolean;
-   temporalConfig?: any;
    temporalColTotals?: { [sourceId: string]: number };
+   temporalConfig?: any;
    rowFields: string[];
    columnWidths: Record<string, number>;
    footerRef: React.RefObject<HTMLDivElement>;
@@ -25,9 +26,9 @@ interface PivotFooterProps {
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, isTemporalMode, temporalConfig, temporalColTotals, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules = [], conditionalRules = []
+   pivotData, isTemporalMode, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules = [], conditionalRules = []
 }) => {
-   if (!pivotData && !isTemporalMode) return null;
+   if (!pivotData && !temporalColTotals) return null;
 
    const getColWidth = (id: string, isRowField: boolean = false) => {
       return columnWidths[id] || (isRowField ? 150 : 120);
@@ -78,7 +79,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                <tr>
                   {rowFields.map((field, idx) => {
                      const widthId = getRowFieldWidthId(field);
-                     const width = columnWidths[widthId] || 150;
+                     const width = getColWidth(widthId, true);
                      const left = rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[getRowFieldWidthId(f)] || 150), 0);
                      return (
                         <td
@@ -98,7 +99,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                   {isTemporalMode && temporalConfig && temporalColTotals && temporalConfig.sources.map((source: any) => {
                      const val = temporalColTotals[source.id] || 0;
                      const customStyle = getCellFormatting(source.id, val, source.label);
-                     const width = columnWidths[source.id] || 120;
+                     const width = getColWidth(source.id);
 
                      return (
                         <React.Fragment key={source.id}>
