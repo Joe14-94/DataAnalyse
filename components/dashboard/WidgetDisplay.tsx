@@ -33,7 +33,7 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
 
       // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
       const seriesKeys = Array.from(new Set(chartData.flatMap((d: any) =>
-         Object.keys(d).filter(k => k !== 'name')
+         Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')
       ))) as string[];
 
       const displaySeriesNames: Record<string, string> = (seriesKeys.length === 1 && seriesName)

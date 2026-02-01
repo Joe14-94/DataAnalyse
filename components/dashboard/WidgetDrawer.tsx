@@ -163,7 +163,9 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                            >
                               <option value="">-- Choisir une source --</option>
                               {tempWidget.config?.source?.mode === 'temporal' && (
-                                 <option value="temporal">Comparaison Temporelle (Multi-sources)</option>
+                                 <option value="temporal">
+                                    Comparaison Temporelle ({datasets.find(d => d.id === tempWidget.config?.source?.datasetId)?.name || 'Multi-sources'})
+                                 </option>
                               )}
                               {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                            </Select>
