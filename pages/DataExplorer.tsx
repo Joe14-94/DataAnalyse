@@ -8,7 +8,7 @@ import {
    Search, Download, Database, Table2,
    Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X,
    History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-   FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren, BarChart2, Info
+   FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, BarChart2, Info
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -28,9 +28,6 @@ export const DataExplorer: React.FC = () => {
    // Column Filters
    const [showFilters, setShowFilters] = useState(false);
    const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
-
-   // OUTLIERS DETECTION STATE (NEW)
-   const [showOutliers, setShowOutliers] = useState(false);
 
    // Column Selection for Tools
    const [selectedCol, setSelectedCol] = useState<string | null>(null);
@@ -530,51 +527,6 @@ export const DataExplorer: React.FC = () => {
       return data;
    }, [allRows, searchTerm, columnFilters, sortConfig]);
 
-   // --- STATS CALCULATION FOR OUTLIERS ---
-   const columnStats = useMemo(() => {
-      if (!showOutliers || !currentDataset || processedRows.length === 0) return {};
-
-      // BOLT OPTIMIZATION: Calculate all stats in a single pass over data
-      const statsAccumulator: Record<string, { sum: number, sumSq: number, count: number }> = {};
-      const fieldsToCheck = [...displayFields, ...(currentDataset.calculatedFields?.map(f => f.name) || [])];
-
-      const numericFields = fieldsToCheck.filter(field => {
-         const config = currentDataset.fieldConfigs?.[field];
-         const calcField = currentDataset.calculatedFields?.find(f => f.name === field);
-         return config?.type === 'number' || calcField?.outputType === 'number';
-      });
-
-      if (numericFields.length === 0) return {};
-
-      numericFields.forEach(f => statsAccumulator[f] = { sum: 0, sumSq: 0, count: 0 });
-
-      processedRows.forEach(row => {
-         numericFields.forEach(field => {
-            const val = row[field];
-            const num = parseSmartNumber(val);
-            if (!isNaN(num) && val !== '' && val !== null && val !== undefined) {
-               statsAccumulator[field].sum += num;
-               statsAccumulator[field].sumSq += num * num;
-               statsAccumulator[field].count++;
-            }
-         });
-      });
-
-      const finalStats: Record<string, { mean: number, stdDev: number }> = {};
-      numericFields.forEach(field => {
-         const { sum, sumSq, count } = statsAccumulator[field];
-         if (count > 1) {
-            const mean = sum / count;
-            const variance = (sumSq / count) - (mean * mean);
-            const stdDev = Math.sqrt(Math.max(0, variance));
-            if (stdDev > 0) {
-               finalStats[field] = { mean, stdDev };
-            }
-         }
-      });
-      return finalStats;
-   }, [processedRows, showOutliers, displayFields, currentDataset]);
-
    // --- DISTRIBUTION CHART DATA ---
    const distributionData = useMemo(() => {
       if (!selectedCol || processedRows.length === 0) return [];
@@ -641,21 +593,7 @@ export const DataExplorer: React.FC = () => {
          return cachedNum;
       };
 
-      // 1. Check Outliers (Prioritaire)
-      if (showOutliers) {
-         const stats = columnStats[fieldName];
-         if (stats) {
-            const numVal = getNumericValue();
-            if (!isNaN(numVal) && value !== '' && value !== null) {
-               const zScore = (numVal - stats.mean) / stats.stdDev;
-               if (Math.abs(zScore) > 2.5) {
-                  return 'bg-red-100 text-red-800 font-bold border border-red-300 ring-2 ring-red-400 ring-opacity-50'; // Highlighting effect
-               }
-            }
-         }
-      }
-
-      // 2. Check Conditional Formatting
+      // 1. Check Conditional Formatting
       if (!currentDataset?.fieldConfigs) return '';
       const rules = currentDataset.fieldConfigs[fieldName]?.conditionalFormatting;
       if (!rules || rules.length === 0) return '';
@@ -871,7 +809,6 @@ export const DataExplorer: React.FC = () => {
                   />
                </div>
 
-               <Button variant={showOutliers ? "primary" : "secondary"} onClick={() => setShowOutliers(!showOutliers)} className={`whitespace-nowrap ${showOutliers ? 'bg-red-600 text-white' : ''}`}><Siren className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Anomalies (Z-Score)</span></Button>
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
