@@ -105,7 +105,7 @@ export const Settings: React.FC = () => {
       fileInputRef.current?.click();
    };
 
-   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -115,9 +115,26 @@ export const Settings: React.FC = () => {
          if (content) {
             try {
                const parsed = JSON.parse(content);
-               setRestoreFileContent(content);
-               setRestoreAvailableData(parsed);
-               setBackupModalMode('restore');
+
+               // Phase 1 - Détecter si c'est un SharePackage
+               const isSharePackage = await import('../services/o365Service')
+                  .then(m => m.o365Service.isSharePackage(content));
+
+               if (isSharePackage) {
+                  // C'est un contenu partagé
+                  alert(`📤 Import de contenu partagé détecté !\n\nType: ${parsed.type}\nNom: ${parsed.name}\nPartagé par: ${parsed.sharedBy}\nDate: ${new Date(parsed.sharedAt).toLocaleString('fr-FR')}\n\nLe contenu va être importé.`);
+
+                  // Extraire le contenu du SharePackage
+                  const shareContent = parsed.content;
+                  setRestoreFileContent(JSON.stringify(shareContent));
+                  setRestoreAvailableData(shareContent);
+                  setBackupModalMode('restore');
+               } else {
+                  // Backup classique
+                  setRestoreFileContent(content);
+                  setRestoreAvailableData(parsed);
+                  setBackupModalMode('restore');
+               }
             } catch (err) {
                alert('Fichier invalide');
             }

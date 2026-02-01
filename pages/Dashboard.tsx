@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
 import { X, Maximize2 } from 'lucide-react';
 import { DashboardWidget } from '../types';
@@ -11,8 +11,10 @@ import { WidgetDisplay } from '../components/dashboard/WidgetDisplay';
 import { WidgetDrawer } from '../components/dashboard/WidgetDrawer';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { DashboardFilters } from '../components/dashboard/DashboardFilters';
+import { ShareDashboardModal } from '../components/dashboard/ShareDashboardModal';
 import { useWidgetData } from '../hooks/useWidgetData';
 import { useExport } from '../hooks/useExport';
+import { o365Service } from '../services/o365Service';
 
 const FullscreenWidgetView: React.FC<{ widget: DashboardWidget, globalDateRange: any }> = ({ widget, globalDateRange }) => {
    const data = useWidgetData(widget, globalDateRange);
@@ -47,6 +49,28 @@ export const Dashboard: React.FC = () => {
    // WIDGET MENUS STATE
    const [openMenuWidgetId, setOpenMenuWidgetId] = useState<string | null>(null);
    const [fullscreenWidgetId, setFullscreenWidgetId] = useState<string | null>(null);
+
+   // PHASE 1 - Partage collaboratif
+   const [showShareModal, setShowShareModal] = useState(false);
+   const [isO365Authenticated, setIsO365Authenticated] = useState(false);
+
+   // Vérifier l'authentification O365 au montage
+   useEffect(() => {
+      const checkO365Auth = async () => {
+         if (!o365Service.isConfigured()) {
+            setIsO365Authenticated(false);
+            return;
+         }
+         try {
+            const isAuth = await o365Service.isAuthenticated();
+            setIsO365Authenticated(isAuth);
+         } catch (err) {
+            console.error('O365 auth check failed:', err);
+            setIsO365Authenticated(false);
+         }
+      };
+      checkO365Auth();
+   }, []);
 
    const handleSaveWidget = () => {
       if (!tempWidget.title) return;
@@ -176,6 +200,8 @@ export const Dashboard: React.FC = () => {
                openNewWidget={openNewWidget}
                handlePresentationMode={handlePresentationMode}
                navigate={navigate}
+               onShareDashboard={() => setShowShareModal(true)}
+               canShare={isO365Authenticated && dashboardWidgets.length > 0}
             />
 
             <DashboardFilters
@@ -230,6 +256,17 @@ export const Dashboard: React.FC = () => {
             datasets={datasets}
             allFields={allFields}
             globalDateRange={globalDateRange}
+         />
+
+         {/* Phase 1 - Modal de partage collaboratif */}
+         <ShareDashboardModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            dashboardName="Mon Dashboard"
+            widgets={dashboardWidgets}
+            datasets={datasets}
+            batches={[]} // TODO: Récupérer les batches associés aux datasets
+            uiPrefs={undefined} // TODO: Récupérer les uiPrefs
          />
       </div>
    );

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layout, Maximize2, Plus, Check, Edit3 } from 'lucide-react';
+import { Layout, Maximize2, Plus, Check, Edit3, Share2 } from 'lucide-react';
 import { Heading, Text } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { Dataset } from '../../types';
@@ -11,10 +11,13 @@ interface DashboardHeaderProps {
    openNewWidget: () => void;
    handlePresentationMode: () => void;
    navigate: (path: string) => void;
+   onShareDashboard?: () => void; // Phase 1 - Partage collaboratif
+   canShare?: boolean; // Si O365 activé et authentifié
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
-   isEditMode, setIsEditMode, openNewWidget, handlePresentationMode, navigate
+   isEditMode, setIsEditMode, openNewWidget, handlePresentationMode, navigate,
+   onShareDashboard, canShare = false
 }) => {
    return (
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -26,6 +29,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
          </div>
 
          <div className="flex gap-2">
+            {/* Bouton Partager - Phase 1 Collaboratif */}
+            {canShare && onShareDashboard && !isEditMode && (
+               <Button
+                  variant="secondary"
+                  onClick={onShareDashboard}
+                  icon={<Share2 className="w-4 h-4" />}
+               >
+                  Partager
+               </Button>
+            )}
             <Button variant="ghost" onClick={handlePresentationMode} icon={<Maximize2 className="w-4 h-4" />}>Plein Écran</Button>
             {isEditMode ? (
                <>
