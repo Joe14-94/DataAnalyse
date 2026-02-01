@@ -6,6 +6,9 @@ import { getCellStyle } from '../../utils/pivotFormatting';
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
+   isTemporalMode?: boolean;
+   temporalConfig?: any;
+   temporalColTotals?: { [sourceId: string]: number };
    rowFields: string[];
    columnWidths: Record<string, number>;
    footerRef: React.RefObject<HTMLDivElement>;
@@ -16,14 +19,15 @@ interface PivotFooterProps {
    datasets: Dataset[];
    valFormatting: any;
    showTotalCol: boolean;
+   showVariations?: boolean;
    styleRules?: PivotStyleRule[];
    conditionalRules?: ConditionalFormattingRule[];
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules = [], conditionalRules = []
+   pivotData, isTemporalMode, temporalConfig, temporalColTotals, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules = [], conditionalRules = []
 }) => {
-   if (!pivotData) return null;
+   if (!pivotData && !isTemporalMode) return null;
 
    const getColWidth = (id: string, isRowField: boolean = false) => {
       return columnWidths[id] || (isRowField ? 150 : 120);
@@ -59,6 +63,8 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, 'grandTotal');
    };
 
+   const getRowFieldWidthId = (field: string) => isTemporalMode ? `group_${field}` : `row_${field}`;
+
    const formatOutput = (val: string | number, metric?: any) => {
       const field = metric?.field || valField;
       const type = metric?.aggType || aggType;
@@ -70,21 +76,52 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          <table className="min-w-full divide-y divide-slate-200 border-collapse w-full" style={{ tableLayout: 'fixed' }}>
             <tbody className="font-bold">
                <tr>
-                  {rowFields.map((field, idx) => (
-                     <td
-                        key={idx}
-                        className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
-                        style={{
-                           left: `${rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0)}px`,
-                           width: `${getColWidth(`row_${field}`, true)}px`,
-                           minWidth: `${getColWidth(`row_${field}`, true)}px`,
-                           maxWidth: `${getColWidth(`row_${field}`, true)}px`
-                        }}
-                     >
-                        {idx === rowFields.length - 1 ? 'Total' : ''}
-                     </td>
-                  ))}
-                  {pivotData.colHeaders.map((col: string) => {
+                  {rowFields.map((field, idx) => {
+                     const widthId = getRowFieldWidthId(field);
+                     const width = columnWidths[widthId] || 150;
+                     const left = rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[getRowFieldWidthId(f)] || 150), 0);
+                     return (
+                        <td
+                           key={idx}
+                           className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
+                           style={{
+                              left: `${left}px`,
+                              width: `${width}px`,
+                              minWidth: `${width}px`,
+                              maxWidth: `${width}px`
+                           }}
+                        >
+                           {idx === rowFields.length - 1 ? 'Total' : ''}
+                        </td>
+                     );
+                  })}
+                  {isTemporalMode && temporalConfig && temporalColTotals && temporalConfig.sources.map((source: any) => {
+                     const val = temporalColTotals[source.id] || 0;
+                     const customStyle = getCellFormatting(source.id, val, source.label);
+                     const width = columnWidths[source.id] || 120;
+
+                     return (
+                        <React.Fragment key={source.id}>
+                           <td
+                              className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
+                              style={{
+                                 ...customStyle,
+                                 width: `${width}px`,
+                                 minWidth: `${width}px`,
+                                 maxWidth: `${width}px`
+                              }}
+                           >
+                              {formatOutput(val, metrics[0])}
+                           </td>
+                           {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                              <td className="px-2 py-2 text-right bg-purple-50 border-r border-slate-200" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
+                                 -
+                              </td>
+                           )}
+                        </React.Fragment>
+                     );
+                  })}
+                  {!isTemporalMode && pivotData && pivotData.colHeaders.map((col: string) => {
                      const val = pivotData.colTotals[col];
                      const { metric, isPct } = getMetricInfoFromCol(col);
                      const metricLabel = metric?.label || (metric?.field ? `${metric.field} (${metric.aggType})` : '');

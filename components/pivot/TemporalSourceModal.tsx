@@ -10,7 +10,7 @@ interface TemporalSourceModalProps {
     primaryDataset: Dataset | null;
     batches: ImportBatch[];
     currentSources: TemporalComparisonSource[];
-    onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string) => void;
+    onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string, mode: 'standard' | 'ytd', period: any) => void;
 }
 
 export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
@@ -25,8 +25,13 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
         currentSources.map(s => s.batchId)
     );
     const [referenceId, setReferenceId] = useState<string>(
-        currentSources.find(s => s.label.includes('2024'))?.id || ''
+        currentSources.length > 0 ? (currentSources.find(s => s.label.includes('2024'))?.id || currentSources[0].id) : ''
     );
+
+    const [comparisonMode, setComparisonMode] = useState<'standard' | 'ytd'>(
+        'standard'
+    );
+    const [endMonth, setEndMonth] = useState<number>(12);
 
     // Initialize labels with proper format for existing sources
     const [labels, setLabels] = useState<{ [batchId: string]: string }>(() => {
@@ -117,7 +122,10 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
             };
         });
 
-        onSourcesChange(sources, referenceId);
+        // Update config with period
+        const periodFilter = { startMonth: comparisonMode === 'ytd' ? 1 : endMonth, endMonth };
+
+        onSourcesChange(sources, referenceId, comparisonMode, periodFilter);
         onClose();
     };
 
@@ -153,6 +161,44 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                         <Database className="w-4 h-4 text-slate-500" />
                         <span className="text-sm font-bold text-slate-700">Dataset: {primaryDataset.name}</span>
                         <span className="text-xs text-slate-500">({datasetBatches.length} imports disponibles)</span>
+                    </div>
+
+                    {/* Period selection */}
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-3">
+                        <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" /> Période de comparaison
+                        </h3>
+                        <div className="flex flex-wrap gap-4">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-bold text-indigo-700 uppercase">Mode</label>
+                                <select
+                                    className="text-sm border border-indigo-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    value={comparisonMode}
+                                    onChange={(e) => setComparisonMode(e.target.value as any)}
+                                >
+                                    <option value="standard">Mois par mois</option>
+                                    <option value="ytd">Cumul annuel (YTD)</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-bold text-indigo-700 uppercase">Jusqu'au mois de</label>
+                                <select
+                                    className="text-sm border border-indigo-200 rounded px-2 py-1 bg-white focus:ring-1 focus:ring-indigo-500"
+                                    value={endMonth}
+                                    onChange={(e) => setEndMonth(Number(e.target.value))}
+                                >
+                                    {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, i) => (
+                                        <option key={i+1} value={i+1}>{m}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-indigo-600 italic">
+                            {comparisonMode === 'ytd'
+                                ? `Compare les données cumulées de Janvier à ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][endMonth-1]}.`
+                                : `Compare uniquement les données du mois de ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][endMonth-1]}.`
+                            }
+                        </p>
                     </div>
 
                     {/* Batch Selection */}

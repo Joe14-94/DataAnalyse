@@ -24,15 +24,16 @@ import {
   getSingleColors,
   generateGradient
 } from '../../logic/pivotToChart';
-import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
+import { PivotResult, PivotConfig, TemporalComparisonConfig, SpecificDashboardItem } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
 
 
 interface ChartModalProps {
   isOpen: boolean;
   onClose: () => void;
-  pivotData: PivotResult;
-  pivotConfig: PivotConfig;
+  pivotData?: PivotResult | null;
+  pivotConfig?: PivotConfig | null;
+  manualItems?: SpecificDashboardItem[];
   isTemporalMode?: boolean;
   temporalComparison?: TemporalComparisonConfig | null;
   selectedBatchId?: string;
@@ -61,15 +62,27 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
   // Générer les métadonnées du graphique
   const metadata = useMemo(() => {
-    const meta = generateChartMetadata(pivotConfig, pivotData);
-    console.log('Métadonnées générées:', meta);
-    return meta;
-  }, [pivotConfig, pivotData]);
+    if (manualItems && manualItems.length > 0) {
+      return {
+        totalDataPoints: manualItems.length,
+        isMultiSeries: false,
+        seriesNames: ['Sélective'],
+        suggestedType: 'bar' as ChartType
+      };
+    }
+    if (pivotConfig && pivotData) {
+      const meta = generateChartMetadata(pivotConfig, pivotData);
+      console.log('Métadonnées générées:', meta);
+      return meta;
+    }
+    return { totalDataPoints: 0, isMultiSeries: false, seriesNames: [], suggestedType: 'bar' as ChartType };
+  }, [pivotConfig, pivotData, manualItems]);
 
   // Calculer le nombre de niveaux de hiérarchie disponibles
   const availableLevels = useMemo(() => {
-    return getAvailableHierarchyLevels(pivotData);
-  }, [pivotData]);
+    if (manualItems) return 0;
+    return pivotData ? getAvailableHierarchyLevels(pivotData) : 0;
+  }, [pivotData, manualItems]);
 
   // State pour les options
   const [selectedChartType, setSelectedChartType] = useState<ChartType>(metadata.suggestedType);
@@ -88,6 +101,28 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
   // Transformer les données
   const chartData = useMemo(() => {
+    if (manualItems && manualItems.length > 0) {
+      let data = manualItems.map(item => ({
+        name: item.label,
+        value: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0,
+        size: typeof item.value === 'number' ? item.value : parseFloat(String(item.value)) || 0
+      }));
+
+      if (sortBy === 'value') {
+        data.sort((a, b) => sortOrder === 'desc' ? b.value - a.value : a.value - b.value);
+      } else if (sortBy === 'name') {
+        data.sort((a, b) => sortOrder === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name));
+      }
+
+      if (limit > 0) {
+        data = data.slice(0, limit);
+      }
+
+      return data;
+    }
+
+    if (!pivotData || !pivotConfig) return [];
+
     console.log('=== Transformation des données pour graphique ===');
     console.log('selectedChartType:', selectedChartType);
     console.log('Options:', { limit, sortBy, sortOrder, hierarchyLevel });
@@ -110,7 +145,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     }
 
     return data;
-  }, [pivotData, pivotConfig, selectedChartType, limit, sortBy, sortOrder, hierarchyLevel, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+  }, [pivotData, pivotConfig, manualItems, selectedChartType, limit, sortBy, sortOrder, hierarchyLevel, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
 
   // Calculer les couleurs à utiliser en fonction du mode
   const colors = useMemo(() => {
@@ -133,7 +168,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     if (!chartContainerRef.current) return;
 
     const chartHtml = chartContainerRef.current.innerHTML;
-    const title = `Graphique TCD - ${pivotConfig.valField}`;
+    const title = manualItems ? 'Graphique de sélection' : `Graphique TCD - ${pivotConfig?.valField}`;
     const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -215,9 +250,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       const imgWidth = 210 - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addText(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
+      pdf.addText(manualItems ? 'Graphique de sélection' : `Graphique TCD - ${pivotConfig?.valField}`, 10, 15);
       pdf.setFontSize(10);
-      pdf.addText(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+      if (!manualItems && pivotConfig) {
+        pdf.addText(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+      }
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);
       setShowExportMenu(false);
@@ -261,29 +298,30 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       }
 
       const newWidget = {
-        title: `Graphique TCD : ${pivotConfig.valField}`,
+        title: manualItems ? 'Graphique de sélection' : `Graphique TCD : ${pivotConfig?.valField}`,
         type: 'chart' as const,
         size: 'md' as const,
         height: 'lg' as const,
         config: {
-          metric: (pivotConfig.aggType === 'list' ? 'count' : pivotConfig.aggType) as 'count' | 'sum' | 'avg' | 'distinct',
+          metric: (manualItems ? 'sum' : (pivotConfig?.aggType === 'list' ? 'count' : pivotConfig?.aggType)) as any,
           chartType: selectedChartType,
-          source: {
+          reportItems: manualItems,
+          source: manualItems ? undefined : {
             datasetId: currentDatasetId,
             mode: (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
             batchId: updateMode === 'fixed' ? selectedBatchId : undefined
           },
-          pivotChart: {
+          pivotChart: manualItems ? undefined : {
             pivotConfig: {
-              rowFields: pivotConfig.rowFields,
-              colFields: pivotConfig.colFields,
-              colGrouping: pivotConfig.colGrouping,
-              valField: pivotConfig.valField,
-              aggType: pivotConfig.aggType,
-              filters: pivotConfig.filters,
-              sortBy: pivotConfig.sortBy,
-              sortOrder: pivotConfig.sortOrder,
-              showSubtotals: pivotConfig.showSubtotals
+              rowFields: pivotConfig!.rowFields,
+              colFields: pivotConfig!.colFields,
+              colGrouping: pivotConfig!.colGrouping,
+              valField: pivotConfig!.valField,
+              aggType: pivotConfig!.aggType,
+              filters: pivotConfig!.filters,
+              sortBy: pivotConfig!.sortBy,
+              sortOrder: pivotConfig!.sortOrder,
+              showSubtotals: pivotConfig!.showSubtotals
             },
             isTemporalMode,
             temporalComparison,
@@ -345,7 +383,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         {title && <p className="font-semibold text-slate-800 mb-1">{title}</p>}
         {payload.map((entry: any, index: number) => (
           <p key={index} style={{ color: entry.color }} className="text-xs">
-            {entry.name === 'value' || entry.name === 'size' ? 'Valeur' : entry.name}: <span className="font-bold">{formatChartValue(entry.value, pivotConfig)}</span>
+            {entry.name === 'value' || entry.name === 'size' ? 'Valeur' : entry.name}: <span className="font-bold">{pivotConfig ? formatChartValue(entry.value, pivotConfig) : entry.value.toLocaleString()}</span>
           </p>
         ))}
       </div>

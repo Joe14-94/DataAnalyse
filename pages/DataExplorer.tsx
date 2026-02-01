@@ -8,14 +8,15 @@ import {
    Search, Download, Database, Table2,
    Filter, ArrowUpDown, ArrowUp, ArrowDown, XCircle, X,
    History, GitCommit, ArrowRight, Calculator, Plus, Trash2, FunctionSquare, Palette,
-   FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren, BarChart2
+   FilterX, Hash, MousePointerClick, Columns, AlertTriangle, Link as LinkIcon, Siren, BarChart2,
+   GripVertical
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DataExplorer: React.FC = () => {
-   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
+   const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, reorderDatasetFields, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup } = useData();
    const location = useLocation();
    const navigate = useNavigate();
 
@@ -53,6 +54,9 @@ export const DataExplorer: React.FC = () => {
       unit: ''
    });
    const formulaInputRef = useRef<HTMLTextAreaElement>(null);
+
+   // COLUMN REORDERING DRAWER
+   const [isColumnDrawerOpen, setIsColumnDrawerOpen] = useState(false);
 
    // CONDITIONAL FORMATTING DRAWER
    const [isFormatDrawerOpen, setIsFormatDrawerOpen] = useState(false);
@@ -270,6 +274,7 @@ export const DataExplorer: React.FC = () => {
       setNewField({ name: '', formula: '', outputType: 'number', unit: '' });
       setEditingFieldId(null);
       setPreviewResult(null);
+      setIsCalcDrawerOpen(false);
    };
 
    const handleEditCalculatedField = (field: CalculatedField) => {
@@ -854,13 +859,12 @@ export const DataExplorer: React.FC = () => {
                   />
                </div>
 
-               <Button variant={showOutliers ? "primary" : "secondary"} onClick={() => setShowOutliers(!showOutliers)} className={`whitespace-nowrap ${showOutliers ? 'bg-red-600 text-white' : ''}`}><Siren className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Anomalies (Z-Score)</span></Button>
+               <Button variant={isColumnDrawerOpen ? "primary" : "secondary"} onClick={() => setIsColumnDrawerOpen(!isColumnDrawerOpen)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Colonnes</span></Button>
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
                <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
                <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
-               <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
                {(Object.keys(columnFilters).length > 0 || searchTerm) && (
                   <Button variant="danger" onClick={clearFilters} className="whitespace-nowrap px-3" title="Effacer tous les filtres"><FilterX className="w-4 h-4" /></Button>
@@ -1175,6 +1179,59 @@ export const DataExplorer: React.FC = () => {
                   </tbody>
                </table>
             </div>
+
+            {/* COLUMN REORDERING DRAWER */}
+            {isColumnDrawerOpen && (
+               <>
+                  <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsColumnDrawerOpen(false)} />
+                  <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-slate-200">
+                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <div>
+                           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Columns className="w-5 h-5 text-brand-600" /> Ordre des colonnes</h3>
+                           <p className="text-sm text-slate-500">Réorganisez les champs du dataset</p>
+                        </div>
+                        <button onClick={() => setIsColumnDrawerOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                     </div>
+                     <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-1">
+                        {currentDataset.fields.map((field, idx) => (
+                           <div key={field} className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-md group hover:border-brand-300 transition-colors shadow-sm">
+                              <GripVertical className="w-4 h-4 text-slate-300 group-hover:text-brand-400 cursor-grab" />
+                              <span className="text-sm font-medium text-slate-700 flex-1 truncate">{field}</span>
+                              <div className="flex items-center gap-1">
+                                 <button
+                                    onClick={() => {
+                                       if (idx === 0) return;
+                                       const newFields = [...currentDataset.fields];
+                                       [newFields[idx-1], newFields[idx]] = [newFields[idx], newFields[idx-1]];
+                                       reorderDatasetFields(currentDataset.id, newFields);
+                                    }}
+                                    disabled={idx === 0}
+                                    className="p-1 hover:bg-slate-100 text-slate-400 hover:text-brand-600 rounded disabled:opacity-20"
+                                 >
+                                    <ArrowUp className="w-3.5 h-3.5" />
+                                 </button>
+                                 <button
+                                    onClick={() => {
+                                       if (idx === currentDataset.fields.length - 1) return;
+                                       const newFields = [...currentDataset.fields];
+                                       [newFields[idx+1], newFields[idx]] = [newFields[idx], newFields[idx+1]];
+                                       reorderDatasetFields(currentDataset.id, newFields);
+                                    }}
+                                    disabled={idx === currentDataset.fields.length - 1}
+                                    className="p-1 hover:bg-slate-100 text-slate-400 hover:text-brand-600 rounded disabled:opacity-20"
+                                 >
+                                    <ArrowDown className="w-3.5 h-3.5" />
+                                 </button>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                     <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                        <Button onClick={() => setIsColumnDrawerOpen(false)} variant="primary" className="w-full">Terminer</Button>
+                     </div>
+                  </div>
+               </>
+            )}
 
             {/* CALCULATED FIELDS DRAWER */}
             {isCalcDrawerOpen && (

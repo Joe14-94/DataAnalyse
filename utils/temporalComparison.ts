@@ -167,8 +167,8 @@ export const calculateTemporalComparison = (
   dateColumn: string = 'Date écriture',
   showSubtotals: boolean = false,
   filters: FilterRule[] = []
-): TemporalComparisonResult[] => {
-  const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
+): { results: TemporalComparisonResult[], colTotals: { [sourceId: string]: number } } => {
+  const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType, comparisonMode = 'standard' } = config;
 
   // Préparer les filtres une seule fois
   const preparedFilters = prepareFilters(filters);
@@ -184,10 +184,12 @@ export const calculateTemporalComparison = (
     }
 
     // Filtrer par période et par filtres personnalisés
+    const startMonth = comparisonMode === 'ytd' ? 1 : periodFilter.startMonth;
+
     const filteredData = filterDataByPeriod(
       sourceData,
       dateColumn,
-      periodFilter.startMonth,
+      startMonth,
       periodFilter.endMonth
     ).filter(row => applyPreparedFilters(row, preparedFilters));
 
@@ -267,6 +269,12 @@ export const calculateTemporalComparison = (
       const valB = b.values[sortBy] || 0;
       return sortOrder === 'asc' ? valA - valB : valB - valA;
     }
+  });
+
+  // Calculer les totaux de colonnes (avant les sous-totaux)
+  const colTotals: { [sourceId: string]: number } = {};
+  sources.forEach(source => {
+    colTotals[source.id] = results.reduce((sum, r) => sum + (r.values[source.id] || 0), 0);
   });
 
   // Générer les sous-totaux si on a plusieurs champs de regroupement ET que showSubtotals est activé
@@ -356,10 +364,10 @@ export const calculateTemporalComparison = (
       resultsWithSubtotals.push(result);
     });
 
-    return resultsWithSubtotals;
+    return { results: resultsWithSubtotals, colTotals };
   }
 
-  return results;
+  return { results, colTotals };
 };
 
 /**

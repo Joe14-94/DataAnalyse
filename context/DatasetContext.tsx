@@ -14,6 +14,7 @@ interface DatasetContextType {
   deleteDatasetField: (datasetId: string, fieldName: string) => void;
   renameDatasetField: (datasetId: string, oldName: string, newName: string) => void;
   updateDatasetConfigs: (datasetId: string, configs: Record<string, FieldConfig>) => void;
+  reorderDatasetFields: (datasetId: string, fields: string[]) => void;
   addCalculatedField: (datasetId: string, field: CalculatedField) => void;
   removeCalculatedField: (datasetId: string, fieldId: string) => void;
   updateCalculatedField: (datasetId: string, fieldId: string, updates: Partial<CalculatedField>) => void;

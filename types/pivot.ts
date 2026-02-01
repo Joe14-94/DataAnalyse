@@ -114,6 +114,7 @@ export interface TemporalComparisonConfig {
     startMonth: number;
     endMonth: number;
   };
+  comparisonMode?: 'standard' | 'ytd';
   deltaFormat: 'value' | 'percentage';
   groupByFields: string[];
   valueField: string;

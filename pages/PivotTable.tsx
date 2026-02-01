@@ -10,7 +10,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { SourceManagementModal } from '../components/pivot/SourceManagementModal';
 import { DrilldownModal } from '../components/pivot/DrilldownModal';
 import { FormattingModal } from '../components/pivot/FormattingModal';
-import { QuickChartModal } from '../components/pivot/QuickChartModal';
 import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
@@ -99,7 +98,7 @@ export const PivotTable: React.FC = () => {
 
     // --- HOOKS ---
     const {
-       blendedRows, pivotData, temporalResults, isCalculating, primaryDataset, datasetBatches
+       blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, primaryDataset, datasetBatches
     } = usePivotData({
        sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig, searchTerm
     });
@@ -629,7 +628,7 @@ export const PivotTable: React.FC = () => {
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules }}
+                       {...{ pivotData, isTemporalMode, temporalConfig, temporalColTotals, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules, conditionalRules, showVariations }}
                     />
                 </div>
             </div>
@@ -653,7 +652,7 @@ export const PivotTable: React.FC = () => {
                    selectedBatchId={selectedBatchId}
                 />
             )}
-            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, periodFilter: temporalConfig?.periodFilter || { startMonth: 1, endMonth: 12 }, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
+            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, mode, period) => setTemporalConfig({ ...temporalConfig, sources: s, referenceSourceId: r, comparisonMode: mode, periodFilter: period, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
             <CalculatedFieldModal
                 isOpen={isCalcModalOpen}
                 onClose={() => { setIsCalcModalOpen(false); setEditingCalcField(null); }}
@@ -689,11 +688,13 @@ export const PivotTable: React.FC = () => {
                 onSave={handleSaveSpecificDashboard}
             />
 
-            <QuickChartModal
-                isOpen={isQuickChartModalOpen}
-                onClose={() => setIsQuickChartModalOpen(false)}
-                items={specificDashboardItems}
-            />
+            {isQuickChartModalOpen && (
+                <ChartModal
+                    isOpen={isQuickChartModalOpen}
+                    onClose={() => setIsQuickChartModalOpen(false)}
+                    manualItems={specificDashboardItems}
+                />
+            )}
         </div>
     );
 };
