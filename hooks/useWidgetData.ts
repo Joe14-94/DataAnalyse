@@ -109,7 +109,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
 
             const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
-            const results = calculateTemporalComparison(sourceDataMap, {
+            const { results } = calculateTemporalComparison(sourceDataMap, {
                ...tc,
                groupByFields: pc.rowFields,
                valueField: pc.valField,
@@ -133,7 +133,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                return s.label || `Source ${idx + 1}`;
             });
 
-            const displayRows = results.map(r => {
+            const displayRows = results.map((r: any) => {
                const keys = r.groupLabel.split('\x1F');
 
                // Construire les métriques en s'assurant que toutes les sources sont représentées

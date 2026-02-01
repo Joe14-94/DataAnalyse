@@ -171,7 +171,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     if (!chartContainerRef.current) return;
 
     const chartHtml = chartContainerRef.current.innerHTML;
-    const title = manualItems ? 'Graphique de sélection' : `Graphique TCD - ${pivotConfig?.valField}`;
+    const title = manualItems ? 'Graphique de sélection' : `Graphique TCD - ${pivotConfig?.valField || ''}`;
     const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -193,8 +193,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     <div class="header">
       <h1>${title}</h1>
       <div class="metadata">
-        <p>Champ: ${pivotConfig.valField}</p>
-        <p>Agrégation: ${pivotConfig.aggType}</p>
+        <p>Champ: ${pivotConfig?.valField || ''}</p>
+        <p>Agrégation: ${pivotConfig?.aggType || ''}</p>
         <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
       </div>
     </div>
@@ -253,10 +253,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       const imgWidth = 210 - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addText(manualItems ? 'Graphique de sélection' : `Graphique TCD - ${pivotConfig?.valField}`, 10, 15);
+      pdf.text(manualItems ? 'Graphique de sélection' : `Graphique TCD - ${pivotConfig?.valField || ''}`, 10, 15);
       pdf.setFontSize(10);
       if (!manualItems && pivotConfig) {
-        pdf.addText(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+        pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
       }
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -276,13 +276,13 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     // Ajouter une feuille de métadonnées
     const metadata = [
       ['Métadonnées du graphique'],
-      ['Champ valeur', pivotConfig.valField],
-      ['Type d\'agrégation', pivotConfig.aggType],
+      ['Champ valeur', pivotConfig?.valField || ''],
+      ['Type d\'agrégation', pivotConfig?.aggType || ''],
       ['Type de graphique', selectedChartType],
       ['Date d\'export', new Date().toLocaleString('fr-FR')],
       [],
-      ['Champs de ligne', pivotConfig.rowFields.join(', ')],
-      ['Champs de colonne', pivotConfig.colFields.join(', ')],
+      ['Champs de ligne', (pivotConfig?.rowFields || []).join(', ')],
+      ['Champs de colonne', (pivotConfig?.colFields || []).join(', ')],
       ['Nombre de lignes', chartData.length]
     ];
 
@@ -295,6 +295,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
   const handleCreateWidget = () => {
     try {
+      if (!manualItems && !pivotConfig) return;
+
       if (!currentDatasetId) {
         console.error('Aucun dataset courant sélectionné');
         return;
