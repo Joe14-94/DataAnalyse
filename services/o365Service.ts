@@ -27,7 +27,14 @@ import type { DriveItem } from '@microsoft/microsoft-graph-types';
 import type { AppState, SharePackage, ShareableContentType, ShareLinkScope, ShareMetadata, SharePermission } from '../types';
 
 // Configuration MSAL
-// IMPORTANT: Ces valeurs doivent être configurées dans les variables d'environnement
+// IMPORTANT: Le Client ID est configuré UNE FOIS par le DÉVELOPPEUR DataScope
+// Pas par chaque utilisateur final !
+//
+// En développement : Configurer dans .env.local (fichier non commité)
+// En production : Variable d'environnement au moment du build (Vite)
+//
+// Les utilisateurs finaux n'ont RIEN à configurer. Ils cliquent juste
+// "Se connecter à Microsoft 365" et acceptent les permissions OAuth.
 const getClientId = (): string => {
   // @ts-ignore - Vite env types
   return import.meta.env?.VITE_O365_CLIENT_ID || 'YOUR_CLIENT_ID_HERE';
@@ -35,10 +42,16 @@ const getClientId = (): string => {
 
 const MSAL_CONFIG = {
   auth: {
-    // Client ID de l'application Azure AD (à configurer)
-    // Pour le POC, utiliser une valeur par défaut ou demander configuration
+    // Client ID UNIQUE de l'application DataScope
+    // Créé UNE FOIS par le développeur dans Azure AD App Registration
+    // Partagé par TOUS les utilisateurs (comme Google OAuth Client ID)
     clientId: getClientId(),
+
+    // Authority "common" = Supporte tous les types de comptes Microsoft
+    // - Comptes organisationnels (Azure AD)
+    // - Comptes Microsoft personnels (Outlook.com, Hotmail, etc.)
     authority: 'https://login.microsoftonline.com/common',
+
     redirectUri: window.location.origin,
     postLogoutRedirectUri: window.location.origin,
   },
@@ -49,9 +62,10 @@ const MSAL_CONFIG = {
 };
 
 // Permissions Microsoft Graph nécessaires
+// Chaque utilisateur accepte ces permissions individuellement (popup OAuth)
 const LOGIN_SCOPES = [
-  'User.Read',           // Lire le profil utilisateur
-  'Files.ReadWrite',     // Accès OneDrive en lecture/écriture
+  'User.Read',           // Lire le profil utilisateur (nom, email)
+  'Files.ReadWrite',     // Accès OneDrive en lecture/écriture (UNIQUEMENT du user)
 ];
 
 // Nom du dossier dans OneDrive pour stocker les backups
