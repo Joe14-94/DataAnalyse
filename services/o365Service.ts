@@ -24,7 +24,7 @@ import {
 } from '@azure/msal-browser';
 import { Client } from '@microsoft/microsoft-graph-client';
 import type { DriveItem } from '@microsoft/microsoft-graph-types';
-import type { AppState } from '../types';
+import type { AppState, SharePackage, ShareableContentType, ShareLinkScope, ShareMetadata, SharePermission } from '../types';
 
 // Configuration MSAL
 // IMPORTANT: Ces valeurs doivent être configurées dans les variables d'environnement
@@ -401,6 +401,150 @@ class O365Service {
     } catch (error) {
       console.error('[O365Service] Create share link failed:', error);
       throw new Error('Échec de la création du lien de partage');
+    }
+  }
+
+  /**
+   * Crée et partage du contenu (Dashboard, Analyse, etc.)
+   * Phase 1 - Partage collaboratif
+   */
+  async shareContent<T = any>(
+    type: ShareableContentType,
+    name: string,
+    content: T,
+    options: {
+      includeData?: boolean;
+      scope?: ShareLinkScope;
+      description?: string;
+      permission?: SharePermission;
+    } = {}
+  ): Promise<ShareMetadata> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Utilisateur non trouvé');
+    }
+
+    try {
+      // 1. Créer le package de partage
+      const sharePackage: SharePackage<T> = {
+        type,
+        name,
+        description: options.description,
+        sharedBy: currentUser.email,
+        sharedAt: new Date().toISOString(),
+        version: '2026-01-31-01', // Version de l'app
+        content,
+        includeData: options.includeData ?? true,
+        isSnapshot: true, // Phase 1 : lecture seule
+      };
+
+      // 2. Générer le nom du fichier
+      const timestamp = new Date().toISOString().split('T')[0];
+      const sanitizedName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const fileName = `shared_${type}_${sanitizedName}_${timestamp}.json`;
+
+      // 3. Upload vers OneDrive (dossier DataScope_Backups)
+      await this.ensureBackupFolder();
+
+      const jsonContent = JSON.stringify(sharePackage, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+
+      const uploadResponse = await this.graphClient
+        .api(`/me/drive/root:/${BACKUP_FOLDER}/${fileName}:/content`)
+        .put(blob);
+
+      const fileId = uploadResponse.id;
+
+      // 4. Créer le lien de partage
+      const shareLink = await this.createShareLink(
+        fileId,
+        options.scope ?? 'organization'
+      );
+
+      // 5. Retourner les métadonnées
+      const shareMetadata: ShareMetadata = {
+        shareId: `share_${Date.now()}`,
+        contentType: type,
+        contentName: name,
+        fileId,
+        fileName,
+        shareLink,
+        scope: options.scope ?? 'organization',
+        permission: options.permission ?? 'read',
+        createdAt: new Date().toISOString(),
+      };
+
+      return shareMetadata;
+    } catch (error) {
+      console.error('[O365Service] Share content failed:', error);
+      throw new Error('Échec du partage du contenu');
+    }
+  }
+
+  /**
+   * Charge du contenu partagé depuis un fichier OneDrive
+   * Supporte à la fois fileId et downloadUrl
+   */
+  async loadSharedContent<T = any>(
+    fileIdOrUrl: string
+  ): Promise<SharePackage<T>> {
+    if (!this.graphClient) {
+      throw new Error('Non authentifié');
+    }
+
+    try {
+      let content: string;
+
+      // Vérifier si c'est une URL de téléchargement OneDrive
+      if (fileIdOrUrl.startsWith('http')) {
+        // Télécharger depuis URL
+        const response = await fetch(fileIdOrUrl);
+        if (!response.ok) {
+          throw new Error('Impossible de télécharger le fichier');
+        }
+        content = await response.text();
+      } else {
+        // Utiliser l'API Graph avec fileId
+        const response = await this.graphClient
+          .api(`/me/drive/items/${fileIdOrUrl}/content`)
+          .get();
+        content = typeof response === 'string' ? response : JSON.stringify(response);
+      }
+
+      // Parser le JSON
+      const sharePackage: SharePackage<T> = JSON.parse(content);
+
+      // Valider que c'est bien un SharePackage
+      if (!sharePackage.type || !sharePackage.sharedBy || !sharePackage.content) {
+        throw new Error('Format de fichier invalide');
+      }
+
+      return sharePackage;
+    } catch (error) {
+      console.error('[O365Service] Load shared content failed:', error);
+      throw new Error('Échec du chargement du contenu partagé');
+    }
+  }
+
+  /**
+   * Vérifie si un fichier JSON est un SharePackage
+   */
+  async isSharePackage(jsonContent: string): Promise<boolean> {
+    try {
+      const parsed = JSON.parse(jsonContent);
+      return (
+        parsed.type &&
+        parsed.sharedBy &&
+        parsed.sharedAt &&
+        parsed.content !== undefined &&
+        parsed.isSnapshot !== undefined
+      );
+    } catch {
+      return false;
     }
   }
 
