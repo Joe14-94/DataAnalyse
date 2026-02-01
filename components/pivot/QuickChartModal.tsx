@@ -4,7 +4,8 @@ import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info, Downloa
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as ReLineChart, Line,
-  Treemap, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  Treemap, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  LabelList
 } from 'recharts';
 import { SpecificDashboardItem } from '../../types';
 import { Button } from '../ui/Button';
@@ -58,21 +59,6 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
 
     let data = Array.from(groups.values());
 
-    // Normalisation pour les graphiques en 100%
-    if (chartType === 'percent-bar' || chartType === 'percent-column') {
-      data = data.map(point => {
-        const newPoint = { ...point };
-        const keys = Object.keys(point).filter(k => !['name', 'value', 'size'].includes(k));
-        const total = keys.reduce((sum, k) => sum + Math.abs(point[k] || 0), 0);
-
-        if (total > 0) {
-          keys.forEach(k => {
-            newPoint[k] = (Math.abs(point[k] || 0) / total) * 100;
-          });
-        }
-        return newPoint;
-      });
-    }
 
     return data;
   }, [items, chartType]);
@@ -261,14 +247,21 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
 
                 if (chartType === 'column' || chartType === 'stacked-column' || chartType === 'percent-column') {
                    return (
-                      <BarChart data={chartData} margin={margin}>
+                      <BarChart data={chartData} margin={margin} stackOffset={isPercent ? 'expand' : undefined}>
                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} interval={0} />
-                         <YAxis stroke="#94a3b8" fontSize={10} domain={isPercent ? [0, 100] : [0, 'auto']} hide={isPercent} />
+                         <YAxis
+                           stroke="#94a3b8"
+                           fontSize={10}
+                           domain={isPercent ? [0, 1] : [0, 'auto']}
+                           tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined}
+                         />
                          <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
                          {seriesNames.length > 1 || isStacked ? (
                             seriesNames.map((series, idx) => (
-                               <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0} />
+                               <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0}>
+                                 {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? val.toLocaleString('fr-FR') : ''} style={{ fill: '#fff', fontSize: '9px', fontWeight: 'bold', pointerEvents: 'none' }} />}
+                               </Bar>
                             ))
                          ) : (
                             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
@@ -284,14 +277,22 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
 
                 if (chartType === 'bar' || chartType === 'stacked-bar' || chartType === 'percent-bar') {
                    return (
-                      <BarChart data={chartData} layout="vertical" margin={{ ...margin, left: 100 }}>
+                      <BarChart data={chartData} layout="vertical" margin={{ ...margin, left: 100 }} stackOffset={isPercent ? 'expand' : undefined}>
                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                         <XAxis type="number" stroke="#94a3b8" fontSize={10} domain={isPercent ? [0, 100] : [0, 'auto']} hide={isPercent} />
+                         <XAxis
+                           type="number"
+                           stroke="#94a3b8"
+                           fontSize={10}
+                           domain={isPercent ? [0, 1] : [0, 'auto']}
+                           tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined}
+                         />
                          <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 9 }} stroke="#94a3b8" />
                          <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
                          {seriesNames.length > 1 || isStacked ? (
                             seriesNames.map((series, idx) => (
-                               <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0} />
+                               <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0}>
+                                 {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? val.toLocaleString('fr-FR') : ''} style={{ fill: '#fff', fontSize: '9px', fontWeight: 'bold', pointerEvents: 'none' }} />}
+                               </Bar>
                             ))
                          ) : (
                             <Bar dataKey="value" radius={[0, 4, 4, 0]}>

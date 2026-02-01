@@ -72,7 +72,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    if (temporalColTotals && temporalConfig) {
       return (
          <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
-            <table className="min-w-full divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
+            <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                <tbody className="font-bold">
                   <tr>
                      {rowFields.map((field, idx) => (
@@ -132,7 +132,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
 
    return (
       <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
-         <table className="min-w-full divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
+         <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
             <tbody className="font-bold">
                <tr>
                   {rowFields.map((field, idx) => (
