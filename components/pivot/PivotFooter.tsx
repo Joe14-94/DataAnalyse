@@ -3,7 +3,7 @@ import React from 'react';
 import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
-import { formatCurrency } from '../../utils/temporalComparison';
+import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
@@ -19,12 +19,13 @@ interface PivotFooterProps {
    datasets: Dataset[];
    valFormatting: any;
    showTotalCol: boolean;
+   showVariations?: boolean;
    styleRules?: PivotStyleRule[];
    conditionalRules?: ConditionalFormattingRule[];
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, styleRules = [], conditionalRules = []
+   pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations = false, styleRules = [], conditionalRules = []
 }) => {
    if (!pivotData && !temporalColTotals) return null;
 
@@ -71,7 +72,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    if (temporalColTotals && temporalConfig) {
       return (
          <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
-            <table className="min-w-full divide-y divide-slate-200 border-collapse w-full" style={{ tableLayout: 'fixed' }}>
+            <table className="min-w-full divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                <tbody className="font-bold">
                   <tr>
                      {rowFields.map((field, idx) => (
@@ -91,19 +92,35 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                      {temporalConfig.sources.map((source: any) => {
                         const val = temporalColTotals[source.id] || 0;
                         const customStyle = getCellStyle([], source.id, val, source.label, styleRules, conditionalRules, 'grandTotal');
+
+                        const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId] || 0;
+                        const deltaValue = val - referenceTotal;
+                        const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
+
                         return (
-                           <td
-                              key={source.id}
-                              className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
-                              style={{
-                                 ...customStyle,
-                                 width: `${columnWidths[source.id] || 120}px`,
-                                 minWidth: `${columnWidths[source.id] || 120}px`,
-                                 maxWidth: `${columnWidths[source.id] || 120}px`
-                              }}
-                           >
-                              {formatCurrency(val)}
-                           </td>
+                           <React.Fragment key={source.id}>
+                              <td
+                                 className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
+                                 style={{
+                                    ...customStyle,
+                                    width: `${columnWidths[source.id] || 120}px`,
+                                    minWidth: `${columnWidths[source.id] || 120}px`,
+                                    maxWidth: `${columnWidths[source.id] || 120}px`
+                                 }}
+                              >
+                                 {formatCurrency(val)}
+                              </td>
+                              {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                 <td
+                                    className={`px-2 py-2 text-right text-[10px] font-bold border-r border-slate-200 truncate ${deltaValue > 0 ? 'text-green-600' : deltaValue < 0 ? 'text-red-600' : 'text-slate-400'}`}
+                                    style={{ width: 60, minWidth: 60, maxWidth: 60 }}
+                                 >
+                                    {temporalConfig.deltaFormat === 'percentage'
+                                       ? (deltaPercentage !== 0 ? formatPercentage(deltaPercentage) : '-')
+                                       : (deltaValue !== 0 ? formatCurrency(deltaValue) : '-')}
+                                 </td>
+                              )}
+                           </React.Fragment>
                         );
                      })}
                   </tr>
@@ -115,7 +132,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
 
    return (
       <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
-         <table className="min-w-full divide-y divide-slate-200 border-collapse w-full" style={{ tableLayout: 'fixed' }}>
+         <table className="min-w-full divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
             <tbody className="font-bold">
                <tr>
                   {rowFields.map((field, idx) => (
