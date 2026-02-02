@@ -64,8 +64,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          const datasetId = widget.config.source?.datasetId;
          const dataset = allDatasets.find(d => d.id === datasetId);
 
-         // In temporal mode, we might allow missing dataset if we have enough info in temporalComparison
-         if (!dataset && widget.config.source?.mode !== 'temporal') return { error: 'Jeu de données introuvable' };
+         if (!dataset) return { error: 'Jeu de données introuvable' };
 
          const dsBatches = getEffectiveBatches(batches, datasetId, globalDateRange);
          if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
@@ -89,7 +88,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          }
 
          // Appliquer les filtres du TCD
-         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset!);
+         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
 
          let pivotResult: any = null;
 
@@ -126,11 +125,11 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                      });
                   }
                   // Appliquer les filtres TCD sur chaque source
-                  sourceDataMap.set(source.id, applyPivotFilters(rows, pc.filters, dataset!));
+                  sourceDataMap.set(source.id, applyPivotFilters(rows, pc.filters, dataset));
                }
             });
 
-            const dateColumn = dataset ? (detectDateColumn(dataset.fields) || 'Date écriture') : 'Date écriture';
+            const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
             const { results } = calculateTemporalComparison(sourceDataMap, {
                ...tc,
                groupByFields: pc.rowFields,
@@ -206,7 +205,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          }
 
          // Détection robuste du nombre de séries (à travers tous les points de données)
-         const allKeys = chartData ? Array.from(new Set(chartData.flatMap(d => Object.keys(d).filter(k => k !== 'name')))) : [];
+         const allKeys = chartData ? Array.from(new Set(chartData.flatMap(d => Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')))) : [];
          const seriesCount = allKeys.length || 1;
          const pointCount = chartData?.length || 0;
 
