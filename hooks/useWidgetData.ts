@@ -4,7 +4,7 @@ import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
 import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
 import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
-import { transformPivotToChartData, transformPivotToTreemapData } from '../logic/pivotToChart';
+import { transformPivotToChartData, transformPivotToTreemapData, transformPivotToSunburstData, transformPivotToHierarchicalTreemap, getChartColors, generateGradient } from '../logic/pivotToChart';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
 import { applyPivotFilters, getEffectiveBatches, getChartColorsForWidget } from '../logic/widgetEngine';
 
@@ -188,28 +188,67 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          if (!pivotResult) return { error: 'Erreur lors du calcul du TCD' };
 
-         let chartData;
          const fullPivotConfig = { rows: workingRows, ...pc } as PivotConfig;
-         if (pivotChart.chartType === 'treemap') {
-            chartData = transformPivotToTreemapData(pivotResult, fullPivotConfig, pivotChart.hierarchyLevel);
-         } else {
-            chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
-               chartType: pivotChart.chartType,
-               hierarchyLevel: pivotChart.hierarchyLevel,
+
+         // Calculer les couleurs de base pour les types hiérarchiques
+         const hierarchicalBaseColors = (() => {
+            if (pivotChart.colorMode === 'single') return Array(9).fill(pivotChart.singleColor || '#3b82f6');
+            if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', 9);
+            return getChartColors(9, pivotChart.colorPalette || 'default');
+         })();
+
+         // Sunburst: retourner les données spécifiques (rings)
+         if (pivotChart.chartType === 'sunburst') {
+            const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, hierarchicalBaseColors, {
                limit: pivotChart.limit,
-               excludeSubtotals: true,
-               sortBy: pivotChart.sortBy || 'value',
-               sortOrder: pivotChart.sortOrder || 'desc',
                showOthers: (pivotChart.limit || 0) > 0
             });
+            return {
+               data: [],
+               sunburstData: sbData,
+               colors: hierarchicalBaseColors,
+               unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
+               seriesName: pc.valField,
+               seriesCount: sbData.rings.length,
+               isPivot: true
+            };
          }
+
+         // Treemap hierarchique
+         if (pivotChart.chartType === 'treemap') {
+            const treeData = transformPivotToHierarchicalTreemap(pivotResult, fullPivotConfig, hierarchicalBaseColors, {
+               limit: pivotChart.limit,
+               showOthers: (pivotChart.limit || 0) > 0
+            });
+            const flatData = transformPivotToTreemapData(pivotResult, fullPivotConfig, pivotChart.hierarchyLevel);
+            return {
+               data: flatData,
+               hierarchicalData: treeData,
+               colors: getChartColorsForWidget(pivotChart, flatData?.length || 10),
+               unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
+               seriesName: pc.valField,
+               seriesCount: 1,
+               isPivot: true
+            };
+         }
+
+         let chartData;
+         chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
+            chartType: pivotChart.chartType,
+            hierarchyLevel: pivotChart.hierarchyLevel,
+            limit: pivotChart.limit,
+            excludeSubtotals: true,
+            sortBy: pivotChart.sortBy || 'value',
+            sortOrder: pivotChart.sortOrder || 'desc',
+            showOthers: (pivotChart.limit || 0) > 0
+         });
 
          // Détection robuste du nombre de séries (à travers tous les points de données)
          const allKeys = chartData ? Array.from(new Set(chartData.flatMap(d => Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')))) : [];
          const seriesCount = allKeys.length || 1;
          const pointCount = chartData?.length || 0;
 
-         const colorCount = (pivotChart.chartType === 'pie' || pivotChart.chartType === 'donut' || pivotChart.chartType === 'treemap')
+         const colorCount = (pivotChart.chartType === 'pie' || pivotChart.chartType === 'donut')
             ? pointCount
             : (seriesCount > 1 ? seriesCount : pointCount);
 

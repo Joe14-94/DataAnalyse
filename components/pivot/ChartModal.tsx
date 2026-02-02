@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { X, BarChart3, TrendingUp, Download, ExternalLink, PlusSquare, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { X, BarChart3, TrendingUp, Download, ExternalLink, PlusSquare, ChevronDown, ChevronRight, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
@@ -15,8 +15,12 @@ import {
   ColorPalette,
   ColorMode,
   ChartDataPoint,
+  SunburstData,
+  SunburstRingItem,
   transformPivotToChartData,
   transformPivotToTreemapData,
+  transformPivotToSunburstData,
+  transformPivotToHierarchicalTreemap,
   generateChartMetadata,
   getChartColors,
   formatChartValue,
@@ -87,6 +91,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const [gradientStart, setGradientStart] = useState<string>('#0066cc'); // Bleu
   const [gradientEnd, setGradientEnd] = useState<string>('#e63946'); // Rouge
 
+  // Etat pour le drill-down treemap
+  const [treemapDrillPath, setTreemapDrillPath] = useState<string[]>([]);
+
   // Transformer les données
   const chartData = useMemo(() => {
     console.log('=== Transformation des données pour graphique ===');
@@ -97,6 +104,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     if (selectedChartType === 'treemap') {
       data = transformPivotToTreemapData(pivotData, pivotConfig, hierarchyLevel);
       console.log('Données treemap transformées:', data);
+    } else if (selectedChartType === 'sunburst') {
+      // Sunburst/treemap hiérarchique - pas de transformation ici, traité séparément
+      data = [];
     } else {
       data = transformPivotToChartData(pivotData, pivotConfig, {
         chartType: selectedChartType,
@@ -128,6 +138,81 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       return getChartColors(count, colorPalette);
     }
   }, [colorMode, colorPalette, singleColor, gradientStart, gradientEnd, metadata.seriesNames.length, chartData?.length]);
+
+  // Données sunburst (calculées séparément car structure différente)
+  const sunburstData = useMemo<SunburstData | null>(() => {
+    if (selectedChartType !== 'sunburst') return null;
+    const baseColors = colorMode === 'single'
+      ? Array(9).fill(singleColor)
+      : colorMode === 'gradient'
+        ? generateGradient(gradientStart, gradientEnd, 9)
+        : getChartColors(9, colorPalette);
+    return transformPivotToSunburstData(pivotData, pivotConfig, baseColors, {
+      limit: limit > 0 ? limit : undefined,
+      showOthers: limit > 0
+    });
+  }, [pivotData, pivotConfig, selectedChartType, limit, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
+  // Données treemap hiérarchique
+  const hierarchicalTreemapData = useMemo(() => {
+    if (selectedChartType !== 'treemap') return null;
+    const baseColors = colorMode === 'single'
+      ? Array(9).fill(singleColor)
+      : colorMode === 'gradient'
+        ? generateGradient(gradientStart, gradientEnd, 9)
+        : getChartColors(9, colorPalette);
+    return transformPivotToHierarchicalTreemap(pivotData, pivotConfig, baseColors, {
+      limit: limit > 0 ? limit : undefined,
+      showOthers: limit > 0
+    });
+  }, [pivotData, pivotConfig, selectedChartType, limit, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
+  // Données treemap après drill-down
+  const currentTreemapData = useMemo(() => {
+    if (!hierarchicalTreemapData) return null;
+    if (treemapDrillPath.length === 0) return hierarchicalTreemapData;
+
+    // Naviguer dans l'arbre selon le chemin de drill-down
+    let current: any[] = hierarchicalTreemapData;
+    for (const segment of treemapDrillPath) {
+      const found = current.find((n: any) => n.name === segment);
+      if (found?.children) {
+        current = found.children;
+      } else {
+        break;
+      }
+    }
+    return current;
+  }, [hierarchicalTreemapData, treemapDrillPath]);
+
+  // Handlers treemap drill-down
+  const handleTreemapDrill = useCallback((name: string) => {
+    // Vérifier que ce noeud a des enfants avant de drill
+    const current = treemapDrillPath.length === 0
+      ? hierarchicalTreemapData
+      : (() => {
+          let data: any[] = hierarchicalTreemapData || [];
+          for (const seg of treemapDrillPath) {
+            const found = data.find((n: any) => n.name === seg);
+            if (found?.children) data = found.children;
+          }
+          return data;
+        })();
+    const node = current?.find((n: any) => n.name === name);
+    if (node?.children && node.children.length > 0) {
+      setTreemapDrillPath(prev => [...prev, name]);
+    }
+  }, [hierarchicalTreemapData, treemapDrillPath]);
+
+  const handleTreemapBreadcrumb = useCallback((index: number) => {
+    setTreemapDrillPath(prev => prev.slice(0, index));
+  }, []);
+
+  // Reset drill path quand on change de type
+  const handleChartTypeChange = useCallback((type: ChartType) => {
+    setSelectedChartType(type);
+    setTreemapDrillPath([]);
+  }, []);
 
   // Export handlers
   const handleExportHTML = () => {
@@ -353,6 +438,56 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     );
   };
 
+  // Custom tooltip pour sunburst (affiche le chemin hierarchique + %)
+  const SunburstTooltip = ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    const data = payload[0].payload as SunburstRingItem;
+    if (!data || !data.path) return null;
+
+    const pctTotal = data.grandTotal > 0 ? ((data.value / data.grandTotal) * 100).toFixed(1) : '0';
+    const pctParent = data.parentTotal > 0 ? ((data.value / data.parentTotal) * 100).toFixed(1) : '0';
+
+    return (
+      <div style={tooltipStyle}>
+        <p className="font-semibold text-slate-800 mb-1 text-xs">{data.path.join(' > ')}</p>
+        <p className="text-xs text-slate-700">
+          Valeur: <span className="font-bold">{formatChartValue(data.value, pivotConfig)}</span>
+        </p>
+        <p className="text-xs text-slate-500">
+          {pctTotal}% du total
+          {data.parentName !== 'Total' && ` | ${pctParent}% de ${data.parentName}`}
+        </p>
+      </div>
+    );
+  };
+
+  // Custom tooltip pour treemap hierarchique
+  const TreemapTooltip = ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    const data = payload[0].payload;
+    const path = data.path || (treemapDrillPath.length > 0 ? [...treemapDrillPath, data.name] : [data.name]);
+    const value = data.value || data.size || 0;
+
+    return (
+      <div style={tooltipStyle}>
+        <p className="font-semibold text-slate-800 mb-1 text-xs">{path.join(' > ')}</p>
+        <p className="text-xs text-slate-700">
+          Valeur: <span className="font-bold">{formatChartValue(value, pivotConfig)}</span>
+        </p>
+        {data.children && (
+          <p className="text-xs text-brand-600 mt-1">Cliquer pour explorer</p>
+        )}
+      </div>
+    );
+  };
+
+  // Determine si on a des données à afficher
+  const hasData = selectedChartType === 'sunburst'
+    ? (sunburstData && sunburstData.rings.length > 0 && sunburstData.totalValue > 0)
+    : selectedChartType === 'treemap'
+      ? (currentTreemapData && currentTreemapData.length > 0)
+      : (chartData && chartData.length > 0);
+
   // Rendu du graphique selon le type
   const renderChart = () => {
     console.log('=== renderChart appelé ===');
@@ -575,20 +710,102 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           </ResponsiveContainer>
         );
 
-      case 'treemap': {
+      case 'sunburst': {
+        if (!sunburstData || sunburstData.rings.length === 0) {
+          return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée hierarchique</div>;
+        }
+
+        const numRings = sunburstData.rings.length;
+        const maxOuterRadius = 90; // % du conteneur
+        const gap = 2; // % gap entre anneaux
+        const ringWidth = (maxOuterRadius - gap * (numRings - 1)) / numRings;
+
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <Treemap
-              data={chartData}
-              dataKey="size"
-              aspectRatio={4 / 3}
-              stroke="#fff"
-              fill="#60a5fa"
-              content={<TreemapContent colors={colors} />}
-            >
-              <Tooltip content={<CustomTooltip />} />
-            </Treemap>
+            <PieChart>
+              {sunburstData.rings.map((ring, ringIdx) => {
+                const innerR = ringIdx === 0 ? 0 : (ringIdx * (ringWidth + gap));
+                const outerR = innerR + ringWidth;
+                const showLabels = ringIdx === 0 && ring.length <= 8;
+
+                return (
+                  <Pie
+                    key={`ring-${ringIdx}`}
+                    data={ring}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={`${innerR}%`}
+                    outerRadius={`${outerR}%`}
+                    paddingAngle={ringIdx === 0 ? 2 : 0.5}
+                    stroke="#fff"
+                    strokeWidth={ringIdx === 0 ? 2 : 1}
+                    labelLine={showLabels}
+                    label={showLabels ? ({ name, percent }: any) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)` : false}
+                    isAnimationActive={true}
+                    animationDuration={600}
+                  >
+                    {ring.map((entry, entryIdx) => (
+                      <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                );
+              })}
+              <Tooltip content={<SunburstTooltip />} />
+            </PieChart>
           </ResponsiveContainer>
+        );
+      }
+
+      case 'treemap': {
+        if (!currentTreemapData || currentTreemapData.length === 0) {
+          return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée</div>;
+        }
+
+        // Vérifier si on a des données hiérarchiques (avec children)
+        const isHierarchical = currentTreemapData.some((d: any) => d.children && d.children.length > 0);
+
+        return (
+          <div className="h-full flex flex-col">
+            {/* Breadcrumb pour drill-down */}
+            {treemapDrillPath.length > 0 && (
+              <div className="flex items-center gap-1 mb-2 px-1 text-xs">
+                <button
+                  onClick={() => handleTreemapBreadcrumb(0)}
+                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-brand-50 text-brand-600 font-medium transition-colors"
+                >
+                  <Home className="w-3 h-3" />
+                  Racine
+                </button>
+                {treemapDrillPath.map((segment, idx) => (
+                  <React.Fragment key={idx}>
+                    <ChevronRight className="w-3 h-3 text-slate-400" />
+                    <button
+                      onClick={() => handleTreemapBreadcrumb(idx + 1)}
+                      className={`px-2 py-1 rounded transition-colors ${idx === treemapDrillPath.length - 1 ? 'bg-brand-100 text-brand-700 font-semibold' : 'hover:bg-brand-50 text-brand-600'}`}
+                    >
+                      {segment}
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+            <div className="flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <Treemap
+                  data={currentTreemapData}
+                  dataKey="size"
+                  aspectRatio={4 / 3}
+                  stroke="#fff"
+                  fill="#60a5fa"
+                  content={<TreemapContent colors={colors} onClick={isHierarchical ? handleTreemapDrill : undefined} />}
+                >
+                  <Tooltip content={isHierarchical ? <TreemapTooltip /> : <CustomTooltip />} />
+                </Treemap>
+              </ResponsiveContainer>
+            </div>
+          </div>
         );
       }
 
@@ -596,7 +813,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         return <div className="flex items-center justify-center h-full text-slate-400">Type de graphique non supporté</div>;
       }
     } catch (error) {
-      console.error('❌ Erreur dans renderChart:', error);
+      console.error('Erreur dans renderChart:', error);
       return (
         <div className="flex flex-col items-center justify-center h-full">
           <div className="text-red-500 text-center">
@@ -629,8 +846,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
   const chartTypeOptions: ChartType[] = [
     'column', 'bar', 'stacked-column', 'stacked-bar', 'percent-column', 'percent-bar',
-    'line', 'area', 'stacked-area', 'pie', 'donut', 'radar', 'treemap'
+    'line', 'area', 'stacked-area', 'pie', 'donut', 'radar', 'sunburst', 'treemap'
   ];
+
+  const isHierarchicalType = selectedChartType === 'sunburst' || selectedChartType === 'treemap';
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -645,7 +864,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               <h2 className="font-bold text-slate-800">Visualisation graphique</h2>
               <p className="text-xs text-slate-500">
                 {metadata.totalDataPoints} point{metadata.totalDataPoints > 1 ? 's' : ''} de données
-                {metadata.isMultiSeries && ` • ${metadata.seriesNames.length} séries`}
+                {metadata.isMultiSeries && ` | ${metadata.seriesNames.length} séries`}
+                {sunburstData && selectedChartType === 'sunburst' && ` | ${sunburstData.rings.length} niveaux`}
               </p>
             </div>
           </div>
@@ -673,7 +893,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             <label className="text-xs font-semibold text-slate-600">Type:</label>
             <select
               value={selectedChartType}
-              onChange={(e) => setSelectedChartType(e.target.value as ChartType)}
+              onChange={(e) => handleChartTypeChange(e.target.value as ChartType)}
               className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
             >
               {chartTypeOptions.map((type) => {
@@ -688,26 +908,26 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             </select>
           </div>
 
-          {/* Top N */}
-          {selectedChartType !== 'treemap' && (
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-slate-600">Limiter à:</label>
-              <select
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
-              >
-                <option value={0}>Tout afficher</option>
-                <option value={5}>Top 5</option>
-                <option value={10}>Top 10</option>
-                <option value={15}>Top 15</option>
-                <option value={20}>Top 20</option>
-              </select>
-            </div>
-          )}
+          {/* Top N (pour sunburst/treemap : limite les categories de premier niveau) */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-600">
+              {isHierarchicalType ? 'Limiter (Niv.1):' : 'Limiter à:'}
+            </label>
+            <select
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+            >
+              <option value={0}>Tout afficher</option>
+              <option value={5}>Top 5</option>
+              <option value={10}>Top 10</option>
+              <option value={15}>Top 15</option>
+              <option value={20}>Top 20</option>
+            </select>
+          </div>
 
-          {/* Niveau de hiérarchie */}
-          {availableLevels > 1 && (
+          {/* Niveau de hiérarchie (seulement pour les types non-hierarchiques) */}
+          {availableLevels > 1 && !isHierarchicalType && (
             <div className="flex items-center gap-2">
               <label className="text-xs font-semibold text-slate-600">Niveau:</label>
               <select
@@ -725,8 +945,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             </div>
           )}
 
-          {/* Tri */}
-          {selectedChartType !== 'treemap' && selectedChartType !== 'pie' && selectedChartType !== 'donut' && (
+          {/* Tri (masqué pour sunburst/treemap/pie/donut) */}
+          {!isHierarchicalType && selectedChartType !== 'pie' && selectedChartType !== 'donut' && (
             <>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-semibold text-slate-600">Trier par:</label>
@@ -853,7 +1073,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         {/* Chart */}
         <div className="p-6 overflow-hidden" style={{ height: '600px' }}>
           <div className="h-full w-full" ref={chartContainerRef}>
-            {!chartData || chartData.length === 0 ? (
+            {!hasData ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="text-slate-400 text-center">
                   <p className="text-lg font-semibold mb-2">Aucune donnée à afficher</p>
