@@ -201,7 +201,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
    } = props;
 
    return (
-      <div ref={panelRef} className="xl:w-72 flex-shrink-0 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
+      <div ref={panelRef} className="w-72 flex-shrink-0 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
          {/* 1. DATA SOURCES STACK */}
          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
             <div className="p-2 bg-gradient-to-r from-brand-50 to-indigo-50 border-b border-brand-200">
