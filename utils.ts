@@ -326,16 +326,27 @@ export const getDaysDifference = (dateStr: string): number => {
  */
 const CLEAN_NUM_REGEX = /[^0-9.-]/g;
 const UNIT_REGEX_CACHE = new Map<string, RegExp>();
+// BOLT OPTIMIZATION: Global cache for smart number parsing to avoid redundant regex/string ops
+const SMART_NUMBER_CACHE = new Map<string, number>();
+const MAX_SMART_NUMBER_CACHE_SIZE = 10000;
 
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number') return val;
 
+  // BOLT OPTIMIZATION: Result caching for repeating values
+  const cacheKey = unit ? `${unit}:${val}` : String(val);
+  const cached = SMART_NUMBER_CACHE.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   let str = String(val);
 
   // BOLT OPTIMIZATION: Fast path for simple numeric strings
   if (!unit && /^-?\d+(\.\d+)?$/.test(str)) {
-    return parseFloat(str);
+    const num = parseFloat(str);
+    if (SMART_NUMBER_CACHE.size > MAX_SMART_NUMBER_CACHE_SIZE) SMART_NUMBER_CACHE.clear();
+    SMART_NUMBER_CACHE.set(cacheKey, num);
+    return num;
   }
 
   // Optimisation: Si unité présente, on l'enlève (Case Insensitive)
@@ -371,7 +382,13 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
   str = str.replace(CLEAN_NUM_REGEX, '');
 
   const num = parseFloat(str);
-  return isNaN(num) ? 0 : num;
+  const result = isNaN(num) ? 0 : num;
+
+  // BOLT OPTIMIZATION: Save to cache
+  if (SMART_NUMBER_CACHE.size > MAX_SMART_NUMBER_CACHE_SIZE) SMART_NUMBER_CACHE.clear();
+  SMART_NUMBER_CACHE.set(cacheKey, result);
+
+  return result;
 };
 
 /**

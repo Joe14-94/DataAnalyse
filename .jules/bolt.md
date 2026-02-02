@@ -13,3 +13,7 @@
 ## 2026-01-31 - [Optimize Formula Parser with Token Caching]
 **Learning:** Formula evaluation in Pivot Tables/Widgets was a bottleneck due to re-tokenizing and re-parsing the same formula for every row. Introducing a global `FORMULA_CACHE` and refactoring `FormulaParser` to separate tokenization from evaluation reduced execution time by ~60%. Also, manual character comparisons (char >= '0' && char <= '9') proved significantly faster than regex tests inside the tokenizer loop.
 **Action:** Always cache tokenization/parsing results for operations repeated across large datasets. Prefer manual char checks over regex for simple tokenization in tight loops.
+
+## 2026-02-12 - [Optimize Smart Number Parsing with Result Caching]
+**Learning:** Number parsing was identified as a bottleneck in the Pivot Engine aggregation loop (O(N*M)). Even with fast paths, regex and string manipulations add up across 100k+ rows. Implementing a simple result cache (Map) with a size limit (10k) significantly reduces per-row overhead for datasets with repeating values.
+**Action:** Always consider memoization for utility functions called within O(N) data processing loops, especially those performing string manipulation or regex tests.
