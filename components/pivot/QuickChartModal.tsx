@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useRef } from 'react';
-import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info, Download, FileSpreadsheet, FileText, Image as ImageIcon, Plus, ChevronDown, MonitorPlay } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info, Download, FileSpreadsheet, FileText, Image as ImageIcon, Plus, ChevronDown } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as ReLineChart, Line,
@@ -12,7 +12,6 @@ import { Button } from '../ui/Button';
 import { useData } from '../../context/DataContext';
 import { exportView } from '../../utils';
 import * as XLSX from 'xlsx';
-import { useNavigate } from 'react-router-dom';
 import { getChartColors, generateGradient, getChartTypeConfig } from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
 
@@ -27,13 +26,11 @@ type ColorMode = 'multi' | 'single' | 'gradient';
 type ColorPalette = 'default' | 'vibrant' | 'pastel';
 
 export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClose, items }) => {
-  const { addDashboardWidget, companyLogo } = useData();
-  const navigate = useNavigate();
+  const { companyLogo } = useData();
   const chartRef = useRef<HTMLDivElement>(null);
 
   const [chartType, setChartType] = useState<QuickChartType>('bar');
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [widgetTitle, setWidgetTitle] = useState('');
 
   // Nouveaux états pour les modes de coloration
   const [colorMode, setColorMode] = useState<ColorMode>('multi');
@@ -107,27 +104,6 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Données Sélection');
     XLSX.writeFile(wb, `Export_Selection_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
-  const handleAddToDashboard = () => {
-    addDashboardWidget({
-      title: widgetTitle || `Sélection : ${items.length} cellules`,
-      type: 'chart',
-      size: 'lg',
-      height: 'md',
-      config: {
-        chartType: chartType as any,
-        colorMode,
-        colorPalette,
-        singleColor,
-        gradientStart,
-        gradientEnd,
-        reportItems: items
-      }
-    });
-    alert("Graphique ajouté au tableau de bord !");
-    onClose();
-    navigate('/dashboard');
   };
 
   if (!isOpen) return null;
@@ -211,17 +187,6 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                 <input type="color" value={gradientEnd} onChange={(e) => setGradientEnd(e.target.value)} className="w-5 h-5 rounded cursor-pointer" />
              </div>
           )}
-
-          <div className="ml-auto flex items-center gap-2">
-             <label className="text-[10px] font-black text-slate-400 uppercase">Titre :</label>
-             <input
-                type="text"
-                placeholder="Nom du rapport..."
-                className="text-xs border border-slate-300 rounded-lg px-3 py-1 bg-slate-50 focus:bg-white w-48"
-                value={widgetTitle}
-                onChange={e => setWidgetTitle(e.target.value)}
-             />
-          </div>
         </div>
 
         {/* Chart Area */}
@@ -443,12 +408,6 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-               onClick={handleAddToDashboard}
-               className="bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 px-6"
-            >
-               <MonitorPlay className="w-4 h-4 mr-2" /> Ajouter au Dashboard
-            </Button>
             <Button onClick={onClose} variant="secondary" className="px-8 font-bold rounded-xl">
                Fermer
             </Button>
