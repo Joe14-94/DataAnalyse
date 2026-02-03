@@ -6,6 +6,9 @@ import { CalculatedFieldAction } from '../types';
  */
 const escapeString = (val: string): string => {
     if (!val) return "";
+    // Only escape double quotes (Excel-style: " becomes "")
+    // Do NOT escape backslashes - they are used for regex patterns like \. and \.
+    // and our tokenizer reads them literally from the formula string
     return val.replace(/"/g, '""');
 };
 
