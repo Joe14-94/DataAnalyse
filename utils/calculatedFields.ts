@@ -2,11 +2,13 @@
 import { CalculatedFieldAction } from '../types';
 
 /**
- * Sécurise une chaîne pour l'insertion dans une formule (échappe les guillemets)
+ * Sécurise une chaîne pour l'insertion dans une formule (échappe les guillemets et backslashes)
  */
 const escapeString = (val: string): string => {
     if (!val) return "";
-    return val.replace(/"/g, '""');
+    // Double backslashes first (for regex patterns like 0\.1\.17\.0)
+    // Then double quotes (for Excel-style string escaping)
+    return val.replace(/\\/g, '\\\\').replace(/"/g, '""');
 };
 
 /**

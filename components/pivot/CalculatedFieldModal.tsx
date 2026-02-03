@@ -192,7 +192,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                 </div>
 
                 <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         {/* Left Column: Basic Info & Configuration (span 4) */}
                         <div className="lg:col-span-4 space-y-4">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
