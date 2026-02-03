@@ -2,13 +2,14 @@
 import { CalculatedFieldAction } from '../types';
 
 /**
- * Sécurise une chaîne pour l'insertion dans une formule (échappe les guillemets et backslashes)
+ * Sécurise une chaîne pour l'insertion dans une formule (échappe les guillemets)
  */
 const escapeString = (val: string): string => {
     if (!val) return "";
-    // Double backslashes first (for regex patterns like 0\.1\.17\.0)
-    // Then double quotes (for Excel-style string escaping)
-    return val.replace(/\\/g, '\\\\').replace(/"/g, '""');
+    // Only escape double quotes (Excel-style: " becomes "")
+    // Do NOT escape backslashes - they are used for regex patterns like \. and \.
+    // and our tokenizer reads them literally from the formula string
+    return val.replace(/"/g, '""');
 };
 
 /**
