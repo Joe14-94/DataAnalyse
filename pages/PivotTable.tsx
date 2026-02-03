@@ -305,12 +305,15 @@ export const PivotTable: React.FC = () => {
         // Build export data structure
         const exportData: any[][] = [];
 
-        // Header row
-        const headers = [''];
-        if (rowFields.length > 0) {
-            headers[0] = rowFields.join(' / ');
-        }
+        // Header row - separate column for each row field
+        const headers: string[] = [];
 
+        // Add a column for each row field
+        rowFields.forEach(field => {
+            headers.push(field);
+        });
+
+        // Add column headers (metrics)
         pivotData.colHeaders.forEach(header => {
             headers.push(header);
         });
@@ -326,10 +329,20 @@ export const PivotTable: React.FC = () => {
         pivotData.displayRows.forEach(row => {
             const rowData: any[] = [];
 
-            // Row label (with indentation for subtotals)
-            const indent = '  '.repeat(row.level || 0);
-            const label = row.label || row.keys.join(' / ');
-            rowData.push(indent + label);
+            // Add each key in its own column
+            // row.keys contains the hierarchy: ["France", "Paris", "Ordinateur"]
+            rowFields.forEach((field, index) => {
+                if (index < row.keys.length) {
+                    // Add indentation for subtotals
+                    const indent = row.type === 'subtotal' && index === row.keys.length - 1
+                        ? '  '.repeat(row.level || 0)
+                        : '';
+                    rowData.push(indent + row.keys[index]);
+                } else {
+                    // Empty cell for higher level subtotals
+                    rowData.push('');
+                }
+            });
 
             // Metric values for each column
             pivotData.colHeaders.forEach(colHeader => {
@@ -348,7 +361,15 @@ export const PivotTable: React.FC = () => {
 
         // Column totals row
         if (pivotData.colTotals) {
-            const totalsRow: any[] = ['Total'];
+            const totalsRow: any[] = [];
+
+            // "Total" label in first column, empty for others
+            totalsRow.push('Total');
+            for (let i = 1; i < rowFields.length; i++) {
+                totalsRow.push('');
+            }
+
+            // Column totals
             pivotData.colHeaders.forEach(colHeader => {
                 const total = pivotData.colTotals[colHeader];
                 totalsRow.push(total !== undefined && total !== null ? total : '');
