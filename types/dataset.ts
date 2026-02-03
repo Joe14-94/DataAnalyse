@@ -20,12 +20,26 @@ export interface FieldConfig {
   conditionalFormatting?: ConditionalRule[];
 }
 
+export type CalculatedFieldActionType =
+  | 'trim' | 'upper' | 'lower' | 'proper'
+  | 'replace' | 'regex' | 'concat'
+  | 'left' | 'right' | 'substring'
+  | 'add' | 'subtract' | 'multiply' | 'divide';
+
+export interface CalculatedFieldAction {
+  id: string;
+  type: CalculatedFieldActionType;
+  params: Record<string, any>;
+}
+
 export interface CalculatedField {
   id: string;
   name: string;
   formula: string;
   outputType: 'number' | 'text' | 'boolean';
   unit?: string;
+  mode?: 'formula' | 'actions';
+  actions?: CalculatedFieldAction[];
 }
 
 export interface EnrichmentConfig {

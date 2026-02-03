@@ -496,12 +496,13 @@ export const PivotTable: React.FC = () => {
             const id = generateId();
             const outputType = field.outputType || 'number';
             addCalculatedField(primaryDataset.id, {
+                ...field,
                 id,
                 name: field.name!,
                 formula: field.formula!,
                 outputType,
                 unit: field.unit
-            });
+            } as CalculatedField);
             // Auto add based on output type
             if (outputType === 'number') {
                 // Numbers go to metrics (values)

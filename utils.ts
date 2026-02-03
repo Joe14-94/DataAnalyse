@@ -968,8 +968,20 @@ class FormulaParser {
         const quote = char;
         cursor++;
         let val = '';
-        while (cursor < input.length && input[cursor] !== quote) val += input[cursor++];
-        cursor++;
+        while (cursor < input.length) {
+          if (input[cursor] === quote) {
+            // Check for escaped quote (double quote)
+            if (input[cursor + 1] === quote) {
+              val += quote;
+              cursor += 2;
+              continue;
+            } else {
+              cursor++;
+              break;
+            }
+          }
+          val += input[cursor++];
+        }
         tokens.push({ type: 'STRING', value: val });
         continue;
       }
@@ -1172,7 +1184,13 @@ class FormulaParser {
         const text = String(args[0] || '');
         const search = String(args[1] || '');
         const replacement = String(args[2] || '');
-        return text.replace(new RegExp(search, 'g'), replacement);
+        try {
+          return text.replace(new RegExp(search, 'g'), replacement);
+        } catch (e) {
+          // Si le regex est invalide, retourner le texte original
+          console.warn(`Regex invalide: ${search}`);
+          return text;
+        }
 
       case 'SUBSTITUER': case 'SUBSTITUTE':
         // SUBSTITUER(texte, ancien_texte, nouveau_texte)
