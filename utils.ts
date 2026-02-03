@@ -868,8 +868,35 @@ export const exportView = async (
 
   else if (format === 'html') {
     try {
-      // Clone element to sanitize and ensure styles
-      // For a robust HTML export, we embed a minimal HTML structure with Tailwind CDN
+      // Clone element to ensure we get ALL content (not just what's visible in scroll)
+      const clone = element.cloneNode(true) as HTMLElement;
+
+      // Remove scroll containers and force all content to be visible
+      const fixElement = (el: HTMLElement) => {
+        // Remove height constraints
+        el.style.maxHeight = 'none';
+        el.style.height = 'auto';
+        el.style.overflow = 'visible';
+
+        // Process all children recursively
+        Array.from(el.children).forEach(child => {
+          if (child instanceof HTMLElement) {
+            // Remove scroll and height constraints
+            if (child.classList.contains('overflow-auto') ||
+                child.classList.contains('overflow-hidden') ||
+                child.classList.contains('overflow-y-auto') ||
+                child.classList.contains('overflow-x-auto')) {
+              child.style.overflow = 'visible';
+              child.style.maxHeight = 'none';
+              child.style.height = 'auto';
+            }
+
+            fixElement(child);
+          }
+        });
+      };
+
+      fixElement(clone);
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -885,6 +912,11 @@ export const exportView = async (
             .logo { height: 40px; width: auto; object-fit: contain; }
             .title h1 { font-size: 1.5rem; font-weight: bold; color: #1e293b; margin: 0; }
             .title p { font-size: 0.875rem; color: #64748b; margin: 0; }
+            /* Force all content to be visible */
+            * { max-height: none !important; overflow: visible !important; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #e2e8f0; padding: 0.5rem; }
+            th { background: #f8fafc; font-weight: 600; }
           </style>
         </head>
         <body>
@@ -897,7 +929,7 @@ export const exportView = async (
               </div>
             </div>
             <div class="content">
-              ${element.innerHTML}
+              ${clone.innerHTML}
             </div>
           </div>
         </body>
@@ -917,6 +949,227 @@ export const exportView = async (
       console.error('HTML Export Error', err);
       alert('Erreur lors de l\'export HTML');
     }
+  }
+};
+
+// --- PIVOT TABLE HTML EXPORT ---
+export const exportPivotToHTML = (
+  pivotData: any,
+  rowFields: string[],
+  showTotalCol: boolean,
+  title: string,
+  logo?: string
+) => {
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${timestamp}`;
+
+  try {
+    // Build complete HTML table from pivot data
+    let tableHTML = '<table class="pivot-table">';
+
+    // Header row
+    tableHTML += '<thead><tr>';
+
+    // Row field headers
+    rowFields.forEach(field => {
+      tableHTML += `<th class="row-header">${field}</th>`;
+    });
+
+    // Column headers (metrics)
+    pivotData.colHeaders.forEach((header: string) => {
+      tableHTML += `<th class="col-header">${header}</th>`;
+    });
+
+    // Total column header
+    if (showTotalCol) {
+      tableHTML += '<th class="total-header">Total</th>';
+    }
+
+    tableHTML += '</tr></thead>';
+
+    // Data rows
+    tableHTML += '<tbody>';
+
+    pivotData.displayRows.forEach((row: any) => {
+      const rowClass = row.type === 'subtotal' ? 'subtotal-row' : row.type === 'grandTotal' ? 'grand-total-row' : 'data-row';
+      tableHTML += `<tr class="${rowClass}">`;
+
+      // Row keys (dimensions)
+      rowFields.forEach((field, index) => {
+        if (index < row.keys.length) {
+          const indent = row.type === 'subtotal' && index === row.keys.length - 1
+            ? '&nbsp;&nbsp;'.repeat(row.level || 0)
+            : '';
+          tableHTML += `<td class="row-label">${indent}${row.keys[index]}</td>`;
+        } else {
+          tableHTML += '<td class="row-label"></td>';
+        }
+      });
+
+      // Metric values
+      pivotData.colHeaders.forEach((colHeader: string) => {
+        const value = row.metrics[colHeader];
+        const displayValue = value !== undefined && value !== null ? value : '';
+        tableHTML += `<td class="metric-cell">${displayValue}</td>`;
+      });
+
+      // Row total
+      if (showTotalCol) {
+        const total = row.rowTotal;
+        const displayTotal = total !== undefined && total !== null ? total : '';
+        tableHTML += `<td class="total-cell">${displayTotal}</td>`;
+      }
+
+      tableHTML += '</tr>';
+    });
+
+    // Column totals row
+    if (pivotData.colTotals) {
+      tableHTML += '<tr class="col-totals-row">';
+
+      // "Total" label
+      tableHTML += '<td class="total-label">Total</td>';
+      for (let i = 1; i < rowFields.length; i++) {
+        tableHTML += '<td></td>';
+      }
+
+      // Column totals
+      pivotData.colHeaders.forEach((colHeader: string) => {
+        const total = pivotData.colTotals[colHeader];
+        const displayTotal = total !== undefined && total !== null ? total : '';
+        tableHTML += `<td class="total-cell">${displayTotal}</td>`;
+      });
+
+      // Grand total
+      if (showTotalCol && pivotData.grandTotal !== undefined) {
+        tableHTML += `<td class="grand-total-cell">${pivotData.grandTotal}</td>`;
+      }
+
+      tableHTML += '</tr>';
+    }
+
+    tableHTML += '</tbody></table>';
+
+    // Generate complete HTML document
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+          body {
+            padding: 2rem;
+            background: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+          .export-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 1rem;
+          }
+          .logo {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+          }
+          .title h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin: 0;
+          }
+          .title p {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin: 0;
+          }
+          .pivot-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+          }
+          .pivot-table th {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 0.75rem;
+            font-weight: 600;
+            text-align: left;
+            font-size: 0.875rem;
+            color: #475569;
+          }
+          .pivot-table .col-header,
+          .pivot-table .total-header {
+            text-align: right;
+          }
+          .pivot-table td {
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+          }
+          .pivot-table .metric-cell,
+          .pivot-table .total-cell,
+          .pivot-table .grand-total-cell {
+            text-align: right;
+          }
+          .pivot-table .subtotal-row {
+            background: #f8fafc;
+            font-weight: 600;
+          }
+          .pivot-table .col-totals-row {
+            background: #f1f5f9;
+            font-weight: 700;
+            border-top: 2px solid #94a3b8;
+          }
+          .pivot-table .grand-total-row {
+            background: #e0e7ff;
+            font-weight: 700;
+          }
+          .pivot-table .total-label {
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="export-container">
+          <div class="header">
+            ${logo ? `<img src="${logo}" class="logo" alt="Logo" />` : ''}
+            <div class="title">
+              <h1>${title}</h1>
+              <p>Exporté le ${new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+          <div class="content">
+            ${tableHTML}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.html`;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => document.body.removeChild(link), 100);
+
+  } catch (err) {
+    console.error('Pivot HTML Export Error', err);
+    alert('Erreur lors de l\'export HTML du TCD');
   }
 };
 

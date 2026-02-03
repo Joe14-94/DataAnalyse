@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MousePointerClick, Palette } from 'lucide-react';
 import { useData } from '../context/DataContext';
-import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
+import { detectColumnType, formatDateFr, generateId, exportView, exportPivotToHTML, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { CalculatedField, PivotStyleRule, ConditionalFormattingRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem } from '../types';
@@ -291,13 +291,134 @@ export const PivotTable: React.FC = () => {
 
     const handleExport = (format: 'pdf' | 'html', mode: any = 'adaptive') => {
         setShowExportMenu(false);
-        exportView(format, 'pivot-export-container', `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo, mode);
+
+        if (format === 'html' && pivotData) {
+            // Use data-based export for HTML to include all rows (not just virtualized ones)
+            exportPivotToHTML(pivotData, rowFields, showTotalCol, `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo);
+        } else {
+            // Use DOM-based export for PDF
+            exportView(format, 'pivot-export-container', `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo, mode);
+        }
     };
 
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
         setShowExportMenu(false);
-        // Simplified export logic here - reuse existing logic if possible or move to util
-        alert("Export spreadsheet triggered");
+
+        if (!pivotData || !primaryDataset) {
+            alert("Aucune donnée à exporter");
+            return;
+        }
+
+        // Build export data structure
+        const exportData: any[][] = [];
+
+        // Header row - separate column for each row field
+        const headers: string[] = [];
+
+        // Add a column for each row field
+        rowFields.forEach(field => {
+            headers.push(field);
+        });
+
+        // Add column headers (metrics)
+        pivotData.colHeaders.forEach(header => {
+            headers.push(header);
+        });
+
+        // Add "Total" column if row totals are shown
+        if (showTotalCol) {
+            headers.push('Total');
+        }
+
+        exportData.push(headers);
+
+        // Data rows
+        pivotData.displayRows.forEach(row => {
+            const rowData: any[] = [];
+
+            // Add each key in its own column
+            // row.keys contains the hierarchy: ["France", "Paris", "Ordinateur"]
+            rowFields.forEach((field, index) => {
+                if (index < row.keys.length) {
+                    // Add indentation for subtotals
+                    const indent = row.type === 'subtotal' && index === row.keys.length - 1
+                        ? '  '.repeat(row.level || 0)
+                        : '';
+                    rowData.push(indent + row.keys[index]);
+                } else {
+                    // Empty cell for higher level subtotals
+                    rowData.push('');
+                }
+            });
+
+            // Metric values for each column
+            pivotData.colHeaders.forEach(colHeader => {
+                const value = row.metrics[colHeader];
+                rowData.push(value !== undefined && value !== null ? value : '');
+            });
+
+            // Row total
+            if (showTotalCol) {
+                const total = row.rowTotal;
+                rowData.push(total !== undefined && total !== null ? total : '');
+            }
+
+            exportData.push(rowData);
+        });
+
+        // Column totals row
+        if (pivotData.colTotals) {
+            const totalsRow: any[] = [];
+
+            // "Total" label in first column, empty for others
+            totalsRow.push('Total');
+            for (let i = 1; i < rowFields.length; i++) {
+                totalsRow.push('');
+            }
+
+            // Column totals
+            pivotData.colHeaders.forEach(colHeader => {
+                const total = pivotData.colTotals[colHeader];
+                totalsRow.push(total !== undefined && total !== null ? total : '');
+            });
+
+            // Grand total
+            if (showTotalCol && pivotData.grandTotal !== undefined) {
+                totalsRow.push(pivotData.grandTotal);
+            }
+
+            exportData.push(totalsRow);
+        }
+
+        // Export based on format
+        if (format === 'csv') {
+            // CSV Export
+            const csvContent = exportData.map(row =>
+                row.map(cell => {
+                    const str = String(cell);
+                    // Escape cells containing semicolon, newline, or quote
+                    if (str.includes(';') || str.includes('\n') || str.includes('"')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }
+                    return str;
+                }).join(';')
+            ).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `TCD_${primaryDataset.name}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            // XLSX Export
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'TCD');
+            XLSX.writeFile(wb, `TCD_${primaryDataset.name}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
     };
 
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
