@@ -552,6 +552,14 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         ⚠️ Ordre d'exécution : 1️⃣ "En cours"→"Active" 2️⃣ "Terminé"→"Done" 3️⃣ "Annulé"→"Cancelled"
                                     </div>
                                     <div className="text-[9px] text-amber-700 mt-1">Les remplacements s'exécutent de l'intérieur vers l'extérieur, dans l'ordre des imbrications</div>
+                                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-[9px]">
+                                        <div className="font-bold text-red-900 mb-1">❌ ERREUR COURANTE : Ne mettez PAS les REMPLACER sur plusieurs lignes !</div>
+                                        <code className="text-red-700 block font-mono text-[8px]">
+                                            REMPLACER([Code], "A", "B")<br/>
+                                            REMPLACER([Code], "C", "D") ← Ignoré !
+                                        </code>
+                                        <div className="text-red-800 mt-1">Seule la 1ère ligne sera prise en compte. Il faut imbriquer les fonctions.</div>
+                                    </div>
                                 </div>
 
                                 {/* Example 3: Regex - Remove all digits */}
@@ -592,6 +600,22 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                     <div className="text-[9px] text-slate-600">→ "A.B.C.D" ou "A.B.C.E" deviennent "X.Y.Z"</div>
                                     <div className="text-[9px] text-orange-700 font-medium mt-1">Important : Le point doit être échappé avec \. car en regex, . = n'importe quel caractère</div>
                                     <div className="text-[9px] text-orange-700 font-medium mt-1">Pattern: [A-Z] = une lettre majuscule (D, E, F, etc.)</div>
+                                </div>
+
+                                {/* Example 8: Multiple regex replacements with dots */}
+                                <div className="border-l-4 border-teal-400 pl-3 py-2 bg-teal-50/30">
+                                    <div className="text-[10px] font-bold text-teal-900 mb-1">✓ Regex : Remplacements multiples de codes avec points</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1 break-all">
+                                        REMPLACER(REMPLACER(REMPLACER([Code Entité], "0\\.1\\.17\\.0", "AZERTT"), "A\\.6\\..*", "DAS"), "[0-9]+\\..*", "Autres")
+                                    </code>
+                                    <div className="text-[9px] text-slate-600 space-y-0.5">
+                                        <div>→ 1️⃣ "0.1.17.0" devient "AZERTT"</div>
+                                        <div>→ 2️⃣ "A.6.x.x" (A.6 suivi de n'importe quoi) devient "DAS"</div>
+                                        <div>→ 3️⃣ Tous les autres codes commençant par un chiffre deviennent "Autres"</div>
+                                    </div>
+                                    <div className="text-[9px] text-teal-700 font-medium mt-2 bg-teal-100 p-1.5 rounded">
+                                        💡 Astuce : Mettez les patterns les plus spécifiques EN PREMIER (au centre de l'imbrication), et les plus généraux à la fin (à l'extérieur)
+                                    </div>
                                 </div>
 
                                 {/* Regex Quick Reference */}
