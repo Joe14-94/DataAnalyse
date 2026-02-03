@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MousePointerClick, Palette } from 'lucide-react';
 import { useData } from '../context/DataContext';
-import { detectColumnType, formatDateFr, generateId, exportView, formatDateLabelForDisplay } from '../utils';
+import { detectColumnType, formatDateFr, generateId, exportView, exportPivotToHTML, formatDateLabelForDisplay } from '../utils';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { CalculatedField, PivotStyleRule, ConditionalFormattingRule, FilterRule, FieldConfig, PivotJoin, TemporalComparisonConfig, TemporalComparisonSource, TemporalComparisonResult, DataRow, PivotSourceConfig, AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem } from '../types';
@@ -291,7 +291,14 @@ export const PivotTable: React.FC = () => {
 
     const handleExport = (format: 'pdf' | 'html', mode: any = 'adaptive') => {
         setShowExportMenu(false);
-        exportView(format, 'pivot-export-container', `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo, mode);
+
+        if (format === 'html' && pivotData) {
+            // Use data-based export for HTML to include all rows (not just virtualized ones)
+            exportPivotToHTML(pivotData, rowFields, showTotalCol, `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo);
+        } else {
+            // Use DOM-based export for PDF
+            exportView(format, 'pivot-export-container', `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo, mode);
+        }
     };
 
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
