@@ -16,6 +16,7 @@
     "@azure/msal-browser": "^3.30.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@tanstack/react-virtual": "^3.13.18",
+    "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.344.0",
