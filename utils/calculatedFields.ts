@@ -17,9 +17,10 @@ export const generateFormulaFromActions = (actions: CalculatedFieldAction[], ava
 
     let currentFormula = '';
 
-    // La première action doit définir la source
-    const firstAction = actions[0];
-    const sourceField = firstAction.params.field || (availableFields.length > 0 ? availableFields[0] : '');
+    // Identifier la source. Nouveau format: action de type 'source'.
+    // Vieux format: on prend le champ dans la première action.
+    const sourceAction = actions.find(a => a.type === 'source') || actions[0];
+    const sourceField = sourceAction.params.field || (availableFields.length > 0 ? availableFields[0] : '');
 
     if (!sourceField) return '';
 
@@ -27,10 +28,12 @@ export const generateFormulaFromActions = (actions: CalculatedFieldAction[], ava
 
     // Appliquer chaque action séquentiellement
     actions.forEach((action, idx) => {
-        // Pour la première action, si c'est juste le choix du champ, on a déjà initialisé
-        if (idx === 0 && action.type === 'concat' && !action.params.otherFields) {
-           // Skip initial if it's just selection
-        }
+        // Ignorer l'action source si elle est présente (déjà initialisée)
+        if (action.type === 'source') return;
+
+        // Vieux format migration : si c'était l'action 0 et qu'elle portait le champ,
+        // on l'appliquait aussi comme transformation si ce n'était pas JUSTE une sélection.
+        // Mais avec le nouveau format, on sépare.
 
         switch (action.type) {
             case 'trim':
@@ -56,18 +59,10 @@ export const generateFormulaFromActions = (actions: CalculatedFieldAction[], ava
                 currentFormula = `REMPLACER(${currentFormula}, "${pattern}", "${regexRepl}")`;
                 break;
             case 'concat':
-                if (idx === 0) {
-                    const others = action.params.otherFields || [];
-                    const sep = escapeString(action.params.separator || '');
-                    if (others.length > 0) {
-                        currentFormula = `CONCAT([${sourceField}], ${others.map((f: string) => `[${f}]`).join(', ')}, "${sep}")`;
-                    }
-                } else {
-                    const others = action.params.otherFields || [];
-                    const sep = escapeString(action.params.separator || '');
-                    if (others.length > 0) {
-                        currentFormula = `CONCAT(${currentFormula}, ${others.map((f: string) => `[${f}]`).join(', ')}, "${sep}")`;
-                    }
+                const others = action.params.otherFields || [];
+                const sep = escapeString(action.params.separator || '');
+                if (others.length > 0) {
+                    currentFormula = `CONCAT(${currentFormula}, ${others.map((f: string) => `[${f}]`).join(', ')}, "${sep}")`;
                 }
                 break;
             case 'left':

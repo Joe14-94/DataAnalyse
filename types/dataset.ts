@@ -21,7 +21,7 @@ export interface FieldConfig {
 }
 
 export type CalculatedFieldActionType =
-  | 'trim' | 'upper' | 'lower' | 'proper'
+  | 'source' | 'trim' | 'upper' | 'lower' | 'proper'
   | 'replace' | 'regex' | 'concat'
   | 'left' | 'right' | 'substring'
   | 'add' | 'subtract' | 'multiply' | 'divide';

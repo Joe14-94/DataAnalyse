@@ -92,11 +92,12 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
         const newAction: CalculatedFieldAction = {
             id: generateId(),
             type,
-            params: type === 'concat' ? { field: fields[0], otherFields: [], separator: ' ' } :
+            params: type === 'source' ? { field: fields[0] } :
+                    type === 'concat' ? { otherFields: [], separator: ' ' } :
                     ['replace', 'regex'].includes(type) ? { search: '', pattern: '', replacement: '' } :
                     ['add', 'subtract', 'multiply', 'divide'].includes(type) ? { value: 0 } :
                     ['left', 'right', 'substring'].includes(type) ? { count: 5, start: 0, length: 5 } :
-                    { field: actions.length === 0 ? fields[0] : undefined }
+                    {}
         };
         const newActions = [...actions, newAction];
         setActions(newActions);
@@ -246,8 +247,8 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             onClick={() => {
                                                 setMode('actions');
                                                 if (actions.length === 0) {
-                                                    // Initialisation par défaut avec le premier champ
-                                                    addAction('trim'); // Just to trigger a field selection action
+                                                    // Initialisation par défaut avec une source
+                                                    addAction('source');
                                                 }
                                             }}
                                             className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${mode === 'actions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:bg-slate-300/50'}`}
@@ -295,33 +296,38 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             </div>
                                         ) : (
                                             actions.map((action, idx) => (
-                                                <div key={action.id} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden group hover:border-indigo-300 transition-all">
-                                                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                                <div key={action.id} className={`bg-white border rounded-xl shadow-sm overflow-hidden group transition-all ${action.type === 'source' ? 'border-brand-200' : 'border-slate-200 hover:border-indigo-300'}`}>
+                                                    <div className={`px-3 py-2 border-b flex items-center justify-between ${action.type === 'source' ? 'bg-brand-50 border-brand-100' : 'bg-slate-50 border-slate-200'}`}>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="bg-indigo-600 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold">{idx + 1}</span>
+                                                            <span className={`${action.type === 'source' ? 'bg-brand-600' : 'bg-indigo-600'} text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold`}>{idx + 1}</span>
                                                             <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight truncate w-32">
-                                                                {idx === 0 ? 'Source' : action.type.toUpperCase()}
+                                                                {action.type === 'source' ? 'Source des données' : action.type.toUpperCase()}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={() => moveAction(idx, 'up')} disabled={idx === 0} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowUp className="w-3 h-3" /></button>
-                                                            <button onClick={() => moveAction(idx, 'down')} disabled={idx === actions.length - 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowDown className="w-3 h-3" /></button>
-                                                            <button onClick={() => removeAction(action.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                                                            {action.type !== 'source' && (
+                                                                <>
+                                                                    <button onClick={() => moveAction(idx, 'up')} disabled={idx <= 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowUp className="w-3 h-3" /></button>
+                                                                    <button onClick={() => moveAction(idx, 'down')} disabled={idx === actions.length - 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowDown className="w-3 h-3" /></button>
+                                                                    <button onClick={() => removeAction(action.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="p-3 space-y-3">
-                                                        {idx === 0 ? (
+                                                        {action.type === 'source' && (
                                                             <div>
                                                                 <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Champ source</label>
                                                                 <select
-                                                                    className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 focus:bg-white"
+                                                                    className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 focus:bg-white font-bold text-slate-700"
                                                                     value={action.params.field || ''}
                                                                     onChange={e => updateAction(action.id, { field: e.target.value })}
                                                                 >
+                                                                    <option value="" disabled>Sélectionner un champ</option>
                                                                     {fields.map(f => <option key={f} value={f}>{f}</option>)}
                                                                 </select>
                                                             </div>
-                                                        ) : null}
+                                                        )}
 
                                                         {/* Action specific inputs */}
                                                         {action.type === 'replace' && (
