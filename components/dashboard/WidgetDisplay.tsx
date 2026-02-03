@@ -144,16 +144,78 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                   </BarChart>
                </ResponsiveContainer>
             );
-         } else if (chartType === 'treemap') {
+         } else if (chartType === 'sunburst') {
+            const sbData = data.sunburstData;
+            if (!sbData || !sbData.rings || sbData.rings.length === 0) {
+               return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Aucune donnée hiérarchique</div>;
+            }
+            const numRings = sbData.rings.length;
+            const maxOuterRadius = 88;
+            const gap = 2;
+            const ringWidth = (maxOuterRadius - gap * (numRings - 1)) / numRings;
             return (
                <ResponsiveContainer width="100%" height="100%">
-                  <Treemap data={chartData} dataKey="value" stroke="#fff" content={<TreemapContent colors={colors} />} isAnimationActive={false}>
+                  <PieChart>
+                     {sbData.rings.map((ring: any[], ringIdx: number) => {
+                        const innerR = ringIdx === 0 ? 0 : (ringIdx * (ringWidth + gap));
+                        const outerR = innerR + ringWidth;
+                        return (
+                           <Pie
+                              key={`ring-${ringIdx}`}
+                              data={ring}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={`${innerR}%`}
+                              outerRadius={`${outerR}%`}
+                              paddingAngle={ringIdx === 0 ? 2 : 0.5}
+                              stroke="#fff"
+                              strokeWidth={ringIdx === 0 ? 2 : 1}
+                              isAnimationActive={false}
+                           >
+                              {ring.map((entry: any, entryIdx: number) => (
+                                 <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
+                              ))}
+                           </Pie>
+                        );
+                     })}
                      <Tooltip
-                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }}
-                        formatter={(value: any, name: any, props: any) => [
-                           `${value.toLocaleString()} ${unit || ''}`,
-                           props.payload.name || name
-                        ]}
+                        content={({ active, payload }: any) => {
+                           if (!active || !payload || !payload.length) return null;
+                           const d = payload[0].payload;
+                           if (!d || !d.path) return null;
+                           const pctTotal = d.grandTotal > 0 ? ((d.value / d.grandTotal) * 100).toFixed(1) : '0';
+                           return (
+                              <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                 <p style={{ fontWeight: 600, marginBottom: 2 }}>{d.path.join(' > ')}</p>
+                                 <p>{d.value?.toLocaleString('fr-FR')} {unit || ''} ({pctTotal}%)</p>
+                              </div>
+                           );
+                        }}
+                     />
+                  </PieChart>
+               </ResponsiveContainer>
+            );
+         } else if (chartType === 'treemap') {
+            // Utiliser les données hiérarchiques si disponibles
+            const treemapDisplayData = data.hierarchicalData || chartData;
+            return (
+               <ResponsiveContainer width="100%" height="100%">
+                  <Treemap data={treemapDisplayData} dataKey="size" stroke="#fff" content={<TreemapContent colors={colors} />} isAnimationActive={false}>
+                     <Tooltip
+                        content={({ active, payload }: any) => {
+                           if (!active || !payload || !payload.length) return null;
+                           const d = payload[0].payload;
+                           const path = d.path || [d.name];
+                           const value = d.value || d.size || 0;
+                           return (
+                              <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                 <p style={{ fontWeight: 600, marginBottom: 2 }}>{path.join(' > ')}</p>
+                                 <p>{value?.toLocaleString('fr-FR')} {unit || ''}</p>
+                              </div>
+                           );
+                        }}
                      />
                   </Treemap>
                </ResponsiveContainer>

@@ -326,16 +326,27 @@ export const getDaysDifference = (dateStr: string): number => {
  */
 const CLEAN_NUM_REGEX = /[^0-9.-]/g;
 const UNIT_REGEX_CACHE = new Map<string, RegExp>();
+// BOLT OPTIMIZATION: Global cache for smart number parsing to avoid redundant regex/string ops
+const SMART_NUMBER_CACHE = new Map<string, number>();
+const MAX_SMART_NUMBER_CACHE_SIZE = 10000;
 
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number') return val;
 
+  // BOLT OPTIMIZATION: Result caching for repeating values
+  const cacheKey = unit ? `${unit}:${val}` : String(val);
+  const cached = SMART_NUMBER_CACHE.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   let str = String(val);
 
   // BOLT OPTIMIZATION: Fast path for simple numeric strings
   if (!unit && /^-?\d+(\.\d+)?$/.test(str)) {
-    return parseFloat(str);
+    const num = parseFloat(str);
+    if (SMART_NUMBER_CACHE.size > MAX_SMART_NUMBER_CACHE_SIZE) SMART_NUMBER_CACHE.clear();
+    SMART_NUMBER_CACHE.set(cacheKey, num);
+    return num;
   }
 
   // Optimisation: Si unité présente, on l'enlève (Case Insensitive)
@@ -371,7 +382,13 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
   str = str.replace(CLEAN_NUM_REGEX, '');
 
   const num = parseFloat(str);
-  return isNaN(num) ? 0 : num;
+  const result = isNaN(num) ? 0 : num;
+
+  // BOLT OPTIMIZATION: Save to cache
+  if (SMART_NUMBER_CACHE.size > MAX_SMART_NUMBER_CACHE_SIZE) SMART_NUMBER_CACHE.clear();
+  SMART_NUMBER_CACHE.set(cacheKey, result);
+
+  return result;
 };
 
 /**
@@ -1134,12 +1151,96 @@ class FormulaParser {
       case 'ARRONDI': case 'ROUND':
         const p = Math.pow(10, args[1] || 0);
         return Math.round((Number(args[0]) || 0) * p) / p;
-      case 'CONCAT':
-        return args.join('');
+
+      // --- STRING FUNCTIONS ---
+      case 'CONCAT': case 'CONCATENER':
+        // CONCAT(texte1, texte2, ..., séparateur_optionnel)
+        // Si le dernier argument ressemble à un séparateur court (1-3 caractères), on l'utilise comme séparateur
+        if (args.length > 1) {
+          const lastArg = String(args[args.length - 1] || '');
+          // Si le dernier argument est une chaîne courte qui ne contient que des caractères spéciaux/espaces
+          // on le considère comme un séparateur
+          if (lastArg.length <= 3 && args.length > 2) {
+            const separator = lastArg;
+            return args.slice(0, -1).map(a => String(a || '')).join(separator);
+          }
+        }
+        return args.map(a => String(a || '')).join('');
+
+      case 'REMPLACER': case 'REPLACE':
+        // REMPLACER(texte, recherche, remplacement)
+        const text = String(args[0] || '');
+        const search = String(args[1] || '');
+        const replacement = String(args[2] || '');
+        return text.replace(new RegExp(search, 'g'), replacement);
+
+      case 'SUBSTITUER': case 'SUBSTITUTE':
+        // SUBSTITUER(texte, ancien_texte, nouveau_texte)
+        // Contrairement à REMPLACER, ne supporte pas les regex
+        const textSub = String(args[0] || '');
+        const oldText = String(args[1] || '');
+        const newText = String(args[2] || '');
+        return textSub.split(oldText).join(newText);
+
+      case 'EXTRAIRE': case 'SUBSTRING': case 'MID':
+        // EXTRAIRE(texte, position_départ, longueur)
+        const textExt = String(args[0] || '');
+        const start = Number(args[1] || 0);
+        const length = args[2] !== undefined ? Number(args[2]) : undefined;
+        return length !== undefined ? textExt.substring(start, start + length) : textExt.substring(start);
+
+      case 'GAUCHE': case 'LEFT':
+        // GAUCHE(texte, nombre_caractères)
+        const textLeft = String(args[0] || '');
+        const leftLen = Number(args[1] || 0);
+        return textLeft.substring(0, leftLen);
+
+      case 'DROITE': case 'RIGHT':
+        // DROITE(texte, nombre_caractères)
+        const textRight = String(args[0] || '');
+        const rightLen = Number(args[1] || 0);
+        return textRight.substring(textRight.length - rightLen);
+
+      case 'LONGUEUR': case 'LENGTH': case 'LEN':
+        // LONGUEUR(texte)
+        return String(args[0] || '').length;
+
+      case 'TROUVE': case 'FIND': case 'SEARCH':
+        // TROUVE(recherche, texte, [position_départ])
+        const searchText = String(args[0] || '');
+        const textFind = String(args[1] || '');
+        const startPos = args[2] !== undefined ? Number(args[2]) : 0;
+        const index = textFind.indexOf(searchText, startPos);
+        return index; // Retourne -1 si non trouvé
+
+      case 'CONTIENT': case 'CONTAINS': case 'INCLUS':
+        // CONTIENT(texte, recherche)
+        const textContains = String(args[0] || '');
+        const searchContains = String(args[1] || '');
+        return textContains.includes(searchContains);
+
+      case 'SUPPRESPACE': case 'TRIM': case 'NETTOYER':
+        // SUPPRESPACE(texte)
+        return String(args[0] || '').trim();
+
       case 'MAJUSCULE': case 'UPPER':
         return String(args[0] || '').toUpperCase();
+
       case 'MINUSCULE': case 'LOWER':
         return String(args[0] || '').toLowerCase();
+
+      case 'CAPITALISEPREMIER': case 'CAPITALIZE':
+        // CAPITALISEPREMIER(texte) - Met la première lettre en majuscule
+        const textCap = String(args[0] || '');
+        return textCap.charAt(0).toUpperCase() + textCap.slice(1).toLowerCase();
+
+      case 'CAPITALISEMOTS': case 'PROPER': case 'TITLE':
+        // CAPITALISEMOTS(texte) - Met la première lettre de chaque mot en majuscule
+        const textProper = String(args[0] || '');
+        return textProper.split(' ').map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+
       default:
         return 0;
     }
@@ -1150,7 +1251,7 @@ class FormulaParser {
  * Évalue une formule de manière sécurisée sans utiliser eval() ni new Function()
  * BOLT OPTIMIZATION: Uses a global cache for tokenized formulas to improve performance in loops.
  */
-export const evaluateFormula = (row: any, formula: string): number | string | null => {
+export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean'): number | string | boolean | null => {
   if (!formula || !formula.trim()) return null;
 
   try {
@@ -1161,9 +1262,26 @@ export const evaluateFormula = (row: any, formula: string): number | string | nu
     }
 
     const parser = new FormulaParser(tokens, row);
-    const result = parser.evaluate();
+    let result = parser.evaluate();
 
-    // Nettoyage résultat final
+    // Force conversion based on outputType if specified
+    if (outputType) {
+      if (outputType === 'text') {
+        // Force conversion to string
+        if (result === null || result === undefined) return '';
+        return String(result);
+      } else if (outputType === 'boolean') {
+        // Force conversion to boolean
+        return Boolean(result);
+      } else if (outputType === 'number') {
+        // Force conversion to number
+        const num = Number(result);
+        if (!isFinite(num) || isNaN(num)) return null;
+        return Math.round(num * 10000) / 10000; // Round to 4 decimals
+      }
+    }
+
+    // Nettoyage résultat final (comportement par défaut)
     if (typeof result === 'number') {
       if (!isFinite(result) || isNaN(result)) return null;
       return Math.round(result * 10000) / 10000; // Round to 4 decimals

@@ -13,6 +13,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
 
 export const DataExplorer: React.FC = () => {
    const { currentDataset, batches, datasets, currentDatasetId, switchDataset, addCalculatedField, removeCalculatedField, updateCalculatedField, updateDatasetConfigs, deleteBatch, deleteDatasetField, deleteBatchRow, updateRows, renameDatasetField, addFieldToDataset, enrichBatchesWithLookup, reorderDatasetFields, lastDataExplorerState, saveDataExplorerState } = useData();
@@ -38,18 +39,9 @@ export const DataExplorer: React.FC = () => {
    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
    const [trackingKey, setTrackingKey] = useState<string>('');
 
-   // CALCULATED FIELDS UI STATE (DRAWER)
-   const [isCalcDrawerOpen, setIsCalcDrawerOpen] = useState(false);
-   const [calcTab, setCalcTab] = useState<'fields' | 'functions'>('fields');
-   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
-   const [previewResult, setPreviewResult] = useState<{ value: any, error?: string } | null>(null);
-   const [newField, setNewField] = useState<Partial<CalculatedField>>({
-      name: '',
-      formula: '',
-      outputType: 'number',
-      unit: ''
-   });
-   const formulaInputRef = useRef<HTMLTextAreaElement>(null);
+   // CALCULATED FIELDS UI STATE (MODAL)
+   const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+   const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
 
    // CONDITIONAL FORMATTING DRAWER
    const [isFormatDrawerOpen, setIsFormatDrawerOpen] = useState(false);
@@ -176,26 +168,8 @@ export const DataExplorer: React.FC = () => {
    };
 
    const handleHeaderClick = (field: string) => {
-      if (isCalcDrawerOpen) {
-         insertIntoFormula(`[${field}]`);
-         return;
-      }
       setSelectedCol(selectedCol === field ? null : field);
       handleSort(field);
-   };
-
-   const insertIntoFormula = (textToInsert: string) => {
-      if (!formulaInputRef.current) return;
-      const input = formulaInputRef.current;
-      const start = input.selectionStart || 0;
-      const end = input.selectionEnd || 0;
-      const text = input.value;
-      const newText = text.substring(0, start) + textToInsert + text.substring(end);
-      setNewField({ ...newField, formula: newText });
-      setTimeout(() => {
-         input.focus();
-         input.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
-      }, 0);
    };
 
    const handleColumnFilterChange = (key: string, value: string) => {
@@ -277,23 +251,17 @@ export const DataExplorer: React.FC = () => {
       setPendingChanges({});
    };
 
-   const handleAddCalculatedField = () => {
-      if (!currentDataset || !newField.name || !newField.formula) return;
+   const handleSaveCalculatedField = (field: Partial<CalculatedField>) => {
+      if (!currentDataset) return;
 
-      if (editingFieldId) {
-         const oldField = currentDataset.calculatedFields?.find(f => f.id === editingFieldId);
-         const oldName = oldField?.name;
-         const newName = newField.name;
+      if (editingCalcField) {
+         const oldName = editingCalcField.name;
+         const newName = field.name || oldName;
 
-         updateCalculatedField(currentDataset.id, editingFieldId, {
-            name: newField.name,
-            formula: newField.formula,
-            outputType: newField.outputType as any,
-            unit: newField.unit
-         });
+         updateCalculatedField(currentDataset.id, editingCalcField.id, field);
 
          // Update local state references if name changed
-         if (oldName && newName && oldName !== newName) {
+         if (newName !== oldName) {
             if (sortConfig?.key === oldName) setSortConfig({ ...sortConfig, key: newName });
             if (columnFilters[oldName]) {
                const newFilters = { ...columnFilters };
@@ -304,29 +272,22 @@ export const DataExplorer: React.FC = () => {
             if (selectedCol === oldName) setSelectedCol(newName);
          }
       } else {
-         const field: CalculatedField = {
-            id: generateId(),
-            name: newField.name,
-            formula: newField.formula,
-            outputType: newField.outputType as any,
-            unit: newField.unit
-         };
-         addCalculatedField(currentDataset.id, field);
+         const id = generateId();
+         const outputType = field.outputType || 'number';
+         addCalculatedField(currentDataset.id, {
+            id,
+            name: field.name!,
+            formula: field.formula!,
+            outputType,
+            unit: field.unit
+         });
       }
-      setNewField({ name: '', formula: '', outputType: 'number', unit: '' });
-      setEditingFieldId(null);
-      setPreviewResult(null);
+      setEditingCalcField(null);
    };
 
    const handleEditCalculatedField = (field: CalculatedField) => {
-      setEditingFieldId(field.id);
-      setNewField({
-         name: field.name,
-         formula: field.formula,
-         outputType: field.outputType,
-         unit: field.unit
-      });
-      setIsCalcDrawerOpen(true);
+      setEditingCalcField(field);
+      setIsCalcModalOpen(true);
    };
 
    const handleAddConditionalRule = () => {
@@ -615,23 +576,6 @@ export const DataExplorer: React.FC = () => {
       overscan: 10,
    });
 
-   // LIVE PREVIEW EFFECT
-   useEffect(() => {
-      if (!isCalcDrawerOpen || !newField.formula) {
-         setPreviewResult(null);
-         return;
-      }
-      const timer = setTimeout(() => {
-         const sampleRow = processedRows.length > 0 ? processedRows[0] : (allRows.length > 0 ? allRows[0] : null);
-         if (sampleRow) {
-            const res = evaluateFormula(sampleRow, newField.formula!);
-            if (res === null && newField.formula!.trim() !== '') setPreviewResult({ value: null, error: "Erreur de syntaxe ou champ introuvable" });
-            else setPreviewResult({ value: res });
-         } else setPreviewResult({ value: null, error: "Aucune donnée pour tester" });
-      }, 500);
-      return () => clearTimeout(timer);
-   }, [newField.formula, processedRows, allRows, isCalcDrawerOpen]);
-
    const historyData = useMemo(() => {
       if (!selectedRow || !trackingKey) return [];
       const trackValue = selectedRow[trackingKey];
@@ -871,7 +815,7 @@ export const DataExplorer: React.FC = () => {
                </div>
 
                <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
-               <Button variant={isCalcDrawerOpen ? "primary" : "secondary"} onClick={() => setIsCalcDrawerOpen(!isCalcDrawerOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
+               <Button variant={isCalcModalOpen ? "primary" : "secondary"} onClick={() => setIsCalcModalOpen(!isCalcModalOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
                <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
                <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
                <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
@@ -1050,13 +994,12 @@ export const DataExplorer: React.FC = () => {
                            const defaultWidth = isNumeric ? 120 : 180;
                            const colWidth = columnWidths[field] || defaultWidth;
                            return (
-                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isCalcDrawerOpen ? 'hover:bg-indigo-100 hover:text-indigo-800' : (isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'))} ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100')} ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                  <div className="flex items-center gap-2 justify-between">
                                     <div className="flex items-center gap-2">
-                                       {isCalcDrawerOpen && <MousePointerClick className="w-3 h-3 text-indigo-500" />}
                                        {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
                                        <span>{field}</span>
-                                       {!isCalcDrawerOpen && (sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
+                                       {sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                                     </div>
                                     <div
                                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1075,7 +1018,7 @@ export const DataExplorer: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                        <Calculator className="w-3 h-3" />
                                        <span>{cf.name}</span>
-                                       {!isCalcDrawerOpen && (sortConfig?.key === cf.name ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />) : <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />)}
+                                       {sortConfig?.key === cf.name ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />) : <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                                     </div>
                                     <div
                                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-400 active:bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1205,107 +1148,18 @@ export const DataExplorer: React.FC = () => {
                </table>
             </div>
 
-            {/* CALCULATED FIELDS DRAWER */}
-            {isCalcDrawerOpen && (
-               <div className="w-[500px] bg-white border-l border-slate-200 shadow-xl flex flex-col z-30 animate-in slide-in-from-right duration-300">
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                     <div>
-                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><FunctionSquare className="w-4 h-4 text-indigo-600" /> Éditeur de Formule</h3>
-                        <p className="text-xs text-slate-500 mt-1">Créez une nouvelle colonne calculée</p>
-                     </div>
-                     <button onClick={() => setIsCalcDrawerOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-                  </div>
-                  <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
-                     <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Nom de la colonne</label>
-                        <input type="text" className="block w-full rounded-md border-slate-300 text-sm p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Total TTC" value={newField.name} onChange={e => setNewField({ ...newField, name: e.target.value })} />
-                     </div>
-                     <div className="flex-1 flex flex-col min-h-[300px]">
-                        <label className="block text-xs font-bold text-slate-600 mb-1 flex justify-between"><span>Formule</span><span className="text-xs text-slate-400">Syntaxe Excel simplifiée</span></label>
-                        <textarea ref={formulaInputRef} className="block w-full h-32 rounded-t-md border-slate-300 text-sm p-2 bg-slate-50 font-mono text-slate-700 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: [Prix Unitaire] * [Quantité] * 1.2" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
-                        <div className="border border-t-0 border-slate-300 rounded-b-md bg-white flex flex-col h-64">
-                           <div className="flex border-b border-slate-200">
-                              <button onClick={() => setCalcTab('fields')} className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'fields' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}>Champs ({currentDataset.fields.length})</button>
-                              <button onClick={() => setCalcTab('functions')} className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${calcTab === 'functions' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50'}`}>Fonctions</button>
-                           </div>
-                           <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-slate-50/50">
-                              {calcTab === 'fields' ? (
-                                 <div className="grid grid-cols-2 gap-2">
-                                    {currentDataset.fields.map(f => (
-                                       <button key={f} onClick={() => insertIntoFormula(`[${f}]`)} className="text-left px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-700 hover:border-indigo-300 hover:text-indigo-700 truncate transition-colors" title={`Insérer [${f}]`}>{f}</button>
-                                    ))}
-                                 </div>
-                              ) : (
-                                 <div className="space-y-1">
-                                    {[
-                                       { name: 'SI', syntax: 'SI(condition, vrai, faux)', desc: 'Condition logique' },
-                                       { name: 'SOMME', syntax: 'SOMME(v1, v2...)', desc: 'Additionne les valeurs' },
-                                       { name: 'MOYENNE', syntax: 'MOYENNE(v1, v2...)', desc: 'Moyenne des valeurs' },
-                                       { name: 'ARRONDI', syntax: 'ARRONDI(nombre, décimales)', desc: 'Arrondit un nombre' },
-                                       { name: 'MIN', syntax: 'MIN(v1, v2...)', desc: 'Valeur minimale' },
-                                       { name: 'MAX', syntax: 'MAX(v1, v2...)', desc: 'Valeur maximale' },
-                                       { name: 'ABS', syntax: 'ABS(nombre)', desc: 'Valeur absolue' },
-                                    ].map(fn => (
-                                       <button key={fn.name} onClick={() => insertIntoFormula(`${fn.name}(`)} className="w-full text-left px-2 py-1.5 bg-white border border-slate-200 rounded hover:border-indigo-300 group">
-                                          <div className="flex justify-between items-center"><span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span><span className="text-xs text-slate-400 font-mono">{fn.syntax}</span></div>
-                                          <div className="text-xs text-slate-500 mt-0.5">{fn.desc}</div>
-                                       </button>
-                                    ))}
-                                 </div>
-                              )}
-                           </div>
-                        </div>
-                     </div>
-                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                           <label className="block text-xs font-bold text-slate-600 mb-1">Type de résultat</label>
-                           <select className="block w-full rounded-md border-slate-300 text-sm p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500" value={newField.outputType} onChange={e => setNewField({ ...newField, outputType: e.target.value as any })}>
-                              <option value="number">Nombre</option>
-                              <option value="text">Texte</option>
-                              <option value="boolean">Vrai/Faux</option>
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-slate-600 mb-1">Unité (opt)</label>
-                           <input type="text" className="block w-full rounded-md border-slate-300 text-sm p-1.5 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: €" value={newField.unit} onChange={e => setNewField({ ...newField, unit: e.target.value })} />
-                        </div>
-                     </div>
-                     <div className={`p-3 rounded border ${previewResult?.error ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} transition-colors`}>
-                        <div className="text-xs font-bold uppercase mb-1 flex justify-between"><span className={previewResult?.error ? 'text-red-700' : 'text-green-700'}>{previewResult?.error ? 'Erreur' : 'Aperçu (1ère ligne)'}</span></div>
-                        <div className={`text-sm font-mono ${previewResult?.error ? 'text-red-800' : 'text-green-900 font-bold'}`}>{previewResult ? (previewResult.error || String(previewResult.value)) : '...'}</div>
-                     </div>
-
-                     {/* Existing Fields Section */}
-                     <div className="mt-4 pt-4 border-t border-slate-100">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Champs existants ({calculatedFields.length})</label>
-                        <div className="space-y-2">
-                           {calculatedFields.length === 0 ? (
-                              <p className="text-xs text-slate-400 italic">Aucun champ calculé</p>
-                           ) : (
-                              calculatedFields.map(cf => (
-                                 <div key={cf.id} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200 hover:border-indigo-300 transition-colors group">
-                                    <div className="min-w-0 flex-1">
-                                       <div className="text-xs font-bold text-slate-700 truncate">{cf.name}</div>
-                                       <div className="text-[10px] text-slate-400 font-mono truncate">{cf.formula}</div>
-                                    </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                       <button onClick={() => handleEditCalculatedField(cf)} className="p-1 hover:bg-indigo-100 text-indigo-600 rounded" title="Modifier"><Calculator className="w-3.5 h-3.5" /></button>
-                                       <button onClick={() => removeCalculatedField(currentDataset.id, cf.id)} className="p-1 hover:bg-red-100 text-red-600 rounded" title="Supprimer"><Trash2 className="w-3.5 h-3.5" /></button>
-                                    </div>
-                                 </div>
-                              ))
-                           )}
-                        </div>
-                     </div>
-                  </div>
-                  <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                     <Button variant="outline" onClick={() => { setIsCalcDrawerOpen(false); setEditingFieldId(null); setNewField({ name: '', formula: '', outputType: 'number', unit: '' }); }}>Annuler</Button>
-                     <Button onClick={handleAddCalculatedField} disabled={!newField.name || !newField.formula || !!previewResult?.error}>
-                        {editingFieldId ? 'Mettre à jour' : 'Créer le champ'}
-                     </Button>
-                  </div>
-               </div>
-            )}
+            {/* CALCULATED FIELDS MODAL */}
+            <CalculatedFieldModal
+               isOpen={isCalcModalOpen}
+               onClose={() => {
+                  setIsCalcModalOpen(false);
+                  setEditingCalcField(null);
+               }}
+               fields={currentDataset.fields}
+               onSave={handleSaveCalculatedField}
+               initialField={editingCalcField}
+               sampleRow={processedRows[0]}
+            />
 
             {/* CONDITIONAL FORMATTING DRAWER */}
             {isFormatDrawerOpen && (

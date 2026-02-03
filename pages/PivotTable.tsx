@@ -494,15 +494,22 @@ export const PivotTable: React.FC = () => {
             }
         } else {
             const id = generateId();
+            const outputType = field.outputType || 'number';
             addCalculatedField(primaryDataset.id, {
                 id,
                 name: field.name!,
                 formula: field.formula!,
-                outputType: field.outputType || 'number',
+                outputType,
                 unit: field.unit
             });
-            // Auto add to metrics
-            setMetrics(prev => [...prev, { field: field.name!, aggType: 'sum' }]);
+            // Auto add based on output type
+            if (outputType === 'number') {
+                // Numbers go to metrics (values)
+                setMetrics(prev => [...prev, { field: field.name!, aggType: 'sum' }]);
+            } else {
+                // Text and boolean go to rows (dimensions)
+                setRowFields(prev => [...prev, field.name!]);
+            }
         }
         setEditingCalcField(null);
     };

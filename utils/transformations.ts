@@ -78,40 +78,65 @@ export const applyJoin = (
 ): DataRow[] => {
   const result: DataRow[] = [];
 
-  if (joinType === 'inner' || joinType === 'left') {
-    for (const leftRow of leftData) {
-      const matches = rightData.filter(rightRow => leftRow[leftKey] === rightRow[rightKey]);
+  // BOLT OPTIMIZATION: O(N+M) implementation using Map for lookup instead of O(N*M) nested loops
+  // Build lookup map for the right side
+  const rightMap = new Map<string, DataRow[]>();
+  for (const row of rightData) {
+    const key = String(row[rightKey] ?? '');
+    if (!rightMap.has(key)) rightMap.set(key, []);
+    rightMap.get(key)!.push(row);
+  }
 
-      if (matches.length > 0) {
-        for (const rightRow of matches) {
-          const merged = { ...leftRow };
-          // Ajouter les colonnes de droite avec suffix si conflit
-          Object.keys(rightRow).forEach(key => {
-            const newKey = key in leftRow && key !== rightKey ? `${key}${suffix}` : key;
-            merged[newKey] = rightRow[key];
-          });
-          result.push(merged);
-        }
-      } else if (joinType === 'left') {
+  // Track matched right rows for 'right' and 'full' joins
+  const matchedRightRows = new Set<DataRow>();
+
+  // 1. Process Left side (handles Inner, Left, and first part of Full join)
+  for (const leftRow of leftData) {
+    const key = String(leftRow[leftKey] ?? '');
+    const matches = rightMap.get(key) || [];
+
+    if (matches.length > 0) {
+      for (const rightRow of matches) {
+        matchedRightRows.add(rightRow);
+
+        // Don't include matches for 'right' only join if we are only building unmatched right rows later
+        // Actually, 'right' join should include matched rows too.
+
+        const merged = { ...leftRow };
+        Object.keys(rightRow).forEach(k => {
+          if (k === 'id') return; // Preserve left ID
+          const newKey = k in leftRow && k !== rightKey ? `${k}${suffix}` : k;
+          merged[newKey] = rightRow[k];
+        });
+        result.push(merged);
+      }
+    } else {
+      // No match for this left row
+      if (joinType === 'left' || joinType === 'full') {
         result.push({ ...leftRow });
       }
     }
   }
 
+  // 2. Process Right side (handles unmatched rows for 'right' and 'full' join)
   if (joinType === 'right' || joinType === 'full') {
     for (const rightRow of rightData) {
-      const matches = leftData.filter(leftRow => leftRow[leftKey] === rightRow[rightKey]);
-
-      if (matches.length === 0) {
+      if (!matchedRightRows.has(rightRow)) {
         const merged: DataRow = { id: generateId() };
-        // Ajouter les colonnes de droite
-        Object.keys(rightRow).forEach(key => {
-          merged[key] = rightRow[key];
+        Object.keys(rightRow).forEach(k => {
+          merged[k] = rightRow[k];
         });
         result.push(merged);
       }
     }
   }
+
+  // Final filtering for 'right' join: The above loop added ALL matched rows (left-centric).
+  // For a pure 'right' join, we only want matched rows and unmatched right rows.
+  // Wait, if joinType is 'right', the first loop added matched rows. The second loop added unmatched right rows.
+  // This matches 'right' join definition.
+  // HOWEVER, the first loop included ALL matching left rows for each right row.
+  // If we have multiple left rows for one right row, they all appear in 'right' join. This is standard SQL behavior.
 
   return result;
 };

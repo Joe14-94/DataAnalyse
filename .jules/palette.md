@@ -7,3 +7,7 @@
 ## 2026-02-13 - [Modal Accessibility Standards]
 **Learning:** Generic Modal components frequently miss ARIA attributes that are critical for screen readers to understand the context.
 **Action:** Always include `role="dialog"`, `aria-modal="true"`, and link the title via `aria-labelledby`. Ensure close buttons have descriptive `aria-label` props rather than relying on hardcoded strings or icons.
+
+## 2026-02-14 - [Keyboard Navigation in Tabs]
+**Learning:** Modern tab components often lack standardized keyboard interaction (Arrow keys, Home, End), making them difficult for power users and keyboard-only users.
+**Action:** Implement `role="tablist"`, `role="tab"`, and `role="tabpanel"` correctly, and use a simple DOM-based traversal in the `onKeyDown` handler of the `TabList` to manage focus and selection efficiently. Always sanitize IDs generated from user-provided values to ensure valid HTML.
