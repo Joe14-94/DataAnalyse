@@ -543,11 +543,15 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
                                 {/* Example 2: Multiple replacements */}
                                 <div className="border-l-4 border-amber-400 pl-3 py-2 bg-amber-50/30">
-                                    <div className="text-[10px] font-bold text-amber-900 mb-1">✓ Remplacements multiples en chaîne</div>
+                                    <div className="text-[10px] font-bold text-amber-900 mb-1">✓ Remplacements multiples en chaîne (ordre d'exécution)</div>
                                     <code className="text-[10px] font-mono text-slate-700 block mb-1">
                                         REMPLACER(REMPLACER(REMPLACER([Statut], "En cours", "Active"), "Terminé", "Done"), "Annulé", "Cancelled")
                                     </code>
                                     <div className="text-[9px] text-slate-600">→ Remplace plusieurs chaînes différentes en imbriquant les fonctions</div>
+                                    <div className="text-[9px] text-amber-700 font-medium mt-1 bg-amber-100 p-1.5 rounded">
+                                        ⚠️ Ordre d'exécution : 1️⃣ "En cours"→"Active" 2️⃣ "Terminé"→"Done" 3️⃣ "Annulé"→"Cancelled"
+                                    </div>
+                                    <div className="text-[9px] text-amber-700 mt-1">Les remplacements s'exécutent de l'intérieur vers l'extérieur, dans l'ordre des imbrications</div>
                                 </div>
 
                                 {/* Example 3: Regex - Remove all digits */}
@@ -579,6 +583,15 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                     <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Email], "@.*", "@example.com")</code>
                                     <div className="text-[9px] text-slate-600">→ "user@ancien.com" devient "user@example.com"</div>
                                     <div className="text-[9px] text-cyan-700 font-medium mt-1">Pattern: .* = n'importe quoi après @</div>
+                                </div>
+
+                                {/* Example 7: Regex - Replace text with dots (escaped) */}
+                                <div className="border-l-4 border-orange-400 pl-3 py-2 bg-orange-50/30">
+                                    <div className="text-[10px] font-bold text-orange-900 mb-1">✓ Regex : Remplacer texte avec points (A.B.C.D)</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Code], "A\\.B\\.C\\.[A-Z]", "X.Y.Z")</code>
+                                    <div className="text-[9px] text-slate-600">→ "A.B.C.D" ou "A.B.C.E" deviennent "X.Y.Z"</div>
+                                    <div className="text-[9px] text-orange-700 font-medium mt-1">Important : Le point doit être échappé avec \. car en regex, . = n'importe quel caractère</div>
+                                    <div className="text-[9px] text-orange-700 font-medium mt-1">Pattern: [A-Z] = une lettre majuscule (D, E, F, etc.)</div>
                                 </div>
 
                                 {/* Regex Quick Reference */}
@@ -620,6 +633,14 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             <code className="font-mono text-indigo-700">\s</code>
                                             <span className="text-slate-600"> = espace blanc</span>
                                         </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">\.</code>
+                                            <span className="text-slate-600"> = point littéral (échappé)</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">\\</code>
+                                            <span className="text-slate-600"> = échapper un caractère spécial</span>
+                                        </div>
                                     </div>
                                     <div className="mt-2 text-[9px] text-slate-500 italic">
                                         Note : SUBSTITUER ne supporte pas les regex, utilisez REMPLACER pour les patterns complexes
@@ -631,7 +652,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                     <div className="text-[9px] text-blue-900 flex items-start gap-1">
                                         <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <strong>Astuce :</strong> Pour remplacer plusieurs chaînes différentes, imbriquez les REMPLACER les uns dans les autres comme dans l'exemple 2. Testez avec l'aperçu en temps réel pour vérifier le résultat !
+                                            <strong>Astuce :</strong> Pour remplacer plusieurs chaînes différentes, imbriquez les REMPLACER les uns dans les autres comme dans l'exemple 2. Les remplacements sont ordonnancés : la première règle (la plus imbriquée) s'exécute en premier, puis la seconde, puis la troisième, etc. Testez avec l'aperçu en temps réel pour vérifier le résultat !
                                         </div>
                                     </div>
                                 </div>
