@@ -238,7 +238,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         calculatedFields: (d.calculatedFields || []).map(f => f.id === fieldId ? { ...f, ...updates } : f)
       };
     }));
-  }, []);
+
+    // Recalculate all calculated fields on existing data
+    setAllBatches(prev => prev.map(b => {
+      if (b.datasetId !== datasetId) return b;
+      const dataset = datasets.find(d => d.id === datasetId);
+      if (!dataset) return b;
+
+      // Get updated calculated fields
+      const allCalcFields = (dataset.calculatedFields || []).map(f =>
+        f.id === fieldId ? { ...f, ...updates } : f
+      );
+
+      return {
+        ...b,
+        rows: b.rows.map(row => {
+          const enrichedRow = { ...row };
+          allCalcFields.forEach(cf => {
+            enrichedRow[cf.name] = evaluateFormula(enrichedRow, cf.formula, cf.outputType);
+          });
+          return enrichedRow;
+        })
+      };
+    }));
+  }, [datasets]);
 
   const renameDatasetField = useCallback((datasetId: string, oldName: string, newName: string) => {
     if (oldName === newName || !newName.trim()) return;
@@ -284,7 +307,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         calculatedFields: [...(d.calculatedFields || []), field]
       };
     }));
-  }, []);
+
+    // Recalculate all calculated fields on existing data
+    setAllBatches(prev => prev.map(b => {
+      if (b.datasetId !== datasetId) return b;
+      const dataset = datasets.find(d => d.id === datasetId);
+      if (!dataset) return b;
+
+      const allCalcFields = [...(dataset.calculatedFields || []), field];
+
+      return {
+        ...b,
+        rows: b.rows.map(row => {
+          const enrichedRow = { ...row };
+          allCalcFields.forEach(cf => {
+            enrichedRow[cf.name] = evaluateFormula(enrichedRow, cf.formula, cf.outputType);
+          });
+          return enrichedRow;
+        })
+      };
+    }));
+  }, [datasets]);
 
   const removeCalculatedField = useCallback((datasetId: string, fieldId: string) => {
     setDatasets(prev => prev.map(d => {
