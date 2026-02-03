@@ -1234,7 +1234,7 @@ class FormulaParser {
  * Évalue une formule de manière sécurisée sans utiliser eval() ni new Function()
  * BOLT OPTIMIZATION: Uses a global cache for tokenized formulas to improve performance in loops.
  */
-export const evaluateFormula = (row: any, formula: string): number | string | null => {
+export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean'): number | string | boolean | null => {
   if (!formula || !formula.trim()) return null;
 
   try {
@@ -1245,9 +1245,26 @@ export const evaluateFormula = (row: any, formula: string): number | string | nu
     }
 
     const parser = new FormulaParser(tokens, row);
-    const result = parser.evaluate();
+    let result = parser.evaluate();
 
-    // Nettoyage résultat final
+    // Force conversion based on outputType if specified
+    if (outputType) {
+      if (outputType === 'text') {
+        // Force conversion to string
+        if (result === null || result === undefined) return '';
+        return String(result);
+      } else if (outputType === 'boolean') {
+        // Force conversion to boolean
+        return Boolean(result);
+      } else if (outputType === 'number') {
+        // Force conversion to number
+        const num = Number(result);
+        if (!isFinite(num) || isNaN(num)) return null;
+        return Math.round(num * 10000) / 10000; // Round to 4 decimals
+      }
+    }
+
+    // Nettoyage résultat final (comportement par défaut)
     if (typeof result === 'number') {
       if (!isFinite(result) || isNaN(result)) return null;
       return Math.round(result * 10000) / 10000; // Round to 4 decimals

@@ -333,7 +333,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         processedRows = processedRows.map(row => {
           const enrichedRow = { ...row };
           dataset.calculatedFields?.forEach(cf => {
-             enrichedRow[cf.name] = evaluateFormula(enrichedRow, cf.formula);
+             enrichedRow[cf.name] = evaluateFormula(enrichedRow, cf.formula, cf.outputType);
           });
           return enrichedRow;
         });

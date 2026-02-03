@@ -48,7 +48,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
         const timer = setTimeout(() => {
             if (sampleRow) {
                 try {
-                    const res = evaluateFormula(sampleRow, formula);
+                    const res = evaluateFormula(sampleRow, formula, outputType);
                     if (res === null && formula.trim() !== '') {
                         setPreviewResult({ value: null, error: "Syntaxe invalide" });
                     } else {
@@ -62,7 +62,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
             }
         }, 500);
         return () => clearTimeout(timer);
-    }, [formula, sampleRow]);
+    }, [formula, sampleRow, outputType]);
 
     const insertIntoFormula = (text: string) => {
         if (!textareaRef.current) return;
