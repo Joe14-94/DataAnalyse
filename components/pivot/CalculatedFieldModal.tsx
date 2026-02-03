@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check } from 'lucide-react';
+import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { evaluateFormula } from '../../utils';
 import { CalculatedField } from '../../types';
@@ -21,6 +21,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
     const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean'>(initialField?.outputType || 'number');
     const [unit, setUnit] = useState(initialField?.unit || '');
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
+    const [showExamples, setShowExamples] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -272,6 +273,126 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         <div className={`text-base font-mono break-all ${previewResult?.error ? 'text-red-800 italic opacity-80' : 'text-slate-800 font-bold'}`}>
                             {previewResult ? (previewResult.error || (previewResult.value === null ? 'null' : String(previewResult.value)) + (unit && outputType === 'number' ? ` ${unit}` : '')) : <span className="text-slate-400 italic">Saisissez une formule pour voir un aperçu...</span>}
                         </div>
+                    </div>
+
+                    {/* Examples Section */}
+                    <div className="border border-indigo-200 rounded-xl overflow-hidden bg-indigo-50/50 shadow-sm">
+                        <button
+                            onClick={() => setShowExamples(!showExamples)}
+                            className="w-full p-3 flex items-center justify-between hover:bg-indigo-100/50 transition-colors"
+                        >
+                            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-2">
+                                <BookOpen className="w-4 h-4" />
+                                Exemples d'utilisation (REMPLACER, Regex, Remplacements multiples)
+                            </span>
+                            {showExamples ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-indigo-600" />}
+                        </button>
+
+                        {showExamples && (
+                            <div className="p-4 space-y-3 bg-white border-t border-indigo-200">
+                                {/* Example 1: Simple replacement */}
+                                <div className="border-l-4 border-indigo-400 pl-3 py-2 bg-indigo-50/30">
+                                    <div className="text-[10px] font-bold text-indigo-900 mb-1">✓ Remplacement simple</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Test], "AZERTY", "QSDFGH")</code>
+                                    <div className="text-[9px] text-slate-600">→ Remplace toutes les occurrences de "AZERTY" par "QSDFGH"</div>
+                                </div>
+
+                                {/* Example 2: Multiple replacements */}
+                                <div className="border-l-4 border-amber-400 pl-3 py-2 bg-amber-50/30">
+                                    <div className="text-[10px] font-bold text-amber-900 mb-1">✓ Remplacements multiples en chaîne</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">
+                                        REMPLACER(REMPLACER(REMPLACER([Statut], "En cours", "Active"), "Terminé", "Done"), "Annulé", "Cancelled")
+                                    </code>
+                                    <div className="text-[9px] text-slate-600">→ Remplace plusieurs chaînes différentes en imbriquant les fonctions</div>
+                                </div>
+
+                                {/* Example 3: Regex - Remove all digits */}
+                                <div className="border-l-4 border-purple-400 pl-3 py-2 bg-purple-50/30">
+                                    <div className="text-[10px] font-bold text-purple-900 mb-1">✓ Regex : Supprimer tous les chiffres</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Code], "[0-9]+", "")</code>
+                                    <div className="text-[9px] text-slate-600">→ "ABC123DEF" devient "ABCDEF"</div>
+                                    <div className="text-[9px] text-purple-700 font-medium mt-1">Pattern: [0-9]+ = un ou plusieurs chiffres</div>
+                                </div>
+
+                                {/* Example 4: Regex - Replace spaces */}
+                                <div className="border-l-4 border-green-400 pl-3 py-2 bg-green-50/30">
+                                    <div className="text-[10px] font-bold text-green-900 mb-1">✓ Regex : Remplacer tous les espaces</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Tel], " ", "")</code>
+                                    <div className="text-[9px] text-slate-600">→ "06 12 34 56 78" devient "0612345678"</div>
+                                </div>
+
+                                {/* Example 5: Regex - Replace special chars */}
+                                <div className="border-l-4 border-pink-400 pl-3 py-2 bg-pink-50/30">
+                                    <div className="text-[10px] font-bold text-pink-900 mb-1">✓ Regex : Supprimer caractères spéciaux</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Texte], "[^a-zA-Z0-9 ]", "")</code>
+                                    <div className="text-[9px] text-slate-600">→ Garde uniquement lettres, chiffres et espaces</div>
+                                    <div className="text-[9px] text-pink-700 font-medium mt-1">Pattern: [^...] = tout SAUF ce qui est dans les crochets</div>
+                                </div>
+
+                                {/* Example 6: Regex - Extract domain from email */}
+                                <div className="border-l-4 border-cyan-400 pl-3 py-2 bg-cyan-50/30">
+                                    <div className="text-[10px] font-bold text-cyan-900 mb-1">✓ Regex : Remplacer tout après @</div>
+                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Email], "@.*", "@example.com")</code>
+                                    <div className="text-[9px] text-slate-600">→ "user@ancien.com" devient "user@example.com"</div>
+                                    <div className="text-[9px] text-cyan-700 font-medium mt-1">Pattern: .* = n'importe quoi après @</div>
+                                </div>
+
+                                {/* Regex Quick Reference */}
+                                <div className="border border-slate-300 rounded-lg p-3 bg-slate-50 mt-3">
+                                    <div className="text-[10px] font-bold text-slate-700 mb-2 flex items-center gap-1">
+                                        <Info className="w-3 h-3" />
+                                        Aide Regex (expressions régulières)
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-[9px]">
+                                        <div>
+                                            <code className="font-mono text-indigo-700">[0-9]</code>
+                                            <span className="text-slate-600"> = un chiffre</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">[a-z]</code>
+                                            <span className="text-slate-600"> = une lettre minuscule</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">[A-Z]</code>
+                                            <span className="text-slate-600"> = une lettre majuscule</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">[^...]</code>
+                                            <span className="text-slate-600"> = tout sauf ...</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">+</code>
+                                            <span className="text-slate-600"> = un ou plusieurs</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">*</code>
+                                            <span className="text-slate-600"> = zéro ou plusieurs</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">.</code>
+                                            <span className="text-slate-600"> = n'importe quel caractère</span>
+                                        </div>
+                                        <div>
+                                            <code className="font-mono text-indigo-700">\s</code>
+                                            <span className="text-slate-600"> = espace blanc</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 text-[9px] text-slate-500 italic">
+                                        Note : SUBSTITUER ne supporte pas les regex, utilisez REMPLACER pour les patterns complexes
+                                    </div>
+                                </div>
+
+                                {/* Practical tip */}
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                                    <div className="text-[9px] text-blue-900 flex items-start gap-1">
+                                        <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <strong>Astuce :</strong> Pour remplacer plusieurs chaînes différentes, imbriquez les REMPLACER les uns dans les autres comme dans l'exemple 2. Testez avec l'aperçu en temps réel pour vérifier le résultat !
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
