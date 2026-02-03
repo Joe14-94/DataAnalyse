@@ -868,8 +868,35 @@ export const exportView = async (
 
   else if (format === 'html') {
     try {
-      // Clone element to sanitize and ensure styles
-      // For a robust HTML export, we embed a minimal HTML structure with Tailwind CDN
+      // Clone element to ensure we get ALL content (not just what's visible in scroll)
+      const clone = element.cloneNode(true) as HTMLElement;
+
+      // Remove scroll containers and force all content to be visible
+      const fixElement = (el: HTMLElement) => {
+        // Remove height constraints
+        el.style.maxHeight = 'none';
+        el.style.height = 'auto';
+        el.style.overflow = 'visible';
+
+        // Process all children recursively
+        Array.from(el.children).forEach(child => {
+          if (child instanceof HTMLElement) {
+            // Remove scroll and height constraints
+            if (child.classList.contains('overflow-auto') ||
+                child.classList.contains('overflow-hidden') ||
+                child.classList.contains('overflow-y-auto') ||
+                child.classList.contains('overflow-x-auto')) {
+              child.style.overflow = 'visible';
+              child.style.maxHeight = 'none';
+              child.style.height = 'auto';
+            }
+
+            fixElement(child);
+          }
+        });
+      };
+
+      fixElement(clone);
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -885,6 +912,11 @@ export const exportView = async (
             .logo { height: 40px; width: auto; object-fit: contain; }
             .title h1 { font-size: 1.5rem; font-weight: bold; color: #1e293b; margin: 0; }
             .title p { font-size: 0.875rem; color: #64748b; margin: 0; }
+            /* Force all content to be visible */
+            * { max-height: none !important; overflow: visible !important; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #e2e8f0; padding: 0.5rem; }
+            th { background: #f8fafc; font-weight: 600; }
           </style>
         </head>
         <body>
@@ -897,7 +929,7 @@ export const exportView = async (
               </div>
             </div>
             <div class="content">
-              ${element.innerHTML}
+              ${clone.innerHTML}
             </div>
           </div>
         </body>
