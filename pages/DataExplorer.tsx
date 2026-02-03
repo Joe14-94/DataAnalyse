@@ -275,12 +275,13 @@ export const DataExplorer: React.FC = () => {
          const id = generateId();
          const outputType = field.outputType || 'number';
          addCalculatedField(currentDataset.id, {
+            ...field,
             id,
             name: field.name!,
             formula: field.formula!,
             outputType,
             unit: field.unit
-         });
+         } as CalculatedField);
       }
       setEditingCalcField(null);
    };

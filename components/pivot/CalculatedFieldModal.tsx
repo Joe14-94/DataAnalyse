@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, ChevronDown, ChevronUp, BookOpen, Trash2, ArrowUp, ArrowDown, Wand2, Type as TypeIcon, Scissors, Layers, MessageSquare } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { evaluateFormula } from '../../utils';
-import { CalculatedField } from '../../types';
+import { evaluateFormula, generateId } from '../../utils';
+import { CalculatedField, CalculatedFieldAction, CalculatedFieldActionType } from '../../types';
+import { generateFormulaFromActions } from '../../utils/calculatedFields';
 import { CalculatedFieldHelpModal } from './CalculatedFieldHelpModal';
 
 interface CalculatedFieldModalProps {
@@ -21,6 +22,9 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
     const [formula, setFormula] = useState(initialField?.formula || '');
     const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean'>(initialField?.outputType || 'number');
     const [unit, setUnit] = useState(initialField?.unit || '');
+    const [mode, setMode] = useState<'formula' | 'actions'>(initialField?.mode || 'formula');
+    const [actions, setActions] = useState<CalculatedFieldAction[]>(initialField?.actions || []);
+
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
     const [showExamples, setShowExamples] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
@@ -32,11 +36,15 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
             setFormula(initialField.formula);
             setOutputType(initialField.outputType);
             setUnit(initialField.unit || '');
+            setMode(initialField.mode || 'formula');
+            setActions(initialField.actions || []);
         } else {
             setName('');
             setFormula('');
             setOutputType('number');
             setUnit('');
+            setMode('formula');
+            setActions([]);
         }
     }, [initialField, isOpen]);
 
@@ -78,6 +86,47 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
         }, 10);
     };
 
+    // --- ACTIONS LOGIC ---
+
+    const addAction = (type: CalculatedFieldActionType) => {
+        const newAction: CalculatedFieldAction = {
+            id: generateId(),
+            type,
+            params: type === 'source' ? { field: fields[0] } :
+                    type === 'concat' ? { otherFields: [], separator: ' ' } :
+                    ['replace', 'regex'].includes(type) ? { search: '', pattern: '', replacement: '' } :
+                    ['add', 'subtract', 'multiply', 'divide'].includes(type) ? { value: 0 } :
+                    ['left', 'right', 'substring'].includes(type) ? { count: 5, start: 0, length: 5 } :
+                    {}
+        };
+        const newActions = [...actions, newAction];
+        setActions(newActions);
+        if (mode === 'actions') {
+            setFormula(generateFormulaFromActions(newActions, fields));
+        }
+    };
+
+    const updateAction = (id: string, params: any) => {
+        const newActions = actions.map(a => a.id === id ? { ...a, params: { ...a.params, ...params } } : a);
+        setActions(newActions);
+        setFormula(generateFormulaFromActions(newActions, fields));
+    };
+
+    const removeAction = (id: string) => {
+        const newActions = actions.filter(a => a.id !== id);
+        setActions(newActions);
+        setFormula(generateFormulaFromActions(newActions, fields));
+    };
+
+    const moveAction = (index: number, direction: 'up' | 'down') => {
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= actions.length) return;
+        const newActions = [...actions];
+        [newActions[index], newActions[newIndex]] = [newActions[newIndex], newActions[index]];
+        setActions(newActions);
+        setFormula(generateFormulaFromActions(newActions, fields));
+    };
+
     const handleSave = () => {
         if (name && formula) {
             onSave({
@@ -85,7 +134,9 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                 name,
                 formula,
                 outputType,
-                unit: outputType === 'number' ? unit : undefined
+                unit: outputType === 'number' ? unit : undefined,
+                mode,
+                actions: mode === 'actions' ? actions : undefined
             });
             onClose();
         }
@@ -126,7 +177,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-[80vw] h-[80vh] overflow-hidden flex flex-col">
+            <div className="bg-white rounded-xl shadow-2xl w-[90vw] h-[90vh] overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
@@ -142,64 +193,255 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
                 <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-                        {/* Left Column: Basic Info & Formula (span 4) */}
+                        {/* Left Column: Basic Info & Configuration (span 4) */}
                         <div className="lg:col-span-4 space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
-                                <input
-                                    type="text"
-                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all focus:border-indigo-500"
-                                    placeholder="Ex: Taux de marge, % Réalisation"
-                                    value={name}
-                                    onChange={e => setName(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider flex justify-between">
-                                    <span>Formule</span>
-                                    <span className="text-[9px] normal-case font-medium text-slate-400">Ex: [Ventes] - [Coûts]</span>
-                                </label>
-                                <div className="relative group">
-                                    <textarea
-                                        ref={textareaRef}
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none h-40 shadow-sm transition-all focus:border-indigo-500 bg-slate-50 focus:bg-white"
-                                        placeholder="Utilisez les noms de champs entre crochets []"
-                                        value={formula}
-                                        onChange={e => setFormula(e.target.value)}
-                                    />
-                                    <div className="absolute bottom-2 right-2 flex gap-1">
-                                        <button onClick={() => setFormula('')} className="p-1 text-slate-300 hover:text-slate-500 transition-colors" title="Effacer"><X className="w-3 h-3" /></button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4">
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Type de résultat</label>
-                                    <select
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                        value={outputType}
-                                        onChange={e => setOutputType(e.target.value as any)}
-                                    >
-                                        <option value="number">Nombre</option>
-                                        <option value="text">Texte</option>
-                                        <option value="boolean">Vrai/Faux</option>
-                                    </select>
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all focus:border-indigo-500"
+                                        placeholder="Ex: Taux de marge, % Réalisation"
+                                        value={name}
+                                        onChange={e => setName(e.target.value)}
+                                    />
                                 </div>
-                                {outputType === 'number' && (
+
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Unité</label>
-                                        <input
-                                            type="text"
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            placeholder="Ex: €, %"
-                                            value={unit}
-                                            onChange={e => setUnit(e.target.value)}
-                                        />
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Type de résultat</label>
+                                        <select
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            value={outputType}
+                                            onChange={e => setOutputType(e.target.value as any)}
+                                        >
+                                            <option value="number">Nombre</option>
+                                            <option value="text">Texte</option>
+                                            <option value="boolean">Vrai/Faux</option>
+                                        </select>
                                     </div>
-                                )}
+                                    {outputType === 'number' && (
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Unité</label>
+                                            <input
+                                                type="text"
+                                                className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                placeholder="Ex: €, %"
+                                                value={unit}
+                                                onChange={e => setUnit(e.target.value)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="pt-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">Mode de création</label>
+                                    <div className="flex p-1 bg-slate-200 rounded-lg gap-1">
+                                        <button
+                                            onClick={() => setMode('formula')}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${mode === 'formula' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:bg-slate-300/50'}`}
+                                        >
+                                            Formule libre
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setMode('actions');
+                                                if (actions.length === 0) {
+                                                    // Initialisation par défaut avec une source
+                                                    addAction('source');
+                                                }
+                                            }}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${mode === 'actions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:bg-slate-300/50'}`}
+                                        >
+                                            Assistant par étapes
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+
+                            {mode === 'formula' ? (
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider flex justify-between">
+                                        <span>Formule</span>
+                                        <span className="text-[9px] normal-case font-medium text-slate-400">Ex: [Ventes] - [Coûts]</span>
+                                    </label>
+                                    <div className="relative group">
+                                        <textarea
+                                            ref={textareaRef}
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none h-40 shadow-sm transition-all focus:border-indigo-500 bg-slate-50 focus:bg-white"
+                                            placeholder="Utilisez les noms de champs entre crochets []"
+                                            value={formula}
+                                            onChange={e => setFormula(e.target.value)}
+                                        />
+                                        <div className="absolute bottom-2 right-2 flex gap-1">
+                                            <button onClick={() => setFormula('')} className="p-1 text-slate-300 hover:text-slate-500 transition-colors" title="Effacer"><X className="w-3 h-3" /></button>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 italic">
+                                        Cliquez sur les champs et fonctions à droite pour les insérer dans la formule.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Séquence d'actions</label>
+                                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">Ordre séquentiel</span>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                                        {actions.length === 0 ? (
+                                            <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                                                <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                                <p className="text-xs text-slate-400 font-medium px-4">Aucune action définie.<br/>Commencez par choisir un champ source.</p>
+                                            </div>
+                                        ) : (
+                                            actions.map((action, idx) => (
+                                                <div key={action.id} className={`bg-white border rounded-xl shadow-sm overflow-hidden group transition-all ${action.type === 'source' ? 'border-brand-200' : 'border-slate-200 hover:border-indigo-300'}`}>
+                                                    <div className={`px-3 py-2 border-b flex items-center justify-between ${action.type === 'source' ? 'bg-brand-50 border-brand-100' : 'bg-slate-50 border-slate-200'}`}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`${action.type === 'source' ? 'bg-brand-600' : 'bg-indigo-600'} text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold`}>{idx + 1}</span>
+                                                            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight truncate w-32">
+                                                                {action.type === 'source' ? 'Source des données' : action.type.toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {action.type !== 'source' && (
+                                                                <>
+                                                                    <button onClick={() => moveAction(idx, 'up')} disabled={idx <= 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowUp className="w-3 h-3" /></button>
+                                                                    <button onClick={() => moveAction(idx, 'down')} disabled={idx === actions.length - 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowDown className="w-3 h-3" /></button>
+                                                                    <button onClick={() => removeAction(action.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-3 space-y-3">
+                                                        {action.type === 'source' && (
+                                                            <div>
+                                                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Champ source</label>
+                                                                <select
+                                                                    className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 focus:bg-white font-bold text-slate-700"
+                                                                    value={action.params.field || ''}
+                                                                    onChange={e => updateAction(action.id, { field: e.target.value })}
+                                                                >
+                                                                    <option value="" disabled>Sélectionner un champ</option>
+                                                                    {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Action specific inputs */}
+                                                        {action.type === 'replace' && (
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Chercher</label>
+                                                                    <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.search || ''} onChange={e => updateAction(action.id, { search: e.target.value })} />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Remplacer</label>
+                                                                    <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.replacement || ''} onChange={e => updateAction(action.id, { replacement: e.target.value })} />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {action.type === 'regex' && (
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Motif Regex</label>
+                                                                    <input type="text" className="w-full text-xs font-mono border border-slate-200 rounded px-2 py-1" value={action.params.pattern || ''} onChange={e => updateAction(action.id, { pattern: e.target.value })} placeholder="Ex: [0-9]+" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Remplacement</label>
+                                                                    <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.replacement || ''} onChange={e => updateAction(action.id, { replacement: e.target.value })} />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {action.type === 'concat' && (
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Colonnes à ajouter</label>
+                                                                    <div className="flex flex-wrap gap-1 p-2 bg-slate-50 border border-slate-200 rounded-lg min-h-[40px]">
+                                                                        {(action.params.otherFields || []).map((f: string) => (
+                                                                            <span key={f} className="inline-flex items-center gap-1 bg-white border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                                                                {f}
+                                                                                <button onClick={() => updateAction(action.id, { otherFields: action.params.otherFields.filter((of: string) => of !== f) })} className="hover:text-red-500"><X className="w-2.5 h-2.5" /></button>
+                                                                            </span>
+                                                                        ))}
+                                                                        <select
+                                                                            className="text-[9px] bg-transparent border-none focus:ring-0 text-slate-400"
+                                                                            onChange={e => {
+                                                                                if (!e.target.value) return;
+                                                                                const current = action.params.otherFields || [];
+                                                                                if (!current.includes(e.target.value)) {
+                                                                                    updateAction(action.id, { otherFields: [...current, e.target.value] });
+                                                                                }
+                                                                                e.target.value = "";
+                                                                            }}
+                                                                        >
+                                                                            <option value="">+ Ajouter...</option>
+                                                                            {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Séparateur</label>
+                                                                    <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.separator || ''} onChange={e => updateAction(action.id, { separator: e.target.value })} placeholder="Ex: - , /" />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {['add', 'subtract', 'multiply', 'divide'].includes(action.type) && (
+                                                            <div>
+                                                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Valeur</label>
+                                                                <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.value || 0} onChange={e => updateAction(action.id, { value: parseFloat(e.target.value) })} />
+                                                            </div>
+                                                        )}
+                                                        {['left', 'right'].includes(action.type) && (
+                                                            <div>
+                                                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Nombre de caractères</label>
+                                                                <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.count || 5} onChange={e => updateAction(action.id, { count: parseInt(e.target.value) })} />
+                                                            </div>
+                                                        )}
+                                                        {action.type === 'substring' && (
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Position début</label>
+                                                                    <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.start || 0} onChange={e => updateAction(action.id, { start: parseInt(e.target.value) })} />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Longueur</label>
+                                                                    <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.length || 5} onChange={e => updateAction(action.id, { length: parseInt(e.target.value) })} />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Plus className="w-3 h-3 text-indigo-600" />
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ajouter une transformation</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <button onClick={() => addAction('trim')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Scissors className="w-3 h-3" /> Nettoyer (Trim)</button>
+                                            <button onClick={() => addAction('upper')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><TypeIcon className="w-3 h-3" /> Majuscule</button>
+                                            <button onClick={() => addAction('replace')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Wand2 className="w-3 h-3" /> Remplacer</button>
+                                            <button onClick={() => addAction('regex')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><MessageSquare className="w-3 h-3" /> Regex</button>
+                                            <button onClick={() => addAction('concat')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Plus className="w-3 h-3" /> Concaténer</button>
+                                            {outputType === 'number' && (
+                                                <button onClick={() => addAction('add')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Calculator className="w-3 h-3" /> Calculer</button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 pt-4 border-t border-slate-200">
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Formule générée (Lecture seule)</label>
+                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-[10px] font-mono text-slate-600 break-all h-20 overflow-y-auto custom-scrollbar">
+                                            {formula || "Choisissez un champ source pour commencer..."}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Middle Column: Fields (span 5) */}

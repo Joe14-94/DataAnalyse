@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette } from 'lucide-react';
+import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette, Pencil } from 'lucide-react';
 import { PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig, AggregationType, DateGrouping } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
 import { formatDateFr } from '../../utils';
@@ -112,7 +112,7 @@ const FieldChip: React.FC<{
                        className="p-0.5 hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 rounded transition-colors"
                        title="Modifier"
                    >
-                       <Plus className="w-2.5 h-2.5" />
+                       <Pencil className="w-2.5 h-2.5" />
                    </button>
                )}
                {onDelete && (

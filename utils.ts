@@ -968,8 +968,20 @@ class FormulaParser {
         const quote = char;
         cursor++;
         let val = '';
-        while (cursor < input.length && input[cursor] !== quote) val += input[cursor++];
-        cursor++;
+        while (cursor < input.length) {
+          if (input[cursor] === quote) {
+            // Check for escaped quote (double quote)
+            if (input[cursor + 1] === quote) {
+              val += quote;
+              cursor += 2;
+              continue;
+            } else {
+              cursor++;
+              break;
+            }
+          }
+          val += input[cursor++];
+        }
         tokens.push({ type: 'STRING', value: val });
         continue;
       }
@@ -1036,8 +1048,8 @@ class FormulaParser {
     while (this.peek().type === 'OPERATOR' && ['+', '-', '>', '<', '>=', '<=', '=', '<>'].includes(this.peek().value)) {
       const op = this.consume().value;
       const right = this.parseTerm();
-      if (op === '+') left = (Number(left) || 0) + (Number(right) || 0);
-      else if (op === '-') left = (Number(left) || 0) - (Number(right) || 0);
+      if (op === '+') left = parseSmartNumber(left) + parseSmartNumber(right);
+      else if (op === '-') left = parseSmartNumber(left) - parseSmartNumber(right);
       else if (op === '>') left = left > right;
       else if (op === '<') left = left < right;
       else if (op === '>=') left = left >= right;
@@ -1053,10 +1065,10 @@ class FormulaParser {
     while (this.peek().type === 'OPERATOR' && ['*', '/'].includes(this.peek().value)) {
       const op = this.consume().value;
       const right = this.parseFactor();
-      if (op === '*') left = (Number(left) || 0) * (Number(right) || 0);
+      if (op === '*') left = parseSmartNumber(left) * parseSmartNumber(right);
       else if (op === '/') {
-        const r = Number(right) || 0;
-        left = r !== 0 ? (Number(left) || 0) / r : 0;
+        const r = parseSmartNumber(right);
+        left = r !== 0 ? parseSmartNumber(left) / r : 0;
       }
     }
     return left;
@@ -1078,23 +1090,8 @@ class FormulaParser {
     if (token.type === 'FIELD') {
       this.consume();
       const val = this.row[token.value];
-
-      // Si la valeur n'existe pas, retourner 0
-      if (val === undefined || val === null) return 0;
-
-      // Si c'est déjà un nombre, le retourner
-      if (typeof val === 'number') return val;
-
-      // Si c'est une chaîne qui ressemble à un nombre, la convertir
-      const strVal = String(val).trim();
-      // Accepter les nombres avec ou sans unités (€, kg, %, etc.)
-      if (strVal !== '' && /^[-+]?[\d\s.,]+[\w€$£%°]*$/.test(strVal)) {
-        const num = parseSmartNumber(val);
-        if (!isNaN(num)) return num;
-      }
-
-      // Sinon, retourner la valeur telle quelle (texte, booléen, etc.)
-      return val;
+      // Retourner la valeur brute, les opérateurs et fonctions se chargeront de la conversion si nécessaire
+      return val === undefined ? null : val;
     }
 
     if (token.type === 'IDENTIFIER') {
@@ -1138,19 +1135,19 @@ class FormulaParser {
       case 'SI': case 'IF':
         return args[0] ? args[1] : args[2];
       case 'SOMME': case 'SUM':
-        return args.reduce((a, b) => a + (Number(b) || 0), 0);
+        return args.reduce((a, b) => a + parseSmartNumber(b), 0);
       case 'MOYENNE': case 'AVG': case 'AVERAGE':
-        const nums = args.filter(a => typeof a === 'number');
+        const nums = args.map(a => parseSmartNumber(a));
         return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
       case 'MIN':
-        return Math.min(...args.map(n => Number(n) || 0));
+        return Math.min(...args.map(n => parseSmartNumber(n)));
       case 'MAX':
-        return Math.max(...args.map(n => Number(n) || 0));
+        return Math.max(...args.map(n => parseSmartNumber(n)));
       case 'ABS':
-        return Math.abs(Number(args[0]) || 0);
+        return Math.abs(parseSmartNumber(args[0]));
       case 'ARRONDI': case 'ROUND':
-        const p = Math.pow(10, args[1] || 0);
-        return Math.round((Number(args[0]) || 0) * p) / p;
+        const p = Math.pow(10, parseSmartNumber(args[1]));
+        return Math.round(parseSmartNumber(args[0]) * p) / p;
 
       // --- STRING FUNCTIONS ---
       case 'CONCAT': case 'CONCATENER':
@@ -1172,7 +1169,13 @@ class FormulaParser {
         const text = String(args[0] || '');
         const search = String(args[1] || '');
         const replacement = String(args[2] || '');
-        return text.replace(new RegExp(search, 'g'), replacement);
+        try {
+          return text.replace(new RegExp(search, 'g'), replacement);
+        } catch (e) {
+          // Si le regex est invalide, retourner le texte original
+          console.warn(`Regex invalide: ${search}`);
+          return text;
+        }
 
       case 'SUBSTITUER': case 'SUBSTITUTE':
         // SUBSTITUER(texte, ancien_texte, nouveau_texte)
