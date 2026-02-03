@@ -314,7 +314,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                            >
                               {[
                                  'column', 'bar', 'line', 'area', 'pie', 'donut',
-                                 'stacked-bar', 'stacked-area', 'radar', 'treemap'
+                                 'stacked-bar', 'stacked-area', 'radar', 'sunburst', 'treemap'
                               ].map(ct => (
                                  <option key={ct} value={ct}>
                                     {getChartTypeConfig(ct as ChartType).label}

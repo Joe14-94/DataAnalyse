@@ -21,7 +21,7 @@ interface QuickChartModalProps {
   items: SpecificDashboardItem[];
 }
 
-type QuickChartType = 'pie' | 'donut' | 'bar' | 'column' | 'line' | 'area' | 'treemap' | 'radar' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'stacked-area';
+type QuickChartType = 'pie' | 'donut' | 'bar' | 'column' | 'line' | 'area' | 'treemap' | 'sunburst' | 'radar' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'stacked-area';
 type ColorMode = 'multi' | 'single' | 'gradient';
 type ColorPalette = 'default' | 'vibrant' | 'pastel';
 
@@ -148,6 +148,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
               <option value="area">Aires</option>
               <option value="stacked-area">Aires empilées</option>
               <option value="radar">Radar</option>
+              <option value="sunburst">Rayon de soleil</option>
               <option value="treemap">Treemap</option>
             </select>
           </div>
@@ -365,6 +366,33 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                       >
                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
                       </Treemap>
+                   );
+                }
+
+                if (chartType === 'sunburst') {
+                   // Sunburst simplifié pour QuickChart : utilise le même format que pie avec anneau unique
+                   return (
+                      <PieChart>
+                        <Pie
+                           data={chartData}
+                           cx="50%"
+                           cy="50%"
+                           innerRadius={0}
+                           outerRadius="75%"
+                           paddingAngle={2}
+                           dataKey="value"
+                           stroke="#fff"
+                           strokeWidth={2}
+                           labelLine={true}
+                           label={({ name, percent }) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                           {chartData.map((entry: any, index: number) => (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                           ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                        <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', bottom: 0 }} />
+                      </PieChart>
                    );
                 }
 

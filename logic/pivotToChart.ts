@@ -33,6 +33,33 @@ export interface ChartMetadata {
 }
 
 // ============================================================================
+// TYPES POUR SUNBURST ET TREEMAP HIERARCHIQUE
+// ============================================================================
+
+export interface HierarchicalNode {
+  name: string;
+  value?: number;
+  children?: HierarchicalNode[];
+  path?: string[];
+}
+
+export interface SunburstRingItem {
+  name: string;
+  value: number;
+  fill: string;
+  path: string[];
+  parentName: string;
+  parentTotal: number;
+  grandTotal: number;
+}
+
+export interface SunburstData {
+  tree: HierarchicalNode[];
+  rings: SunburstRingItem[][];
+  totalValue: number;
+}
+
+// ============================================================================
 // DETECTION AUTOMATIQUE DU TYPE DE GRAPHIQUE
 // ============================================================================
 
@@ -54,27 +81,32 @@ export const detectBestChartType = (
     return 'line';
   }
 
-  // Cas 2 : Colonnes multiples sans temporalité → Stacked Bar
+  // Cas 2 : Hiérarchie + colonnes multiples → Sunburst (répartition hiérarchique)
+  if (hasHierarchy && hasMultipleCols && !isTemporal) {
+    return 'sunburst';
+  }
+
+  // Cas 3 : Colonnes multiples sans temporalité → Stacked Bar
   if (hasMultipleCols && dataRowsCount <= 20) {
     return 'stacked-bar';
   }
 
-  // Cas 3 : Beaucoup de données hiérarchiques → Treemap
+  // Cas 4 : Beaucoup de données hiérarchiques → Treemap
   if (hasHierarchy && dataRowsCount > 15) {
     return 'treemap';
   }
 
-  // Cas 4 : Peu de données (≤ 7) → Pie Chart
+  // Cas 5 : Peu de données (≤ 7) → Pie Chart
   if (dataRowsCount <= 7 && !hasMultipleCols && !hasHierarchy) {
     return 'pie';
   }
 
-  // Cas 5 : Données temporelles simples → Line ou Area
+  // Cas 6 : Données temporelles simples → Line ou Area
   if (isTemporal) {
     return aggType === 'sum' ? 'area' : 'line';
   }
 
-  // Cas 6 : Défaut → Column Chart (barres verticales)
+  // Cas 7 : Défaut → Column Chart (barres verticales)
   return 'column';
 };
 
@@ -292,6 +324,230 @@ export const transformPivotToTreemapData = (
   console.log('🌳 Format correct pour Recharts:', topData.every(d => d.name && typeof d.size === 'number'));
 
   return topData;
+};
+
+// ============================================================================
+// TRANSFORMATION HIERARCHIQUE (SUNBURST + TREEMAP)
+// ============================================================================
+
+/**
+ * Eclaircit une couleur hex d'un facteur donné (0-1)
+ */
+export const lightenColor = (hex: string, factor: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const newR = Math.min(255, Math.round(r + (255 - r) * factor));
+  const newG = Math.min(255, Math.round(g + (255 - g) * factor));
+  const newB = Math.min(255, Math.round(b + (255 - b) * factor));
+  return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+};
+
+/**
+ * Calcule la valeur totale d'un noeud (récursif)
+ */
+const getNodeValue = (node: HierarchicalNode): number => {
+  if (node.value !== undefined) return node.value;
+  if (node.children && node.children.length > 0) {
+    return node.children.reduce((sum, c) => sum + getNodeValue(c), 0);
+  }
+  return 0;
+};
+
+/**
+ * Construit l'arbre hiérarchique à partir des données pivot
+ * Utilisé pour le sunburst (multi-Pie) et le treemap hiérarchique
+ */
+export const buildHierarchicalTree = (
+  result: PivotResult,
+  config: PivotConfig,
+  options?: { limit?: number; showOthers?: boolean }
+): HierarchicalNode[] => {
+  const dataRows = result.displayRows.filter(r => r.type === 'data');
+  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const hasMultiCols = seriesHeaders.length > 1;
+
+  // Map pour construire l'arbre incrementalement
+  const nodeMap = new Map<string, HierarchicalNode>();
+  const tree: HierarchicalNode[] = [];
+
+  for (const row of dataRows) {
+    // Naviguer/creer chaque niveau de la hierarchie
+    for (let depth = 0; depth < row.keys.length; depth++) {
+      const pathKey = row.keys.slice(0, depth + 1).join('\x1F');
+      const parentKey = depth > 0 ? row.keys.slice(0, depth).join('\x1F') : null;
+
+      if (!nodeMap.has(pathKey)) {
+        const node: HierarchicalNode = {
+          name: row.keys[depth] || '(Vide)',
+          children: [],
+          path: row.keys.slice(0, depth + 1)
+        };
+        nodeMap.set(pathKey, node);
+
+        if (parentKey && nodeMap.has(parentKey)) {
+          nodeMap.get(parentKey)!.children!.push(node);
+        } else if (depth === 0) {
+          tree.push(node);
+        }
+      }
+    }
+
+    // Au niveau feuille, ajouter les valeurs
+    const leafKey = row.keys.join('\x1F');
+    const leafNode = nodeMap.get(leafKey)!;
+
+    if (hasMultiCols) {
+      // Ajouter les colonnes comme niveau feuille
+      leafNode.children = seriesHeaders.map(header => ({
+        name: header,
+        value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
+        path: [...row.keys, header]
+      })).filter(item => item.value! > 0);
+    } else {
+      // Pas de colonnes : utiliser rowTotal comme valeur
+      leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
+      leafNode.children = undefined;
+    }
+  }
+
+  // Appliquer le limit/Others sur le premier niveau
+  if (options?.limit && options.limit > 0 && tree.length > options.limit) {
+    tree.sort((a, b) => getNodeValue(b) - getNodeValue(a));
+    if (options.showOthers) {
+      const topN = tree.slice(0, options.limit);
+      const rest = tree.slice(options.limit);
+      const othersNode: HierarchicalNode = {
+        name: 'Autres',
+        value: rest.reduce((sum, n) => sum + getNodeValue(n), 0),
+        path: ['Autres']
+      };
+      tree.length = 0;
+      tree.push(...topN, othersNode);
+    } else {
+      tree.length = options.limit;
+    }
+  }
+
+  return tree;
+};
+
+/**
+ * Transforme l'arbre hiérarchique en anneaux concentriques pour le sunburst
+ * Chaque anneau est un tableau de SunburstRingItem ordonnés pour aligner avec les parents
+ */
+export const treeToSunburstRings = (
+  tree: HierarchicalNode[],
+  baseColors: string[]
+): SunburstRingItem[][] => {
+  const rings: SunburstRingItem[][] = [];
+  const grandTotal = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
+
+  // Map pour stocker la couleur de chaque noeud (pour propagation aux enfants)
+  const colorMap = new Map<string, string>();
+
+  function traverse(
+    nodes: HierarchicalNode[],
+    level: number,
+    parentPath: string[],
+    parentColor: string,
+    parentTotal: number
+  ) {
+    if (!rings[level]) rings[level] = [];
+
+    nodes.forEach((node, idx) => {
+      const path = [...parentPath, node.name];
+      const pathKey = path.join('\x1F');
+      const nodeValue = getNodeValue(node);
+
+      // Attribuer une couleur
+      let fill: string;
+      if (level === 0) {
+        // Niveau 1 : couleurs distinctes de la palette
+        fill = baseColors[idx % baseColors.length];
+      } else {
+        // Niveaux plus profonds : nuances du parent
+        const siblingCount = nodes.length;
+        const lightenFactor = 0.15 + (idx / Math.max(siblingCount - 1, 1)) * 0.35;
+        fill = lightenColor(parentColor, lightenFactor);
+      }
+      colorMap.set(pathKey, fill);
+
+      rings[level].push({
+        name: node.name,
+        value: nodeValue,
+        fill,
+        path,
+        parentName: parentPath[parentPath.length - 1] || 'Total',
+        parentTotal: parentTotal,
+        grandTotal
+      });
+
+      // Recurser dans les enfants
+      if (node.children && node.children.length > 0) {
+        traverse(node.children, level + 1, path, fill, nodeValue);
+      }
+    });
+  }
+
+  traverse(tree, 0, [], baseColors[0], grandTotal);
+  return rings;
+};
+
+/**
+ * Transforme les données pivot en SunburstData complet
+ */
+export const transformPivotToSunburstData = (
+  result: PivotResult,
+  config: PivotConfig,
+  baseColors: string[],
+  options?: { limit?: number; showOthers?: boolean }
+): SunburstData => {
+  const tree = buildHierarchicalTree(result, config, options);
+  const rings = treeToSunburstRings(tree, baseColors);
+  const totalValue = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
+
+  return { tree, rings, totalValue };
+};
+
+/**
+ * Transforme les données pivot en treemap hiérarchique (nested)
+ */
+export const transformPivotToHierarchicalTreemap = (
+  result: PivotResult,
+  config: PivotConfig,
+  baseColors: string[],
+  options?: { limit?: number; showOthers?: boolean }
+): any[] => {
+  const tree = buildHierarchicalTree(result, config, options);
+
+  // Assigner des couleurs et la propriété 'size' pour Recharts Treemap
+  let colorIdx = 0;
+  function assignColorsAndSize(nodes: HierarchicalNode[], parentColor?: string, depth: number = 0): any[] {
+    return nodes.map((node, idx) => {
+      const color = depth === 0
+        ? baseColors[colorIdx++ % baseColors.length]
+        : lightenColor(parentColor || baseColors[0], 0.15 + (idx / Math.max(nodes.length - 1, 1)) * 0.3);
+
+      if (node.children && node.children.length > 0) {
+        return {
+          name: node.name,
+          fill: color,
+          path: node.path,
+          children: assignColorsAndSize(node.children, color, depth + 1)
+        };
+      }
+      return {
+        name: node.name,
+        size: node.value || 0,
+        value: node.value || 0,
+        fill: color,
+        path: node.path
+      };
+    });
+  }
+
+  return assignColorsAndSize(tree);
 };
 
 // ============================================================================
@@ -534,42 +790,42 @@ export const getChartTypeConfig = (chartType: ChartType) => {
     'area': {
       label: 'Aires',
       description: 'Graphique en aires',
-      bestFor: 'Évolution cumulée dans le temps'
+      bestFor: 'Evolution cumulee dans le temps'
     },
     'pie': {
       label: 'Camembert',
       description: 'Graphique circulaire',
-      bestFor: 'Répartition en pourcentages (≤ 7 éléments)'
+      bestFor: 'Repartition en pourcentages (<= 7 elements)'
     },
     'donut': {
       label: 'Anneau',
       description: 'Graphique en anneau',
-      bestFor: 'Répartition avec focus sur le total'
+      bestFor: 'Repartition avec focus sur le total'
     },
     'stacked-bar': {
-      label: 'Barres empilées',
-      description: 'Barres empilées horizontales',
-      bestFor: 'Comparaison multi-séries, longs labels'
+      label: 'Barres empilees',
+      description: 'Barres empilees horizontales',
+      bestFor: 'Comparaison multi-series, longs labels'
     },
     'stacked-column': {
-      label: 'Colonnes empilées',
-      description: 'Colonnes empilées verticales',
-      bestFor: 'Comparaison multi-séries'
+      label: 'Colonnes empilees',
+      description: 'Colonnes empilees verticales',
+      bestFor: 'Comparaison multi-series'
     },
     'stacked-area': {
-      label: 'Aires empilées',
-      description: 'Aires empilées',
-      bestFor: 'Évolution de composition dans le temps'
+      label: 'Aires empilees',
+      description: 'Aires empilees',
+      bestFor: 'Evolution de composition dans le temps'
     },
     'percent-bar': {
       label: 'Barres 100%',
-      description: 'Barres empilées 100% horizontales',
-      bestFor: 'Proportions relatives entre séries'
+      description: 'Barres empilees 100% horizontales',
+      bestFor: 'Proportions relatives entre series'
     },
     'percent-column': {
       label: 'Colonnes 100%',
-      description: 'Colonnes empilées 100% verticales',
-      bestFor: 'Proportions relatives entre séries'
+      description: 'Colonnes empilees 100% verticales',
+      bestFor: 'Proportions relatives entre series'
     },
     'radar': {
       label: 'Radar',
@@ -578,8 +834,13 @@ export const getChartTypeConfig = (chartType: ChartType) => {
     },
     'treemap': {
       label: 'Treemap',
-      description: 'Carte arborescente',
-      bestFor: 'Hiérarchies et proportions'
+      description: 'Carte arborescente hierarchique',
+      bestFor: 'Hierarchies et proportions avec drill-down'
+    },
+    'sunburst': {
+      label: 'Rayon de soleil',
+      description: 'Anneaux concentriques hierarchiques',
+      bestFor: 'Repartition hierarchique multi-niveaux'
     },
     'radial': {
       label: 'Jauge radiale',
@@ -589,7 +850,7 @@ export const getChartTypeConfig = (chartType: ChartType) => {
     'funnel': {
       label: 'Entonnoir',
       description: 'Graphique en entonnoir',
-      bestFor: 'Étapes de conversion et processus'
+      bestFor: 'Etapes de conversion et processus'
     }
   };
 
