@@ -296,8 +296,101 @@ export const PivotTable: React.FC = () => {
 
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
         setShowExportMenu(false);
-        // Simplified export logic here - reuse existing logic if possible or move to util
-        alert("Export spreadsheet triggered");
+
+        if (!pivotData || !primaryDataset) {
+            alert("Aucune donnée à exporter");
+            return;
+        }
+
+        // Build export data structure
+        const exportData: any[][] = [];
+
+        // Header row
+        const headers = [''];
+        if (rowFields.length > 0) {
+            headers[0] = rowFields.join(' / ');
+        }
+
+        pivotData.colHeaders.forEach(header => {
+            headers.push(header);
+        });
+
+        // Add "Total" column if row totals are shown
+        if (showTotalCol) {
+            headers.push('Total');
+        }
+
+        exportData.push(headers);
+
+        // Data rows
+        pivotData.displayRows.forEach(row => {
+            const rowData: any[] = [];
+
+            // Row label (with indentation for subtotals)
+            const indent = '  '.repeat(row.level || 0);
+            const label = row.label || row.keys.join(' / ');
+            rowData.push(indent + label);
+
+            // Metric values for each column
+            pivotData.colHeaders.forEach(colHeader => {
+                const value = row.metrics[colHeader];
+                rowData.push(value !== undefined && value !== null ? value : '');
+            });
+
+            // Row total
+            if (showTotalCol) {
+                const total = row.rowTotal;
+                rowData.push(total !== undefined && total !== null ? total : '');
+            }
+
+            exportData.push(rowData);
+        });
+
+        // Column totals row
+        if (pivotData.colTotals) {
+            const totalsRow: any[] = ['Total'];
+            pivotData.colHeaders.forEach(colHeader => {
+                const total = pivotData.colTotals[colHeader];
+                totalsRow.push(total !== undefined && total !== null ? total : '');
+            });
+
+            // Grand total
+            if (showTotalCol && pivotData.grandTotal !== undefined) {
+                totalsRow.push(pivotData.grandTotal);
+            }
+
+            exportData.push(totalsRow);
+        }
+
+        // Export based on format
+        if (format === 'csv') {
+            // CSV Export
+            const csvContent = exportData.map(row =>
+                row.map(cell => {
+                    const str = String(cell);
+                    // Escape cells containing semicolon, newline, or quote
+                    if (str.includes(';') || str.includes('\n') || str.includes('"')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }
+                    return str;
+                }).join(';')
+            ).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `TCD_${primaryDataset.name}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            // XLSX Export
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'TCD');
+            XLSX.writeFile(wb, `TCD_${primaryDataset.name}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
     };
 
     const handleDrilldown = (rowKeys: string[], colLabel: string) => {
