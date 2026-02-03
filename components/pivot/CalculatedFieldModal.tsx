@@ -3,6 +3,7 @@ import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, C
 import { Button } from '../ui/Button';
 import { evaluateFormula } from '../../utils';
 import { CalculatedField } from '../../types';
+import { CalculatedFieldHelpModal } from './CalculatedFieldHelpModal';
 
 interface CalculatedFieldModalProps {
     isOpen: boolean;
@@ -22,6 +23,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
     const [unit, setUnit] = useState(initialField?.unit || '');
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
     const [showExamples, setShowExamples] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -391,6 +393,15 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Complete Documentation Button */}
+                                <button
+                                    onClick={() => setShowHelpModal(true)}
+                                    className="w-full mt-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm transition-all shadow-md hover:shadow-lg"
+                                >
+                                    <BookOpen className="w-5 h-5" />
+                                    📚 Voir la documentation complète
+                                </button>
                             </div>
                         )}
                     </div>
@@ -408,6 +419,12 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                     </Button>
                 </div>
             </div>
+
+            {/* Help Modal */}
+            <CalculatedFieldHelpModal
+                isOpen={showHelpModal}
+                onClose={() => setShowHelpModal(false)}
+            />
         </div>
     );
 };
