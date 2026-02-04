@@ -56,15 +56,27 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
       // NOUVEAU : Gérer les widgets basés sur des graphiques TCD (Pivot)
       if (widget.config.pivotChart) {
+         console.log('📊 Widget Pivot détecté:', widget.config.pivotChart.chartType);
          const { pivotChart } = widget.config;
          const { pivotConfig: pc } = pivotChart;
 
-         if (!pc.rowFields || pc.rowFields.length === 0) return { error: 'Configuration de graphique TCD invalide' };
+         console.log('📊 pivotConfig:', pc);
+
+         if (!pc.rowFields || pc.rowFields.length === 0) {
+            console.error('📊 ERROR: rowFields manquant ou vide');
+            return { error: 'Configuration de graphique TCD invalide' };
+         }
 
          const datasetId = widget.config.source?.datasetId;
+         console.log('📊 datasetId:', datasetId);
          const dataset = allDatasets.find(d => d.id === datasetId);
 
-         if (!dataset) return { error: 'Jeu de données introuvable' };
+         if (!dataset) {
+            console.error('📊 ERROR: Dataset introuvable:', datasetId);
+            return { error: 'Jeu de données introuvable' };
+         }
+
+         console.log('📊 Dataset trouvé:', dataset.name);
 
          const dsBatches = getEffectiveBatches(batches, datasetId, globalDateRange);
          if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
@@ -186,12 +198,19 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
          }
 
-         if (!pivotResult) return { error: 'Erreur lors du calcul du TCD' };
+         if (!pivotResult) {
+            console.error('📊 ERROR: pivotResult est null');
+            return { error: 'Erreur lors du calcul du TCD' };
+         }
+
+         console.log('📊 pivotResult calculé avec succès');
+         console.log('📊 chartType demandé:', pivotChart.chartType);
 
          const fullPivotConfig = { rows: workingRows, ...pc } as PivotConfig;
 
          // Sunburst: Calculate color count from pivot data before transformation
          if (pivotChart.chartType === 'sunburst') {
+            console.log('🌞 ENTRÉE dans le bloc Sunburst du widget');
             try {
                console.log('🌞 Widget Sunburst - pivotResult:', pivotResult);
                console.log('🌞 Widget Sunburst - displayRows:', pivotResult.displayRows);
