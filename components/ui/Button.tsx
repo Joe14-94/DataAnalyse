@@ -36,11 +36,14 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "h-12 px-6 text-base"
   };
 
+  const derivedAriaLabel = props['aria-label'] || (typeof props.title === 'string' ? props.title : undefined);
+
   return (
     <button 
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled || isLoading}
       aria-busy={isLoading}
+      aria-label={derivedAriaLabel}
       {...props}
     >
       {isLoading ? (

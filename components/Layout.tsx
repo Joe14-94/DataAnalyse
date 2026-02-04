@@ -109,6 +109,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-0.5 shadow-sm text-txt-muted hover:text-brand-600 z-30"
+            aria-label={isCollapsed ? "Agrandir la barre latérale" : "Réduire la barre latérale"}
+            title={isCollapsed ? "Agrandir" : "Réduire"}
           >
             {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
           </button>
@@ -146,6 +148,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 ${isCollapsed ? 'w-8 h-8 p-0' : 'w-full px-3'}
              `}
             title="Sauvegarde rapide"
+            aria-label="Sauvegarde rapide"
           >
             <Save className={`${isCollapsed ? 'w-3.5 h-3.5' : 'w-3 h-3'}`} />
             {!isCollapsed && "Sauvegarde"}
