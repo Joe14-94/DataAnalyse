@@ -416,6 +416,16 @@ export const buildHierarchicalTree = (
         path: [...row.keys, header]
       })).filter(item => item.value! > 0);
 
+      if (dataRows.indexOf(row) < 2) {
+        console.log(`🌞 LEAF row ${dataRows.indexOf(row)}:`, {
+          keys: row.keys,
+          hasMultiCols,
+          metricsKeys: Object.keys(row.metrics || {}),
+          childrenWithValues: childrenWithValues.length,
+          rowTotal: row.rowTotal
+        });
+      }
+
       // Si après filtrage il reste des enfants, les utiliser
       // Sinon, fallback sur rowTotal
       if (childrenWithValues.length > 0) {
@@ -424,11 +434,17 @@ export const buildHierarchicalTree = (
         // Pas de métriques valides, utiliser rowTotal
         leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
         leafNode.children = undefined;
+        if (dataRows.indexOf(row) < 2) {
+          console.log(`🌞 Using rowTotal fallback: ${leafNode.value}`);
+        }
       }
     } else {
       // Pas de colonnes multiples ou pas de métriques : utiliser rowTotal comme valeur
       leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
       leafNode.children = undefined;
+      if (dataRows.indexOf(row) < 2) {
+        console.log(`🌞 No multiCols, using rowTotal: ${leafNode.value}`);
+      }
     }
   }
 
