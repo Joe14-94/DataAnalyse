@@ -222,38 +222,191 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const handleExportHTML = () => {
     if (!chartContainerRef.current) return;
 
-    const chartHtml = chartContainerRef.current.innerHTML;
     const title = `Graphique TCD - ${pivotConfig.valField}`;
+
+    // Préparer les données pour l'export interactif
+    const exportData = {
+      type: selectedChartType,
+      data: chartData,
+      sunburstData: sunburstData,
+      config: {
+        valField: pivotConfig.valField,
+        aggType: pivotConfig.aggType,
+        rowFields: pivotConfig.rowFields,
+        colFields: pivotConfig.colFields,
+        isMultiSeries: metadata.isMultiSeries,
+        seriesNames: metadata.seriesNames,
+        colors: colors,
+        showCenterTotal,
+        showLevelLegend
+      }
+    };
+
     const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
-  <script src="https://cdn.jsdelivr.net/npm/recharts@2/dist/recharts.global.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
-    h1 { margin: 0; color: #1e293b; font-size: 24px; }
-    .metadata { margin-top: 10px; font-size: 12px; color: #64748b; }
-    .chart-container { margin: 30px 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); }
+    .header { margin-bottom: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { margin: 0; color: #1e293b; font-size: 24px; font-weight: 800; }
+    .metadata { font-size: 13px; color: #64748b; line-height: 1.6; }
+    .chart-wrapper { height: 700px; width: 100%; margin-top: 20px; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; }
+    .level-legend { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #475569; }
+    .legend-box { width: 12px; height: 12px; border-radius: 3px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>${title}</h1>
-      <div class="metadata">
-        <p>Champ: ${pivotConfig.valField}</p>
-        <p>Agrégation: ${pivotConfig.aggType}</p>
-        <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
+      <div>
+        <h1>${title}</h1>
+        <div class="metadata">
+          <span>Champ: <b>${pivotConfig.valField}</b></span> |
+          <span>Agrégation: <b>${pivotConfig.aggType}</b></span>
+        </div>
+      </div>
+      <div class="metadata" style="text-align: right">
+        <div>Exporté le ${new Date().toLocaleDateString('fr-FR')}</div>
+        <div style="font-weight: bold; color: #6366f1">DataScope Dashboard</div>
       </div>
     </div>
-    <div class="chart-container">
-      ${chartHtml}
+
+    <div id="chart-container" class="chart-wrapper"></div>
+
+    <div id="legend-container" class="level-legend"></div>
+
+    <div class="footer">
+      Généré par DataScope - Outil d'analyse décisionnelle interactif
     </div>
   </div>
+
+  <script>
+    const data = ${JSON.stringify(exportData)};
+    const container = document.getElementById('chart-container');
+    const legendContainer = document.getElementById('legend-container');
+
+    function renderPlotlyChart() {
+      if (data.type === 'sunburst' && data.sunburstData) {
+        const sb = data.sunburstData;
+        const labels = [];
+        const parents = [];
+        const values = [];
+        const ids = [];
+        const colors = [];
+
+        // Total
+        ids.push('Total');
+        labels.push('Total');
+        parents.push('');
+        values.push(sb.totalValue);
+        colors.push('#ffffff');
+
+        // Rings to Flat Data for Plotly
+        sb.rings.forEach((ring, ringIdx) => {
+          ring.forEach(item => {
+            const id = item.path.join('/');
+            const parentId = item.path.length > 1 ? item.path.slice(0, -1).join('/') : 'Total';
+
+            ids.push(id);
+            labels.push(item.name);
+            parents.push(parentId);
+            values.push(item.value);
+            colors.push(item.fill);
+          });
+        });
+
+        const plotData = [{
+          type: "sunburst",
+          ids: ids,
+          labels: labels,
+          parents: parents,
+          values: values,
+          outsidetextfont: {size: 20, color: "#377eb8"},
+          leaf: {opacity: 0.8},
+          marker: {colors: colors},
+          branchvalues: "total",
+          hovertemplate: '<b>%{label}</b><br>Valeur: %{value}<br>%{percentParent:.1%} de %{parent}<br>%{percentRoot:.1%} du total<extra></extra>'
+        }];
+
+        const layout = {
+          margin: {l: 0, r: 0, b: 0, t: 0},
+          sunburstcolorway: data.config.colors,
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)'
+        };
+
+        Plotly.newPlot('chart-container', plotData, layout, {responsive: true, displayModeBar: false});
+
+        // Add legend for levels
+        if (data.config.showLevelLegend) {
+           const levelColors = ['#475569', '#60a5fa', '#34d399', '#f87171', '#a78bfa'];
+           data.config.rowFields.forEach((field, idx) => {
+              const item = document.createElement('div');
+              item.className = 'legend-item';
+              item.innerHTML = '<div class="legend-box" style="background-color: ' + levelColors[idx % levelColors.length] + '"></div>' + field;
+              legendContainer.appendChild(item);
+           });
+        }
+      }
+
+      else if (['pie', 'donut'].includes(data.type)) {
+        const plotData = [{
+          type: "pie",
+          labels: data.data.map(d => d.name),
+          values: data.data.map(d => d.value),
+          hole: data.type === 'donut' ? 0.4 : 0,
+          marker: { colors: data.config.colors },
+          textinfo: "label+percent",
+          hoverinfo: "label+value+percent"
+        }];
+        Plotly.newPlot('chart-container', plotData, { margin: {t: 20, b: 20, l: 20, r: 20} }, {responsive: true});
+      }
+
+      else {
+        // Bar/Column/Line
+        const isHorizontal = ['bar', 'stacked-bar', 'percent-bar'].includes(data.type);
+        const isStacked = data.type.includes('stacked') || data.type.includes('percent');
+
+        const traces = [];
+        if (data.config.isMultiSeries || isStacked) {
+          data.config.seriesNames.forEach((series, idx) => {
+            traces.push({
+              x: isHorizontal ? data.data.map(d => d[series]) : data.data.map(d => d.name),
+              y: isHorizontal ? data.data.map(d => d.name) : data.data.map(d => d[series]),
+              name: series,
+              type: data.type.includes('bar') || data.type.includes('column') ? 'bar' : 'scatter',
+              orientation: isHorizontal ? 'h' : 'v',
+              marker: { color: data.config.colors[idx % data.config.colors.length] }
+            });
+          });
+        } else {
+          traces.push({
+            x: isHorizontal ? data.data.map(d => d.value) : data.data.map(d => d.name),
+            y: isHorizontal ? data.data.map(d => d.name) : data.data.map(d => d.value),
+            type: data.type.includes('bar') || data.type.includes('column') ? 'bar' : 'scatter',
+            orientation: isHorizontal ? 'h' : 'v',
+            marker: { color: data.config.colors[0] }
+          });
+        }
+
+        const layout = {
+          barmode: isStacked ? (data.type.includes('percent') ? 'stack' : 'stack') : 'group',
+          margin: { t: 50, b: 100, l: 150, r: 50 }
+        };
+
+        Plotly.newPlot('chart-container', traces, layout, {responsive: true});
+      }
+    }
+
+    window.onload = renderPlotlyChart;
+  </script>
 </body>
 </html>`;
 
@@ -732,7 +885,31 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 {sunburstData.rings.map((ring, ringIdx) => {
                   const innerR = centerRadius + (ringIdx * (ringWidth + gap));
                   const outerR = innerR + ringWidth;
-                  const showLabels = ringIdx === 0 && ring.length <= 8;
+
+                  // LabelRenderer interne pour Sunburst
+                  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, value }: any) => {
+                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+
+                    // N'afficher le label que si le segment est assez grand
+                    const arcLength = (outerRadius * Math.PI * (ring[0].value / sunburstData.totalValue)); // Approximation grossière
+                    if (value / sunburstData.totalValue < 0.02) return null;
+
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        fill="#1e293b"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        className="text-[9px] font-bold pointer-events-none"
+                        style={{ textShadow: '0 0 2px rgba(255,255,255,0.8)' }}
+                      >
+                        {name.length > 10 ? name.substring(0, 8) + '..' : name}
+                      </text>
+                    );
+                  };
 
                   return (
                     <Pie
@@ -744,11 +921,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                       cy="50%"
                       innerRadius={`${innerR}%`}
                       outerRadius={`${outerR}%`}
-                      paddingAngle={ringIdx === 0 ? 2 : 0.5}
+                      paddingAngle={0} // Aligné parfaitement
                       stroke="#fff"
-                      strokeWidth={ringIdx === 0 ? 2 : 1}
-                      labelLine={showLabels}
-                      label={showLabels ? ({ name, percent }: any) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)` : false}
+                      strokeWidth={1}
+                      labelLine={false}
+                      label={renderCustomLabel}
                       isAnimationActive={true}
                       animationDuration={600}
                     >
@@ -764,27 +941,31 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
             {/* Total au centre */}
             {showCenterTotal && (
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm rounded-full w-[15%] aspect-square flex flex-col items-center justify-center shadow-lg border border-slate-100 z-10">
-                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Total</span>
-                  <span className="text-sm font-black text-slate-800">{formatChartValue(sunburstData.totalValue, pivotConfig)}</span>
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-md rounded-full w-[22%] aspect-square flex flex-col items-center justify-center shadow-2xl border border-white z-10 animate-in zoom-in duration-500">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total</span>
+                  <span className="text-xl font-black text-slate-900 tabular-nums">{formatChartValue(sunburstData.totalValue, pivotConfig)}</span>
                </div>
             )}
 
-            {/* Légende des niveaux */}
+            {/* Légende des niveaux - Reprise du style de la capture d'écran */}
             {showLevelLegend && (
-               <div className="absolute right-0 bottom-10 bg-white/90 p-3 rounded-xl border border-slate-200 shadow-sm z-10 max-w-[150px]">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Niveaux</p>
-                  <div className="space-y-1.5">
-                     {pivotConfig.rowFields.map((field, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                           <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: getChartColors(9, colorPalette)[idx % 9] }}></div>
-                           <span className="text-[10px] font-bold text-slate-600 truncate">{field}</span>
-                        </div>
-                     ))}
+               <div className="absolute right-4 bottom-4 bg-white/95 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-xl z-10 min-w-[180px]">
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Niveaux</p>
+                  <div className="space-y-3">
+                     {pivotConfig.rowFields.map((field, idx) => {
+                        // Couleurs spécifiques demandées
+                        const levelColors = ['#475569', '#60a5fa', '#34d399', '#f87171', '#a78bfa'];
+                        return (
+                          <div key={idx} className="flex items-center gap-3">
+                             <div className="w-3.5 h-3.5 rounded-md shadow-sm" style={{ backgroundColor: levelColors[idx % levelColors.length] }}></div>
+                             <span className="text-[11px] font-black text-slate-700 truncate">{field}</span>
+                          </div>
+                        );
+                     })}
                      {metadata.isMultiSeries && !isTemporalMode && (
-                        <div className="flex items-center gap-2">
-                           <div className="w-2.5 h-2.5 rounded-sm bg-slate-300"></div>
-                           <span className="text-[10px] font-bold text-slate-600 truncate">Métriques</span>
+                        <div className="flex items-center gap-3">
+                           <div className="w-3.5 h-3.5 rounded-md shadow-sm bg-slate-200"></div>
+                           <span className="text-[11px] font-black text-slate-700 truncate">Métriques</span>
                         </div>
                      )}
                   </div>
@@ -1133,7 +1314,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         </div>
 
         {/* Chart */}
-        <div className="p-6 overflow-hidden" style={{ height: '600px' }}>
+        <div className="p-6 overflow-hidden flex-1 min-h-[500px]">
           <div className="h-full w-full" ref={chartContainerRef}>
             {!hasData ? (
               <div className="flex flex-col items-center justify-center h-full">

@@ -61,6 +61,44 @@ describe('Sunburst Data Transformation', () => {
     expect(nodeA11?.value).toBe(100);
   });
 
+  it('should handle ragged hierarchies (parent appearing after child)', () => {
+    const raggedResult: PivotResult = {
+      displayRows: [
+        {
+          type: 'data',
+          keys: ['A', 'A1', 'A11'],
+          metrics: {},
+          rowTotal: 100,
+          level: 2
+        },
+        {
+          type: 'data',
+          keys: ['A', 'A1'], // A1 as leaf, coming AFTER it was seen as parent
+          metrics: {},
+          rowTotal: 50,
+          level: 1
+        }
+      ],
+      colHeaders: [],
+      colTotals: {},
+      grandTotal: 150
+    };
+
+    const tree = buildHierarchicalTree(raggedResult, mockConfig);
+    const nodeA = tree[0];
+    const nodeA1 = nodeA.children![0];
+
+    // Children should NOT be wiped
+    expect(nodeA1.children).toBeDefined();
+    expect(nodeA1.children?.length).toBe(1);
+    expect(nodeA1.children?.[0].name).toBe('A11');
+
+    // Value of A1 should be 50 + 100 = 150 (recursive)
+    const rings = treeToSunburstRings(tree, ['#000', '#111']);
+    expect(rings[0][0].value).toBe(150); // A
+    expect(rings[1][0].value).toBe(150); // A1
+  });
+
   it('should generate sunburst rings with correct values', () => {
     const tree = buildHierarchicalTree(mockResult, mockConfig);
     const rings = treeToSunburstRings(tree, ['#ff0000', '#00ff00']);
