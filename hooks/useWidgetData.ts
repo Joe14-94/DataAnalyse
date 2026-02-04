@@ -56,47 +56,28 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
       // NOUVEAU : Gérer les widgets basés sur des graphiques TCD (Pivot)
       if (widget.config.pivotChart) {
-         console.log('📊 Widget Pivot détecté:', widget.config.pivotChart.chartType);
          const { pivotChart } = widget.config;
          const { pivotConfig: pc } = pivotChart;
 
-         console.log('📊 pivotConfig:', pc);
-
-         if (!pc.rowFields || pc.rowFields.length === 0) {
-            console.error('📊 ERROR: rowFields manquant ou vide');
-            return { error: 'Configuration de graphique TCD invalide' };
-         }
+         if (!pc.rowFields || pc.rowFields.length === 0) return { error: 'Configuration de graphique TCD invalide' };
 
          const datasetId = widget.config.source?.datasetId;
-         console.log('📊 datasetId:', datasetId);
          const dataset = allDatasets.find(d => d.id === datasetId);
 
-         if (!dataset) {
-            console.error('📊 ERROR: Dataset introuvable:', datasetId);
-            return { error: 'Jeu de données introuvable' };
-         }
-
-         console.log('📊 Dataset trouvé:', dataset.name);
+         if (!dataset) return { error: 'Jeu de données introuvable' };
 
          const dsBatches = getEffectiveBatches(batches, datasetId, globalDateRange);
-         console.log('📊 dsBatches trouvés:', dsBatches.length);
          if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
          let targetBatch = dsBatches[dsBatches.length - 1];
-         console.log('📊 targetBatch sélectionné:', targetBatch.id, 'rows:', targetBatch.rows?.length);
          if (pivotChart.updateMode === 'fixed' && widget.config.source?.mode === 'specific' && widget.config.source?.batchId) {
             const specific = dsBatches.find(b => b.id === widget.config.source?.batchId);
-            if (specific) {
-               targetBatch = specific;
-               console.log('📊 Batch spécifique trouvé:', specific.id, 'rows:', specific.rows?.length);
-            }
+            if (specific) targetBatch = specific;
          }
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
-         console.log('📊 baseRows avant enrichissement:', baseRows?.length);
          if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
-            console.log('📊 Enrichissement avec', dataset.calculatedFields.length, 'champs calculés');
             baseRows = baseRows.map(r => {
                const enriched = { ...r };
                dataset.calculatedFields?.forEach(cf => {
@@ -104,36 +85,12 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                });
                return enriched;
             });
-            console.log('📊 baseRows après enrichissement:', baseRows.length);
          }
 
          // Appliquer les filtres du TCD
-         console.log('📊 Filtres à appliquer:', pc.filters);
-         if (pc.filters && pc.filters.length > 0) {
-            pc.filters.forEach((filter: any, idx: number) => {
-               console.log(`📊 Filtre ${idx}:`, {
-                  field: filter.field,
-                  operator: filter.operator,
-                  value: filter.value,
-                  values: filter.values
-               });
-            });
-         }
          let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
-         console.log('📊 workingRows après filtrage:', workingRows.length);
-
-         if (workingRows.length === 0 && baseRows.length > 0 && pc.filters && pc.filters.length > 0) {
-            console.error('⚠️ ATTENTION: Tous les filtres ont éliminé toutes les lignes!');
-            console.error('⚠️ Exemple de ligne avant filtrage:', baseRows[0]);
-            console.error('⚠️ Champs disponibles:', Object.keys(baseRows[0]));
-         }
 
          let pivotResult: any = null;
-
-         console.log('📊 Avant calcul pivot - workingRows:', workingRows.length);
-         console.log('📊 Avant calcul pivot - pc.rowFields:', pc.rowFields);
-         console.log('📊 Avant calcul pivot - pc.valField:', pc.valField);
-         console.log('📊 Avant calcul pivot - isTemporalMode:', pivotChart.isTemporalMode);
 
          if (pivotChart.isTemporalMode && pivotChart.temporalComparison) {
             const tc = pivotChart.temporalComparison;
@@ -213,16 +170,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
 
             pivotResult = { colHeaders, displayRows, colTotals: {}, grandTotal: 0, isTemporal: true };
-            console.log('📊 Pivot temporal calculé:', pivotResult);
          } else {
-            console.log('📊 Appel de calculatePivotData avec:', {
-               rowsCount: workingRows.length,
-               rowFields: pc.rowFields,
-               colFields: pc.colFields,
-               valField: pc.valField,
-               aggType: pc.aggType
-            });
-
             pivotResult = calculatePivotData({
                rows: workingRows,
                rowFields: pc.rowFields,
@@ -236,77 +184,50 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                showSubtotals: pc.showSubtotals,
                currentDataset: dataset
             });
-
-            console.log('📊 Pivot standard calculé:', pivotResult);
          }
 
-         if (!pivotResult) {
-            console.error('📊 ERROR: pivotResult est null');
-            console.error('📊 ERROR: Détails - rowFields:', pc.rowFields, 'valField:', pc.valField, 'workingRows:', workingRows.length);
-            return { error: 'Erreur lors du calcul du TCD' };
-         }
-
-         console.log('📊 pivotResult calculé avec succès');
-         console.log('📊 chartType demandé:', pivotChart.chartType);
+         if (!pivotResult) return { error: 'Erreur lors du calcul du TCD' };
 
          const fullPivotConfig = { rows: workingRows, ...pc } as PivotConfig;
 
          // Sunburst: Calculate color count from pivot data before transformation
          if (pivotChart.chartType === 'sunburst') {
-            console.log('🌞 ENTRÉE dans le bloc Sunburst du widget');
-            try {
-               console.log('🌞 Widget Sunburst - pivotResult:', pivotResult);
-               console.log('🌞 Widget Sunburst - displayRows:', pivotResult.displayRows);
-
-               // Calculate expected level 1 count from pivot data directly
-               const level1Keys = new Set<string>();
-               if (pivotResult.displayRows && Array.isArray(pivotResult.displayRows)) {
-                  pivotResult.displayRows.forEach((row: any) => {
-                     if (row.keys && Array.isArray(row.keys) && row.keys.length > 0) {
-                        level1Keys.add(row.keys[0]);
-                     }
-                  });
-               }
-
-               console.log('🌞 Widget Sunburst - level1Keys:', level1Keys);
-
-               // Apply limit if set
-               let colorCount = level1Keys.size || 6; // Fallback to 6 if no keys found
-               if (pivotChart.limit && pivotChart.limit > 0 && colorCount > pivotChart.limit) {
-                  colorCount = pivotChart.limit + 1; // +1 for "Autres"
-               }
-
-               console.log('🌞 Widget Sunburst - colorCount:', colorCount);
-
-               const sunburstColors = (() => {
-                  if (pivotChart.colorMode === 'single') return Array(colorCount).fill(pivotChart.singleColor || '#3b82f6');
-                  if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', colorCount);
-                  return getChartColors(colorCount, pivotChart.colorPalette || 'default');
-               })();
-
-               console.log('🌞 Widget Sunburst - sunburstColors:', sunburstColors);
-               console.log('🌞 Widget Sunburst - Calling transformPivotToSunburstData...');
-
-               const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, sunburstColors, {
-                  limit: pivotChart.limit,
-                  showOthers: (pivotChart.limit || 0) > 0
+            // Calculate expected level 1 count from pivot data directly
+            const level1Keys = new Set<string>();
+            if (pivotResult.displayRows && Array.isArray(pivotResult.displayRows)) {
+               pivotResult.displayRows.forEach((row: any) => {
+                  if (row.keys && Array.isArray(row.keys) && row.keys.length > 0) {
+                     level1Keys.add(row.keys[0]);
+                  }
                });
-
-               console.log('🌞 Widget Sunburst - sbData:', sbData);
-
-               return {
-                  data: [],
-                  sunburstData: sbData,
-                  colors: sunburstColors,
-                  unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
-                  seriesName: pc.valField,
-                  seriesCount: sbData.rings.length,
-                  isPivot: true
-               };
-            } catch (error) {
-               console.error('🌞 Widget Sunburst - ERROR:', error);
-               return { error: `Erreur Sunburst: ${error instanceof Error ? error.message : String(error)}` };
             }
+
+            // Apply limit if set
+            let colorCount = level1Keys.size || 6; // Fallback to 6 if no keys found
+            if (pivotChart.limit && pivotChart.limit > 0 && colorCount > pivotChart.limit) {
+               colorCount = pivotChart.limit + 1; // +1 for "Autres"
+            }
+
+            const sunburstColors = (() => {
+               if (pivotChart.colorMode === 'single') return Array(colorCount).fill(pivotChart.singleColor || '#3b82f6');
+               if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', colorCount);
+               return getChartColors(colorCount, pivotChart.colorPalette || 'default');
+            })();
+
+            const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, sunburstColors, {
+               limit: pivotChart.limit,
+               showOthers: (pivotChart.limit || 0) > 0
+            });
+
+            return {
+               data: [],
+               sunburstData: sbData,
+               colors: sunburstColors,
+               unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
+               seriesName: pc.valField,
+               seriesCount: sbData.rings.length,
+               isPivot: true
+            };
          }
 
          // Calculer les couleurs de base pour les types hiérarchiques (treemap)

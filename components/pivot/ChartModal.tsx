@@ -676,7 +676,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               colGrouping: pivotConfig.colGrouping,
               valField: pivotConfig.valField,
               aggType: pivotConfig.aggType,
-              filters: pivotConfig.filters,
+              filters: [], // Ne pas sauvegarder les filtres avec le widget
               sortBy: pivotConfig.sortBy,
               sortOrder: pivotConfig.sortOrder,
               showSubtotals: pivotConfig.showSubtotals
