@@ -153,8 +153,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     // Calculate expected level 1 count from pivot data directly
     // without calling the transformation function
     const level1Keys = new Set<string>();
-    pivotData.data.forEach(row => {
-      if (row.keys.length > 0) {
+    pivotData.displayRows.forEach((row: any) => {
+      if (row.keys && row.keys.length > 0) {
         level1Keys.add(row.keys[0]);
       }
     });
@@ -198,6 +198,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       return getChartColors(colorCount, colorPalette);
     }
   }, [selectedChartType, sunburstData, colorMode, colorPalette, singleColor, gradientStart, gradientEnd, colors]);
+
+  // Convertir les données Sunburst pour D3
+  const d3HierarchyData = useMemo(() => {
+    if (!sunburstData) return null;
+    return sunburstDataToD3Hierarchy(sunburstData);
+  }, [sunburstData]);
 
   // Données treemap hiérarchique
   const hierarchicalTreemapData = useMemo(() => {
@@ -1038,12 +1044,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'sunburst': {
-        if (!sunburstData || !sunburstData.tree || sunburstData.tree.length === 0) {
+        if (!sunburstData || !sunburstData.tree || sunburstData.tree.length === 0 || !d3HierarchyData) {
           return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée hierarchique</div>;
         }
-
-        // Convertir les données pour D3
-        const d3HierarchyData = sunburstDataToD3Hierarchy(sunburstData);
 
         return (
           <div className="relative w-full h-full flex flex-col">
