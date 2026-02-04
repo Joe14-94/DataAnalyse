@@ -264,8 +264,221 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const handleExportHTML = () => {
     if (!chartContainerRef.current) return;
 
-    const chartHtml = chartContainerRef.current.innerHTML;
     const title = `Graphique TCD - ${pivotConfig.valField}`;
+
+    // Special handling for Sunburst with D3.js
+    if (selectedChartType === 'sunburst' && d3HierarchyData) {
+      const dataJson = JSON.stringify(d3HierarchyData);
+      const colorsJson = JSON.stringify(sunburstColors);
+      const rowFieldsJson = JSON.stringify(pivotConfig.rowFields);
+      const unit = pivotConfig.valField || '';
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+    h1 { margin: 0; color: #1e293b; font-size: 24px; }
+    .metadata { margin-top: 10px; font-size: 12px; color: #64748b; }
+    .chart-container { margin: 30px 0; display: flex; justify-content: center; align-items: center; min-height: 600px; }
+    .tooltip { position: fixed; pointer-events: none; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; z-index: 9999; opacity: 0; transition: opacity 0.2s; }
+    .tooltip .font-bold { font-weight: 600; }
+    .tooltip .text-sm { font-size: 14px; }
+    .tooltip .text-xs { font-size: 12px; }
+    .tooltip .mb-1 { margin-bottom: 4px; }
+    .tooltip .mt-2 { margin-top: 8px; }
+    .tooltip .pt-1 { padding-top: 4px; }
+    .tooltip .border-t { border-top: 1px solid #e2e8f0; }
+    .tooltip .text-gray-800 { color: #1e293b; }
+    .tooltip .text-gray-600 { color: #475569; }
+    .tooltip .text-gray-400 { color: #94a3b8; }
+    .tooltip .text-blue-600 { color: #2563eb; }
+    .tooltip .font-semibold { font-weight: 600; }
+    .tooltip .font-medium { font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${title}</h1>
+      <div class="metadata">
+        <p>Champ: ${pivotConfig.valField}</p>
+        <p>Agrégation: ${pivotConfig.aggType}</p>
+        <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
+      </div>
+    </div>
+    <div class="chart-container" id="chart-container">
+      <svg id="sunburst-svg"></svg>
+      <div id="tooltip" class="tooltip"></div>
+    </div>
+  </div>
+
+  <script>
+    const data = ${dataJson};
+    const colors = ${colorsJson};
+    const rowFields = ${rowFieldsJson};
+    const unit = '${unit}';
+    const sunburstTitle = '${sunburstTitle || ''}';
+    const width = 800;
+    const height = 800;
+
+    // Render Sunburst
+    const radius = Math.min(width, height) / 2;
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+    const hierarchy = d3.hierarchy(data)
+      .sum(d => d.value || 0)
+      .sort((a, b) => (b.value || 0) - (a.value || 0));
+
+    const level1Nodes = hierarchy.children || [];
+    const colorMap = new Map();
+    level1Nodes.forEach((node, idx) => {
+      colorMap.set(node.data.name, colors[idx % colors.length] || colorScale(idx.toString()));
+    });
+
+    const partition = d3.partition()
+      .size([2 * Math.PI, radius]);
+
+    const root = partition(hierarchy);
+    const totalValue = root.value || 1;
+
+    const arc = d3.arc()
+      .startAngle(d => d.x0)
+      .endAngle(d => d.x1)
+      .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
+      .padRadius(radius / 2)
+      .innerRadius(d => d.y0)
+      .outerRadius(d => d.y1 - 1);
+
+    const svg = d3.select('#sunburst-svg')
+      .attr('viewBox', \`-\${width / 2} -\${height / 2} \${width} \${height}\`)
+      .style('width', '100%')
+      .style('height', '100%')
+      .style('font', '10px sans-serif');
+
+    const tooltip = d3.select('#tooltip');
+
+    svg.append('g')
+      .selectAll('path')
+      .data(root.descendants().filter(d => d.depth))
+      .join('path')
+      .attr('fill', d => {
+        let ancestor = d;
+        while (ancestor.depth > 1) ancestor = ancestor.parent;
+        const baseColor = colorMap.get(ancestor.data.name) || colorScale(ancestor.data.name);
+
+        if (d.depth === 1) return baseColor;
+        else if (d.depth === 2) return d3.color(baseColor)?.brighter(0.3)?.formatHex() || baseColor;
+        else if (d.depth === 3) return d3.color(baseColor)?.brighter(0.6)?.formatHex() || baseColor;
+        return baseColor;
+      })
+      .attr('d', arc)
+      .style('cursor', 'pointer')
+      .on('mouseover', (event, d) => {
+        d3.select(event.currentTarget).style('opacity', 0.7);
+
+        const value = d.value?.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const percent = ((d.value || 0) / totalValue * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+        const levelLabel = rowFields[d.depth - 1] || \`Niveau \${d.depth}\`;
+
+        let content = \`
+          <div class="font-bold text-sm mb-1 text-gray-800">\${d.data.name}</div>
+          <div class="text-xs text-gray-600">Niveau: \${levelLabel}</div>
+          <div class="text-xs text-gray-600">Valeur: <span class="font-semibold text-blue-600">\${value} \${unit}</span></div>
+          <div class="text-xs text-gray-600">Part: <span class="font-medium text-gray-800">\${percent}%</span></div>
+        \`;
+
+        if (d.depth > 1 && d.parent) {
+          content += \`<div class="mt-2 text-xs text-gray-400 border-t pt-1">Parent: \${d.parent.data.name}</div>\`;
+        }
+
+        tooltip
+          .style('opacity', 1)
+          .html(content)
+          .style('left', \`\${event.clientX + 10}px\`)
+          .style('top', \`\${event.clientY + 10}px\`);
+      })
+      .on('mousemove', (event) => {
+        tooltip
+          .style('left', \`\${event.clientX + 10}px\`)
+          .style('top', \`\${event.clientY + 10}px\`);
+      })
+      .on('mouseout', (event) => {
+        d3.select(event.currentTarget).style('opacity', 1);
+        tooltip.style('opacity', 0);
+      });
+
+    svg.append('g')
+      .attr('pointer-events', 'none')
+      .attr('text-anchor', 'middle')
+      .style('user-select', 'none')
+      .selectAll('text')
+      .data(root.descendants().filter(d => d.depth && (d.y0 + d.y1) / 2 * (d.x1 - d.x0) > 10))
+      .join('text')
+      .attr('transform', function(d) {
+        const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+        const y = (d.y0 + d.y1) / 2;
+        return \`rotate(\${x - 90}) translate(\${y},0) rotate(\${x < 180 ? 0 : 180})\`;
+      })
+      .attr('dy', '0.35em')
+      .attr('fill', 'white')
+      .attr('font-size', '10px')
+      .attr('font-weight', '500')
+      .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
+      .text(d => d.data.name.length > 15 ? d.data.name.substring(0, 12) + '...' : d.data.name);
+
+    if (sunburstTitle) {
+      svg.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '-0.5em')
+        .attr('font-size', '12px')
+        .attr('font-weight', '600')
+        .attr('fill', '#475569')
+        .style('text-transform', 'uppercase')
+        .style('letter-spacing', '0.05em')
+        .text(sunburstTitle);
+    }
+
+    svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', sunburstTitle ? '0.8em' : '0')
+      .attr('font-size', '24px')
+      .attr('font-weight', '700')
+      .attr('fill', '#1e293b')
+      .text('Total');
+
+    svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', sunburstTitle ? '2.2em' : '1.5em')
+      .attr('font-size', '16px')
+      .attr('font-weight', '500')
+      .attr('fill', '#475569')
+      .text(\`\${root.value?.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} \${unit}\`);
+  </script>
+</body>
+</html>`;
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `graphique_sunburst_${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setShowExportMenu(false);
+      return;
+    }
+
+    // Standard HTML export for other chart types
+    const chartHtml = chartContainerRef.current.innerHTML;
     const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
