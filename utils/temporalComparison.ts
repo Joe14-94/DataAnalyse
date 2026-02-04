@@ -1,11 +1,19 @@
 import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
-import { parseSmartNumber, prepareFilters, applyPreparedFilters } from '../utils';
+import { parseSmartNumber, prepareFilters, applyPreparedFilters, getCachedNumberFormat } from '../utils';
+
+// BOLT OPTIMIZATION: Global cache for date parsing to avoid redundant parsing in tight loops
+const DATE_CACHE = new Map<any, Date | null>();
+const MAX_DATE_CACHE_SIZE = 10000;
 
 /**
  * Parse une date avec support du format français DD/MM/YYYY
  */
-const parseDateValue = (dateValue: any): Date | null => {
+export const parseDateValue = (dateValue: any): Date | null => {
   if (!dateValue) return null;
+
+  // BOLT OPTIMIZATION: Return cached result if available
+  const cached = DATE_CACHE.get(dateValue);
+  if (cached !== undefined) return cached;
 
   let date: Date;
 
@@ -58,7 +66,12 @@ const parseDateValue = (dateValue: any): Date | null => {
     return null;
   }
 
-  if (isNaN(date.getTime())) return null;
+  if (isNaN(date.getTime())) {
+    if (DATE_CACHE.size < MAX_DATE_CACHE_SIZE) DATE_CACHE.set(dateValue, null);
+    return null;
+  }
+
+  if (DATE_CACHE.size < MAX_DATE_CACHE_SIZE) DATE_CACHE.set(dateValue, date);
   return date;
 };
 
@@ -100,11 +113,19 @@ export const aggregateDataByGroup = (
 ): Map<string, { label: string; value: number; details: DataRow[] }> => {
   const groups = new Map<string, { label: string; value: number; details: DataRow[] }>();
 
-  data.forEach(row => {
-    // Créer la clé de regroupement
-    const groupKey = groupByFields.map(field => row[field] || '').join('|');
-    // Utiliser un séparateur de contrôle spécial qui ne sera jamais dans les données utilisateur
-    const groupLabel = groupByFields.map(field => row[field] || '(vide)').join('\x1F');
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    // BOLT OPTIMIZATION: Use manual loop instead of map().join() to avoid temporary array allocations
+    let groupKey = "";
+    let groupLabel = "";
+    for (let j = 0; j < groupByFields.length; j++) {
+      const field = groupByFields[j];
+      const val = row[field];
+      const sVal = val !== undefined && val !== null ? String(val) : '';
+      groupKey += (j === 0 ? "" : "|") + sVal;
+      groupLabel += (j === 0 ? "" : "\x1F") + (sVal || '(vide)');
+    }
 
     if (!groups.has(groupKey)) {
       groups.set(groupKey, {
@@ -146,7 +167,7 @@ export const aggregateDataByGroup = (
         group.value = group.details.length === 1 ? value : Math.max(group.value, value);
         break;
     }
-  });
+  }
 
   // Finaliser la moyenne si nécessaire
   if (aggType === 'avg') {
@@ -386,7 +407,8 @@ export const calculateTemporalComparison = (
  * Formatte un nombre en valeur monétaire
  */
 export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('fr-FR', {
+  // BOLT OPTIMIZATION: Reuse Intl.NumberFormat instances via global cache
+  return getCachedNumberFormat({
     style: 'decimal',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -397,7 +419,8 @@ export const formatCurrency = (value: number): string => {
  * Formatte un pourcentage
  */
 export const formatPercentage = (value: number): string => {
-  return new Intl.NumberFormat('fr-FR', {
+  // BOLT OPTIMIZATION: Reuse Intl.NumberFormat instances via global cache
+  return getCachedNumberFormat({
     style: 'percent',
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
