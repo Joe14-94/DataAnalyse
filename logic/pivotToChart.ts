@@ -365,6 +365,7 @@ export const buildHierarchicalTree = (
   config: PivotConfig,
   options?: { limit?: number; showOthers?: boolean }
 ): HierarchicalNode[] => {
+  const dataRows = result.displayRows.filter(r => r.type === 'data');
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const hasMultiCols = seriesHeaders.length > 1;
 
