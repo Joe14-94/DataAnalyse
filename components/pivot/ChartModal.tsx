@@ -149,24 +149,47 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   // Données sunburst (calculées séparément car structure différente)
   const sunburstData = useMemo<SunburstData | null>(() => {
     if (selectedChartType !== 'sunburst') return null;
+
+    // Calculate color count first by building tree
+    const tempResult = transformPivotToSunburstData(pivotData, pivotConfig, [], {
+      limit: limit > 0 ? limit : undefined,
+      showOthers: limit > 0
+    });
+
+    const colorCount = tempResult.tree.length;
     const baseColors = colorMode === 'single'
-      ? Array(9).fill(singleColor)
+      ? Array(colorCount).fill(singleColor)
       : colorMode === 'gradient'
-        ? generateGradient(gradientStart, gradientEnd, 9)
-        : getChartColors(9, colorPalette);
+        ? generateGradient(gradientStart, gradientEnd, colorCount)
+        : getChartColors(colorCount, colorPalette);
+
     const result = transformPivotToSunburstData(pivotData, pivotConfig, baseColors, {
       limit: limit > 0 ? limit : undefined,
       showOthers: limit > 0
     });
+
     console.log('🌞 Sunburst Data:', {
       result,
       ringsCount: result?.rings?.length,
-      rings: result?.rings,
-      totalValue: result?.totalValue,
+      colorCount,
+      baseColors,
       tree: result?.tree
     });
     return result;
   }, [pivotData, pivotConfig, selectedChartType, limit, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
+  // Couleurs spécifiques pour Sunburst
+  const sunburstColors = useMemo(() => {
+    if (selectedChartType !== 'sunburst' || !sunburstData) return colors;
+    const colorCount = sunburstData.tree.length;
+    if (colorMode === 'single') {
+      return Array(colorCount).fill(singleColor);
+    } else if (colorMode === 'gradient') {
+      return generateGradient(gradientStart, gradientEnd, colorCount);
+    } else {
+      return getChartColors(colorCount, colorPalette);
+    }
+  }, [selectedChartType, sunburstData, colorMode, colorPalette, singleColor, gradientStart, gradientEnd, colors]);
 
   // Données treemap hiérarchique
   const hierarchicalTreemapData = useMemo(() => {
@@ -768,7 +791,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                       <div
                         className="w-3 h-3 rounded-sm border border-slate-300"
                         style={{
-                          backgroundColor: colors[idx % colors.length]
+                          backgroundColor: sunburstColors[idx % sunburstColors.length]
                         }}
                       />
                       <span className="text-slate-700 font-medium">{field}</span>
@@ -787,7 +810,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 unit={pivotConfig.valField || ''}
                 title={sunburstTitle}
                 rowFields={pivotConfig.rowFields}
-                colors={colors}
+                colors={sunburstColors}
               />
             </div>
           </div>

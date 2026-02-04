@@ -48,6 +48,13 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
       .sum(d => d.value || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
+    // Assign unique colors to level 1 nodes
+    const level1Nodes = hierarchy.children || [];
+    const colorMap = new Map<string, string>();
+    level1Nodes.forEach((node, idx) => {
+      colorMap.set(node.data.name, colors[idx % colors.length] || colorScale(idx.toString()));
+    });
+
     // Partition Layout
     const partition = d3.partition<HierarchyNode>()
       .size([2 * Math.PI, radius]);
@@ -78,16 +85,23 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
       .data(root.descendants().filter(d => d.depth))
       .join("path")
       .attr("fill", d => {
-        // Get base color from first ancestor
+        // Get base color from level 1 ancestor
         let ancestor: any = d;
         while (ancestor.depth > 1) ancestor = ancestor.parent;
 
-        const baseColor = colorScale(ancestor.data.name);
+        // Get the base color for this level 1 category
+        const baseColor = colorMap.get(ancestor.data.name) || colorScale(ancestor.data.name);
 
-        // Adjust brightness based on depth
-        if (d.depth === 1) return baseColor;
-        if (d.depth === 2) return d3.color(baseColor)?.brighter(0.5)?.formatHex() || baseColor;
-        if (d.depth === 3) return d3.color(baseColor)?.brighter(1)?.formatHex() || baseColor;
+        // Adjust brightness based on depth - lighter for deeper levels
+        if (d.depth === 1) {
+          return baseColor;
+        } else if (d.depth === 2) {
+          // Level 2: slightly lighter
+          return d3.color(baseColor)?.brighter(0.3)?.formatHex() || baseColor;
+        } else if (d.depth === 3) {
+          // Level 3: even lighter
+          return d3.color(baseColor)?.brighter(0.6)?.formatHex() || baseColor;
+        }
         return baseColor;
       })
       .attr("d", arc)
