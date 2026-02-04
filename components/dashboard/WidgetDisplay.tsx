@@ -24,11 +24,19 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
 
    // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
    if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
-      const { colors, data: chartData, unit, seriesName } = data;
+      const { colors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
       const chartType = widget.config.pivotChart ? widget.config.pivotChart.chartType : widget.config.chartType;
 
+      // Pour Sunburst et Treemap, les données sont dans sunburstData/hierarchicalData, pas chartData
+      const hasHierarchicalData = chartType === 'sunburst' ? sunburstData : chartType === 'treemap' ? hierarchicalData : null;
+
       if (!chartData || chartData.length === 0) {
-         return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
+         // Si c'est un graphique hiérarchique, vérifier les données hiérarchiques au lieu de chartData
+         if (hasHierarchicalData) {
+            // Continue pour afficher le graphique hiérarchique
+         } else {
+            return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
+         }
       }
 
       // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
