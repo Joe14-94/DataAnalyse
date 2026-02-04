@@ -109,8 +109,24 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Appliquer les filtres du TCD
          console.log('📊 Filtres à appliquer:', pc.filters);
+         if (pc.filters && pc.filters.length > 0) {
+            pc.filters.forEach((filter: any, idx: number) => {
+               console.log(`📊 Filtre ${idx}:`, {
+                  field: filter.field,
+                  operator: filter.operator,
+                  value: filter.value,
+                  values: filter.values
+               });
+            });
+         }
          let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
          console.log('📊 workingRows après filtrage:', workingRows.length);
+
+         if (workingRows.length === 0 && baseRows.length > 0 && pc.filters && pc.filters.length > 0) {
+            console.error('⚠️ ATTENTION: Tous les filtres ont éliminé toutes les lignes!');
+            console.error('⚠️ Exemple de ligne avant filtrage:', baseRows[0]);
+            console.error('⚠️ Champs disponibles:', Object.keys(baseRows[0]));
+         }
 
          let pivotResult: any = null;
 
