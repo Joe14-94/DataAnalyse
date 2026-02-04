@@ -163,10 +163,10 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
                            const outerR = innerR + ringWidth;
 
                         const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, value }: any) => {
+                           if (!sbData.totalValue || value / sbData.totalValue < 0.05) return null; // Plus strict sur les widgets car plus petits
                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                            const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                            const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                           if (value / sbData.totalValue < 0.05) return null; // Plus strict sur les widgets car plus petits
                            return (
                              <text x={x} y={y} fill="#1e293b" textAnchor="middle" dominantBaseline="central" className="text-[7px] font-bold pointer-events-none" style={{ textShadow: '0 0 2px rgba(255,255,255,0.8)' }}>
                                {name.length > 8 ? name.substring(0, 6) + '..' : name}

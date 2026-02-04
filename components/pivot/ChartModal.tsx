@@ -888,13 +888,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
                   // LabelRenderer interne pour Sunburst
                   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, value }: any) => {
+                    if (!sunburstData.totalValue || value / sunburstData.totalValue < 0.02) return null;
+
                     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                     const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-
-                    // N'afficher le label que si le segment est assez grand
-                    const arcLength = (outerRadius * Math.PI * (ring[0].value / sunburstData.totalValue)); // Approximation grossière
-                    if (value / sunburstData.totalValue < 0.02) return null;
 
                     return (
                       <text

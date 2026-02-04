@@ -348,9 +348,10 @@ export const lightenColor = (hex: string, factor: number): string => {
  * Additionne sa propre valeur et celle de tous ses descendants
  */
 const getNodeValue = (node: HierarchicalNode): number => {
-  let val = typeof node.value === 'number' ? node.value : 0;
+  let val = (typeof node.value === 'number' && !isNaN(node.value)) ? node.value : 0;
   if (node.children && node.children.length > 0) {
-    val += node.children.reduce((sum, c) => sum + getNodeValue(c), 0);
+    const childrenSum = node.children.reduce((sum, c) => sum + getNodeValue(c), 0);
+    val += childrenSum;
   }
   return val;
 };
@@ -364,7 +365,6 @@ export const buildHierarchicalTree = (
   config: PivotConfig,
   options?: { limit?: number; showOthers?: boolean }
 ): HierarchicalNode[] => {
-  const dataRows = result.displayRows.filter(r => r.type === 'data');
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const hasMultiCols = seriesHeaders.length > 1;
 
@@ -408,11 +408,11 @@ export const buildHierarchicalTree = (
 
       if (leafChildren.length > 0) {
         if (!leafNode.children) leafNode.children = [];
+        // Fusionner avec les enfants existants pour ne pas écraser les données d'autres lignes avec même clé
         leafNode.children.push(...leafChildren);
       }
     } else {
       // Pas de colonnes : utiliser rowTotal comme valeur
-      // On additionne si jamais le noeud est atteint plusieurs fois (peu probable en TCD mais plus robuste)
       const rowVal = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
       leafNode.value = (leafNode.value || 0) + rowVal;
     }
@@ -460,6 +460,7 @@ export const treeToSunburstRings = (
     parentColor: string,
     parentTotal: number
   ) {
+    if (nodes.length === 0) return;
     if (!rings[level]) rings[level] = [];
 
     nodes.forEach((node, idx) => {
@@ -475,7 +476,7 @@ export const treeToSunburstRings = (
       } else {
         // Niveaux plus profonds : nuances du parent
         const siblingCount = nodes.length;
-        const lightenFactor = 0.15 + (idx / Math.max(siblingCount - 1, 1)) * 0.35;
+        const lightenFactor = 0.1 + (idx / Math.max(siblingCount, 1)) * 0.4;
         fill = lightenColor(parentColor, lightenFactor);
       }
       colorMap.set(pathKey, fill);
@@ -492,7 +493,7 @@ export const treeToSunburstRings = (
           grandTotal
         });
 
-        // Recurser dans les enfants
+        // Recurser dans les enfants si nécessaire
         if (node.children && node.children.length > 0) {
           traverse(node.children, level + 1, path, fill, nodeValue);
         }
@@ -500,8 +501,10 @@ export const treeToSunburstRings = (
     });
   }
 
-  traverse(tree, 0, [], baseColors[0], grandTotal);
-  return rings;
+  traverse(tree, 0, [], baseColors[0] || '#64748b', grandTotal);
+
+  // Filtrer les anneaux vides
+  return rings.filter(r => r.length > 0);
 };
 
 /**
