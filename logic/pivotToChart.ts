@@ -59,6 +59,17 @@ export interface SunburstData {
   totalValue: number;
 }
 
+/**
+ * Convertit le tree Sunburst (array de nodes) en un seul node root pour D3
+ */
+export const sunburstDataToD3Hierarchy = (sunburstData: SunburstData): HierarchicalNode => {
+  return {
+    name: 'root',
+    children: sunburstData.tree,
+    value: undefined // La valeur sera calculée par d3.hierarchy().sum()
+  };
+};
+
 // ============================================================================
 // DETECTION AUTOMATIQUE DU TYPE DE GRAPHIQUE
 // ============================================================================

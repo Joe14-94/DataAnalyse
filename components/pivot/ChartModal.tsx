@@ -10,6 +10,7 @@ import {
   LabelList
 } from 'recharts';
 import { TreemapContent } from '../ui/TreemapContent';
+import { SunburstD3 } from '../charts/SunburstD3';
 import {
   ChartType,
   ColorPalette,
@@ -27,7 +28,8 @@ import {
   getChartTypeConfig,
   getAvailableHierarchyLevels,
   getSingleColors,
-  generateGradient
+  generateGradient,
+  sunburstDataToD3Hierarchy
 } from '../../logic/pivotToChart';
 import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
@@ -747,105 +749,46 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'sunburst': {
-        console.log('🌞 Rendering Sunburst:', { sunburstData, hasRings: !!sunburstData?.rings, ringsLength: sunburstData?.rings?.length });
-
-        if (!sunburstData || !sunburstData.rings || sunburstData.rings.length === 0) {
+        if (!sunburstData || !sunburstData.tree || sunburstData.tree.length === 0) {
           return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée hierarchique</div>;
         }
 
-        const numRings = sunburstData.rings.length;
-        console.log('🌞 Sunburst rings to render:', numRings, sunburstData.rings);
-        const centerRadius = showCenterTotal ? 15 : 0; // Rayon réservé pour le centre
-        const maxOuterRadius = 88; // % du conteneur
-        const gap = 1.5; // % gap entre anneaux
-        const availableRadius = maxOuterRadius - centerRadius;
-        const ringWidth = (availableRadius - gap * (numRings - 1)) / numRings;
+        // Convertir les données pour D3
+        const d3HierarchyData = sunburstDataToD3Hierarchy(sunburstData);
 
         return (
           <div className="relative w-full h-full flex flex-col">
-            {/* Titre */}
-            {sunburstTitle && (
-              <div className="text-center mb-2">
-                <h3 className="text-lg font-bold text-slate-800">{sunburstTitle}</h3>
-              </div>
-            )}
-
-            {/* Graphique avec légende */}
-            <div className="flex-1 flex items-center gap-4">
-              <div className="flex-1 relative" style={{ minHeight: '400px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    {sunburstData.rings.map((ring, ringIdx) => {
-                      const innerR = centerRadius + (ringIdx * (ringWidth + gap));
-                      const outerR = innerR + ringWidth;
-                      const showLabels = ringIdx === 0 && ring.length <= 6;
-
-                      const firstItem = ring[0];
-                      const hasValues = ring.every((item: any) => typeof item.value === 'number' && item.value > 0);
-                      console.log(`🌞 RENDER ring=${ringIdx}: length=${ring.length}, innerR=${innerR}%, outerR=${outerR}%, hasValues=${hasValues}, firstItem.name="${firstItem?.name}", firstItem.value=${firstItem?.value}, firstItem.fill="${firstItem?.fill}"`);
-
-                      return (
-                        <Pie
-                          key={`ring-${ringIdx}`}
-                          data={ring}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={`${innerR}%`}
-                          outerRadius={`${outerR}%`}
-                          paddingAngle={ringIdx === 0 ? 2 : 0.5}
-                          stroke="#fff"
-                          strokeWidth={ringIdx === 0 ? 2 : 1}
-                          labelLine={showLabels}
-                          label={showLabels ? ({ name, percent }: any) => `${name.length > 10 ? name.substring(0, 10) + '...' : name}` : false}
-                          isAnimationActive={true}
-                          animationDuration={600}
-                        >
-                          {ring.map((entry, entryIdx) => (
-                            <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                      );
-                    })}
-                    <Tooltip content={<SunburstTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-
-                {/* Total au centre */}
-                {showCenterTotal && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-center bg-white/90 rounded-full p-4 shadow-sm">
-                      <div className="text-xs font-semibold text-slate-600 mb-1">Total</div>
-                      <div className="text-xl font-bold text-slate-900">
-                        {formatChartValue(sunburstData.totalValue, pivotConfig)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Légende avec noms de colonnes */}
-              {showSunburstLegend && pivotConfig.rowFields.length > 0 && (
-                <div className="flex flex-col gap-2 pr-4" style={{ minWidth: '150px' }}>
-                  <div className="text-xs font-bold text-slate-700 mb-1 uppercase tracking-wide">Niveaux</div>
+            {/* Légende avec noms de colonnes */}
+            {showSunburstLegend && pivotConfig.rowFields.length > 0 && (
+              <div className="flex justify-center mb-2">
+                <div className="flex gap-4">
+                  <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Niveaux:</div>
                   {pivotConfig.rowFields.map((field, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs">
+                    <div key={idx} className="flex items-center gap-1.5 text-xs">
                       <div
                         className="w-3 h-3 rounded-sm border border-slate-300"
                         style={{
-                          backgroundColor: idx === 0
-                            ? colors[0]
-                            : idx === 1
-                              ? colors[1 % colors.length]
-                              : colors[2 % colors.length]
+                          backgroundColor: colors[idx % colors.length]
                         }}
                       />
                       <span className="text-slate-700 font-medium">{field}</span>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Graphique Sunburst D3 */}
+            <div className="flex-1" style={{ minHeight: '500px' }}>
+              <SunburstD3
+                data={d3HierarchyData}
+                width={800}
+                height={800}
+                unit={pivotConfig.valField || ''}
+                title={sunburstTitle}
+                rowFields={pivotConfig.rowFields}
+                colors={colors}
+              />
             </div>
           </div>
         );
