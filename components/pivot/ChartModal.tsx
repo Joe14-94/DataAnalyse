@@ -152,10 +152,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       : colorMode === 'gradient'
         ? generateGradient(gradientStart, gradientEnd, 9)
         : getChartColors(9, colorPalette);
-    return transformPivotToSunburstData(pivotData, pivotConfig, baseColors, {
+    const result = transformPivotToSunburstData(pivotData, pivotConfig, baseColors, {
       limit: limit > 0 ? limit : undefined,
       showOthers: limit > 0
     });
+    console.log('🌞 Sunburst Data:', {
+      result,
+      ringsCount: result?.rings?.length,
+      rings: result?.rings,
+      totalValue: result?.totalValue,
+      tree: result?.tree
+    });
+    return result;
   }, [pivotData, pivotConfig, selectedChartType, limit, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
 
   // Données treemap hiérarchique
@@ -739,11 +747,14 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'sunburst': {
-        if (!sunburstData || sunburstData.rings.length === 0) {
+        console.log('🌞 Rendering Sunburst:', { sunburstData, hasRings: !!sunburstData?.rings, ringsLength: sunburstData?.rings?.length });
+
+        if (!sunburstData || !sunburstData.rings || sunburstData.rings.length === 0) {
           return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée hierarchique</div>;
         }
 
         const numRings = sunburstData.rings.length;
+        console.log('🌞 Sunburst rings to render:', numRings, sunburstData.rings);
         const centerRadius = showCenterTotal ? 15 : 0; // Rayon réservé pour le centre
         const maxOuterRadius = 88; // % du conteneur
         const gap = 1.5; // % gap entre anneaux
