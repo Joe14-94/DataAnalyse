@@ -104,6 +104,11 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          let pivotResult: any = null;
 
+         console.log('📊 Avant calcul pivot - workingRows:', workingRows.length);
+         console.log('📊 Avant calcul pivot - pc.rowFields:', pc.rowFields);
+         console.log('📊 Avant calcul pivot - pc.valField:', pc.valField);
+         console.log('📊 Avant calcul pivot - isTemporalMode:', pivotChart.isTemporalMode);
+
          if (pivotChart.isTemporalMode && pivotChart.temporalComparison) {
             const tc = pivotChart.temporalComparison;
             const sourceDataMap = new Map<string, any[]>();
@@ -182,7 +187,16 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             });
 
             pivotResult = { colHeaders, displayRows, colTotals: {}, grandTotal: 0, isTemporal: true };
+            console.log('📊 Pivot temporal calculé:', pivotResult);
          } else {
+            console.log('📊 Appel de calculatePivotData avec:', {
+               rowsCount: workingRows.length,
+               rowFields: pc.rowFields,
+               colFields: pc.colFields,
+               valField: pc.valField,
+               aggType: pc.aggType
+            });
+
             pivotResult = calculatePivotData({
                rows: workingRows,
                rowFields: pc.rowFields,
@@ -196,10 +210,13 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                showSubtotals: pc.showSubtotals,
                currentDataset: dataset
             });
+
+            console.log('📊 Pivot standard calculé:', pivotResult);
          }
 
          if (!pivotResult) {
             console.error('📊 ERROR: pivotResult est null');
+            console.error('📊 ERROR: Détails - rowFields:', pc.rowFields, 'valField:', pc.valField, 'workingRows:', workingRows.length);
             return { error: 'Erreur lors du calcul du TCD' };
          }
 
