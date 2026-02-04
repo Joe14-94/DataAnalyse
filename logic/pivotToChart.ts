@@ -511,15 +511,7 @@ export const treeToSunburstRings = (
       });
 
       if (level === 0 && idx < 2) {
-        console.log(`🌞 Ring item at level ${level}:`, {
-          name: node.name,
-          value: nodeValue,
-          fill,
-          path,
-          nodeHasValue: node.value,
-          nodeHasChildren: !!node.children,
-          childrenCount: node.children?.length
-        });
+        console.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
       }
 
       // Recurser dans les enfants

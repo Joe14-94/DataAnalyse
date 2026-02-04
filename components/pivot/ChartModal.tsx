@@ -780,13 +780,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                       const outerR = innerR + ringWidth;
                       const showLabels = ringIdx === 0 && ring.length <= 6;
 
-                      console.log(`🌞 Rendering ring ${ringIdx}:`, {
-                        ringLength: ring.length,
-                        innerR,
-                        outerR,
-                        firstItem: ring[0],
-                        hasValues: ring.every((item: any) => typeof item.value === 'number' && item.value > 0)
-                      });
+                      const firstItem = ring[0];
+                      const hasValues = ring.every((item: any) => typeof item.value === 'number' && item.value > 0);
+                      console.log(`🌞 RENDER ring=${ringIdx}: length=${ring.length}, innerR=${innerR}%, outerR=${outerR}%, hasValues=${hasValues}, firstItem.name="${firstItem?.name}", firstItem.value=${firstItem?.value}, firstItem.fill="${firstItem?.fill}"`);
 
                       return (
                         <Pie
