@@ -94,6 +94,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   // Etat pour le drill-down treemap
   const [treemapDrillPath, setTreemapDrillPath] = useState<string[]>([]);
 
+  // États pour la configuration Sunburst
+  const [sunburstTitle, setSunburstTitle] = useState<string>('Analyse de la répartition');
+  const [showCenterTotal, setShowCenterTotal] = useState<boolean>(true);
+  const [showSunburstLegend, setShowSunburstLegend] = useState<boolean>(true);
+
   // Transformer les données
   const chartData = useMemo(() => {
     console.log('=== Transformation des données pour graphique ===');
@@ -383,7 +388,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             colorPalette,
             singleColor,
             gradientStart,
-            gradientEnd
+            gradientEnd,
+            sunburstConfig: selectedChartType === 'sunburst' ? {
+              title: sunburstTitle,
+              showCenterTotal,
+              showLegend: showSunburstLegend
+            } : undefined
           }
         }
       };
@@ -447,16 +457,34 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     const pctTotal = data.grandTotal > 0 ? ((data.value / data.grandTotal) * 100).toFixed(1) : '0';
     const pctParent = data.parentTotal > 0 ? ((data.value / data.parentTotal) * 100).toFixed(1) : '0';
 
+    // Déterminer le niveau (0-indexed devient 1-indexed pour affichage)
+    const level = data.path.length;
+    const levelLabel = pivotConfig.rowFields[level - 1] || `Niveau ${level}`;
+
     return (
-      <div style={tooltipStyle}>
-        <p className="font-semibold text-slate-800 mb-1 text-xs">{data.path.join(' > ')}</p>
-        <p className="text-xs text-slate-700">
-          Valeur: <span className="font-bold">{formatChartValue(data.value, pivotConfig)}</span>
-        </p>
-        <p className="text-xs text-slate-500">
-          {pctTotal}% du total
-          {data.parentName !== 'Total' && ` | ${pctParent}% de ${data.parentName}`}
-        </p>
+      <div style={{...tooltipStyle, minWidth: '180px'}}>
+        <p className="font-bold text-slate-900 mb-2 text-sm border-b border-slate-200 pb-1">{data.name}</p>
+        <div className="space-y-1">
+          <p className="text-xs text-slate-600">
+            <span className="font-semibold">Niveau:</span> {levelLabel}
+          </p>
+          <p className="text-xs text-slate-700">
+            <span className="font-semibold">Valeur:</span> <span className="font-bold text-brand-600">{formatChartValue(data.value, pivotConfig)}</span>
+          </p>
+          <p className="text-xs text-slate-600">
+            <span className="font-semibold">Part:</span> {pctTotal}% du total
+          </p>
+          {data.parentName !== 'Total' && (
+            <p className="text-xs text-slate-600">
+              <span className="font-semibold">Parent:</span> {data.parentName} ({pctParent}%)
+            </p>
+          )}
+        </div>
+        {data.path.length > 1 && (
+          <p className="text-[10px] text-slate-400 mt-2 pt-1 border-t border-slate-100">
+            {data.path.join(' › ')}
+          </p>
+        )}
       </div>
     );
   };
@@ -716,45 +744,95 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         }
 
         const numRings = sunburstData.rings.length;
-        const maxOuterRadius = 90; // % du conteneur
-        const gap = 2; // % gap entre anneaux
-        const ringWidth = (maxOuterRadius - gap * (numRings - 1)) / numRings;
+        const centerRadius = showCenterTotal ? 15 : 0; // Rayon réservé pour le centre
+        const maxOuterRadius = 88; // % du conteneur
+        const gap = 1.5; // % gap entre anneaux
+        const availableRadius = maxOuterRadius - centerRadius;
+        const ringWidth = (availableRadius - gap * (numRings - 1)) / numRings;
 
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              {sunburstData.rings.map((ring, ringIdx) => {
-                const innerR = ringIdx === 0 ? 0 : (ringIdx * (ringWidth + gap));
-                const outerR = innerR + ringWidth;
-                const showLabels = ringIdx === 0 && ring.length <= 8;
+          <div className="relative w-full h-full flex flex-col">
+            {/* Titre */}
+            {sunburstTitle && (
+              <div className="text-center mb-2">
+                <h3 className="text-lg font-bold text-slate-800">{sunburstTitle}</h3>
+              </div>
+            )}
 
-                return (
-                  <Pie
-                    key={`ring-${ringIdx}`}
-                    data={ring}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={`${innerR}%`}
-                    outerRadius={`${outerR}%`}
-                    paddingAngle={ringIdx === 0 ? 2 : 0.5}
-                    stroke="#fff"
-                    strokeWidth={ringIdx === 0 ? 2 : 1}
-                    labelLine={showLabels}
-                    label={showLabels ? ({ name, percent }: any) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)` : false}
-                    isAnimationActive={true}
-                    animationDuration={600}
-                  >
-                    {ring.map((entry, entryIdx) => (
-                      <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                );
-              })}
-              <Tooltip content={<SunburstTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+            {/* Graphique avec légende */}
+            <div className="flex-1 flex items-center gap-4">
+              <div className="flex-1 relative" style={{ minHeight: '400px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    {sunburstData.rings.map((ring, ringIdx) => {
+                      const innerR = centerRadius + (ringIdx * (ringWidth + gap));
+                      const outerR = innerR + ringWidth;
+                      const showLabels = ringIdx === 0 && ring.length <= 6;
+
+                      return (
+                        <Pie
+                          key={`ring-${ringIdx}`}
+                          data={ring}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={`${innerR}%`}
+                          outerRadius={`${outerR}%`}
+                          paddingAngle={ringIdx === 0 ? 2 : 0.5}
+                          stroke="#fff"
+                          strokeWidth={ringIdx === 0 ? 2 : 1}
+                          labelLine={showLabels}
+                          label={showLabels ? ({ name, percent }: any) => `${name.length > 10 ? name.substring(0, 10) + '...' : name}` : false}
+                          isAnimationActive={true}
+                          animationDuration={600}
+                        >
+                          {ring.map((entry, entryIdx) => (
+                            <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                      );
+                    })}
+                    <Tooltip content={<SunburstTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Total au centre */}
+                {showCenterTotal && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center bg-white/90 rounded-full p-4 shadow-sm">
+                      <div className="text-xs font-semibold text-slate-600 mb-1">Total</div>
+                      <div className="text-xl font-bold text-slate-900">
+                        {formatChartValue(sunburstData.totalValue, pivotConfig)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Légende avec noms de colonnes */}
+              {showSunburstLegend && pivotConfig.rowFields.length > 0 && (
+                <div className="flex flex-col gap-2 pr-4" style={{ minWidth: '150px' }}>
+                  <div className="text-xs font-bold text-slate-700 mb-1 uppercase tracking-wide">Niveaux</div>
+                  {pivotConfig.rowFields.map((field, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <div
+                        className="w-3 h-3 rounded-sm border border-slate-300"
+                        style={{
+                          backgroundColor: idx === 0
+                            ? colors[0]
+                            : idx === 1
+                              ? colors[1 % colors.length]
+                              : colors[2 % colors.length]
+                        }}
+                      />
+                      <span className="text-slate-700 font-medium">{field}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         );
       }
 
@@ -1043,6 +1121,47 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
                 />
                 <span className="text-xs text-slate-500">{gradientEnd}</span>
+              </div>
+            </>
+          )}
+
+          {/* Options Sunburst */}
+          {selectedChartType === 'sunburst' && (
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-slate-600">Titre:</label>
+                <input
+                  type="text"
+                  value={sunburstTitle}
+                  onChange={(e) => setSunburstTitle(e.target.value)}
+                  className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                  placeholder="Titre du graphique"
+                  style={{ minWidth: '200px' }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show-center-total"
+                  checked={showCenterTotal}
+                  onChange={(e) => setShowCenterTotal(e.target.checked)}
+                  className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
+                />
+                <label htmlFor="show-center-total" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  Total au centre
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show-sunburst-legend"
+                  checked={showSunburstLegend}
+                  onChange={(e) => setShowSunburstLegend(e.target.checked)}
+                  className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
+                />
+                <label htmlFor="show-sunburst-legend" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  Légende niveaux
+                </label>
               </div>
             </>
           )}

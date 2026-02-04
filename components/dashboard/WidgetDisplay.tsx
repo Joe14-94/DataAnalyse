@@ -146,56 +146,92 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
             );
          } else if (chartType === 'sunburst') {
             const sbData = data.sunburstData;
+            const sunburstConfig = widget.config.pivotChart?.sunburstConfig;
+            const showCenterTotal = sunburstConfig?.showCenterTotal !== false; // Default true
+            const showLegend = sunburstConfig?.showLegend !== false; // Default true
+            const title = sunburstConfig?.title;
+
             if (!sbData || !sbData.rings || sbData.rings.length === 0) {
                return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Aucune donnée hiérarchique</div>;
             }
             const numRings = sbData.rings.length;
-            const maxOuterRadius = 88;
-            const gap = 2;
-            const ringWidth = (maxOuterRadius - gap * (numRings - 1)) / numRings;
+            const centerRadius = showCenterTotal ? 18 : 0;
+            const maxOuterRadius = 85;
+            const gap = 1.5;
+            const availableRadius = maxOuterRadius - centerRadius;
+            const ringWidth = (availableRadius - gap * (numRings - 1)) / numRings;
+
             return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                     {sbData.rings.map((ring: any[], ringIdx: number) => {
-                        const innerR = ringIdx === 0 ? 0 : (ringIdx * (ringWidth + gap));
-                        const outerR = innerR + ringWidth;
-                        return (
-                           <Pie
-                              key={`ring-${ringIdx}`}
-                              data={ring}
-                              dataKey="value"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={`${innerR}%`}
-                              outerRadius={`${outerR}%`}
-                              paddingAngle={ringIdx === 0 ? 2 : 0.5}
-                              stroke="#fff"
-                              strokeWidth={ringIdx === 0 ? 2 : 1}
-                              isAnimationActive={false}
-                           >
-                              {ring.map((entry: any, entryIdx: number) => (
-                                 <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
-                              ))}
-                           </Pie>
-                        );
-                     })}
-                     <Tooltip
-                        content={({ active, payload }: any) => {
-                           if (!active || !payload || !payload.length) return null;
-                           const d = payload[0].payload;
-                           if (!d || !d.path) return null;
-                           const pctTotal = d.grandTotal > 0 ? ((d.value / d.grandTotal) * 100).toFixed(1) : '0';
-                           return (
-                              <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                 <p style={{ fontWeight: 600, marginBottom: 2 }}>{d.path.join(' > ')}</p>
-                                 <p>{d.value?.toLocaleString('fr-FR')} {unit || ''} ({pctTotal}%)</p>
+               <div className="relative w-full h-full flex flex-col">
+                  {title && (
+                     <div className="text-center mb-1">
+                        <h4 className="text-xs font-bold text-slate-800">{title}</h4>
+                     </div>
+                  )}
+                  <div className="flex-1 flex items-center gap-2">
+                     <div className="flex-1 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                           <PieChart>
+                              {sbData.rings.map((ring: any[], ringIdx: number) => {
+                                 const innerR = centerRadius + (ringIdx * (ringWidth + gap));
+                                 const outerR = innerR + ringWidth;
+                                 return (
+                                    <Pie
+                                       key={`ring-${ringIdx}`}
+                                       data={ring}
+                                       dataKey="value"
+                                       nameKey="name"
+                                       cx="50%"
+                                       cy="50%"
+                                       innerRadius={`${innerR}%`}
+                                       outerRadius={`${outerR}%`}
+                                       paddingAngle={ringIdx === 0 ? 2 : 0.5}
+                                       stroke="#fff"
+                                       strokeWidth={ringIdx === 0 ? 2 : 1}
+                                       isAnimationActive={false}
+                                    >
+                                       {ring.map((entry: any, entryIdx: number) => (
+                                          <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
+                                       ))}
+                                    </Pie>
+                                 );
+                              })}
+                              <Tooltip
+                                 content={({ active, payload }: any) => {
+                                    if (!active || !payload || !payload.length) return null;
+                                    const d = payload[0].payload;
+                                    if (!d || !d.path) return null;
+                                    const pctTotal = d.grandTotal > 0 ? ((d.value / d.grandTotal) * 100).toFixed(1) : '0';
+                                    const pctParent = d.parentTotal > 0 ? ((d.value / d.parentTotal) * 100).toFixed(1) : '0';
+                                    const level = d.path.length;
+                                    return (
+                                       <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', minWidth: '140px' }}>
+                                          <p style={{ fontWeight: 700, marginBottom: 4, fontSize: '11px' }}>{d.name}</p>
+                                          <p style={{ fontSize: '9px', color: '#64748b', marginBottom: 2 }}>Niveau {level}</p>
+                                          <p style={{ fontSize: '10px', fontWeight: 600 }}>{d.value?.toLocaleString('fr-FR')} {unit || ''}</p>
+                                          <p style={{ fontSize: '9px', color: '#64748b' }}>Part: {pctTotal}%</p>
+                                          {d.parentName !== 'Total' && (
+                                             <p style={{ fontSize: '9px', color: '#64748b' }}>Parent: {d.parentName} ({pctParent}%)</p>
+                                          )}
+                                       </div>
+                                    );
+                                 }}
+                              />
+                           </PieChart>
+                        </ResponsiveContainer>
+                        {showCenterTotal && (
+                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="text-center bg-white/95 rounded-full px-2 py-1 shadow-sm">
+                                 <div className="text-[8px] font-semibold text-slate-600">Total</div>
+                                 <div className="text-xs font-bold text-slate-900">
+                                    {sbData.totalValue?.toLocaleString('fr-FR')} {unit || ''}
+                                 </div>
                               </div>
-                           );
-                        }}
-                     />
-                  </PieChart>
-               </ResponsiveContainer>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+               </div>
             );
          } else if (chartType === 'treemap') {
             // Utiliser les données hiérarchiques si disponibles

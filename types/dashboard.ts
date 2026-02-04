@@ -20,6 +20,12 @@ export interface WidgetSource {
   batchId?: string;
 }
 
+export interface SunburstConfig {
+  title?: string;
+  showCenterTotal?: boolean;
+  showLegend?: boolean;
+}
+
 export interface PivotChartConfig {
   pivotConfig: any; // Using any here to avoid circular dependencies if needed, or proper import
   isTemporalMode?: boolean;
@@ -35,6 +41,7 @@ export interface PivotChartConfig {
   singleColor?: string;
   gradientStart?: string;
   gradientEnd?: string;
+  sunburstConfig?: SunburstConfig;
 }
 
 export interface SpecificDashboardItem {
