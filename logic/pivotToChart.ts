@@ -408,15 +408,25 @@ export const buildHierarchicalTree = (
     const leafKey = row.keys.join('\x1F');
     const leafNode = nodeMap.get(leafKey)!;
 
-    if (hasMultiCols) {
+    if (hasMultiCols && row.metrics && Object.keys(row.metrics).length > 0) {
       // Ajouter les colonnes comme niveau feuille
-      leafNode.children = seriesHeaders.map(header => ({
+      const childrenWithValues = seriesHeaders.map(header => ({
         name: header,
         value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
         path: [...row.keys, header]
       })).filter(item => item.value! > 0);
+
+      // Si après filtrage il reste des enfants, les utiliser
+      // Sinon, fallback sur rowTotal
+      if (childrenWithValues.length > 0) {
+        leafNode.children = childrenWithValues;
+      } else {
+        // Pas de métriques valides, utiliser rowTotal
+        leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
+        leafNode.children = undefined;
+      }
     } else {
-      // Pas de colonnes : utiliser rowTotal comme valeur
+      // Pas de colonnes multiples ou pas de métriques : utiliser rowTotal comme valeur
       leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
       leafNode.children = undefined;
     }
