@@ -560,9 +560,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       const imgWidth = 210 - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addText(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
+      pdf.setFontSize(14);
+      pdf.text(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
       pdf.setFontSize(10);
-      pdf.addText(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+      pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);
       setShowExportMenu(false);
@@ -572,9 +573,53 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   };
 
   const handleExportXLSX = () => {
-    if (!chartData || chartData.length === 0) return;
+    let exportData: any[] = [];
+    let dataCount = 0;
 
-    const worksheet = XLSX.utils.json_to_sheet(chartData);
+    // Special handling for Sunburst hierarchical data
+    if (selectedChartType === 'sunburst' && sunburstData) {
+      // Flatten hierarchical Sunburst data for XLSX
+      const flattenNode = (node: any, level: number = 1, parentPath: string[] = []): any[] => {
+        const currentPath = [...parentPath, node.name];
+        const rows: any[] = [];
+
+        // Add current node
+        const row: any = {
+          'Niveau': level,
+          'Chemin': currentPath.join(' > '),
+          'Nom': node.name,
+          'Valeur': node.value || 0
+        };
+
+        // Add parent info for levels 2+
+        if (level > 1 && parentPath.length > 0) {
+          row['Parent'] = parentPath[parentPath.length - 1];
+        }
+
+        rows.push(row);
+
+        // Recursively add children
+        if (node.children && node.children.length > 0) {
+          node.children.forEach((child: any) => {
+            rows.push(...flattenNode(child, level + 1, currentPath));
+          });
+        }
+
+        return rows;
+      };
+
+      exportData = sunburstData.tree.flatMap((topNode: any) => flattenNode(topNode));
+      dataCount = exportData.length;
+    } else if (chartData && chartData.length > 0) {
+      // Standard chart data export
+      exportData = chartData;
+      dataCount = chartData.length;
+    } else {
+      console.warn('Aucune donnée à exporter');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Données du graphique');
 
@@ -588,7 +633,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       [],
       ['Champs de ligne', pivotConfig.rowFields.join(', ')],
       ['Champs de colonne', pivotConfig.colFields.join(', ')],
-      ['Nombre de lignes', chartData.length]
+      ['Nombre de lignes', dataCount]
     ];
 
     const metaSheet = XLSX.utils.aoa_to_sheet(metadata);
