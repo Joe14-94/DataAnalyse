@@ -190,29 +190,49 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          const fullPivotConfig = { rows: workingRows, ...pc } as PivotConfig;
 
-         // Calculer les couleurs de base pour les types hiérarchiques
-         const hierarchicalBaseColors = (() => {
-            if (pivotChart.colorMode === 'single') return Array(9).fill(pivotChart.singleColor || '#3b82f6');
-            if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', 9);
-            return getChartColors(9, pivotChart.colorPalette || 'default');
-         })();
-
-         // Sunburst: retourner les données spécifiques (rings)
+         // Sunburst: Calculate color count from pivot data before transformation
          if (pivotChart.chartType === 'sunburst') {
-            const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, hierarchicalBaseColors, {
+            // Calculate expected level 1 count from pivot data directly
+            const level1Keys = new Set<string>();
+            pivotResult.displayRows.forEach((row: any) => {
+               if (row.keys && row.keys.length > 0) {
+                  level1Keys.add(row.keys[0]);
+               }
+            });
+
+            // Apply limit if set
+            let colorCount = level1Keys.size;
+            if (pivotChart.limit && pivotChart.limit > 0 && colorCount > pivotChart.limit) {
+               colorCount = pivotChart.limit + 1; // +1 for "Autres"
+            }
+
+            const sunburstColors = (() => {
+               if (pivotChart.colorMode === 'single') return Array(colorCount).fill(pivotChart.singleColor || '#3b82f6');
+               if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', colorCount);
+               return getChartColors(colorCount, pivotChart.colorPalette || 'default');
+            })();
+
+            const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, sunburstColors, {
                limit: pivotChart.limit,
                showOthers: (pivotChart.limit || 0) > 0
             });
             return {
                data: [],
                sunburstData: sbData,
-               colors: hierarchicalBaseColors,
+               colors: sunburstColors,
                unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
                seriesName: pc.valField,
                seriesCount: sbData.rings.length,
                isPivot: true
             };
          }
+
+         // Calculer les couleurs de base pour les types hiérarchiques (treemap)
+         const hierarchicalBaseColors = (() => {
+            if (pivotChart.colorMode === 'single') return Array(9).fill(pivotChart.singleColor || '#3b82f6');
+            if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', 9);
+            return getChartColors(9, pivotChart.colorPalette || 'default');
+         })();
 
          // Treemap hierarchique
          if (pivotChart.chartType === 'treemap') {
