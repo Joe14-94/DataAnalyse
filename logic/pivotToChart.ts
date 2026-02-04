@@ -367,6 +367,17 @@ export const buildHierarchicalTree = (
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const hasMultiCols = seriesHeaders.length > 1;
 
+  console.log('🌞🌞🌞 buildHierarchicalTree START:', {
+    dataRowsCount: dataRows.length,
+    seriesHeadersCount: seriesHeaders.length,
+    seriesHeaders,
+    hasMultiCols,
+    firstRow: dataRows[0],
+    firstRowKeys: dataRows[0]?.keys,
+    firstRowMetrics: dataRows[0]?.metrics,
+    firstRowTotal: dataRows[0]?.rowTotal
+  });
+
   // Map pour construire l'arbre incrementalement
   const nodeMap = new Map<string, HierarchicalNode>();
   const tree: HierarchicalNode[] = [];
@@ -429,6 +440,13 @@ export const buildHierarchicalTree = (
     }
   }
 
+  console.log('🌞🌞🌞 buildHierarchicalTree END:', {
+    treeLength: tree.length,
+    tree: tree.slice(0, 3),
+    firstNodeChildren: tree[0]?.children?.length,
+    firstNodeValue: tree[0]?.value
+  });
+
   return tree;
 };
 
@@ -443,6 +461,13 @@ export const treeToSunburstRings = (
   const rings: SunburstRingItem[][] = [];
   const grandTotal = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
 
+  console.log('🌞🌞🌞 treeToSunburstRings START:', {
+    treeLength: tree.length,
+    grandTotal,
+    baseColorsLength: baseColors.length,
+    baseColors
+  });
+
   // Map pour stocker la couleur de chaque noeud (pour propagation aux enfants)
   const colorMap = new Map<string, string>();
 
@@ -454,6 +479,8 @@ export const treeToSunburstRings = (
     parentTotal: number
   ) {
     if (!rings[level]) rings[level] = [];
+
+    console.log(`🌞 Traversing level ${level}, nodes count: ${nodes.length}`);
 
     nodes.forEach((node, idx) => {
       const path = [...parentPath, node.name];
@@ -491,6 +518,13 @@ export const treeToSunburstRings = (
   }
 
   traverse(tree, 0, [], baseColors[0], grandTotal);
+
+  console.log('🌞🌞🌞 treeToSunburstRings END:', {
+    ringsLength: rings.length,
+    ringsItemCounts: rings.map(r => r.length),
+    firstRing: rings[0]?.slice(0, 3)
+  });
+
   return rings;
 };
 
@@ -503,9 +537,18 @@ export const transformPivotToSunburstData = (
   baseColors: string[],
   options?: { limit?: number; showOthers?: boolean }
 ): SunburstData => {
+  console.log('🌞🌞🌞 transformPivotToSunburstData START');
+
   const tree = buildHierarchicalTree(result, config, options);
   const rings = treeToSunburstRings(tree, baseColors);
   const totalValue = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
+
+  console.log('🌞🌞🌞 transformPivotToSunburstData END:', {
+    treeLength: tree.length,
+    ringsLength: rings.length,
+    totalValue,
+    result: { tree, rings, totalValue }
+  });
 
   return { tree, rings, totalValue };
 };
