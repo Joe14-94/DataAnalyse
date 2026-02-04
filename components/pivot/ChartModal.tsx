@@ -96,10 +96,16 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   // Etat pour le drill-down treemap
   const [treemapDrillPath, setTreemapDrillPath] = useState<string[]>([]);
 
+<<<<<<< claude/add-string-functions-calculated-fields-YQgmu
   // États pour la configuration Sunburst
   const [sunburstTitle, setSunburstTitle] = useState<string>('Analyse de la répartition');
   const [showCenterTotal, setShowCenterTotal] = useState<boolean>(true);
   const [showSunburstLegend, setShowSunburstLegend] = useState<boolean>(true);
+=======
+  // Nouvelles options sunburst
+  const [showCenterTotal, setShowCenterTotal] = useState(true);
+  const [showLevelLegend, setShowLevelLegend] = useState(true);
+>>>>>>> main
 
   // Transformer les données
   const chartData = useMemo(() => {
@@ -1048,6 +1054,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée hierarchique</div>;
         }
 
+<<<<<<< claude/add-string-functions-calculated-fields-YQgmu
         return (
           <div className="relative w-full h-full flex flex-col">
             {/* Légende avec noms de colonnes */}
@@ -1082,6 +1089,79 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 colors={sunburstColors}
               />
             </div>
+=======
+        const numRings = sunburstData.rings.length;
+        const centerRadius = showCenterTotal ? 15 : 0;
+        const maxOuterRadius = 85; // % du conteneur
+        const gap = 1; // % gap entre anneaux
+        const ringWidth = (maxOuterRadius - centerRadius - gap * (numRings - 1)) / numRings;
+
+        return (
+          <div className="relative h-full w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                {sunburstData.rings.map((ring, ringIdx) => {
+                  const innerR = centerRadius + (ringIdx * (ringWidth + gap));
+                  const outerR = innerR + ringWidth;
+                  const showLabels = ringIdx === 0 && ring.length <= 8;
+
+                  return (
+                    <Pie
+                      key={`ring-${ringIdx}`}
+                      data={ring}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={`${innerR}%`}
+                      outerRadius={`${outerR}%`}
+                      paddingAngle={ringIdx === 0 ? 2 : 0.5}
+                      stroke="#fff"
+                      strokeWidth={ringIdx === 0 ? 2 : 1}
+                      labelLine={showLabels}
+                      label={showLabels ? ({ name, percent }: any) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)` : false}
+                      isAnimationActive={true}
+                      animationDuration={600}
+                    >
+                      {ring.map((entry, entryIdx) => (
+                        <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                  );
+                })}
+                <Tooltip content={<SunburstTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Total au centre */}
+            {showCenterTotal && (
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm rounded-full w-[15%] aspect-square flex flex-col items-center justify-center shadow-lg border border-slate-100 z-10">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Total</span>
+                  <span className="text-sm font-black text-slate-800">{formatChartValue(sunburstData.totalValue, pivotConfig)}</span>
+               </div>
+            )}
+
+            {/* Légende des niveaux */}
+            {showLevelLegend && (
+               <div className="absolute right-0 bottom-10 bg-white/90 p-3 rounded-xl border border-slate-200 shadow-sm z-10 max-w-[150px]">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Niveaux</p>
+                  <div className="space-y-1.5">
+                     {pivotConfig.rowFields.map((field, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                           <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: getChartColors(9, colorPalette)[idx % 9] }}></div>
+                           <span className="text-[10px] font-bold text-slate-600 truncate">{field}</span>
+                        </div>
+                     ))}
+                     {metadata.isMultiSeries && !isTemporalMode && (
+                        <div className="flex items-center gap-2">
+                           <div className="w-2.5 h-2.5 rounded-sm bg-slate-300"></div>
+                           <span className="text-[10px] font-bold text-slate-600 truncate">Métriques</span>
+                        </div>
+                     )}
+                  </div>
+               </div>
+            )}
+>>>>>>> main
           </div>
         );
       }
@@ -1302,6 +1382,32 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   </select>
                 </div>
               )}
+            </>
+          )}
+
+          {/* Options spécifiques Sunburst */}
+          {selectedChartType === 'sunburst' && (
+            <>
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-50/50 rounded-lg border border-brand-100/50">
+                  <input
+                     type="checkbox"
+                     id="show-center-total"
+                     checked={showCenterTotal}
+                     onChange={e => setShowCenterTotal(e.target.checked)}
+                     className="w-4 h-4 text-brand-600 rounded border-slate-300"
+                  />
+                  <label htmlFor="show-center-total" className="text-xs font-bold text-brand-800 cursor-pointer">Total au centre</label>
+               </div>
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-50/50 rounded-lg border border-brand-100/50">
+                  <input
+                     type="checkbox"
+                     id="show-level-legend"
+                     checked={showLevelLegend}
+                     onChange={e => setShowLevelLegend(e.target.checked)}
+                     className="w-4 h-4 text-brand-600 rounded border-slate-300"
+                  />
+                  <label htmlFor="show-level-legend" className="text-xs font-bold text-brand-800 cursor-pointer">Légende niveaux</label>
+               </div>
             </>
           )}
 

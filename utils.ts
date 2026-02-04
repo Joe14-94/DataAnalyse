@@ -297,7 +297,7 @@ export const formatDateFr = (dateStr: string): string => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
 
-    return new Intl.DateTimeFormat('fr-FR', {
+    return getCachedDateTimeFormat({
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -329,6 +329,29 @@ const UNIT_REGEX_CACHE = new Map<string, RegExp>();
 // BOLT OPTIMIZATION: Global cache for smart number parsing to avoid redundant regex/string ops
 const SMART_NUMBER_CACHE = new Map<string, number>();
 const MAX_SMART_NUMBER_CACHE_SIZE = 10000;
+
+// BOLT OPTIMIZATION: Global cache for Intl formatters to avoid expensive object creation
+const FORMATTER_CACHE = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat>();
+
+export const getCachedNumberFormat = (options: Intl.NumberFormatOptions): Intl.NumberFormat => {
+  const key = `num:${JSON.stringify(options)}`;
+  let f = FORMATTER_CACHE.get(key) as Intl.NumberFormat;
+  if (!f) {
+    f = new Intl.NumberFormat('fr-FR', options);
+    FORMATTER_CACHE.set(key, f);
+  }
+  return f;
+};
+
+export const getCachedDateTimeFormat = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat => {
+  const key = `date:${JSON.stringify(options)}`;
+  let f = FORMATTER_CACHE.get(key) as Intl.DateTimeFormat;
+  if (!f) {
+    f = new Intl.DateTimeFormat('fr-FR', options);
+    FORMATTER_CACHE.set(key, f);
+  }
+  return f;
+};
 
 export const parseSmartNumber = (val: any, unit?: string): number => {
   if (val === undefined || val === null || val === '') return 0;
@@ -420,10 +443,10 @@ export const formatNumberValue = (value: number | string, config?: FieldConfig):
   const fullSuffix = unit ? `${suffix} ${unit}` : suffix;
 
   // Formater avec séparateur de milliers et décimales fixes
-  return numVal.toLocaleString('fr-FR', {
+  return getCachedNumberFormat({
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
-  }) + fullSuffix;
+  }).format(numVal) + fullSuffix;
 };
 
 // BOLT OPTIMIZATION: Global cache for grouped labels to avoid redundant date parsing
