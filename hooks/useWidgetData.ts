@@ -79,17 +79,24 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          console.log('📊 Dataset trouvé:', dataset.name);
 
          const dsBatches = getEffectiveBatches(batches, datasetId, globalDateRange);
+         console.log('📊 dsBatches trouvés:', dsBatches.length);
          if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
          let targetBatch = dsBatches[dsBatches.length - 1];
+         console.log('📊 targetBatch sélectionné:', targetBatch.id, 'rows:', targetBatch.rows?.length);
          if (pivotChart.updateMode === 'fixed' && widget.config.source?.mode === 'specific' && widget.config.source?.batchId) {
             const specific = dsBatches.find(b => b.id === widget.config.source?.batchId);
-            if (specific) targetBatch = specific;
+            if (specific) {
+               targetBatch = specific;
+               console.log('📊 Batch spécifique trouvé:', specific.id, 'rows:', specific.rows?.length);
+            }
          }
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
+         console.log('📊 baseRows avant enrichissement:', baseRows?.length);
          if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
+            console.log('📊 Enrichissement avec', dataset.calculatedFields.length, 'champs calculés');
             baseRows = baseRows.map(r => {
                const enriched = { ...r };
                dataset.calculatedFields?.forEach(cf => {
@@ -97,10 +104,13 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                });
                return enriched;
             });
+            console.log('📊 baseRows après enrichissement:', baseRows.length);
          }
 
          // Appliquer les filtres du TCD
+         console.log('📊 Filtres à appliquer:', pc.filters);
          let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
+         console.log('📊 workingRows après filtrage:', workingRows.length);
 
          let pivotResult: any = null;
 
