@@ -510,6 +510,18 @@ export const treeToSunburstRings = (
         grandTotal
       });
 
+      if (level === 0 && idx < 2) {
+        console.log(`🌞 Ring item at level ${level}:`, {
+          name: node.name,
+          value: nodeValue,
+          fill,
+          path,
+          nodeHasValue: node.value,
+          nodeHasChildren: !!node.children,
+          childrenCount: node.children?.length
+        });
+      }
+
       // Recurser dans les enfants
       if (node.children && node.children.length > 0) {
         traverse(node.children, level + 1, path, fill, nodeValue);
