@@ -150,13 +150,21 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const sunburstData = useMemo<SunburstData | null>(() => {
     if (selectedChartType !== 'sunburst') return null;
 
-    // Calculate color count first by building tree
-    const tempResult = transformPivotToSunburstData(pivotData, pivotConfig, [], {
-      limit: limit > 0 ? limit : undefined,
-      showOthers: limit > 0
+    // Calculate expected level 1 count from pivot data directly
+    // without calling the transformation function
+    const level1Keys = new Set<string>();
+    pivotData.data.forEach(row => {
+      if (row.keys.length > 0) {
+        level1Keys.add(row.keys[0]);
+      }
     });
 
-    const colorCount = tempResult.tree.length;
+    // Apply limit if set
+    let colorCount = level1Keys.size;
+    if (limit > 0 && colorCount > limit) {
+      colorCount = limit + 1; // +1 for "Autres"
+    }
+
     const baseColors = colorMode === 'single'
       ? Array(colorCount).fill(singleColor)
       : colorMode === 'gradient'
