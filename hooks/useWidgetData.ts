@@ -192,39 +192,59 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Sunburst: Calculate color count from pivot data before transformation
          if (pivotChart.chartType === 'sunburst') {
-            // Calculate expected level 1 count from pivot data directly
-            const level1Keys = new Set<string>();
-            pivotResult.displayRows.forEach((row: any) => {
-               if (row.keys && row.keys.length > 0) {
-                  level1Keys.add(row.keys[0]);
+            try {
+               console.log('🌞 Widget Sunburst - pivotResult:', pivotResult);
+               console.log('🌞 Widget Sunburst - displayRows:', pivotResult.displayRows);
+
+               // Calculate expected level 1 count from pivot data directly
+               const level1Keys = new Set<string>();
+               if (pivotResult.displayRows && Array.isArray(pivotResult.displayRows)) {
+                  pivotResult.displayRows.forEach((row: any) => {
+                     if (row.keys && Array.isArray(row.keys) && row.keys.length > 0) {
+                        level1Keys.add(row.keys[0]);
+                     }
+                  });
                }
-            });
 
-            // Apply limit if set
-            let colorCount = level1Keys.size;
-            if (pivotChart.limit && pivotChart.limit > 0 && colorCount > pivotChart.limit) {
-               colorCount = pivotChart.limit + 1; // +1 for "Autres"
+               console.log('🌞 Widget Sunburst - level1Keys:', level1Keys);
+
+               // Apply limit if set
+               let colorCount = level1Keys.size || 6; // Fallback to 6 if no keys found
+               if (pivotChart.limit && pivotChart.limit > 0 && colorCount > pivotChart.limit) {
+                  colorCount = pivotChart.limit + 1; // +1 for "Autres"
+               }
+
+               console.log('🌞 Widget Sunburst - colorCount:', colorCount);
+
+               const sunburstColors = (() => {
+                  if (pivotChart.colorMode === 'single') return Array(colorCount).fill(pivotChart.singleColor || '#3b82f6');
+                  if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', colorCount);
+                  return getChartColors(colorCount, pivotChart.colorPalette || 'default');
+               })();
+
+               console.log('🌞 Widget Sunburst - sunburstColors:', sunburstColors);
+               console.log('🌞 Widget Sunburst - Calling transformPivotToSunburstData...');
+
+               const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, sunburstColors, {
+                  limit: pivotChart.limit,
+                  showOthers: (pivotChart.limit || 0) > 0
+               });
+
+               console.log('🌞 Widget Sunburst - sbData:', sbData);
+
+               return {
+                  data: [],
+                  sunburstData: sbData,
+                  colors: sunburstColors,
+                  unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
+                  seriesName: pc.valField,
+                  seriesCount: sbData.rings.length,
+                  isPivot: true
+               };
+            } catch (error) {
+               console.error('🌞 Widget Sunburst - ERROR:', error);
+               return { error: `Erreur Sunburst: ${error instanceof Error ? error.message : String(error)}` };
             }
-
-            const sunburstColors = (() => {
-               if (pivotChart.colorMode === 'single') return Array(colorCount).fill(pivotChart.singleColor || '#3b82f6');
-               if (pivotChart.colorMode === 'gradient') return generateGradient(pivotChart.gradientStart || '#3b82f6', pivotChart.gradientEnd || '#ef4444', colorCount);
-               return getChartColors(colorCount, pivotChart.colorPalette || 'default');
-            })();
-
-            const sbData = transformPivotToSunburstData(pivotResult, fullPivotConfig, sunburstColors, {
-               limit: pivotChart.limit,
-               showOthers: (pivotChart.limit || 0) > 0
-            });
-            return {
-               data: [],
-               sunburstData: sbData,
-               colors: sunburstColors,
-               unit: dataset?.fieldConfigs?.[pc.valField]?.unit || '',
-               seriesName: pc.valField,
-               seriesCount: sbData.rings.length,
-               isPivot: true
-            };
          }
 
          // Calculer les couleurs de base pour les types hiérarchiques (treemap)
