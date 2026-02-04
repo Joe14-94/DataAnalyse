@@ -345,13 +345,14 @@ export const lightenColor = (hex: string, factor: number): string => {
 
 /**
  * Calcule la valeur totale d'un noeud (récursif)
+ * Additionne sa propre valeur et celle de tous ses descendants
  */
 const getNodeValue = (node: HierarchicalNode): number => {
-  if (node.value !== undefined) return node.value;
+  let val = typeof node.value === 'number' ? node.value : 0;
   if (node.children && node.children.length > 0) {
-    return node.children.reduce((sum, c) => sum + getNodeValue(c), 0);
+    val += node.children.reduce((sum, c) => sum + getNodeValue(c), 0);
   }
-  return 0;
+  return val;
 };
 
 /**
@@ -399,15 +400,21 @@ export const buildHierarchicalTree = (
 
     if (hasMultiCols) {
       // Ajouter les colonnes comme niveau feuille
-      leafNode.children = seriesHeaders.map(header => ({
+      const leafChildren = seriesHeaders.map(header => ({
         name: header,
         value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
         path: [...row.keys, header]
       })).filter(item => item.value! > 0);
+
+      if (leafChildren.length > 0) {
+        if (!leafNode.children) leafNode.children = [];
+        leafNode.children.push(...leafChildren);
+      }
     } else {
       // Pas de colonnes : utiliser rowTotal comme valeur
-      leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
-      leafNode.children = undefined;
+      // On additionne si jamais le noeud est atteint plusieurs fois (peu probable en TCD mais plus robuste)
+      const rowVal = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
+      leafNode.value = (leafNode.value || 0) + rowVal;
     }
   }
 
@@ -473,19 +480,22 @@ export const treeToSunburstRings = (
       }
       colorMap.set(pathKey, fill);
 
-      rings[level].push({
-        name: node.name,
-        value: nodeValue,
-        fill,
-        path,
-        parentName: parentPath[parentPath.length - 1] || 'Total',
-        parentTotal: parentTotal,
-        grandTotal
-      });
+      // N'ajouter que si la valeur est significative (> 0)
+      if (nodeValue > 0) {
+        rings[level].push({
+          name: node.name,
+          value: nodeValue,
+          fill,
+          path,
+          parentName: parentPath[parentPath.length - 1] || 'Total',
+          parentTotal: parentTotal,
+          grandTotal
+        });
 
-      // Recurser dans les enfants
-      if (node.children && node.children.length > 0) {
-        traverse(node.children, level + 1, path, fill, nodeValue);
+        // Recurser dans les enfants
+        if (node.children && node.children.length > 0) {
+          traverse(node.children, level + 1, path, fill, nodeValue);
+        }
       }
     });
   }
