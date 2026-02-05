@@ -10,6 +10,7 @@ import {
   LabelList
 } from 'recharts';
 import { TreemapContent } from '../ui/TreemapContent';
+import { SunburstD3 } from '../charts/SunburstD3';
 import {
   ChartType,
   ColorPalette,
@@ -27,7 +28,8 @@ import {
   getChartTypeConfig,
   getAvailableHierarchyLevels,
   getSingleColors,
-  generateGradient
+  generateGradient,
+  sunburstDataToD3Hierarchy
 } from '../../logic/pivotToChart';
 import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
@@ -94,9 +96,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   // Etat pour le drill-down treemap
   const [treemapDrillPath, setTreemapDrillPath] = useState<string[]>([]);
 
-  // Nouvelles options sunburst
-  const [showCenterTotal, setShowCenterTotal] = useState(true);
-  const [showLevelLegend, setShowLevelLegend] = useState(true);
+  // États pour la configuration Sunburst
+  const [sunburstTitle, setSunburstTitle] = useState<string>('Analyse de la répartition');
+  const [showCenterTotal, setShowCenterTotal] = useState<boolean>(true);
+  const [showSunburstLegend, setShowSunburstLegend] = useState<boolean>(true);
 
   // Transformer les données
   const chartData = useMemo(() => {
@@ -146,16 +149,61 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   // Données sunburst (calculées séparément car structure différente)
   const sunburstData = useMemo<SunburstData | null>(() => {
     if (selectedChartType !== 'sunburst') return null;
+
+    // Calculate expected level 1 count from pivot data directly
+    // without calling the transformation function
+    const level1Keys = new Set<string>();
+    pivotData.displayRows.forEach((row: any) => {
+      if (row.keys && row.keys.length > 0) {
+        level1Keys.add(row.keys[0]);
+      }
+    });
+
+    // Apply limit if set
+    let colorCount = level1Keys.size;
+    if (limit > 0 && colorCount > limit) {
+      colorCount = limit + 1; // +1 for "Autres"
+    }
+
     const baseColors = colorMode === 'single'
-      ? Array(9).fill(singleColor)
+      ? Array(colorCount).fill(singleColor)
       : colorMode === 'gradient'
-        ? generateGradient(gradientStart, gradientEnd, 9)
-        : getChartColors(9, colorPalette);
-    return transformPivotToSunburstData(pivotData, pivotConfig, baseColors, {
+        ? generateGradient(gradientStart, gradientEnd, colorCount)
+        : getChartColors(colorCount, colorPalette);
+
+    const result = transformPivotToSunburstData(pivotData, pivotConfig, baseColors, {
       limit: limit > 0 ? limit : undefined,
       showOthers: limit > 0
     });
+
+    console.log('🌞 Sunburst Data:', {
+      result,
+      ringsCount: result?.rings?.length,
+      colorCount,
+      baseColors,
+      tree: result?.tree
+    });
+    return result;
   }, [pivotData, pivotConfig, selectedChartType, limit, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
+  // Couleurs spécifiques pour Sunburst
+  const sunburstColors = useMemo(() => {
+    if (selectedChartType !== 'sunburst' || !sunburstData) return colors;
+    const colorCount = sunburstData.tree.length;
+    if (colorMode === 'single') {
+      return Array(colorCount).fill(singleColor);
+    } else if (colorMode === 'gradient') {
+      return generateGradient(gradientStart, gradientEnd, colorCount);
+    } else {
+      return getChartColors(colorCount, colorPalette);
+    }
+  }, [selectedChartType, sunburstData, colorMode, colorPalette, singleColor, gradientStart, gradientEnd, colors]);
+
+  // Convertir les données Sunburst pour D3
+  const d3HierarchyData = useMemo(() => {
+    if (!sunburstData) return null;
+    return sunburstDataToD3Hierarchy(sunburstData);
+  }, [sunburstData]);
 
   // Données treemap hiérarchique
   const hierarchicalTreemapData = useMemo(() => {
@@ -222,8 +270,221 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   const handleExportHTML = () => {
     if (!chartContainerRef.current) return;
 
-    const chartHtml = chartContainerRef.current.innerHTML;
     const title = `Graphique TCD - ${pivotConfig.valField}`;
+
+    // Special handling for Sunburst with D3.js
+    if (selectedChartType === 'sunburst' && d3HierarchyData) {
+      const dataJson = JSON.stringify(d3HierarchyData);
+      const colorsJson = JSON.stringify(sunburstColors);
+      const rowFieldsJson = JSON.stringify(pivotConfig.rowFields);
+      const unit = pivotConfig.valField || '';
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+    h1 { margin: 0; color: #1e293b; font-size: 24px; }
+    .metadata { margin-top: 10px; font-size: 12px; color: #64748b; }
+    .chart-container { margin: 30px 0; display: flex; justify-content: center; align-items: center; min-height: 600px; }
+    .tooltip { position: fixed; pointer-events: none; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; z-index: 9999; opacity: 0; transition: opacity 0.2s; }
+    .tooltip .font-bold { font-weight: 600; }
+    .tooltip .text-sm { font-size: 14px; }
+    .tooltip .text-xs { font-size: 12px; }
+    .tooltip .mb-1 { margin-bottom: 4px; }
+    .tooltip .mt-2 { margin-top: 8px; }
+    .tooltip .pt-1 { padding-top: 4px; }
+    .tooltip .border-t { border-top: 1px solid #e2e8f0; }
+    .tooltip .text-gray-800 { color: #1e293b; }
+    .tooltip .text-gray-600 { color: #475569; }
+    .tooltip .text-gray-400 { color: #94a3b8; }
+    .tooltip .text-blue-600 { color: #2563eb; }
+    .tooltip .font-semibold { font-weight: 600; }
+    .tooltip .font-medium { font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${title}</h1>
+      <div class="metadata">
+        <p>Champ: ${pivotConfig.valField}</p>
+        <p>Agrégation: ${pivotConfig.aggType}</p>
+        <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
+      </div>
+    </div>
+    <div class="chart-container" id="chart-container">
+      <svg id="sunburst-svg"></svg>
+      <div id="tooltip" class="tooltip"></div>
+    </div>
+  </div>
+
+  <script>
+    const data = ${dataJson};
+    const colors = ${colorsJson};
+    const rowFields = ${rowFieldsJson};
+    const unit = '${unit}';
+    const sunburstTitle = '${sunburstTitle || ''}';
+    const width = 800;
+    const height = 800;
+
+    // Render Sunburst
+    const radius = Math.min(width, height) / 2;
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+    const hierarchy = d3.hierarchy(data)
+      .sum(d => d.value || 0)
+      .sort((a, b) => (b.value || 0) - (a.value || 0));
+
+    const level1Nodes = hierarchy.children || [];
+    const colorMap = new Map();
+    level1Nodes.forEach((node, idx) => {
+      colorMap.set(node.data.name, colors[idx % colors.length] || colorScale(idx.toString()));
+    });
+
+    const partition = d3.partition()
+      .size([2 * Math.PI, radius]);
+
+    const root = partition(hierarchy);
+    const totalValue = root.value || 1;
+
+    const arc = d3.arc()
+      .startAngle(d => d.x0)
+      .endAngle(d => d.x1)
+      .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
+      .padRadius(radius / 2)
+      .innerRadius(d => d.y0)
+      .outerRadius(d => d.y1 - 1);
+
+    const svg = d3.select('#sunburst-svg')
+      .attr('viewBox', \`-\${width / 2} -\${height / 2} \${width} \${height}\`)
+      .style('width', '100%')
+      .style('height', '100%')
+      .style('font', '10px sans-serif');
+
+    const tooltip = d3.select('#tooltip');
+
+    svg.append('g')
+      .selectAll('path')
+      .data(root.descendants().filter(d => d.depth))
+      .join('path')
+      .attr('fill', d => {
+        let ancestor = d;
+        while (ancestor.depth > 1) ancestor = ancestor.parent;
+        const baseColor = colorMap.get(ancestor.data.name) || colorScale(ancestor.data.name);
+
+        if (d.depth === 1) return baseColor;
+        else if (d.depth === 2) return d3.color(baseColor)?.brighter(0.3)?.formatHex() || baseColor;
+        else if (d.depth === 3) return d3.color(baseColor)?.brighter(0.6)?.formatHex() || baseColor;
+        return baseColor;
+      })
+      .attr('d', arc)
+      .style('cursor', 'pointer')
+      .on('mouseover', (event, d) => {
+        d3.select(event.currentTarget).style('opacity', 0.7);
+
+        const value = d.value?.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const percent = ((d.value || 0) / totalValue * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+        const levelLabel = rowFields[d.depth - 1] || \`Niveau \${d.depth}\`;
+
+        let content = \`
+          <div class="font-bold text-sm mb-1 text-gray-800">\${d.data.name}</div>
+          <div class="text-xs text-gray-600">Niveau: \${levelLabel}</div>
+          <div class="text-xs text-gray-600">Valeur: <span class="font-semibold text-blue-600">\${value} \${unit}</span></div>
+          <div class="text-xs text-gray-600">Part: <span class="font-medium text-gray-800">\${percent}%</span></div>
+        \`;
+
+        if (d.depth > 1 && d.parent) {
+          content += \`<div class="mt-2 text-xs text-gray-400 border-t pt-1">Parent: \${d.parent.data.name}</div>\`;
+        }
+
+        tooltip
+          .style('opacity', 1)
+          .html(content)
+          .style('left', \`\${event.clientX + 10}px\`)
+          .style('top', \`\${event.clientY + 10}px\`);
+      })
+      .on('mousemove', (event) => {
+        tooltip
+          .style('left', \`\${event.clientX + 10}px\`)
+          .style('top', \`\${event.clientY + 10}px\`);
+      })
+      .on('mouseout', (event) => {
+        d3.select(event.currentTarget).style('opacity', 1);
+        tooltip.style('opacity', 0);
+      });
+
+    svg.append('g')
+      .attr('pointer-events', 'none')
+      .attr('text-anchor', 'middle')
+      .style('user-select', 'none')
+      .selectAll('text')
+      .data(root.descendants().filter(d => d.depth && (d.y0 + d.y1) / 2 * (d.x1 - d.x0) > 10))
+      .join('text')
+      .attr('transform', function(d) {
+        const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+        const y = (d.y0 + d.y1) / 2;
+        return \`rotate(\${x - 90}) translate(\${y},0) rotate(\${x < 180 ? 0 : 180})\`;
+      })
+      .attr('dy', '0.35em')
+      .attr('fill', 'white')
+      .attr('font-size', '10px')
+      .attr('font-weight', '500')
+      .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
+      .text(d => d.data.name.length > 15 ? d.data.name.substring(0, 12) + '...' : d.data.name);
+
+    if (sunburstTitle) {
+      svg.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '-0.5em')
+        .attr('font-size', '12px')
+        .attr('font-weight', '600')
+        .attr('fill', '#475569')
+        .style('text-transform', 'uppercase')
+        .style('letter-spacing', '0.05em')
+        .text(sunburstTitle);
+    }
+
+    svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', sunburstTitle ? '0.8em' : '0')
+      .attr('font-size', '24px')
+      .attr('font-weight', '700')
+      .attr('fill', '#1e293b')
+      .text('Total');
+
+    svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', sunburstTitle ? '2.2em' : '1.5em')
+      .attr('font-size', '16px')
+      .attr('font-weight', '500')
+      .attr('fill', '#475569')
+      .text(\`\${root.value?.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} \${unit}\`);
+  </script>
+</body>
+</html>`;
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `graphique_sunburst_${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setShowExportMenu(false);
+      return;
+    }
+
+    // Standard HTML export for other chart types
+    const chartHtml = chartContainerRef.current.innerHTML;
     const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -305,9 +566,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       const imgWidth = 210 - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addText(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
+      pdf.setFontSize(14);
+      pdf.text(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
       pdf.setFontSize(10);
-      pdf.addText(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+      pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);
       setShowExportMenu(false);
@@ -317,9 +579,53 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   };
 
   const handleExportXLSX = () => {
-    if (!chartData || chartData.length === 0) return;
+    let exportData: any[] = [];
+    let dataCount = 0;
 
-    const worksheet = XLSX.utils.json_to_sheet(chartData);
+    // Special handling for Sunburst hierarchical data
+    if (selectedChartType === 'sunburst' && sunburstData) {
+      // Flatten hierarchical Sunburst data for XLSX
+      const flattenNode = (node: any, level: number = 1, parentPath: string[] = []): any[] => {
+        const currentPath = [...parentPath, node.name];
+        const rows: any[] = [];
+
+        // Add current node
+        const row: any = {
+          'Niveau': level,
+          'Chemin': currentPath.join(' > '),
+          'Nom': node.name,
+          'Valeur': node.value || 0
+        };
+
+        // Add parent info for levels 2+
+        if (level > 1 && parentPath.length > 0) {
+          row['Parent'] = parentPath[parentPath.length - 1];
+        }
+
+        rows.push(row);
+
+        // Recursively add children
+        if (node.children && node.children.length > 0) {
+          node.children.forEach((child: any) => {
+            rows.push(...flattenNode(child, level + 1, currentPath));
+          });
+        }
+
+        return rows;
+      };
+
+      exportData = sunburstData.tree.flatMap((topNode: any) => flattenNode(topNode));
+      dataCount = exportData.length;
+    } else if (chartData && chartData.length > 0) {
+      // Standard chart data export
+      exportData = chartData;
+      dataCount = chartData.length;
+    } else {
+      console.warn('Aucune donnée à exporter');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Données du graphique');
 
@@ -333,7 +639,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       [],
       ['Champs de ligne', pivotConfig.rowFields.join(', ')],
       ['Champs de colonne', pivotConfig.colFields.join(', ')],
-      ['Nombre de lignes', chartData.length]
+      ['Nombre de lignes', dataCount]
     ];
 
     const metaSheet = XLSX.utils.aoa_to_sheet(metadata);
@@ -350,6 +656,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         return;
       }
 
+      // Si des filtres sont sauvegardés, forcer le mode 'specific' avec le batch actuel
+      // pour éviter que le widget charge un batch différent qui n'aurait pas les données filtrées
+      const hasFilters = pivotConfig.filters && pivotConfig.filters.length > 0;
+      const shouldUseSpecificBatch = hasFilters || updateMode === 'fixed';
+
       const newWidget = {
         title: `Graphique TCD : ${pivotConfig.valField}`,
         type: 'chart' as const,
@@ -360,8 +671,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           chartType: selectedChartType,
           source: {
             datasetId: currentDatasetId,
-            mode: isTemporalMode ? 'temporal' as const : (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
-            batchId: (!isTemporalMode && updateMode === 'fixed') ? selectedBatchId : undefined
+            mode: isTemporalMode ? 'temporal' as const : (shouldUseSpecificBatch ? 'specific' : 'latest') as 'latest' | 'specific',
+            batchId: (!isTemporalMode && shouldUseSpecificBatch) ? selectedBatchId : undefined
           },
           pivotChart: {
             pivotConfig: {
@@ -370,14 +681,14 @@ export const ChartModal: React.FC<ChartModalProps> = ({
               colGrouping: pivotConfig.colGrouping,
               valField: pivotConfig.valField,
               aggType: pivotConfig.aggType,
-              filters: pivotConfig.filters,
+              filters: pivotConfig.filters, // Sauvegarder les filtres avec le widget
               sortBy: pivotConfig.sortBy,
               sortOrder: pivotConfig.sortOrder,
               showSubtotals: pivotConfig.showSubtotals
             },
             isTemporalMode,
             temporalComparison,
-            updateMode,
+            updateMode: (shouldUseSpecificBatch ? 'fixed' : updateMode) as 'fixed' | 'latest',
             chartType: selectedChartType,
             hierarchyLevel,
             limit: limit > 0 ? limit : undefined,
@@ -387,7 +698,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             colorPalette,
             singleColor,
             gradientStart,
-            gradientEnd
+            gradientEnd,
+            sunburstConfig: selectedChartType === 'sunburst' ? {
+              title: sunburstTitle,
+              showCenterTotal,
+              showLegend: showSunburstLegend
+            } : undefined
           }
         }
       };
@@ -451,16 +767,34 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     const pctTotal = data.grandTotal > 0 ? ((data.value / data.grandTotal) * 100).toFixed(1) : '0';
     const pctParent = data.parentTotal > 0 ? ((data.value / data.parentTotal) * 100).toFixed(1) : '0';
 
+    // Déterminer le niveau (0-indexed devient 1-indexed pour affichage)
+    const level = data.path.length;
+    const levelLabel = pivotConfig.rowFields[level - 1] || `Niveau ${level}`;
+
     return (
-      <div style={tooltipStyle}>
-        <p className="font-semibold text-slate-800 mb-1 text-xs">{data.path.join(' > ')}</p>
-        <p className="text-xs text-slate-700">
-          Valeur: <span className="font-bold">{formatChartValue(data.value, pivotConfig)}</span>
-        </p>
-        <p className="text-xs text-slate-500">
-          {pctTotal}% du total
-          {data.parentName !== 'Total' && ` | ${pctParent}% de ${data.parentName}`}
-        </p>
+      <div style={{...tooltipStyle, minWidth: '180px'}}>
+        <p className="font-bold text-slate-900 mb-2 text-sm border-b border-slate-200 pb-1">{data.name}</p>
+        <div className="space-y-1">
+          <p className="text-xs text-slate-600">
+            <span className="font-semibold">Niveau:</span> {levelLabel}
+          </p>
+          <p className="text-xs text-slate-700">
+            <span className="font-semibold">Valeur:</span> <span className="font-bold text-brand-600">{formatChartValue(data.value, pivotConfig)}</span>
+          </p>
+          <p className="text-xs text-slate-600">
+            <span className="font-semibold">Part:</span> {pctTotal}% du total
+          </p>
+          {data.parentName !== 'Total' && (
+            <p className="text-xs text-slate-600">
+              <span className="font-semibold">Parent:</span> {data.parentName} ({pctParent}%)
+            </p>
+          )}
+        </div>
+        {data.path.length > 1 && (
+          <p className="text-[10px] text-slate-400 mt-2 pt-1 border-t border-slate-100">
+            {data.path.join(' › ')}
+          </p>
+        )}
       </div>
     );
   };
@@ -715,81 +1049,44 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         );
 
       case 'sunburst': {
-        if (!sunburstData || sunburstData.rings.length === 0) {
+        if (!sunburstData || !sunburstData.tree || sunburstData.tree.length === 0 || !d3HierarchyData) {
           return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée hierarchique</div>;
         }
 
-        const numRings = sunburstData.rings.length;
-        const centerRadius = showCenterTotal ? 15 : 0;
-        const maxOuterRadius = 85; // % du conteneur
-        const gap = 1; // % gap entre anneaux
-        const ringWidth = (maxOuterRadius - centerRadius - gap * (numRings - 1)) / numRings;
-
         return (
-          <div className="relative h-full w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {sunburstData.rings.map((ring, ringIdx) => {
-                  const innerR = centerRadius + (ringIdx * (ringWidth + gap));
-                  const outerR = innerR + ringWidth;
-                  const showLabels = ringIdx === 0 && ring.length <= 8;
-
-                  return (
-                    <Pie
-                      key={`ring-${ringIdx}`}
-                      data={ring}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={`${innerR}%`}
-                      outerRadius={`${outerR}%`}
-                      paddingAngle={ringIdx === 0 ? 2 : 0.5}
-                      stroke="#fff"
-                      strokeWidth={ringIdx === 0 ? 2 : 1}
-                      labelLine={showLabels}
-                      label={showLabels ? ({ name, percent }: any) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)` : false}
-                      isAnimationActive={true}
-                      animationDuration={600}
-                    >
-                      {ring.map((entry, entryIdx) => (
-                        <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                  );
-                })}
-                <Tooltip content={<SunburstTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Total au centre */}
-            {showCenterTotal && (
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm rounded-full w-[15%] aspect-square flex flex-col items-center justify-center shadow-lg border border-slate-100 z-10">
-                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Total</span>
-                  <span className="text-sm font-black text-slate-800">{formatChartValue(sunburstData.totalValue, pivotConfig)}</span>
-               </div>
+          <div className="relative w-full h-full flex flex-col">
+            {/* Légende avec noms de colonnes */}
+            {showSunburstLegend && pivotConfig.rowFields.length > 0 && (
+              <div className="flex justify-center mb-2">
+                <div className="flex gap-4">
+                  <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Niveaux:</div>
+                  {pivotConfig.rowFields.map((field, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 text-xs">
+                      <div
+                        className="w-3 h-3 rounded-sm border border-slate-300"
+                        style={{
+                          backgroundColor: sunburstColors[idx % sunburstColors.length]
+                        }}
+                      />
+                      <span className="text-slate-700 font-medium">{field}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* Légende des niveaux */}
-            {showLevelLegend && (
-               <div className="absolute right-0 bottom-10 bg-white/90 p-3 rounded-xl border border-slate-200 shadow-sm z-10 max-w-[150px]">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Niveaux</p>
-                  <div className="space-y-1.5">
-                     {pivotConfig.rowFields.map((field, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                           <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: getChartColors(9, colorPalette)[idx % 9] }}></div>
-                           <span className="text-[10px] font-bold text-slate-600 truncate">{field}</span>
-                        </div>
-                     ))}
-                     {metadata.isMultiSeries && !isTemporalMode && (
-                        <div className="flex items-center gap-2">
-                           <div className="w-2.5 h-2.5 rounded-sm bg-slate-300"></div>
-                           <span className="text-[10px] font-bold text-slate-600 truncate">Métriques</span>
-                        </div>
-                     )}
-                  </div>
-               </div>
-            )}
+            {/* Graphique Sunburst D3 */}
+            <div className="flex-1" style={{ minHeight: '500px' }}>
+              <SunburstD3
+                data={d3HierarchyData}
+                width={800}
+                height={800}
+                unit={pivotConfig.valField || ''}
+                title={sunburstTitle}
+                rowFields={pivotConfig.rowFields}
+                colors={sunburstColors}
+              />
+            </div>
           </div>
         );
       }
@@ -1030,8 +1327,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   <input
                      type="checkbox"
                      id="show-level-legend"
-                     checked={showLevelLegend}
-                     onChange={e => setShowLevelLegend(e.target.checked)}
+                     checked={showSunburstLegend}
+                     onChange={e => setShowSunburstLegend(e.target.checked)}
                      className="w-4 h-4 text-brand-600 rounded border-slate-300"
                   />
                   <label htmlFor="show-level-legend" className="text-xs font-bold text-brand-800 cursor-pointer">Légende niveaux</label>
@@ -1105,6 +1402,47 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
                 />
                 <span className="text-xs text-slate-500">{gradientEnd}</span>
+              </div>
+            </>
+          )}
+
+          {/* Options Sunburst */}
+          {selectedChartType === 'sunburst' && (
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-slate-600">Titre:</label>
+                <input
+                  type="text"
+                  value={sunburstTitle}
+                  onChange={(e) => setSunburstTitle(e.target.value)}
+                  className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                  placeholder="Titre du graphique"
+                  style={{ minWidth: '200px' }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show-center-total"
+                  checked={showCenterTotal}
+                  onChange={(e) => setShowCenterTotal(e.target.checked)}
+                  className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
+                />
+                <label htmlFor="show-center-total" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  Total au centre
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show-sunburst-legend"
+                  checked={showSunburstLegend}
+                  onChange={(e) => setShowSunburstLegend(e.target.checked)}
+                  className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
+                />
+                <label htmlFor="show-sunburst-legend" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  Légende niveaux
+                </label>
               </div>
             </>
           )}

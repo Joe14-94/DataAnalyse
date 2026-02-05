@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // Updated version
-export const APP_VERSION = "2026-02-01-01";
+export const APP_VERSION = "2026-02-04-02";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);

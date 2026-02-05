@@ -59,6 +59,17 @@ export interface SunburstData {
   totalValue: number;
 }
 
+/**
+ * Convertit le tree Sunburst (array de nodes) en un seul node root pour D3
+ */
+export const sunburstDataToD3Hierarchy = (sunburstData: SunburstData): HierarchicalNode => {
+  return {
+    name: 'root',
+    children: sunburstData.tree,
+    value: undefined // La valeur sera calculée par d3.hierarchy().sum()
+  };
+};
+
 // ============================================================================
 // DETECTION AUTOMATIQUE DU TYPE DE GRAPHIQUE
 // ============================================================================
@@ -368,6 +379,17 @@ export const buildHierarchicalTree = (
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const hasMultiCols = seriesHeaders.length > 1;
 
+  console.log('🌞🌞🌞 buildHierarchicalTree START:', {
+    dataRowsCount: dataRows.length,
+    seriesHeadersCount: seriesHeaders.length,
+    seriesHeaders,
+    hasMultiCols,
+    firstRow: dataRows[0],
+    firstRowKeys: dataRows[0]?.keys,
+    firstRowMetrics: dataRows[0]?.metrics,
+    firstRowTotal: dataRows[0]?.rowTotal
+  });
+
   // Map pour construire l'arbre incrementalement
   const nodeMap = new Map<string, HierarchicalNode>();
   const tree: HierarchicalNode[] = [];
@@ -398,23 +420,43 @@ export const buildHierarchicalTree = (
     const leafKey = row.keys.join('\x1F');
     const leafNode = nodeMap.get(leafKey)!;
 
-    if (hasMultiCols) {
+    if (hasMultiCols && row.metrics && Object.keys(row.metrics).length > 0) {
       // Ajouter les colonnes comme niveau feuille
-      const leafChildren = seriesHeaders.map(header => ({
+      const childrenWithValues = seriesHeaders.map(header => ({
         name: header,
         value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
         path: [...row.keys, header]
       })).filter(item => item.value! > 0);
 
-      if (leafChildren.length > 0) {
-        if (!leafNode.children) leafNode.children = [];
-        leafNode.children.push(...leafChildren);
+      if (dataRows.indexOf(row) < 2) {
+        console.log(`🌞 LEAF row ${dataRows.indexOf(row)}:`, {
+          keys: row.keys,
+          hasMultiCols,
+          metricsKeys: Object.keys(row.metrics || {}),
+          childrenWithValues: childrenWithValues.length,
+          rowTotal: row.rowTotal
+        });
+      }
+
+      // Si après filtrage il reste des enfants, les utiliser
+      // Sinon, fallback sur rowTotal
+      if (childrenWithValues.length > 0) {
+        leafNode.children = childrenWithValues;
+      } else {
+        // Pas de métriques valides, utiliser rowTotal
+        leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
+        leafNode.children = undefined;
+        if (dataRows.indexOf(row) < 2) {
+          console.log(`🌞 Using rowTotal fallback: ${leafNode.value}`);
+        }
       }
     } else {
-      // Pas de colonnes : utiliser rowTotal comme valeur
-      // On additionne si jamais le noeud est atteint plusieurs fois (peu probable en TCD mais plus robuste)
-      const rowVal = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
-      leafNode.value = (leafNode.value || 0) + rowVal;
+      // Pas de colonnes multiples ou pas de métriques : utiliser rowTotal comme valeur
+      leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
+      leafNode.children = undefined;
+      if (dataRows.indexOf(row) < 2) {
+        console.log(`🌞 No multiCols, using rowTotal: ${leafNode.value}`);
+      }
     }
   }
 
@@ -436,6 +478,13 @@ export const buildHierarchicalTree = (
     }
   }
 
+  console.log('🌞🌞🌞 buildHierarchicalTree END:', {
+    treeLength: tree.length,
+    tree: tree.slice(0, 3),
+    firstNodeChildren: tree[0]?.children?.length,
+    firstNodeValue: tree[0]?.value
+  });
+
   return tree;
 };
 
@@ -450,6 +499,13 @@ export const treeToSunburstRings = (
   const rings: SunburstRingItem[][] = [];
   const grandTotal = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
 
+  console.log('🌞🌞🌞 treeToSunburstRings START:', {
+    treeLength: tree.length,
+    grandTotal,
+    baseColorsLength: baseColors.length,
+    baseColors
+  });
+
   // Map pour stocker la couleur de chaque noeud (pour propagation aux enfants)
   const colorMap = new Map<string, string>();
 
@@ -461,6 +517,8 @@ export const treeToSunburstRings = (
     parentTotal: number
   ) {
     if (!rings[level]) rings[level] = [];
+
+    console.log(`🌞 Traversing level ${level}, nodes count: ${nodes.length}`);
 
     nodes.forEach((node, idx) => {
       const path = [...parentPath, node.name];
@@ -492,15 +550,26 @@ export const treeToSunburstRings = (
           grandTotal
         });
 
-        // Recurser dans les enfants
-        if (node.children && node.children.length > 0) {
-          traverse(node.children, level + 1, path, fill, nodeValue);
+        if (level === 0 && idx < 2) {
+          console.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
         }
+      }
+
+      // Recurser dans les enfants
+      if (node.children && node.children.length > 0) {
+        traverse(node.children, level + 1, path, fill, nodeValue);
       }
     });
   }
 
   traverse(tree, 0, [], baseColors[0], grandTotal);
+
+  console.log('🌞🌞🌞 treeToSunburstRings END:', {
+    ringsLength: rings.length,
+    ringsItemCounts: rings.map(r => r.length),
+    firstRing: rings[0]?.slice(0, 3)
+  });
+
   return rings;
 };
 
@@ -513,9 +582,18 @@ export const transformPivotToSunburstData = (
   baseColors: string[],
   options?: { limit?: number; showOthers?: boolean }
 ): SunburstData => {
+  console.log('🌞🌞🌞 transformPivotToSunburstData START');
+
   const tree = buildHierarchicalTree(result, config, options);
   const rings = treeToSunburstRings(tree, baseColors);
   const totalValue = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
+
+  console.log('🌞🌞🌞 transformPivotToSunburstData END:', {
+    treeLength: tree.length,
+    ringsLength: rings.length,
+    totalValue,
+    result: { tree, rings, totalValue }
+  });
 
   return { tree, rings, totalValue };
 };

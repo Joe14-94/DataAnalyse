@@ -9,8 +9,9 @@ import { TrendingUp, Link as LinkIcon } from 'lucide-react';
 import { DashboardWidget } from '../../types';
 import { useWidgets } from '../../context/DataContext';
 import { CHART_COLORS } from '../../utils/constants';
-import { getChartColors, generateGradient } from '../../logic/pivotToChart';
+import { getChartColors, generateGradient, sunburstDataToD3Hierarchy } from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
+import { SunburstD3 } from '../charts/SunburstD3';
 
 interface WidgetDisplayProps {
    widget: DashboardWidget;
@@ -24,11 +25,19 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
 
    // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
    if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
-      const { colors, data: chartData, unit, seriesName } = data;
+      const { colors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
       const chartType = widget.config.pivotChart ? widget.config.pivotChart.chartType : widget.config.chartType;
 
+      // Pour Sunburst et Treemap, les données sont dans sunburstData/hierarchicalData, pas chartData
+      const hasHierarchicalData = chartType === 'sunburst' ? sunburstData : chartType === 'treemap' ? hierarchicalData : null;
+
       if (!chartData || chartData.length === 0) {
-         return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
+         // Si c'est un graphique hiérarchique, vérifier les données hiérarchiques au lieu de chartData
+         if (hasHierarchicalData) {
+            // Continue pour afficher le graphique hiérarchique
+         } else {
+            return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
+         }
       }
 
       // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
@@ -146,65 +155,38 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
             );
          } else if (chartType === 'sunburst') {
             const sbData = data.sunburstData;
+            const sunburstConfig = widget.config.pivotChart?.sunburstConfig;
+            const title = sunburstConfig?.title;
+            const rowFields = widget.config.pivotChart?.pivotConfig?.rowFields || [];
+
             if (!sbData || !sbData.rings || sbData.rings.length === 0) {
                return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Aucune donnée hiérarchique</div>;
             }
-            const numRings = sbData.rings.length;
-            const centerRadius = 15;
-            const maxOuterRadius = 88;
-            const gap = 1;
-            const ringWidth = (maxOuterRadius - centerRadius - gap * (numRings - 1)) / numRings;
-            return (
-               <div className="relative h-full w-full flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                     <PieChart>
-                        {sbData.rings.map((ring: any[], ringIdx: number) => {
-                           const innerR = centerRadius + (ringIdx * (ringWidth + gap));
-                           const outerR = innerR + ringWidth;
-                           return (
-                              <Pie
-                                 key={`ring-${ringIdx}`}
-                                 data={ring}
-                                 dataKey="value"
-                                 nameKey="name"
-                                 cx="50%"
-                                 cy="50%"
-                                 innerRadius={`${innerR}%`}
-                                 outerRadius={`${outerR}%`}
-                                 paddingAngle={ringIdx === 0 ? 2 : 0.5}
-                                 stroke="#fff"
-                                 strokeWidth={ringIdx === 0 ? 2 : 1}
-                                 isAnimationActive={false}
-                              >
-                                 {ring.map((entry: any, entryIdx: number) => (
-                                    <Cell key={`cell-${ringIdx}-${entryIdx}`} fill={entry.fill} />
-                                 ))}
-                              </Pie>
-                           );
-                        })}
-                        <Tooltip
-                           content={({ active, payload }: any) => {
-                              if (!active || !payload || !payload.length) return null;
-                              const d = payload[0].payload;
-                              if (!d || !d.path) return null;
-                              const pctTotal = d.grandTotal > 0 ? ((d.value / d.grandTotal) * 100).toFixed(1) : '0';
-                              return (
-                                 <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                    <p style={{ fontWeight: 600, marginBottom: 2 }}>{d.path.join(' > ')}</p>
-                                    <p>{d.value?.toLocaleString('fr-FR')} {unit || ''} ({pctTotal}%)</p>
-                                 </div>
-                              );
-                           }}
-                        />
-                     </PieChart>
-                  </ResponsiveContainer>
 
-                  {/* Total au centre */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/60 backdrop-blur-sm rounded-full w-[15%] aspect-square flex flex-col items-center justify-center border border-slate-100/50 z-10 pointer-events-none">
-                     <span className="text-[8px] font-medium text-slate-500 uppercase">Total</span>
-                     <span className="text-[10px] font-black text-slate-800 leading-none">
-                        {sbData.totalValue?.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
-                     </span>
+            // Convert sunburst data to D3 hierarchy format
+            const d3HierarchyData = sunburstDataToD3Hierarchy(sbData);
+
+            if (!d3HierarchyData) {
+               return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Erreur de conversion des données</div>;
+            }
+
+            return (
+               <div className="relative w-full h-full flex flex-col">
+                  {title && (
+                     <div className="text-center mb-1">
+                        <h4 className="text-xs font-bold text-slate-800">{title}</h4>
+                     </div>
+                  )}
+                  <div className="flex-1">
+                     <SunburstD3
+                        data={d3HierarchyData}
+                        width={400}
+                        height={400}
+                        unit={unit || ''}
+                        title={title}
+                        rowFields={rowFields}
+                        colors={colors}
+                     />
                   </div>
                </div>
             );
