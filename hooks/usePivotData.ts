@@ -42,7 +42,7 @@ export const usePivotData = ({
 
    const datasetBatches = useMemo(() => {
        if (!primaryDataset) return [];
-       return batches
+       return (batches || [])
            .filter(b => b.datasetId === primaryDataset.id)
            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
    }, [batches, primaryDataset]);
@@ -111,8 +111,8 @@ export const usePivotData = ({
        const timer = setTimeout(() => {
            const sourceDataMap = new Map<string, DataRow[]>();
 
-           temporalConfig.sources.forEach(source => {
-               const batch = batches.find(b => b.id === source.batchId);
+           (temporalConfig.sources || []).forEach(source => {
+               const batch = (batches || []).find(b => b.id === source.batchId);
                if (batch && primaryDataset) {
                    const calcFields = primaryDataset.calculatedFields || [];
                    let rows = batch.rows;
@@ -140,7 +140,7 @@ export const usePivotData = ({
                }
            });
 
-           const dateColumn = detectDateColumn(primaryDataset.fields) || 'Date écriture';
+           const dateColumn = detectDateColumn(primaryDataset.fields || []) || 'Date écriture';
            const validAggType = aggType === 'list' ? 'sum' : aggType;
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,

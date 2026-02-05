@@ -125,13 +125,13 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             const sourceDataMap = new Map<string, any[]>();
 
             // Logique de mise à jour automatique pour le mode temporel
-            let effectiveSources = tc.sources;
+            let effectiveSources = tc.sources || [];
             if (pivotChart.updateMode === 'latest') {
-               const sortedBatches = [...batches]
+               const sortedBatches = [...(batches || [])]
                   .filter(b => b.datasetId === widget.config.source?.datasetId)
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-               effectiveSources = tc.sources.map((s: any, idx: number) => ({
+               effectiveSources = (tc.sources || []).map((s: any, idx: number) => ({
                   ...s,
                   batchId: sortedBatches[idx]?.id || s.batchId,
                   // On garde le label original s'il a été personnalisé, sinon on pourrait mettre la date
@@ -139,7 +139,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             }
 
             effectiveSources.forEach((source: any) => {
-               const batch = batches.find(b => b.id === source.batchId);
+               const batch = (batches || []).find(b => b.id === source.batchId);
                if (batch) {
                   // Enrichissement calculé si nécessaire
                   let rows = batch.rows;
@@ -157,7 +157,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                }
             });
 
-            const dateColumn = detectDateColumn(dataset.fields) || 'Date écriture';
+            const dateColumn = detectDateColumn(dataset.fields || []) || 'Date écriture';
             const { results } = calculateTemporalComparison(sourceDataMap, {
                ...tc,
                groupByFields: pc.rowFields,
@@ -168,7 +168,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             // Formater pour transformPivotToChartData
             const colHeaders = effectiveSources.map((s: any, idx: number) => {
                if (pivotChart.updateMode === 'latest') {
-                  const batch = batches.find(b => b.id === s.batchId);
+                  const batch = (batches || []).find(b => b.id === s.batchId);
                   if (batch) {
                      const dateStr = new Date(batch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
                      return `${s.label.split(' (')[0]} (${dateStr})`;
@@ -177,23 +177,23 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                return s.label || `Source ${idx + 1}`;
             });
 
-            const displayRows = results.map((r: any) => {
-               const keys = r.groupLabel.split('\x1F');
+            const displayRows = (results || []).map((r: any) => {
+               const keys = (r.groupLabel || '').split('\x1F');
 
                // Construire les métriques en s'assurant que toutes les sources sont représentées
                const metrics: Record<string, number> = {};
                effectiveSources.forEach((s: any) => {
                   const label = colHeaders[effectiveSources.indexOf(s)];
-                  metrics[label] = typeof r.values[s.id] === 'number' ? r.values[s.id] : 0;
+                  metrics[label] = (r.values && typeof r.values[s.id] === 'number') ? r.values[s.id] : 0;
                });
 
                return {
                   type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
                   keys: keys,
                   level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
-                  label: r.groupLabel.replace(/\x1F/g, ' > '),
+                  label: (r.groupLabel || '').replace(/\x1F/g, ' > '),
                   metrics,
-                  rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
+                  rowTotal: Object.values(r.values || {}).reduce((a: number, b: any) => a + (b || 0), 0)
                };
             });
 
@@ -319,10 +319,10 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       const { source, metric, dimension, valueField, target, secondarySource, limit } = widget.config;
       if (!source) return null;
 
-      const dataset = allDatasets.find(d => d.id === source.datasetId);
+      const dataset = (allDatasets || []).find(d => d.id === source.datasetId);
       if (!dataset) return { error: 'Jeu de données introuvable' };
 
-      const dsBatches = getEffectiveBatches(batches, source.datasetId, globalDateRange);
+      const dsBatches = getEffectiveBatches(batches || [], source.datasetId, globalDateRange);
       if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
       let targetBatch = dsBatches[dsBatches.length - 1];
@@ -350,14 +350,14 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       let secondaryDataset: Dataset | undefined = undefined;
 
       if (secondarySource && secondarySource.datasetId) {
-         secondaryDataset = allDatasets.find(d => d.id === secondarySource.datasetId);
-         const secBatches = getEffectiveBatches(batches, secondarySource.datasetId, globalDateRange);
+         secondaryDataset = (allDatasets || []).find(d => d.id === secondarySource.datasetId);
+         const secBatches = getEffectiveBatches(batches || [], secondarySource.datasetId, globalDateRange);
 
          if (secBatches.length > 0) {
             const secBatch = secBatches[secBatches.length - 1];
             const lookup = new Map<string, any>();
-            secBatch.rows.forEach(r => { const key = String(r[secondarySource.joinFieldSecondary]).trim(); if (key) lookup.set(key, r); });
-            workingRows = workingRows.map(row => { const key = String(row[secondarySource.joinFieldPrimary]).trim(); const match = lookup.get(key); if (match) { return { ...row, ...match }; } return row; });
+            (secBatch.rows || []).forEach(r => { const key = String(r[secondarySource.joinFieldSecondary]).trim(); if (key) lookup.set(key, r); });
+            workingRows = (workingRows || []).map(row => { const key = String(row[secondarySource.joinFieldPrimary]).trim(); const match = lookup.get(key); if (match) { return { ...row, ...match }; } return row; });
          }
       }
 
@@ -389,7 +389,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
       if (widget.type === 'list') {
          const counts: Record<string, number> = {};
-         workingRows.forEach(row => {
+         (workingRows || []).forEach(row => {
             const key = String(row[dimension || ''] || 'Non défini');
             if (metric === 'count' || metric === 'distinct') counts[key] = (counts[key] || 0) + 1;
             else if (metric === 'sum' && valueField) counts[key] = (counts[key] || 0) + parseVal(row, valueField);
@@ -400,7 +400,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
       if (dimension) {
          const counts: Record<string, number> = {};
-         workingRows.forEach(row => {
+         (workingRows || []).forEach(row => {
             const key = String(row[dimension] || 'Non défini');
             let val = 1;
             if (metric === 'sum' && valueField) val = parseVal(row, valueField);

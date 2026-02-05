@@ -49,12 +49,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- COMPUTED ---
-  const currentDataset = useMemo(() => datasets.find(d => d.id === currentDatasetId) || null, [datasets, currentDatasetId]);
+  const currentDataset = useMemo(() => (datasets || []).find(d => d.id === currentDatasetId) || null, [datasets, currentDatasetId]);
 
   // BOLT OPTIMIZATION: Memoize filtered batches and fix sort bug (was a.date - a.date)
   const filteredBatches = useMemo(() => {
     if (!currentDatasetId) return [];
-    return batches
+    return (batches || [])
       .filter(b => b.datasetId === currentDatasetId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [batches, currentDatasetId]);
@@ -425,13 +425,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedAllBatches = [...prevAllBatches, newBatch];
 
         // --- AUTO-REFRESH DERIVED DATASETS ---
-        const derivedToUpdate = datasets.filter(d => {
+        const derivedToUpdate = (datasets || []).filter(d => {
             if (!d.sourcePivotConfig) return false;
             const config = d.sourcePivotConfig.config;
             if (d.sourcePivotConfig.isTemporal) {
-                return config.sources?.some((s: any) => s.datasetId === datasetId);
+                return config?.sources?.some((s: any) => s.datasetId === datasetId);
             } else {
-                return config.sources?.some((s: any) => s.datasetId === datasetId) || config.currentDataset?.id === datasetId;
+                return config?.sources?.some((s: any) => s.datasetId === datasetId) || config?.currentDataset?.id === datasetId;
             }
         });
 
@@ -444,7 +444,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const { isTemporal, config } = derivedDataset.sourcePivotConfig!;
                 let derivedRows: DataRow[] = [];
 
-                if (isTemporal && config.sources) {
+                if (isTemporal && config?.sources) {
                     const sourceDataMap = new Map<string, DataRow[]>();
                     config.sources.forEach((source: any) => {
                         // Find latest batch for this dataset
@@ -454,14 +454,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     });
 
-                    const primaryDS = datasets.find(d => d.id === config.sources?.[0]?.datasetId);
+                    const primaryDS = (datasets || []).find(d => d.id === config.sources?.[0]?.datasetId);
                     const dateColumn = primaryDS ? (detectDateColumn(primaryDS.fields) || 'Date écriture') : 'Date écriture';
 
                     const { results } = calculateTemporalComparison(sourceDataMap, config, dateColumn, false, config.filters || []);
                     derivedRows = temporalResultToRows(results, config.groupByFields || [], config);
                 } else if (config) {
                     const primarySource = config.sources?.find((s: any) => s.isPrimary) || { datasetId: config.currentDataset?.id, isPrimary: true };
-                    const primaryDS = datasets.find(d => d.id === primarySource.datasetId);
+                    const primaryDS = (datasets || []).find(d => d.id === primarySource.datasetId);
 
                     if (primaryDS) {
                         const dsBatches = finalBatches.filter(b => b.datasetId === primaryDS.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

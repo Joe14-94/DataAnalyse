@@ -157,11 +157,11 @@ export const generateChartMetadata = (
  * Détecte les niveaux de hiérarchie disponibles dans les données
  */
 export const getAvailableHierarchyLevels = (result: PivotResult): number => {
-  const dataRows = result.displayRows.filter(row => row.type === 'data');
+  const dataRows = (result.displayRows || []).filter(row => row.type === 'data');
   if (dataRows.length === 0) return 0;
 
   // Trouver le niveau maximum
-  const maxLevel = Math.max(...dataRows.map(row => row.level), -1);
+  const maxLevel = Math.max(...dataRows.map(row => row.level || 0), -1);
   return maxLevel + 1; // Retourner le nombre de niveaux (0-indexed)
 };
 
@@ -188,7 +188,7 @@ export const transformPivotToChartData = (
   } = options;
 
   // Filtrer les lignes de données (exclure sous-totaux et grand total)
-  let dataRows = result.displayRows.filter(row => {
+  let dataRows = (result.displayRows || []).filter(row => {
     // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
     if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
       return row.type !== 'grandTotal' && row.level === hierarchyLevel;
@@ -302,9 +302,9 @@ export const transformPivotToTreemapData = (
   // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
   let dataRows: PivotRow[];
   if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
-    dataRows = result.displayRows.filter(r => r.type !== 'grandTotal' && r.level === hierarchyLevel);
+    dataRows = (result.displayRows || []).filter(r => r.type !== 'grandTotal' && r.level === hierarchyLevel);
   } else {
-    dataRows = result.displayRows.filter(r => r.type === 'data');
+    dataRows = (result.displayRows || []).filter(r => r.type === 'data');
   }
 
   console.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
@@ -375,7 +375,7 @@ export const buildHierarchicalTree = (
   config: PivotConfig,
   options?: { limit?: number; showOthers?: boolean }
 ): HierarchicalNode[] => {
-  const dataRows = result.displayRows.filter(r => r.type === 'data');
+  const dataRows = (result.displayRows || []).filter(r => r.type === 'data');
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const hasMultiCols = seriesHeaders.length > 1;
 
