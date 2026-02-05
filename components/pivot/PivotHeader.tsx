@@ -28,6 +28,7 @@ interface PivotHeaderProps {
    openCalcModal: () => void;
    openFormattingModal: () => void;
    openSpecificDashboardModal: () => void;
+   openSaveAsDatasetModal: () => void;
    selectedItemsCount?: number;
    searchTerm: string;
    setSearchTerm: (v: string) => void;
@@ -38,7 +39,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
-   openCalcModal, openFormattingModal, openSpecificDashboardModal, selectedItemsCount = 0,
+   openCalcModal, openFormattingModal, openSpecificDashboardModal, openSaveAsDatasetModal, selectedItemsCount = 0,
    searchTerm, setSearchTerm, setIsSelectionMode
 }) => {
    const [showChartMenu, setShowChartMenu] = useState(false);
@@ -96,6 +97,10 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
 
             <button onClick={openFormattingModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-300 disabled:opacity-50">
                <Palette className="w-3 h-3 text-indigo-500" /> Mise en forme
+            </button>
+
+            <button onClick={openSaveAsDatasetModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 disabled:opacity-50">
+               <Database className="w-3 h-3" /> Sauver comme Dataset
             </button>
 
             <button onClick={openSpecificDashboardModal} disabled={!primaryDataset} className="relative flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">

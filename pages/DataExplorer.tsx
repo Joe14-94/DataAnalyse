@@ -108,7 +108,7 @@ export const DataExplorer: React.FC = () => {
 
    // Initialize tracking key
    useEffect(() => {
-      if (currentDataset && currentDataset.fields.length > 0 && !trackingKey) {
+      if (currentDataset && (currentDataset?.fields?.length || 0) > 0 && !trackingKey) {
          const candidates = ['email', 'id', 'reference', 'ref', 'code', 'matricule', 'nom'];
          const found = currentDataset.fields.find(f => candidates.includes(f.toLowerCase()));
          setTrackingKey(found || currentDataset.fields[0]);
@@ -116,7 +116,7 @@ export const DataExplorer: React.FC = () => {
    }, [currentDataset]);
 
    useEffect(() => {
-      if (currentDataset && !selectedFormatCol) {
+      if (currentDataset && !selectedFormatCol && currentDataset?.fields?.length > 0) {
          setSelectedFormatCol(currentDataset.fields[0]);
       }
    }, [currentDataset]);
@@ -416,10 +416,10 @@ export const DataExplorer: React.FC = () => {
       if (!currentDataset) return [];
       const calcFields = currentDataset.calculatedFields || [];
 
-      let rows = batches
+      let rows = (batches || [])
          .filter(b => b.datasetId === currentDataset.id)
          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-         .flatMap(batch => batch.rows.map(r => {
+         .flatMap(batch => (batch.rows || []).map(r => {
             const extendedRow: any = { ...r, _importDate: batch.date, _batchId: batch.id };
             calcFields.forEach(cf => {
                const val = evaluateFormula(r, cf.formula, cf.outputType);
@@ -439,12 +439,12 @@ export const DataExplorer: React.FC = () => {
                   const k = String(r[blendingConfig.joinKeySecondary]).trim();
                   if (k) lookup.set(k, r);
                });
-               rows = rows.map(row => {
+               rows = (rows || []).map(row => {
                   const k = String(row[blendingConfig.joinKeyPrimary]).trim();
                   const match = lookup.get(k);
                   if (match) {
                      const prefixedMatch: any = {};
-                     Object.keys(match).forEach(key => {
+                     Object.keys(match || {}).forEach(key => {
                         if (key !== 'id') prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
                      });
                      return { ...row, ...prefixedMatch };
@@ -471,11 +471,11 @@ export const DataExplorer: React.FC = () => {
 
    const displayFields = useMemo(() => {
       if (!currentDataset) return [];
-      const primFields = [...currentDataset.fields];
+      const primFields = [...(currentDataset.fields || [])];
       if (blendingConfig && blendingConfig.secondaryDatasetId) {
-         const secDS = datasets.find(d => d.id === blendingConfig.secondaryDatasetId);
+         const secDS = (datasets || []).find(d => d.id === blendingConfig.secondaryDatasetId);
          if (secDS) {
-            const secFields = secDS.fields.map(f => `[${secDS.name}] ${f}`);
+            const secFields = (secDS.fields || []).map(f => `[${secDS.name}] ${f}`);
             const secCalcFields = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);
             return [...primFields, ...secFields, ...secCalcFields];
          }
@@ -1002,7 +1002,7 @@ export const DataExplorer: React.FC = () => {
                               />
                            </div>
                         </th>
-                        {displayFields.map(field => {
+                        {(displayFields || []).map(field => {
                            const isSelected = selectedCol === field;
                            const isBlended = field.startsWith('[');
                            const fieldConfig = currentDataset.fieldConfigs?.[field];
@@ -1026,7 +1026,7 @@ export const DataExplorer: React.FC = () => {
                               </th>
                            );
                         })}
-                        {calculatedFields.map(cf => {
+                        {(calculatedFields || []).map(cf => {
                            const colWidth = columnWidths[cf.name] || 150;
                            return (
                               <th key={cf.id} scope="col" title={`Formule: ${cf.formula}`} className={`px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(cf.name)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
@@ -1055,7 +1055,7 @@ export const DataExplorer: React.FC = () => {
                            <th className={`px-2 py-2 border-b border-slate-200 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                               <input type="text" className="w-full px-2 py-1 text-xs border border-slate-300 rounded bg-white focus:ring-1 focus:ring-brand-500 font-normal" placeholder="Filtre Id..." value={columnFilters['id'] || ''} onChange={(e) => handleColumnFilterChange('id', e.target.value)} />
                            </th>
-                           {displayFields.map(field => {
+                           {(displayFields || []).map(field => {
                               const fieldConfig = currentDataset.fieldConfigs?.[field];
                               const isNumeric = fieldConfig?.type === 'number';
                               const defaultWidth = isNumeric ? 120 : 180;
@@ -1066,7 +1066,7 @@ export const DataExplorer: React.FC = () => {
                                  </th>
                               );
                            })}
-                           {calculatedFields.map(cf => {
+                           {(calculatedFields || []).map(cf => {
                               const colWidth = columnWidths[cf.name] || 150;
                               return (
                                  <th key={`filter-${cf.id}`} className={`px-2 py-2 border-b border-indigo-200 bg-indigo-50 ${showColumnBorders ? 'border-r' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
@@ -1103,7 +1103,7 @@ export const DataExplorer: React.FC = () => {
                               <td className={`px-6 py-2 whitespace-nowrap text-sm text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: columnWidths['id'] || 120, minWidth: 120, maxWidth: columnWidths['id'] || 120 }}>
                                  {row.id}
                               </td>
-                              {displayFields.map(field => {
+                           {(displayFields || []).map(field => {
                                  const val = pendingChanges[row._batchId]?.[row.id]?.[field] ?? row[field];
                                  let displayVal: React.ReactNode = val;
                                  const cellStyle = getCellStyle(field, val);
@@ -1135,7 +1135,7 @@ export const DataExplorer: React.FC = () => {
                                     </td>
                                  );
                               })}
-                              {calculatedFields.map(cf => {
+                              {(calculatedFields || []).map(cf => {
                                  const val = row[cf.name];
                                  const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
@@ -1201,7 +1201,7 @@ export const DataExplorer: React.FC = () => {
                         <div>
                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Appliquer sur la colonne</label>
                            <select className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500 text-sm" value={selectedFormatCol} onChange={e => setSelectedFormatCol(e.target.value)}>
-                              {currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}
+                              {(currentDataset.fields || []).map(f => <option key={f} value={f}>{f}</option>)}
                            </select>
                         </div>
                         <div>
@@ -1414,7 +1414,7 @@ export const DataExplorer: React.FC = () => {
                   <div><div className="flex items-center gap-2 mb-1"><History className="w-5 h-5 text-brand-600" /><h3 className="text-lg font-bold text-slate-800">Fiche Détail & Historique</h3></div><p className="text-xs text-slate-500">Suivi de l'entité via la clé : <strong className="text-slate-700">{trackingKey}</strong></p></div>
                   <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white rounded-full p-1 shadow-sm border border-slate-200"><X className="w-5 h-5" /></button>
                </div>
-               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-brand-500 focus:border-brand-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{currentDataset.fields.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
+               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-brand-500 focus:border-brand-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{(currentDataset.fields || []).map(f => <option key={f} value={f}>{f}</option>)}</select></div>
                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/50 space-y-8">
                   <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                      <div className="bg-brand-50 px-4 py-2 border-b border-brand-100 flex justify-between items-center"><span className="text-xs font-bold text-brand-700 uppercase tracking-wider">État Actuel</span><span className="text-xs bg-white px-2 py-0.5 rounded-full border border-brand-200 text-brand-600 font-mono">{formatDateFr(selectedRow._importDate)}</span></div>
@@ -1487,7 +1487,7 @@ export const DataExplorer: React.FC = () => {
                   </div>
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">
-                     {currentDataset.fields.map((field, idx) => (
+                     {(currentDataset.fields || []).map((field, idx) => (
                         <div
                            key={field}
                            className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg hover:border-brand-300 transition-all group"

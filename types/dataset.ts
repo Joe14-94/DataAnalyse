@@ -59,6 +59,10 @@ export interface Dataset {
   calculatedFields?: CalculatedField[];
   enrichmentConfigs?: EnrichmentConfig[];
   createdAt: number;
+  sourcePivotConfig?: {
+      isTemporal?: boolean;
+      config: any; // Equivalent to PivotState['config'] or TemporalComparisonConfig
+  };
 }
 
 export interface ImportBatch {

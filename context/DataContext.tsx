@@ -3,6 +3,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } 
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, db, generateId, evaluateFormula, decompressBatch } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
+import { calculatePivotData } from '../logic/pivotEngine';
+import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
+import { blendData } from '../logic/dataBlending';
+import { pivotResultToRows, temporalResultToRows } from '../utils/pivotToDataset';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
 import { BatchContext, useBatches } from './BatchContext';
@@ -45,12 +49,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- COMPUTED ---
-  const currentDataset = useMemo(() => datasets.find(d => d.id === currentDatasetId) || null, [datasets, currentDatasetId]);
+  const currentDataset = useMemo(() => (datasets || []).find(d => d.id === currentDatasetId) || null, [datasets, currentDatasetId]);
 
   // BOLT OPTIMIZATION: Memoize filtered batches and fix sort bug (was a.date - a.date)
   const filteredBatches = useMemo(() => {
     if (!currentDatasetId) return [];
-    return batches
+    return (batches || [])
       .filter(b => b.datasetId === currentDatasetId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [batches, currentDatasetId]);
@@ -168,6 +172,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now()
     };
     setDatasets(prev => [...prev, newDataset]);
+    setCurrentDatasetId(newId);
+    return newId;
+  }, []);
+
+  const createDerivedDataset = useCallback((name: string, isTemporal: boolean, config: any, fields: string[], rows: any[]) => {
+    const newId = generateId();
+    const newDataset: Dataset = {
+      id: newId,
+      name,
+      fields,
+      fieldConfigs: {},
+      createdAt: Date.now(),
+      sourcePivotConfig: { isTemporal, config }
+    };
+    setDatasets(prev => [...prev, newDataset]);
+
+    // Create the first batch
+    const newBatch: ImportBatch = {
+      id: generateId(),
+      datasetId: newId,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: Date.now(),
+      rows
+    };
+    setAllBatches(prev => [...prev, newBatch]);
+
     setCurrentDatasetId(newId);
     return newId;
   }, []);
@@ -390,7 +420,134 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now(),
       rows: processedRows
     };
-    setAllBatches(prev => [...prev, newBatch]);
+
+    setAllBatches(prevAllBatches => {
+        let finalBatches = [...prevAllBatches, newBatch];
+
+        // --- AUTO-REFRESH DERIVED DATASETS (RECURSIVE) ---
+        let changedDatasetIds = new Set<string>([datasetId]);
+        let totalLoops = 0;
+        const MAX_LOOPS = 5; // Safety limit
+
+        while (changedDatasetIds.size > 0 && totalLoops < MAX_LOOPS) {
+            const nextChangedIds = new Set<string>();
+            totalLoops++;
+
+            const derivedToUpdate = (datasets || []).filter(d => {
+                if (!d.sourcePivotConfig) return false;
+                const config = d.sourcePivotConfig.config;
+                const temporalConfig = config?.temporalComparison || config;
+
+                if (d.sourcePivotConfig.isTemporal) {
+                    return temporalConfig?.sources?.some((s: any) => changedDatasetIds.has(s.datasetId));
+                } else {
+                    return config?.sources?.some((s: any) => changedDatasetIds.has(s.datasetId)) ||
+                           (config?.currentDataset?.id && changedDatasetIds.has(config.currentDataset.id));
+                }
+            });
+
+            derivedToUpdate.forEach(derivedDataset => {
+                try {
+                    const { isTemporal, config } = derivedDataset.sourcePivotConfig!;
+                    let derivedRows: DataRow[] = [];
+
+                    if (isTemporal) {
+                        const tConfig = config.temporalComparison || config;
+                        if (!tConfig || !tConfig.sources) return;
+
+                        const sourceDataMap = new Map<string, DataRow[]>();
+                        tConfig.sources.forEach((source: any) => {
+                            const dsBatches = finalBatches.filter(b => b.datasetId === source.datasetId);
+                            if (dsBatches.length === 0) return;
+
+                            let targetBatch = null;
+                            if (source.year) {
+                                targetBatch = dsBatches
+                                    .filter(b => new Date(b.date).getFullYear() === source.year)
+                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                            }
+
+                            if (!targetBatch) {
+                                targetBatch = dsBatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                            }
+
+                            if (targetBatch) {
+                                sourceDataMap.set(source.id, targetBatch.rows);
+                            }
+                        });
+
+                        const primaryDS = (datasets || []).find(d => d.id === tConfig.sources?.[0]?.datasetId);
+                        const dateColumn = primaryDS ? (detectDateColumn(primaryDS.fields) || 'Date écriture') : 'Date écriture';
+
+                        // Update comparison month if MTD/YTD based on the latest batch
+                        let activeConfig = { ...tConfig };
+                        if (tConfig.comparisonMode === 'mtd' || tConfig.comparisonMode === 'ytd') {
+                            const latestBatch = finalBatches.filter(b => b.datasetId === primaryDS?.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                            if (latestBatch) {
+                                const latestMonth = new Date(latestBatch.date).getMonth() + 1;
+                                activeConfig.comparisonMonth = latestMonth;
+                                activeConfig.periodFilter = tConfig.comparisonMode === 'ytd'
+                                    ? { startMonth: 1, endMonth: latestMonth }
+                                    : { startMonth: latestMonth, endMonth: latestMonth };
+                            }
+                        }
+
+                        const { results } = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, false, activeConfig.filters || config.filters || []);
+                        derivedRows = temporalResultToRows(results, activeConfig.groupByFields || config.rowFields || [], activeConfig);
+                    } else if (config) {
+                        const primarySource = config.sources?.find((s: any) => s.isPrimary) || { datasetId: config.currentDataset?.id, isPrimary: true };
+                        const primaryDS = (datasets || []).find(d => d.id === primarySource.datasetId);
+
+                        if (primaryDS) {
+                            const dsBatches = finalBatches.filter(b => b.datasetId === primaryDS.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                            if (dsBatches.length > 0) {
+                                const currentBatch = dsBatches[0];
+                                const blendedRows = blendData({
+                                    sources: config.sources || [primarySource],
+                                    primaryDataset: primaryDS,
+                                    currentBatch,
+                                    allBatches: finalBatches,
+                                    allDatasets: datasets
+                                });
+
+                                const result = calculatePivotData({
+                                    ...config,
+                                    rows: blendedRows,
+                                    currentDataset: primaryDS,
+                                    datasets,
+                                    showSubtotals: false
+                                });
+
+                                if (result) {
+                                    derivedRows = pivotResultToRows(result, config.rowFields);
+                                }
+                            }
+                        }
+                    }
+
+                    if (derivedRows.length > 0) {
+                        // Check if we already added a batch for this derived dataset in this cycle to avoid infinite growth
+                        if (!finalBatches.some(b => b.datasetId === derivedDataset.id && b.date === date)) {
+                            finalBatches.push({
+                                id: generateId(),
+                                datasetId: derivedDataset.id,
+                                date: date,
+                                createdAt: Date.now(),
+                                rows: derivedRows
+                            });
+                            nextChangedIds.add(derivedDataset.id);
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Failed to auto-refresh derived dataset ${derivedDataset.name}`, err);
+                }
+            });
+
+            changedDatasetIds = nextChangedIds;
+        }
+
+        return finalBatches;
+    });
   }, [datasets, batches]);
 
   const deleteBatch = useCallback((id: string) => {
@@ -711,7 +868,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
-                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
+                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState }}>

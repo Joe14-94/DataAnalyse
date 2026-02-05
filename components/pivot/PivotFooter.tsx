@@ -75,7 +75,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
             <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                <tbody className="font-bold">
                   <tr>
-                     {rowFields.map((field, idx) => (
+                     {(rowFields || []).map((field, idx) => (
                         <td
                            key={idx}
                            className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
@@ -89,7 +89,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            {idx === rowFields.length - 1 ? 'Total' : ''}
                         </td>
                      ))}
-                     {temporalConfig.sources.map((source: any) => {
+                     {(temporalConfig?.sources || []).map((source: any) => {
                         const val = temporalColTotals[source.id] || 0;
                         const customStyle = getCellStyle([], source.id, val, source.label, styleRules, conditionalRules, 'grandTotal');
 
@@ -135,7 +135,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
             <tbody className="font-bold">
                <tr>
-                  {rowFields.map((field, idx) => (
+                  {(rowFields || []).map((field, idx) => (
                      <td
                         key={idx}
                         className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
