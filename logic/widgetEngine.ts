@@ -8,6 +8,13 @@ import { calculateTemporalComparison, detectDateColumn } from '../utils/temporal
 export const applyPivotFilters = (rows: any[], filters: FilterRule[] | undefined, dataset: Dataset) => {
    if (!filters || filters.length === 0) return rows;
 
+   console.log('🔍 applyPivotFilters START:', {
+      totalRows: rows.length,
+      filterCount: filters.length,
+      filters: filters.map(f => ({ field: f.field, operator: f.operator, value: f.value })),
+      sampleRow: rows[0]
+   });
+
    // BOLT OPTIMIZATION: Pre-process filters to use Sets for 'in' operator (O(1) lookup)
    const preparedFilters = filters.map(f => {
       if (f.operator === 'in' && Array.isArray(f.value)) {
@@ -16,7 +23,7 @@ export const applyPivotFilters = (rows: any[], filters: FilterRule[] | undefined
       return f;
    });
 
-   return rows.filter(row => {
+   const filteredRows = rows.filter(row => {
       return preparedFilters.every((filter: any) => {
          const rowVal = row[filter.field];
          const fieldUnit = dataset.fieldConfigs?.[filter.field]?.unit;
@@ -36,6 +43,13 @@ export const applyPivotFilters = (rows: any[], filters: FilterRule[] | undefined
          return true;
       });
    });
+
+   console.log('🔍 applyPivotFilters END:', {
+      filteredRows: filteredRows.length,
+      removedRows: rows.length - filteredRows.length
+   });
+
+   return filteredRows;
 };
 
 export const getEffectiveBatches = (batches: ImportBatch[], datasetId: string | undefined, dateRange: { start: string, end: string }) => {

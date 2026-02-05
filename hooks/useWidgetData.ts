@@ -88,7 +88,22 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
          }
 
          // Appliquer les filtres du TCD
+         console.log('📊 WIDGET FILTERS DEBUG:', {
+            hasFilters: !!pc.filters && pc.filters.length > 0,
+            filterCount: pc.filters?.length || 0,
+            filters: pc.filters,
+            baseRowsCount: baseRows.length,
+            datasetId: dataset?.id,
+            datasetName: dataset?.name
+         });
+
          let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
+
+         console.log('📊 WIDGET AFTER FILTERS:', {
+            workingRowsCount: workingRows.length,
+            firstRow: workingRows[0],
+            sampleFilteredOut: baseRows.find(r => !workingRows.includes(r))
+         });
 
          let pivotResult: any = null;
 
