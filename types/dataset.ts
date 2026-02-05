@@ -51,6 +51,22 @@ export interface EnrichmentConfig {
   newColumnName: string;
 }
 
+export interface DerivedDatasetConfig {
+  sourceDatasetId: string;
+  pivotConfig: {
+    rowFields: string[];
+    colFields: string[];
+    colGrouping: 'none' | 'year' | 'quarter' | 'month';
+    valField: string;
+    aggType: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
+    filters: any[];
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
+    showSubtotals: boolean;
+  };
+  flattenMode: 'rows' | 'pivot'; // 'rows' pour une ligne par cellule, 'pivot' pour garder la structure TCD
+}
+
 export interface Dataset {
   id: string;
   name: string;
@@ -59,6 +75,7 @@ export interface Dataset {
   calculatedFields?: CalculatedField[];
   enrichmentConfigs?: EnrichmentConfig[];
   createdAt: number;
+  derivedFrom?: DerivedDatasetConfig; // Si présent, ce Dataset est dérivé d'un autre
 }
 
 export interface ImportBatch {

@@ -32,7 +32,8 @@ import {
   sunburstDataToD3Hierarchy
 } from '../../logic/pivotToChart';
 import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
-import { useWidgets, useDatasets } from '../../context/DataContext';
+import { useWidgets, useDatasets, useBatches } from '../../context/DataContext';
+import { createDatasetFromPivot, generateDerivedBatch } from '../../logic/derivedDatasets';
 
 
 interface ChartModalProps {
@@ -56,9 +57,13 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const { addDashboardWidget } = useWidgets();
-  const { currentDatasetId } = useDatasets();
+  const { currentDatasetId, datasets, addDataset } = useDatasets();
+  const { batches, addBatch } = useBatches();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showCreateDatasetModal, setShowCreateDatasetModal] = useState(false);
+  const [newDatasetName, setNewDatasetName] = useState('');
+  const [flattenMode, setFlattenMode] = useState<'rows' | 'pivot'>('pivot');
 
   // Logs de debug
   console.log('=== ChartModal rendu ===');
@@ -717,6 +722,62 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       navigate('/dashboard');
     } catch (error) {
       console.error('Erreur lors de la création du widget:', error);
+    }
+  };
+
+  const handleCreateDataset = () => {
+    try {
+      if (!currentDatasetId || !newDatasetName.trim()) {
+        alert('Veuillez entrer un nom pour le nouveau Dataset');
+        return;
+      }
+
+      const sourceDataset = datasets.find(ds => ds.id === currentDatasetId);
+      if (!sourceDataset) {
+        console.error('Dataset source introuvable');
+        return;
+      }
+
+      // Créer le nouveau Dataset
+      const newDataset = createDatasetFromPivot(
+        sourceDataset,
+        pivotConfig,
+        pivotData,
+        {
+          name: newDatasetName.trim(),
+          flattenMode
+        }
+      );
+
+      // Trouver le batch actuel
+      const sourceBatch = batches.find(b =>
+        b.datasetId === currentDatasetId &&
+        (!selectedBatchId || b.id === selectedBatchId)
+      );
+
+      if (!sourceBatch) {
+        console.error('Batch source introuvable');
+        return;
+      }
+
+      // Générer le premier batch pour le nouveau Dataset
+      const newBatch = generateDerivedBatch(newDataset, sourceBatch, sourceDataset);
+
+      // Ajouter le Dataset et son batch
+      addDataset(newDataset);
+      addBatch(newBatch.datasetId, newBatch.date, newBatch.rows);
+
+      console.log('Dataset créé avec succès:', newDataset.name);
+      alert(`Dataset "${newDataset.name}" créé avec succès !`);
+
+      // Réinitialiser et fermer
+      setNewDatasetName('');
+      setShowCreateDatasetModal(false);
+      setShowExportMenu(false);
+      onClose();
+    } catch (error) {
+      console.error('Erreur lors de la création du Dataset:', error);
+      alert('Erreur lors de la création du Dataset. Consultez la console pour plus de détails.');
     }
   };
 
@@ -1542,9 +1603,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                   </button>
                   <button
                     onClick={handleExportXLSX}
-                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700"
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-slate-700 border-b border-slate-100"
                   >
                     XLSX (Excel)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCreateDatasetModal(true);
+                      setShowExportMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-brand-50 text-brand-600 font-semibold"
+                  >
+                    💾 Créer Dataset
                   </button>
                 </div>
               )}
@@ -1569,6 +1639,79 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal de création de Dataset */}
+      {showCreateDatasetModal && (
+        <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Créer un nouveau Dataset</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nom du Dataset
+                </label>
+                <input
+                  type="text"
+                  value={newDatasetName}
+                  onChange={(e) => setNewDatasetName(e.target.value)}
+                  placeholder="Ex: Données filtrées RGPD"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Format des données
+                </label>
+                <select
+                  value={flattenMode}
+                  onChange={(e) => setFlattenMode(e.target.value as 'rows' | 'pivot')}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="pivot">Tableau croisé (conserve la structure)</option>
+                  <option value="rows">Lignes plates (une ligne par cellule)</option>
+                </select>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800">
+                  <strong>Mode Tableau croisé :</strong> Les colonnes du TCD deviennent des colonnes du Dataset.
+                </p>
+                <p className="text-xs text-blue-800 mt-1">
+                  <strong>Mode Lignes plates :</strong> Chaque cellule du TCD devient une ligne avec les dimensions et la valeur.
+                </p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-800">
+                  ⚡ <strong>Mise à jour automatique :</strong> Ce Dataset sera automatiquement mis à jour quand le Dataset source recevra de nouvelles données.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateDatasetModal(false);
+                  setNewDatasetName('');
+                }}
+                className="flex-1 px-4 py-2 text-sm bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCreateDataset}
+                disabled={!newDatasetName.trim()}
+                className="flex-1 px-4 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Créer le Dataset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

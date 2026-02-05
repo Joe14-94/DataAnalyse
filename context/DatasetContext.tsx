@@ -8,6 +8,7 @@ interface DatasetContextType {
   currentDatasetId: string | null;
   switchDataset: (id: string) => void;
   createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
+  addDataset: (dataset: Dataset) => void;
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;

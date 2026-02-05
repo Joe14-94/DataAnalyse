@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } 
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, db, generateId, evaluateFormula } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
+import { updateDerivedDatasets } from '../logic/derivedDatasets';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
 import { BatchContext, useBatches } from './BatchContext';
@@ -170,6 +171,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDatasets(prev => [...prev, newDataset]);
     setCurrentDatasetId(newId);
     return newId;
+  }, []);
+
+  const addDataset = useCallback((dataset: Dataset) => {
+    setDatasets(prev => [...prev, dataset]);
+    setCurrentDatasetId(dataset.id);
   }, []);
 
   const updateDatasetName = useCallback((id: string, name: string) => {
@@ -390,7 +396,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now(),
       rows: processedRows
     };
-    setAllBatches(prev => [...prev, newBatch]);
+
+    // Générer automatiquement les batches des Datasets dérivés
+    const derivedBatches = dataset ? updateDerivedDatasets(datasetId, newBatch, datasets, dataset) : [];
+
+    // Ajouter le batch source et tous les batches dérivés
+    setAllBatches(prev => [...prev, newBatch, ...derivedBatches]);
+
+    if (derivedBatches.length > 0) {
+      console.log(`✅ ${derivedBatches.length} Dataset(s) dérivé(s) mis à jour automatiquement`);
+    }
   }, [datasets, batches]);
 
   const deleteBatch = useCallback((id: string) => {
@@ -709,7 +724,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
-                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
+                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, addDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState }}>
