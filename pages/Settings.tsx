@@ -464,7 +464,7 @@ export const Settings: React.FC = () => {
                                                             />
                                                             <button
                                                                onClick={saveChartEditing}
-                                                               className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200 shrink-0"
+                                                               className="bg-brand-100 text-brand-700 p-1.5 rounded hover:bg-brand-200 shrink-0"
                                                                title="Sauvegarder"
                                                             >
                                                                <Check className="w-4 h-4" />
@@ -550,7 +550,7 @@ export const Settings: React.FC = () => {
                                        variant="outline"
                                        size="sm"
                                        onClick={() => setShowAxisModal(true)}
-                                       className="text-green-600 border-green-200 hover:bg-green-50"
+                                       className="text-brand-600 border-brand-200 hover:bg-brand-50"
                                     >
                                        <Plus className="w-4 h-4 mr-2" />
                                        Nouvel axe
@@ -607,7 +607,7 @@ export const Settings: React.FC = () => {
                                        variant="outline"
                                        size="sm"
                                        onClick={() => setShowCalendarModal(true)}
-                                       className="text-green-600 border-green-200 hover:bg-green-50"
+                                       className="text-brand-600 border-brand-200 hover:bg-brand-50"
                                     >
                                        <Plus className="w-4 h-4 mr-2" />
                                        Nouvel exercice
@@ -677,7 +677,7 @@ export const Settings: React.FC = () => {
                                                       setMasterDataType(type as any);
                                                       setShowMasterDataModal(true);
                                                    }}
-                                                   className="text-green-600 hover:bg-green-50"
+                                                   className="text-brand-600 hover:bg-brand-50"
                                                 >
                                                    <Plus className="w-4 h-4 mr-1" />
                                                    Ajouter
@@ -790,7 +790,7 @@ export const Settings: React.FC = () => {
                                                       autoFocus
                                                       onKeyDown={(e) => { if (e.key === 'Enter') saveEditingAnalysis(); if (e.key === 'Escape') cancelEditingAnalysis(); }}
                                                    />
-                                                   <button onClick={saveEditingAnalysis} className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200" title="Sauvegarder">
+                                                   <button onClick={saveEditingAnalysis} className="bg-brand-100 text-brand-700 p-1.5 rounded hover:bg-brand-200" title="Sauvegarder">
                                                       <Check className="w-4 h-4" />
                                                    </button>
                                                    <button onClick={cancelEditingAnalysis} className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200" title="Annuler">
@@ -881,7 +881,7 @@ export const Settings: React.FC = () => {
                                                       autoFocus
                                                       onKeyDown={(e) => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing(); }}
                                                    />
-                                                   <button onClick={saveEditing} className="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200" title="Sauvegarder">
+                                                   <button onClick={saveEditing} className="bg-brand-100 text-brand-700 p-1.5 rounded hover:bg-brand-200" title="Sauvegarder">
                                                       <Check className="w-4 h-4" />
                                                    </button>
                                                    <button onClick={cancelEditing} className="bg-slate-100 text-slate-600 p-1.5 rounded hover:bg-slate-200" title="Annuler">

@@ -66,7 +66,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
           </Button>
           <Button
             onClick={handleConfirm}
-            className={mode === 'backup' ? 'bg-brand-600 hover:bg-brand-700 shadow-brand-200' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'}
+            className="bg-brand-600 hover:bg-brand-700 shadow-brand-200"
           >
             {mode === 'backup' ? (
               <><Download className="w-4 h-4 mr-2" /> Générer le fichier de sauvegarde</>
@@ -89,13 +89,13 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
               onClick={() => isAvailable && toggleKey(opt.key)}
               className={`relative p-4 rounded-lg border-2 transition-all cursor-pointer group ${
                 !isAvailable ? 'opacity-40 grayscale cursor-not-allowed border-border-default bg-canvas' :
-                isSelected ? (mode === 'backup' ? 'border-brand-500 bg-brand-50' : 'border-emerald-500 bg-emerald-50') :
+                isSelected ? 'border-brand-500 bg-brand-50' :
                 'border-border-default hover:border-txt-muted bg-surface'
               }`}
             >
               <div className="flex items-start gap-3">
                 <div className={`p-2 rounded-md ${
-                  isSelected ? (mode === 'backup' ? 'bg-brand-600 text-white' : 'bg-emerald-600 text-white') : 'bg-canvas text-txt-muted'
+                  isSelected ? 'bg-brand-600 text-white' : 'bg-canvas text-txt-muted'
                 }`}>
                   <Icon className="w-5 h-5" />
                 </div>
@@ -106,7 +106,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
                 {isAvailable && (
                   <div className="absolute top-4 right-4">
                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                       isSelected ? (mode === 'backup' ? 'bg-brand-600 border-brand-600' : 'bg-emerald-600 border-emerald-600') : 'border-border-default'
+                       isSelected ? 'bg-brand-600 border-brand-600' : 'border-border-default'
                      }`}>
                        {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />}
                      </div>

@@ -858,25 +858,25 @@ export const DataExplorer: React.FC = () => {
 
          {/* Formatting & Actions Toolbar */}
          <div className={`transition-all duration-300 overflow-hidden ${selectedCol ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="bg-white border border-teal-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-teal-50 flex flex-wrap items-start gap-4">
+            <div className="bg-white border border-brand-200 rounded-lg p-3 shadow-sm bg-gradient-to-r from-white to-brand-50 flex flex-wrap items-start gap-4">
 
                {/* LEFT: Renaming and Actions */}
                <div className="flex-1 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 border-b border-teal-100 pb-2 mb-2">
-                     <Columns className="w-4 h-4 text-teal-700" />
+                  <div className="flex items-center gap-2 border-b border-brand-100 pb-2 mb-2">
+                     <Columns className="w-4 h-4 text-brand-700" />
                      <div className="relative group">
-                        <input type="text" className="text-sm font-bold text-teal-800 bg-transparent border-b border-teal-300 focus:outline-none focus:border-teal-600 w-48" value={renamingValue} onChange={e => setRenamingValue(e.target.value)} placeholder={selectedCol || ''} />
+                        <input type="text" className="text-sm font-bold text-brand-800 bg-transparent border-b border-brand-300 focus:outline-none focus:border-brand-600 w-48" value={renamingValue} onChange={e => setRenamingValue(e.target.value)} placeholder={selectedCol || ''} />
                         {renamingValue !== selectedCol && (
-                           <button onClick={handleRenameColumn} className="absolute -right-16 top-0 text-xs bg-teal-600 text-white px-2 py-0.5 rounded hover:bg-teal-700 shadow-sm">Renommer</button>
+                           <button onClick={handleRenameColumn} className="absolute -right-16 top-0 text-xs bg-brand-600 text-white px-2 py-0.5 rounded hover:bg-brand-700 shadow-sm">Renommer</button>
                         )}
                      </div>
                   </div>
 
                   <div className="flex flex-wrap gap-3 items-center">
-                     <div className="flex items-center gap-2 pr-3 border-r border-teal-100">
+                     <div className="flex items-center gap-2 pr-3 border-r border-brand-100">
                         <span className="text-xs text-slate-600 font-medium whitespace-nowrap">Type :</span>
                         <select
-                           className="text-xs border border-slate-200 rounded py-1 px-2 bg-white focus:ring-1 focus:ring-teal-500"
+                           className="text-xs border border-slate-200 rounded py-1 px-2 bg-white focus:ring-1 focus:ring-brand-500"
                            value={selectedConfig?.type || 'text'}
                            onChange={(e) => handleFormatChange('type', e.target.value)}
                         >
@@ -899,7 +899,7 @@ export const DataExplorer: React.FC = () => {
                            </div>
                            <div className="flex items-center gap-2">
                               <span className="text-xs text-slate-600 font-medium">Échelle :</span>
-                              <select className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-teal-500" value={selectedConfig?.displayScale || 'none'} onChange={(e) => handleFormatChange('displayScale', e.target.value)}>
+                              <select className="text-xs border border-slate-200 rounded py-1 pl-2 pr-6 bg-white focus:ring-1 focus:ring-brand-500" value={selectedConfig?.displayScale || 'none'} onChange={(e) => handleFormatChange('displayScale', e.target.value)}>
                                  <option value="none">Aucune</option>
                                  <option value="thousands">Milliers (k)</option>
                                  <option value="millions">Millions (M)</option>
@@ -908,7 +908,7 @@ export const DataExplorer: React.FC = () => {
                            </div>
                            <div className="flex items-center gap-2">
                               <span className="text-xs text-slate-600 font-medium">Unité :</span>
-                              <input type="text" className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-teal-500" placeholder="Ex: €" value={selectedConfig?.unit || ''} onChange={(e) => handleFormatChange('unit', e.target.value)} />
+                              <input type="text" className="text-xs border border-slate-200 rounded w-16 px-2 py-1 bg-white focus:ring-1 focus:ring-brand-500" placeholder="Ex: €" value={selectedConfig?.unit || ''} onChange={(e) => handleFormatChange('unit', e.target.value)} />
                            </div>
                         </>
                      ) : (
@@ -929,7 +929,7 @@ export const DataExplorer: React.FC = () => {
                            </Button>
                         )}
                         <Button onClick={handleDeleteColumn} size="sm" className="bg-red-600 hover:bg-red-700 text-white border border-red-700 shadow-sm text-xs font-semibold"><Trash2 className="w-3 h-3 mr-1" /> Supprimer</Button>
-                        <Button onClick={() => setSelectedCol(null)} size="sm" className="bg-teal-600 text-white hover:bg-teal-700 shadow-sm text-xs">Terminer</Button>
+                        <Button onClick={() => setSelectedCol(null)} size="sm" className="bg-brand-600 text-white hover:bg-brand-700 shadow-sm text-xs">Terminer</Button>
                      </div>
                   </div>
                </div>
@@ -995,7 +995,7 @@ export const DataExplorer: React.FC = () => {
                            const defaultWidth = isNumeric ? 120 : 180;
                            const colWidth = columnWidths[field] || defaultWidth;
                            return (
-                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isSelected ? 'bg-teal-50 text-teal-900 border-teal-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100')} ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                              <th key={field} scope="col" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isSelected ? 'bg-brand-50 text-brand-900 border-brand-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100')} ${showColumnBorders ? 'border-r' : ''}`} onClick={() => handleHeaderClick(field)} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
                                  <div className="flex items-center gap-2 justify-between">
                                     <div className="flex items-center gap-2">
                                        {isNumeric && <Hash className="w-3 h-3 text-slate-400" />}
@@ -1233,10 +1233,10 @@ export const DataExplorer: React.FC = () => {
                <>
                   <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsVlookupDrawerOpen(false)} />
                   <div className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-slate-200">
-                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-teal-50/50">
+                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-brand-50/50">
                         <div>
                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                              <LinkIcon className="w-5 h-5 text-teal-600" /> RECHERCHEV (VLOOKUP)
+                              <LinkIcon className="w-5 h-5 text-brand-600" /> RECHERCHEV (VLOOKUP)
                            </h3>
                            <p className="text-sm text-slate-500">Enrichir avec des données d'une autre source</p>
                         </div>
@@ -1252,7 +1252,7 @@ export const DataExplorer: React.FC = () => {
                               1. Dataset source (où chercher les données)
                            </label>
                            <select
-                              className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                              className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-brand-500 focus:border-brand-500 text-sm"
                               value={vlookupConfig.targetDatasetId}
                               onChange={(e) => setVlookupConfig({ ...vlookupConfig, targetDatasetId: e.target.value, secondaryKey: '', columnsToAdd: [] })}
                            >
@@ -1271,7 +1271,7 @@ export const DataExplorer: React.FC = () => {
                                     2. Clé de jointure dans {currentDataset?.name}
                                  </label>
                                  <select
-                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-brand-500 focus:border-brand-500 text-sm"
                                     value={vlookupConfig.primaryKey}
                                     onChange={(e) => setVlookupConfig({ ...vlookupConfig, primaryKey: e.target.value })}
                                  >
@@ -1287,7 +1287,7 @@ export const DataExplorer: React.FC = () => {
                                     3. Clé de jointure dans {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.name}
                                  </label>
                                  <select
-                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-brand-500 focus:border-brand-500 text-sm"
                                     value={vlookupConfig.secondaryKey}
                                     onChange={(e) => setVlookupConfig({ ...vlookupConfig, secondaryKey: e.target.value })}
                                  >
@@ -1320,14 +1320,14 @@ export const DataExplorer: React.FC = () => {
                                                    setVlookupConfig({ ...vlookupConfig, columnsToAdd: vlookupConfig.columnsToAdd.filter(c => c !== f) });
                                                 }
                                              }}
-                                             className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                                           />
                                           <span className="text-sm text-slate-700">{f}</span>
                                        </label>
                                     ))}
                                  </div>
                                  {vlookupConfig.columnsToAdd.length > 0 && (
-                                    <div className="mt-2 text-xs text-teal-600 font-medium">
+                                       <div className="mt-2 text-xs text-brand-600 font-medium">
                                        {vlookupConfig.columnsToAdd.length} colonne(s) sélectionnée(s)
                                     </div>
                                  )}
@@ -1339,7 +1339,7 @@ export const DataExplorer: React.FC = () => {
                                  </label>
                                  <input
                                     type="text"
-                                    className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-teal-500 focus:border-teal-500 text-sm"
+                                       className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-brand-500 focus:border-brand-500 text-sm"
                                     placeholder="Ex: Informations Client"
                                     value={vlookupConfig.newColumnName}
                                     onChange={(e) => setVlookupConfig({ ...vlookupConfig, newColumnName: e.target.value })}
@@ -1371,7 +1371,7 @@ export const DataExplorer: React.FC = () => {
                         <Button
                            onClick={handleApplyVlookup}
                            disabled={!vlookupConfig.targetDatasetId || !vlookupConfig.primaryKey || !vlookupConfig.secondaryKey || vlookupConfig.columnsToAdd.length === 0 || !vlookupConfig.newColumnName.trim()}
-                           className="bg-teal-600 hover:bg-teal-700"
+                           className="bg-brand-600 hover:bg-brand-700"
                         >
                            Enrichir les données
                         </Button>
