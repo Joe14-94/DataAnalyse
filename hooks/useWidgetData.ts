@@ -157,7 +157,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                }
             });
 
-            const dateColumn = detectDateColumn(dataset.fields || []) || 'Date écriture';
+            const dateColumn = detectDateColumn(dataset?.fields || []) || 'Date écriture';
             const { results } = calculateTemporalComparison(sourceDataMap, {
                ...tc,
                groupByFields: pc.rowFields,
@@ -182,9 +182,9 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
                // Construire les métriques en s'assurant que toutes les sources sont représentées
                const metrics: Record<string, number> = {};
-               effectiveSources.forEach((s: any) => {
+            (effectiveSources || []).forEach((s: any) => {
                   const label = colHeaders[effectiveSources.indexOf(s)];
-                  metrics[label] = (r.values && typeof r.values[s.id] === 'number') ? r.values[s.id] : 0;
+               metrics[label] = (r.values && typeof r.values?.[s.id] === 'number') ? r.values[s.id] : 0;
                });
 
                return {

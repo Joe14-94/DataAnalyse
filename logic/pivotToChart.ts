@@ -82,10 +82,10 @@ export const detectBestChartType = (
   result: PivotResult
 ): ChartType => {
   const { rowFields, colFields, colGrouping, aggType } = config;
-  const hasMultipleCols = colFields.length > 0;
+  const hasMultipleCols = (colFields || []).length > 0;
   const isTemporal = colGrouping !== 'none';
-  const dataRowsCount = result.displayRows.filter(r => r.type === 'data').length;
-  const hasHierarchy = rowFields.length > 1;
+  const dataRowsCount = (result?.displayRows || []).filter(r => r.type === 'data').length;
+  const hasHierarchy = (rowFields || []).length > 1;
 
   // Cas 1 : Données temporelles avec colonnes multiples → Line Chart
   if (isTemporal && hasMultipleCols) {
@@ -131,11 +131,11 @@ export const generateChartMetadata = (
   const { rowFields, colFields, colGrouping, valField, aggType } = config;
 
   // Utiliser result.colHeaders pour détecter multi-séries (fonctionne en mode temporel)
-  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const seriesHeaders = (result?.colHeaders || []).filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const isMultiSeries = seriesHeaders.length > 1;
   const hasTemporalData = colGrouping !== 'none';
-  const hasHierarchy = rowFields.length > 1;
-  const dataRows = result.displayRows.filter(r => r.type === 'data');
+  const hasHierarchy = (rowFields || []).length > 1;
+  const dataRows = (result?.displayRows || []).filter(r => r.type === 'data');
 
   // Noms des séries pour graphiques multi-séries
   const seriesNames = isMultiSeries

@@ -177,22 +177,22 @@ export const PivotTable: React.FC = () => {
     // --- HELPERS ---
     const allAvailableFields = useMemo(() => {
         if (!primaryDataset) return [];
-        return [...(primaryDataset.fields || []), ...(primaryDataset.calculatedFields || []).map(cf => cf.name)];
+        return [...(primaryDataset?.fields || []), ...(primaryDataset?.calculatedFields || []).map(cf => cf.name)];
     }, [primaryDataset]);
 
     const usedFields = useMemo(() => {
         const used = new Set<string>();
-        rowFields.forEach(f => used.add(f));
-        colFields.forEach(f => used.add(f));
+        (rowFields || []).forEach(f => used.add(f));
+        (colFields || []).forEach(f => used.add(f));
         if (valField) used.add(valField);
-        metrics.forEach(m => used.add(m.field));
-        filters.forEach(f => used.add(f.field));
+        (metrics || []).forEach(m => used.add(m.field));
+        (filters || []).forEach(f => used.add(f.field));
         return used;
     }, [rowFields, colFields, valField, metrics, filters]);
 
     const groupedFields = useMemo(() => {
         return (sources || []).map(src => {
-            const ds = datasets.find(d => d.id === src.datasetId);
+            const ds = (datasets || []).find(d => d.id === src.datasetId);
             if (!ds) return null;
             const prefix = src.isPrimary ? '' : `[${ds.name}] `;
             const fields = [...(ds.fields || []), ...(ds.calculatedFields || []).map(cf => cf.name)].map(f => `${prefix}${f}`);

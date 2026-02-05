@@ -102,7 +102,7 @@ export const usePivotData = ({
            return;
        }
 
-       if (rowFields.length === 0 || !valField || temporalConfig.sources.length < 2) {
+       if (rowFields.length === 0 || !valField || (temporalConfig?.sources?.length || 0) < 2) {
            setTemporalResults([]);
            return;
        }
@@ -140,7 +140,7 @@ export const usePivotData = ({
                }
            });
 
-           const dateColumn = detectDateColumn(primaryDataset.fields || []) || 'Date écriture';
+           const dateColumn = detectDateColumn(primaryDataset?.fields || []) || 'Date écriture';
            const validAggType = aggType === 'list' ? 'sum' : aggType;
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,

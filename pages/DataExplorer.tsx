@@ -108,7 +108,7 @@ export const DataExplorer: React.FC = () => {
 
    // Initialize tracking key
    useEffect(() => {
-      if (currentDataset && currentDataset.fields.length > 0 && !trackingKey) {
+      if (currentDataset && (currentDataset?.fields?.length || 0) > 0 && !trackingKey) {
          const candidates = ['email', 'id', 'reference', 'ref', 'code', 'matricule', 'nom'];
          const found = currentDataset.fields.find(f => candidates.includes(f.toLowerCase()));
          setTrackingKey(found || currentDataset.fields[0]);
@@ -116,7 +116,7 @@ export const DataExplorer: React.FC = () => {
    }, [currentDataset]);
 
    useEffect(() => {
-      if (currentDataset && !selectedFormatCol) {
+      if (currentDataset && !selectedFormatCol && currentDataset?.fields?.length > 0) {
          setSelectedFormatCol(currentDataset.fields[0]);
       }
    }, [currentDataset]);

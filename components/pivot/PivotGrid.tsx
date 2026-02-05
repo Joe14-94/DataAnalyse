@@ -159,7 +159,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                   <thead className="sticky top-0 z-30 shadow-sm">
                      <tr className="bg-slate-50">
-                        {rowFields.map((field: string, idx: number) => {
+                        {(rowFields || []).map((field: string, idx: number) => {
                            const displayLabel = columnLabels[`group_${field}`] || field;
                            const isEditing = editingColumn === `group_${field}`;
                            const widthId = `group_${field}`;
@@ -205,7 +205,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               </th>
                            );
                         })}
-                        {temporalConfig.sources.map((source: any) => {
+                        {(temporalConfig?.sources || []).map((source: any) => {
                            const width = columnWidths[source.id] || 120;
                            const headerStyle = getCellFormatting([], source.id, undefined, source.label, 'data');
                            return (
@@ -275,7 +275,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     );
                                  });
                               })()}
-                              {temporalConfig.sources.map((source: any) => {
+                              {(temporalConfig?.sources || []).map((source: any) => {
                                  const value = result.values[source.id] || 0;
                                  const delta = result.deltas[source.id];
                                  const width = columnWidths[source.id] || 120;
@@ -360,7 +360,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  </th>
                               );
                            })}
-                           {pivotData.colHeaders.map((col: string) => {
+                           {(pivotData?.colHeaders || []).map((col: string) => {
                               const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
                               let displayLabel = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(colLabel);
                               if (metricLabel && !isDiff && !isPct && colLabel === 'ALL') displayLabel = metricLabel;
@@ -443,7 +443,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const row = pivotData.displayRows[virtualRow.index];
                            return (
                               <tr key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
-                                 {rowFields.map((field, cIdx) => {
+                                 {(rowFields || []).map((field, cIdx) => {
                                     const width = columnWidths[`row_${field}`] || 150;
                                     const left = rowFields.slice(0, cIdx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
                                     const headerStyle = getCellFormatting(row.keys, '', undefined, '', row.type);
@@ -485,7 +485,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        </td>
                                     );
                                  })}
-                                 {pivotData.colHeaders.map((col: string) => {
+                                 {(pivotData?.colHeaders || []).map((col: string) => {
                                     const width = columnWidths[col] || 120;
                                     const val = row.metrics[col];
                                     const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
