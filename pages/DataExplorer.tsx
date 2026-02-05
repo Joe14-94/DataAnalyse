@@ -422,7 +422,7 @@ export const DataExplorer: React.FC = () => {
          .flatMap(batch => batch.rows.map(r => {
             const extendedRow: any = { ...r, _importDate: batch.date, _batchId: batch.id };
             calcFields.forEach(cf => {
-               const val = evaluateFormula(r, cf.formula);
+               const val = evaluateFormula(r, cf.formula, cf.outputType);
                extendedRow[cf.name] = val;
             });
             return extendedRow;
@@ -680,7 +680,22 @@ export const DataExplorer: React.FC = () => {
    const calculatedFields = currentDataset.calculatedFields || [];
    const activeBatchFilter = columnFilters['_batchId'] ? columnFilters['_batchId'].replace(/^=/, '') : null;
    const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
-   const selectedConfig = selectedCol ? currentDataset.fieldConfigs?.[selectedCol] : null;
+
+   const selectedConfig = useMemo(() => {
+      if (!selectedCol || !currentDataset) return null;
+      const config = currentDataset.fieldConfigs?.[selectedCol];
+      if (config) return config;
+
+      const calcField = calculatedFields.find(f => f.name === selectedCol);
+      if (calcField) {
+         return {
+            type: calcField.outputType,
+            unit: calcField.unit
+         } as FieldConfig;
+      }
+      return null;
+   }, [selectedCol, currentDataset, calculatedFields]);
+
    const isSelectedNumeric = selectedConfig?.type === 'number';
 
    return (
@@ -1124,10 +1139,21 @@ export const DataExplorer: React.FC = () => {
                                  const val = row[cf.name];
                                  const cellStyle = getCellStyle(cf.name, val);
                                  const colWidth = columnWidths[cf.name] || 150;
-                                 const config = currentDataset.fieldConfigs?.[cf.name] || { type: 'number', unit: cf.unit };
+                                 const config = currentDataset.fieldConfigs?.[cf.name] || { type: cf.outputType || 'number', unit: cf.unit };
+                                 const isNumeric = config.type === 'number';
+
+                                 let displayVal: React.ReactNode = val;
+                                 if (isNumeric && val !== undefined && val !== null && val !== '') {
+                                    displayVal = formatNumberValue(val, config);
+                                 } else if (config.type === 'boolean') {
+                                    displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
+                                 } else if (!val && val !== 0) {
+                                    displayVal = <span className="text-indigo-200">-</span>;
+                                 }
+
                                  return (
-                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 text-right font-mono ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
-                                       {val !== undefined && val !== null ? <span>{formatNumberValue(val, config)}</span> : <span className="text-indigo-200">-</span>}
+                                    <td key={cf.id} className={`px-3 py-1 whitespace-nowrap text-sm text-indigo-700 font-medium truncate bg-indigo-50/30 ${isNumeric ? 'text-right font-mono' : ''} ${cellStyle} ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ width: colWidth, minWidth: 80, maxWidth: colWidth }}>
+                                       {displayVal}
                                     </td>
                                  );
                               })}
