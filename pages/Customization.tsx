@@ -64,7 +64,7 @@ export const Customization: React.FC = () => {
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Theme Selection */}
                   <div className="space-y-3">
-                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-[10px]">Thème de l'interface</label>
+                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-xs">Thème de l'interface</label>
                      <div className="grid grid-cols-2 gap-2">
                         {[
                            { id: 'light', name: 'Clair' },
@@ -84,7 +84,7 @@ export const Customization: React.FC = () => {
 
                   {/* Style Selection */}
                   <div className="space-y-3">
-                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-[10px]">Style visuel</label>
+                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-xs">Style visuel</label>
                      <div className="grid grid-cols-3 gap-2">
                         {[
                            { id: 'classic', name: 'Classique' },
@@ -105,7 +105,7 @@ export const Customization: React.FC = () => {
 
                {/* Color Ambiance */}
                <div className="space-y-3">
-                  <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-[10px]">Ambiance colorimétrique (Palette)</label>
+                  <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-xs">Ambiance colorimétrique (Palette)</label>
                   <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-3">
                      {[
                         { id: 'blue', color: '#2563eb', name: 'Océan' },
@@ -127,7 +127,7 @@ export const Customization: React.FC = () => {
                               className="w-10 h-10 rounded-full shadow-md border-2 border-white transition-transform group-hover:scale-110"
                               style={{ backgroundColor: p.color }}
                            />
-                           <span className={`text-[9px] font-bold uppercase tracking-tight text-center ${uiPrefs.colorPalette === p.id ? 'text-brand-700' : 'text-txt-muted'}`}>
+                           <span className={`text-xs font-bold uppercase tracking-tight text-center ${uiPrefs.colorPalette === p.id ? 'text-brand-700' : 'text-txt-muted'}`}>
                               {p.name}
                            </span>
                         </button>
@@ -139,7 +139,7 @@ export const Customization: React.FC = () => {
                   {/* Font Size */}
                   <div className="space-y-4">
                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-bold text-txt-main flex items-center gap-2 uppercase tracking-wider text-[10px]">
+                        <label className="text-sm font-bold text-txt-main flex items-center gap-2 uppercase tracking-wider text-xs">
                            <Type className="w-4 h-4 text-txt-muted" /> Taille de police
                         </label>
                         <span className="text-xs font-mono bg-canvas px-2 py-1 rounded text-txt-secondary">{uiPrefs.fontSize}px</span>
@@ -153,7 +153,7 @@ export const Customization: React.FC = () => {
                         onChange={(e) => updateUIPrefs({ fontSize: parseInt(e.target.value) })}
                         className="w-full h-2 bg-border-default rounded-lg appearance-none cursor-pointer accent-brand-600"
                      />
-                     <div className="flex justify-between text-[10px] text-txt-muted font-bold uppercase">
+                     <div className="flex justify-between text-xs text-txt-muted font-bold uppercase">
                         <span>Minuscule</span>
                         <span>Large</span>
                      </div>
@@ -162,7 +162,7 @@ export const Customization: React.FC = () => {
                   {/* Sidebar Width */}
                   <div className="space-y-4">
                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-bold text-txt-main flex items-center gap-2 uppercase tracking-wider text-[10px]">
+                        <label className="text-sm font-bold text-txt-main flex items-center gap-2 uppercase tracking-wider text-xs">
                            <LayoutIcon className="w-4 h-4 text-txt-muted" /> Largeur du menu
                         </label>
                         <span className="text-xs font-mono bg-canvas px-2 py-1 rounded text-txt-secondary">{uiPrefs.sidebarWidth}px</span>
@@ -176,7 +176,7 @@ export const Customization: React.FC = () => {
                         onChange={(e) => updateUIPrefs({ sidebarWidth: parseInt(e.target.value) })}
                         className="w-full h-2 bg-border-default rounded-lg appearance-none cursor-pointer accent-brand-600"
                      />
-                     <div className="flex justify-between text-[10px] text-txt-muted font-bold uppercase">
+                     <div className="flex justify-between text-xs text-txt-muted font-bold uppercase">
                         <span>Étroit</span>
                         <span>Large</span>
                      </div>
@@ -186,7 +186,7 @@ export const Customization: React.FC = () => {
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Font Family */}
                   <div className="space-y-3">
-                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-[10px]">Identité visuelle (Police)</label>
+                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-xs">Identité visuelle (Police)</label>
                      <div className="grid grid-cols-2 gap-2">
                         {[
                            { id: 'inter', name: 'Inter (Pro)', fontClass: 'font-inter' },
@@ -200,7 +200,7 @@ export const Customization: React.FC = () => {
                               className={`p-3 text-left border rounded-lg transition-all ${uiPrefs.fontFamily === f.id ? 'border-brand-600 bg-brand-50' : 'border-border-default hover:border-border-default bg-surface'}`}
                            >
                               <div className={`text-sm font-bold ${f.fontClass} truncate ${uiPrefs.fontFamily === f.id ? 'text-brand-700' : 'text-txt-main'}`}>{f.name}</div>
-                              <div className="text-[10px] text-txt-muted mt-0.5">Interface complète</div>
+                              <div className="text-xs text-txt-muted mt-0.5">Interface complète</div>
                            </button>
                         ))}
                      </div>
@@ -208,7 +208,7 @@ export const Customization: React.FC = () => {
 
                   {/* Density / Presets */}
                   <div className="space-y-3">
-                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-[10px]">Densité d'affichage</label>
+                     <label className="text-sm font-bold text-txt-main block uppercase tracking-wider text-xs">Densité d'affichage</label>
                      <div className="space-y-2">
                         {[
                            { id: 'ultra', name: 'Mode Expert', desc: 'Densité maximale pour TCD massifs', size: 10, sw: 160 },
@@ -225,7 +225,7 @@ export const Customization: React.FC = () => {
                               </div>
                               <div className="flex-1">
                                  <div className={`text-xs font-bold ${uiPrefs.density === p.id ? 'text-brand-700' : 'text-txt-main'}`}>{p.name}</div>
-                                 <div className="text-[10px] text-txt-muted font-medium">{p.desc}</div>
+                                 <div className="text-xs text-txt-muted font-medium">{p.desc}</div>
                               </div>
                               {uiPrefs.density === p.id && <Check className="w-4 h-4 text-brand-600" />}
                            </button>

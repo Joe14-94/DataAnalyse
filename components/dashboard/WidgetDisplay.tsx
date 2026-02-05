@@ -242,12 +242,12 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
             {items.map((item: any) => (
                <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
                   <div className="mb-2">
-                     <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1 truncate" title={item.label}>{item.label}</h5>
+                     <h5 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-1 truncate" title={item.label}>{item.label}</h5>
                      <div className="h-0.5 w-6 bg-emerald-500 rounded-full"></div>
                   </div>
                   <div className="text-xl font-black text-slate-800 tracking-tight font-mono truncate">{item.value}</div>
                   <div className="mt-2 pt-2 border-t border-slate-200/50">
-                     <p className="text-[8px] text-slate-400 italic truncate">{item.rowPath[item.rowPath.length-1]} | {item.colLabel}</p>
+                     <p className="text-xs text-slate-400 italic truncate">{item.rowPath[item.rowPath.length-1]} | {item.colLabel}</p>
                   </div>
                </div>
             ))}

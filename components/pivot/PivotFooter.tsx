@@ -112,7 +112,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                               </td>
                               {showVariations && source.id !== temporalConfig.referenceSourceId && (
                                  <td
-                                    className={`px-2 py-2 text-right text-[10px] font-bold border-r border-slate-200 truncate ${deltaValue > 0 ? 'text-green-600' : deltaValue < 0 ? 'text-red-600' : 'text-slate-400'}`}
+                                    className={`px-2 py-2 text-right text-xs font-bold border-r border-slate-200 truncate ${deltaValue > 0 ? 'text-green-600' : deltaValue < 0 ? 'text-red-600' : 'text-slate-400'}`}
                                     style={{ width: 60, minWidth: 60, maxWidth: 60 }}
                                  >
                                     {temporalConfig.deltaFormat === 'percentage'
@@ -188,7 +188,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                  const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === label);
                                  const metricStyle = getCellStyle([], 'Total', v, label, styleRules, conditionalRules, 'grandTotal');
                                  return (
-                                    <div key={idx} className="text-[9px] whitespace-nowrap" style={metricStyle}>
+                                    <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}>
                                        <span className="text-slate-500 font-medium mr-1">{label}:</span>
                                        <span className="font-bold text-black">{formatOutput(v, metric)}</span>
                                     </div>

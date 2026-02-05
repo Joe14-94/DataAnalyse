@@ -112,7 +112,7 @@ export const Help: React.FC = () => {
                     <div className="w-full bg-brand-800 rounded-full h-1">
                       <div className="bg-emerald-400 h-1 rounded-full w-full"></div>
                     </div>
-                    <p className="text-[10px] text-brand-200 leading-relaxed mt-4">
+                    <p className="text-xs text-brand-200 leading-relaxed mt-4">
                       Toutes vos analyses sont stockées dans le cache de votre navigateur. Aucune donnée n'est envoyée sur un serveur.
                     </p>
                     <div className="text-xs bg-white/10 p-3 rounded-lg border border-white/10 mt-4">
@@ -162,14 +162,14 @@ export const Help: React.FC = () => {
                     Le coeur de DataScope. Faites glisser vos champs pour construire vos analyses.
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2 bg-slate-50 rounded border border-slate-100 text-[10px] text-slate-600">
+                    <div className="p-2 bg-slate-50 rounded border border-slate-100 text-xs text-slate-600">
                       <strong>Lignes/Cols :</strong> Dimensions d'analyse
                     </div>
-                    <div className="p-2 bg-slate-50 rounded border border-slate-100 text-[10px] text-slate-600">
+                    <div className="p-2 bg-slate-50 rounded border border-slate-100 text-xs text-slate-600">
                       <strong>Valeurs :</strong> Métriques calculées
                     </div>
                   </div>
-                  <p className="text-[10px] text-brand-600 font-bold italic">
+                  <p className="text-xs text-brand-600 font-bold italic">
                     Astuce : Cliquez sur un chiffre pour voir le détail des lignes (Drill-down).
                   </p>
                 </div>
@@ -242,7 +242,7 @@ export const Help: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <h4 className="font-bold text-xs text-slate-800 mb-2">Arithmétique & Logique</h4>
-                    <ul className="text-[10px] text-slate-500 space-y-1">
+                    <ul className="text-xs text-slate-500 space-y-1">
                       <li><code>+ , - , * , /</code> : Opérations de base</li>
                       <li><code>SI(condition; vrai; faux)</code> : Test logique</li>
                       <li><code>ET(c1; c2) , OU(c1; c2)</code> : Combinaisons</li>
@@ -250,7 +250,7 @@ export const Help: React.FC = () => {
                   </div>
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <h4 className="font-bold text-xs text-slate-800 mb-2">Agrégations</h4>
-                    <ul className="text-[10px] text-slate-500 space-y-1">
+                    <ul className="text-xs text-slate-500 space-y-1">
                       <li><code>SOMME()</code> : Total d'un champ</li>
                       <li><code>MOYENNE()</code> : Valeur moyenne</li>
                       <li><code>NB()</code> : Nombre d'occurrences</li>

@@ -277,7 +277,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                     <Input
                                        value={tempWidget.config?.gradientStart || '#3b82f6'}
                                        onChange={e => updateConfig({ gradientStart: e.target.value })}
-                                       className="font-mono text-[10px] px-1 h-8"
+                                       className="font-mono text-xs px-1 h-8"
                                     />
                                  </div>
                               </div>
@@ -293,7 +293,7 @@ export const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
                                     <Input
                                        value={tempWidget.config?.gradientEnd || '#ef4444'}
                                        onChange={e => updateConfig({ gradientEnd: e.target.value })}
-                                       className="font-mono text-[10px] px-1 h-8"
+                                       className="font-mono text-xs px-1 h-8"
                                     />
                                  </div>
                               </div>

@@ -155,7 +155,7 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
         return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
       })
       .attr("dy", "0.35em")
-      .attr("class", "text-[10px] fill-white font-medium drop-shadow-md")
+      .attr("class", "text-xs fill-white font-medium drop-shadow-md")
       .text(d => {
         return d.data.name.length > 15 ? d.data.name.substring(0, 12) + '...' : d.data.name;
       });

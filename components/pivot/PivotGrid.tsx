@@ -186,7 +186,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                              type="text"
                                              value={columnLabels[`group_${field}`] || field}
                                              autoFocus
-                                             className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
+                                             className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                              onClick={(e) => e.stopPropagation()}
                                              onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value }))}
                                              onBlur={() => setEditingColumn(null)}
@@ -225,7 +225,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 type="text"
                                                 value={columnLabels[source.id] || source.label}
                                                 autoFocus
-                                                className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
+                                                className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
@@ -285,7 +285,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  return (
                                     <React.Fragment key={source.id}>
                                        <td
-                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
+                                          className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
                                           style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
                                           onClick={() => {
                                              if (isSelectionMode) {
@@ -298,7 +298,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           {formatCurrency(value)}
                                        </td>
                                        {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                          <td className={`px-2 py-1 text-[10px] text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
+                                          <td className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
                                              {temporalConfig.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatCurrency(delta.value) : '-')}
                                           </td>
                                        )}
@@ -341,7 +341,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 type="text"
                                                 value={columnLabels[`row_${field}`] || field}
                                                 autoFocus
-                                                className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
+                                                className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
@@ -390,7 +390,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 type="text"
                                                 value={columnLabels[col] || displayLabel}
                                                 autoFocus
-                                                className="w-full px-1 py-0.5 text-[10px] border border-brand-300 rounded text-slate-900"
+                                                className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
@@ -506,7 +506,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     return (
                                        <td
                                           key={col}
-                                          className={`px-2 py-1 text-[10px] text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
+                                          className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
                                        style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
                                           onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
                                        >
@@ -534,7 +534,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === label);
                                                 const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type);
                                                 return (
-                                                   <div key={idx} className="text-[9px] whitespace-nowrap" style={metricStyle}>
+                                                   <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}>
                                                       <span className="text-slate-400 font-medium mr-1">{label}:</span>
                                                       <span className="font-bold text-slate-800">{formatOutput(v, metric)}</span>
                                                    </div>
@@ -542,7 +542,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                              })}
                                           </div>
                                        ) : (
-                                          <span className="text-[10px] font-bold text-slate-800">{formatOutput(row.rowTotal, metrics[0])}</span>
+                                          <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, metrics[0])}</span>
                                        )}
                                     </td>
                                  )}

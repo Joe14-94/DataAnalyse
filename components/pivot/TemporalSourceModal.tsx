@@ -198,7 +198,7 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                             </div>
                         </div>
 
-                        <p className="mt-3 text-[10px] text-slate-500 italic">
+                        <p className="mt-3 text-xs text-slate-500 italic">
                             {comparisonMode === 'ytd'
                                 ? "Compare les données du 1er janvier jusqu'au mois sélectionné."
                                 : "Compare uniquement les données du mois sélectionné."}
