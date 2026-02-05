@@ -444,7 +444,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const { isTemporal, config } = derivedDataset.sourcePivotConfig!;
                 let derivedRows: DataRow[] = [];
 
-                if (isTemporal) {
+                if (isTemporal && config.sources) {
                     const sourceDataMap = new Map<string, DataRow[]>();
                     config.sources.forEach((source: any) => {
                         // Find latest batch for this dataset
@@ -459,7 +459,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                     const { results } = calculateTemporalComparison(sourceDataMap, config, dateColumn, false, config.filters || []);
                     derivedRows = temporalResultToRows(results, config.groupByFields || [], config);
-                } else {
+                } else if (config) {
                     const primarySource = config.sources?.find((s: any) => s.isPrimary) || { datasetId: config.currentDataset?.id, isPrimary: true };
                     const primaryDS = datasets.find(d => d.id === primarySource.datasetId);
 

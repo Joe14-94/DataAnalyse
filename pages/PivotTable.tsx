@@ -191,11 +191,11 @@ export const PivotTable: React.FC = () => {
     }, [rowFields, colFields, valField, metrics, filters]);
 
     const groupedFields = useMemo(() => {
-        return sources.map(src => {
+        return (sources || []).map(src => {
             const ds = datasets.find(d => d.id === src.datasetId);
             if (!ds) return null;
             const prefix = src.isPrimary ? '' : `[${ds.name}] `;
-            const fields = [...ds.fields, ...(ds.calculatedFields || []).map(cf => cf.name)].map(f => `${prefix}${f}`);
+            const fields = [...(ds.fields || []), ...(ds.calculatedFields || []).map(cf => cf.name)].map(f => `${prefix}${f}`);
             return { id: src.id, name: ds.name, isPrimary: src.isPrimary, fields, color: src.color };
         }).filter(Boolean);
     }, [sources, datasets]);
@@ -699,7 +699,7 @@ export const PivotTable: React.FC = () => {
         let rows: any[] = [];
 
         if (isTemporalMode && temporalConfig) {
-            fields = [...(temporalConfig.groupByFields || []), ...temporalConfig.sources.map(s => s.label)];
+            fields = [...(temporalConfig.groupByFields || []), ...(temporalConfig.sources || []).map((s: any) => s.label)];
             rows = temporalResultToRows(temporalResults, temporalConfig.groupByFields || [], temporalConfig);
             createDerivedDataset(name, true, temporalConfig, fields, rows);
         } else if (pivotData) {
@@ -719,8 +719,8 @@ export const PivotTable: React.FC = () => {
 
     const chartPivotData = useMemo(() => {
         if (isTemporalMode && temporalConfig) {
-            const colHeaders = temporalConfig.sources.map((s: any) => s.label);
-            const displayRows = temporalResults.map(r => {
+            const colHeaders = (temporalConfig.sources || []).map((s: any) => s.label);
+            const displayRows = (temporalResults || []).map(r => {
                 const keys = r.groupLabel.split('\x1F');
                 return {
                     type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
@@ -853,7 +853,7 @@ export const PivotTable: React.FC = () => {
                 metrics={metrics}
                 rowFields={rowFields}
                 colFields={colFields}
-                additionalLabels={isTemporalMode ? temporalConfig?.sources.map(s => s.label) : []}
+                additionalLabels={isTemporalMode ? (temporalConfig?.sources || []).map((s: any) => s.label) : []}
                 onStartSelection={(ruleId, type) => {
                     setFormattingSelectionRule({ id: ruleId, type });
                     setIsFormattingModalOpen(false);
