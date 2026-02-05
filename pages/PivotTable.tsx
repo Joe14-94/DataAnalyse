@@ -15,6 +15,8 @@ import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
 import { SpecificDashboardModal } from '../components/pivot/SpecificDashboardModal';
+import { SaveAsDatasetModal } from '../components/pivot/SaveAsDatasetModal';
+import { pivotResultToRows, temporalResultToRows } from '../utils/pivotToDataset';
 import { detectDateColumn, formatCurrency, formatPercentage } from '../utils/temporalComparison';
 
 import { usePivotData } from '../hooks/usePivotData';
@@ -31,7 +33,7 @@ export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, currentDatasetId, switchDataset, datasets, savedAnalyses, saveAnalysis,
         lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField,
-        removeCalculatedField, updateCalculatedField, addDashboardWidget
+        removeCalculatedField, updateCalculatedField, addDashboardWidget, createDerivedDataset
     } = useData();
     const navigate = useNavigate();
 
@@ -67,6 +69,7 @@ export const PivotTable: React.FC = () => {
     const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
     const [isQuickChartModalOpen, setIsQuickChartModalOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [isSaveAsDatasetModalOpen, setIsSaveAsDatasetModalOpen] = useState(false);
     const [formattingSelectionRule, setFormattingSelectionRule] = useState<{id: string, type: 'style' | 'conditional'} | null>(null);
     const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
     const [editingCalcField, setEditingCalcField] = useState<CalculatedField | null>(null);
@@ -689,6 +692,31 @@ export const PivotTable: React.FC = () => {
         }
     };
 
+    const handleSaveAsDataset = (name: string) => {
+        if (!primaryDataset) return;
+
+        let fields: string[] = [];
+        let rows: any[] = [];
+
+        if (isTemporalMode && temporalConfig) {
+            fields = [...(temporalConfig.groupByFields || []), ...temporalConfig.sources.map(s => s.label)];
+            rows = temporalResultToRows(temporalResults, temporalConfig.groupByFields || [], temporalConfig);
+            createDerivedDataset(name, true, temporalConfig, fields, rows);
+        } else if (pivotData) {
+            fields = [...rowFields, ...pivotData.colHeaders];
+            rows = pivotResultToRows(pivotData, rowFields);
+
+            const config = {
+                sources, rowFields, colFields, colGrouping, valField, aggType, metrics, filters,
+                sortBy, sortOrder, showVariations
+            };
+            createDerivedDataset(name, false, config, fields, rows);
+        }
+
+        alert(`Le Dataset "${name}" a été créé avec succès.`);
+        navigate('/data');
+    };
+
     const chartPivotData = useMemo(() => {
         if (isTemporalMode && temporalConfig) {
             const colHeaders = temporalConfig.sources.map((s: any) => s.label);
@@ -721,6 +749,7 @@ export const PivotTable: React.FC = () => {
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
                openFormattingModal={() => setIsFormattingModalOpen(true)}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
+               openSaveAsDatasetModal={() => setIsSaveAsDatasetModalOpen(true)}
                selectedItemsCount={specificDashboardItems.length}
                searchTerm={searchTerm}
                setSearchTerm={setSearchTerm}
@@ -844,6 +873,13 @@ export const PivotTable: React.FC = () => {
                 isOpen={isQuickChartModalOpen}
                 onClose={() => setIsQuickChartModalOpen(false)}
                 items={specificDashboardItems}
+            />
+
+            <SaveAsDatasetModal
+                isOpen={isSaveAsDatasetModalOpen}
+                onClose={() => setIsSaveAsDatasetModalOpen(false)}
+                onSave={handleSaveAsDataset}
+                defaultName={`Analyse ${primaryDataset?.name || ''}`}
             />
         </div>
     );

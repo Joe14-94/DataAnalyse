@@ -3,6 +3,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } 
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, db, generateId, evaluateFormula } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
+import { calculatePivotData } from '../logic/pivotEngine';
+import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
+import { blendData } from '../logic/dataBlending';
+import { pivotResultToRows, temporalResultToRows } from '../utils/pivotToDataset';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
 import { BatchContext, useBatches } from './BatchContext';
@@ -168,6 +172,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now()
     };
     setDatasets(prev => [...prev, newDataset]);
+    setCurrentDatasetId(newId);
+    return newId;
+  }, []);
+
+  const createDerivedDataset = useCallback((name: string, isTemporal: boolean, config: any, fields: string[], rows: any[]) => {
+    const newId = generateId();
+    const newDataset: Dataset = {
+      id: newId,
+      name,
+      fields,
+      fieldConfigs: {},
+      createdAt: Date.now(),
+      sourcePivotConfig: { isTemporal, config }
+    };
+    setDatasets(prev => [...prev, newDataset]);
+
+    // Create the first batch
+    const newBatch: ImportBatch = {
+      id: generateId(),
+      datasetId: newId,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: Date.now(),
+      rows
+    };
+    setAllBatches(prev => [...prev, newBatch]);
+
     setCurrentDatasetId(newId);
     return newId;
   }, []);
@@ -390,7 +420,92 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now(),
       rows: processedRows
     };
-    setAllBatches(prev => [...prev, newBatch]);
+
+    setAllBatches(prevAllBatches => {
+        const updatedAllBatches = [...prevAllBatches, newBatch];
+
+        // --- AUTO-REFRESH DERIVED DATASETS ---
+        const derivedToUpdate = datasets.filter(d => {
+            if (!d.sourcePivotConfig) return false;
+            const config = d.sourcePivotConfig.config;
+            if (d.sourcePivotConfig.isTemporal) {
+                return config.sources?.some((s: any) => s.datasetId === datasetId);
+            } else {
+                return config.sources?.some((s: any) => s.datasetId === datasetId) || config.currentDataset?.id === datasetId;
+            }
+        });
+
+        if (derivedToUpdate.length === 0) return updatedAllBatches;
+
+        let finalBatches = [...updatedAllBatches];
+
+        derivedToUpdate.forEach(derivedDataset => {
+            try {
+                const { isTemporal, config } = derivedDataset.sourcePivotConfig!;
+                let derivedRows: DataRow[] = [];
+
+                if (isTemporal) {
+                    const sourceDataMap = new Map<string, DataRow[]>();
+                    config.sources.forEach((source: any) => {
+                        // Find latest batch for this dataset
+                        const dsBatches = finalBatches.filter(b => b.datasetId === source.datasetId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        if (dsBatches.length > 0) {
+                            sourceDataMap.set(source.id, dsBatches[0].rows);
+                        }
+                    });
+
+                    const primaryDS = datasets.find(d => d.id === config.sources?.[0]?.datasetId);
+                    const dateColumn = primaryDS ? (detectDateColumn(primaryDS.fields) || 'Date écriture') : 'Date écriture';
+
+                    const { results } = calculateTemporalComparison(sourceDataMap, config, dateColumn, false, config.filters || []);
+                    derivedRows = temporalResultToRows(results, config.groupByFields || [], config);
+                } else {
+                    const primarySource = config.sources?.find((s: any) => s.isPrimary) || { datasetId: config.currentDataset?.id, isPrimary: true };
+                    const primaryDS = datasets.find(d => d.id === primarySource.datasetId);
+
+                    if (primaryDS) {
+                        const dsBatches = finalBatches.filter(b => b.datasetId === primaryDS.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        if (dsBatches.length > 0) {
+                            const currentBatch = dsBatches[0];
+                            const blendedRows = blendData({
+                                sources: config.sources || [primarySource],
+                                primaryDataset: primaryDS,
+                                currentBatch,
+                                allBatches: finalBatches,
+                                allDatasets: datasets
+                            });
+
+                            const result = calculatePivotData({
+                                ...config,
+                                rows: blendedRows,
+                                currentDataset: primaryDS,
+                                datasets,
+                                showSubtotals: false // We don't want subtotals in the derived dataset
+                            });
+
+                            if (result) {
+                                derivedRows = pivotResultToRows(result, config.rowFields);
+                            }
+                        }
+                    }
+                }
+
+                if (derivedRows.length > 0) {
+                    finalBatches.push({
+                        id: generateId(),
+                        datasetId: derivedDataset.id,
+                        date: date, // Same date as the trigger batch
+                        createdAt: Date.now(),
+                        rows: derivedRows
+                    });
+                }
+            } catch (err) {
+                console.error(`Failed to auto-refresh derived dataset ${derivedDataset.name}`, err);
+            }
+        });
+
+        return finalBatches;
+    });
   }, [datasets, batches]);
 
   const deleteBatch = useCallback((id: string) => {
@@ -709,7 +824,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
-                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
+                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState }}>

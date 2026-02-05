@@ -18,6 +18,7 @@ interface DatasetContextType {
   removeCalculatedField: (datasetId: string, fieldId: string) => void;
   updateCalculatedField: (datasetId: string, fieldId: string, updates: Partial<CalculatedField>) => void;
   reorderDatasetFields: (datasetId: string, fields: string[]) => void;
+  createDerivedDataset: (name: string, isTemporal: boolean, config: any, fields: string[], rows: any[]) => string;
 }
 
 export const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
