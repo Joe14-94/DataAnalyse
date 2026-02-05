@@ -656,6 +656,11 @@ export const ChartModal: React.FC<ChartModalProps> = ({
         return;
       }
 
+      // Si des filtres sont sauvegardés, forcer le mode 'specific' avec le batch actuel
+      // pour éviter que le widget charge un batch différent qui n'aurait pas les données filtrées
+      const hasFilters = pivotConfig.filters && pivotConfig.filters.length > 0;
+      const shouldUseSpecificBatch = hasFilters || updateMode === 'fixed';
+
       const newWidget = {
         title: `Graphique TCD : ${pivotConfig.valField}`,
         type: 'chart' as const,
@@ -666,8 +671,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           chartType: selectedChartType,
           source: {
             datasetId: currentDatasetId,
-            mode: isTemporalMode ? 'temporal' as const : (updateMode === 'latest' ? 'latest' : 'specific') as 'latest' | 'specific',
-            batchId: (!isTemporalMode && updateMode === 'fixed') ? selectedBatchId : undefined
+            mode: isTemporalMode ? 'temporal' as const : (shouldUseSpecificBatch ? 'specific' : 'latest') as 'latest' | 'specific',
+            batchId: (!isTemporalMode && shouldUseSpecificBatch) ? selectedBatchId : undefined
           },
           pivotChart: {
             pivotConfig: {
@@ -683,7 +688,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
             },
             isTemporalMode,
             temporalComparison,
-            updateMode,
+            updateMode: (shouldUseSpecificBatch ? 'fixed' : updateMode) as 'fixed' | 'latest',
             chartType: selectedChartType,
             hierarchyLevel,
             limit: limit > 0 ? limit : undefined,
