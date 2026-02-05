@@ -1,6 +1,6 @@
 
 import { Dataset, ImportBatch, DashboardWidget, AppState, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
-import { generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, generateId, APP_VERSION } from '../utils';
+import { generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, generateId, APP_VERSION, compressBatch } from '../utils';
 
 export const getDemoData = () => {
     // Dataset 1: RH
@@ -59,8 +59,16 @@ export const getDemoData = () => {
 };
 
 export const createBackupJson = (state: AppState) => {
-    return JSON.stringify({
+    // We compress batches for the backup as well to significantly reduce file size
+    const compactState = {
         ...state,
+        batches: (state.batches || []).map(b => compressBatch(b)),
         exportDate: new Date().toISOString()
-    }, null, 2);
+    };
+
+    // Use minimal spacing for large datasets to further reduce size
+    const isLarge = compactState.batches.length > 5 ||
+                    compactState.batches.some(b => b.d && b.d.length > 500);
+
+    return JSON.stringify(compactState, null, isLarge ? 0 : 2);
 };
