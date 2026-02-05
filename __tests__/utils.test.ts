@@ -48,6 +48,13 @@ describe('Parser de Formules Sécurisé', () => {
     expect(evaluateFormula({ Nom: 'MARTIN' }, 'MINUSCULE([Nom])')).toBe('martin');
     expect(evaluateFormula({ Prenom: 'Jean', Nom: 'Dupont' }, 'CONCAT([Prenom], " ", [Nom])')).toBe('Jean Dupont');
   });
+
+  it('devrait respecter le outputType pour forcer le format', () => {
+    expect(evaluateFormula({ val: 123 }, '[val]', 'text')).toBe('123');
+    expect(evaluateFormula({ val: '123' }, '[val]', 'number')).toBe(123);
+    expect(evaluateFormula({ val: 1 }, '[val]', 'boolean')).toBe(true);
+    expect(evaluateFormula({ val: 0 }, '[val]', 'boolean')).toBe(false);
+  });
 });
 
 describe('Parsing Numérique Intelligent', () => {
