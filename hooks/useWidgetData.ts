@@ -77,6 +77,14 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
+         console.log('📊 BEFORE CALCULATED FIELDS:', {
+            rowCount: baseRows.length,
+            hasCalculatedFields: !!dataset?.calculatedFields && dataset.calculatedFields.length > 0,
+            calculatedFieldsCount: dataset?.calculatedFields?.length || 0,
+            calculatedFieldNames: dataset?.calculatedFields?.map(cf => cf.name) || [],
+            sampleRowBefore: baseRows[0]
+         });
+
          if (dataset?.calculatedFields && dataset.calculatedFields.length > 0) {
             baseRows = baseRows.map(r => {
                const enriched = { ...r };
@@ -84,6 +92,11 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                   enriched[cf.name] = evaluateFormula(enriched, cf.formula);
                });
                return enriched;
+            });
+
+            console.log('📊 AFTER CALCULATED FIELDS:', {
+               sampleRowAfter: baseRows[0],
+               portefeuilleField: baseRows[0]?.['Portefeuille']
             });
          }
 
