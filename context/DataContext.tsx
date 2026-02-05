@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
-import { APP_VERSION, db, generateId, evaluateFormula } from '../utils';
+import { APP_VERSION, db, generateId, evaluateFormula, decompressBatch } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
@@ -661,7 +661,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const shouldImport = (key: keyof AppState) => !keys || keys.includes(key);
 
       if (shouldImport('datasets') && parsed.datasets) setDatasets(parsed.datasets);
-      if (shouldImport('batches') && parsed.batches) setAllBatches(parsed.batches);
+      if (shouldImport('batches') && parsed.batches) {
+        setAllBatches(parsed.batches.map((b: any) => decompressBatch(b)));
+      }
       if (shouldImport('savedMappings') && parsed.savedMappings) setSavedMappings(parsed.savedMappings);
       if (shouldImport('dashboardWidgets') && parsed.dashboardWidgets) setDashboardWidgets(parsed.dashboardWidgets);
       if (shouldImport('savedAnalyses') && parsed.savedAnalyses) setSavedAnalyses(parsed.savedAnalyses);

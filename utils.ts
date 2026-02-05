@@ -5,10 +5,52 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // Updated version
-export const APP_VERSION = "2026-02-04-02";
+export const APP_VERSION = "2026-02-04-03";
 
 export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
+};
+
+/**
+ * Compresse un batch de données en format colonnaire pour économiser de l'espace
+ */
+export const compressBatch = (batch: ImportBatch): any => {
+  if (!batch.rows || batch.rows.length === 0) return batch;
+
+  // On identifie tous les champs uniques
+  const fields = Array.from(new Set(batch.rows.flatMap(r => Object.keys(r))));
+
+  // On convertit les lignes en tableaux de valeurs
+  const data = batch.rows.map(row => fields.map(f => row[f]));
+
+  const { rows, ...meta } = batch;
+  return {
+    ...meta,
+    _c: true, // Flag compressé
+    f: fields, // Fields (colonnes)
+    d: data    // Data (valeurs)
+  };
+};
+
+/**
+ * Décompresse un batch de données format colonnaire en format objet standard
+ */
+export const decompressBatch = (batch: any): ImportBatch => {
+  if (!batch || !batch._c) return batch as ImportBatch;
+
+  const { f, d, _c, ...meta } = batch;
+  const rows = d.map((rowValues: any[]) => {
+    const row: any = {};
+    f.forEach((fieldName: string, i: number) => {
+      const val = rowValues[i];
+      if (val !== undefined && val !== null) {
+        row[fieldName] = val;
+      }
+    });
+    return row;
+  });
+
+  return { ...meta, rows } as ImportBatch;
 };
 
 // --- MATH & PREDICTIVE ---
@@ -36,8 +78,9 @@ export const calculateLinearRegression = (yValues: number[]): { slope: number, i
 
 // --- INDEXED DB ENGINE ---
 const DB_NAME = 'DataScopeDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented for multi-store support
 const STORE_NAME = 'appState';
+const BATCHES_STORE = 'batches';
 const KEY_NAME = 'global_state';
 
 export const db = {
@@ -49,6 +92,9 @@ export const db = {
         const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME);
+        }
+        if (!db.objectStoreNames.contains(BATCHES_STORE)) {
+          db.createObjectStore(BATCHES_STORE);
         }
       };
 
@@ -65,18 +111,48 @@ export const db = {
   save: async (data: any): Promise<void> => {
     const database = await db.open();
     return new Promise((resolve, reject) => {
-      const transaction = database.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(data, KEY_NAME);
+      const hasBatches = data && Array.isArray(data.batches);
+      const stores = hasBatches ? [STORE_NAME, BATCHES_STORE] : [STORE_NAME];
+      const transaction = database.transaction(stores, 'readwrite');
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      if (hasBatches) {
+        const batchStore = transaction.objectStore(BATCHES_STORE);
+        const batches = data.batches as any[];
+
+        batches.forEach(b => {
+          // Only save to batch store if it has rows (prevent redundant saves of metadata-only objects)
+          if (b.rows) {
+            batchStore.put(compressBatch(b), b.id);
+          }
+        });
+      }
+
+      const mainStore = transaction.objectStore(STORE_NAME);
+
+      // We strip the actual rows from the global state to keep it lightweight
+      let stateToSave = data;
+      if (hasBatches) {
+        stateToSave = {
+          ...data,
+          batches: (data.batches as any[]).map(b => {
+            const { rows, f, d, _c, ...meta } = b;
+            return meta; // Only metadata stays in appState
+          })
+        };
+      }
+
+      const request = mainStore.put(stateToSave, KEY_NAME);
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
   },
 
   load: async (): Promise<any | null> => {
     const database = await db.open();
-    return new Promise((resolve, reject) => {
+
+    // 1. Load main state
+    const mainData = await new Promise<any>((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get(KEY_NAME);
@@ -84,17 +160,44 @@ export const db = {
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
     });
+
+    if (!mainData) return null;
+
+    // 2. Load batches if metadata exists
+    if (Array.isArray(mainData.batches) && mainData.batches.length > 0) {
+      const tx = database.transaction(BATCHES_STORE, 'readonly');
+      const batchStore = tx.objectStore(BATCHES_STORE);
+
+      const fullBatches = await Promise.all(mainData.batches.map((meta: any) => {
+        return new Promise((res) => {
+          const req = batchStore.get(meta.id);
+          req.onsuccess = () => {
+            if (req.result) {
+              res(decompressBatch(req.result));
+            } else {
+              // Fallback for legacy data that might still be in the meta object
+              res(decompressBatch(meta));
+            }
+          };
+          req.onerror = () => res(decompressBatch(meta));
+        });
+      }));
+
+      mainData.batches = fullBatches.filter(b => b && (b as any).rows);
+    }
+
+    return mainData;
   },
 
   clear: async (): Promise<void> => {
     const database = await db.open();
     return new Promise((resolve, reject) => {
-      const transaction = database.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.clear();
+      const transaction = database.transaction([STORE_NAME, BATCHES_STORE], 'readwrite');
+      transaction.objectStore(STORE_NAME).clear();
+      transaction.objectStore(BATCHES_STORE).clear();
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
   }
 };
