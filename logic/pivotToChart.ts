@@ -422,17 +422,12 @@ export const buildHierarchicalTree = (
 
     if (hasMultiCols && row.metrics && Object.keys(row.metrics).length > 0) {
       // Ajouter les colonnes comme niveau feuille
-<<<<<<< claude/add-string-functions-calculated-fields-YQgmu
       const childrenWithValues = seriesHeaders.map(header => ({
-=======
-      const leafChildren = seriesHeaders.map(header => ({
->>>>>>> main
         name: header,
         value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
         path: [...row.keys, header]
       })).filter(item => item.value! > 0);
 
-<<<<<<< claude/add-string-functions-calculated-fields-YQgmu
       if (dataRows.indexOf(row) < 2) {
         console.log(`🌞 LEAF row ${dataRows.indexOf(row)}:`, {
           keys: row.keys,
@@ -462,17 +457,6 @@ export const buildHierarchicalTree = (
       if (dataRows.indexOf(row) < 2) {
         console.log(`🌞 No multiCols, using rowTotal: ${leafNode.value}`);
       }
-=======
-      if (leafChildren.length > 0) {
-        if (!leafNode.children) leafNode.children = [];
-        leafNode.children.push(...leafChildren);
-      }
-    } else {
-      // Pas de colonnes : utiliser rowTotal comme valeur
-      // On additionne si jamais le noeud est atteint plusieurs fois (peu probable en TCD mais plus robuste)
-      const rowVal = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
-      leafNode.value = (leafNode.value || 0) + rowVal;
->>>>>>> main
     }
   }
 
@@ -566,20 +550,14 @@ export const treeToSunburstRings = (
           grandTotal
         });
 
-<<<<<<< claude/add-string-functions-calculated-fields-YQgmu
-      if (level === 0 && idx < 2) {
-        console.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
+        if (level === 0 && idx < 2) {
+          console.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
+        }
       }
 
       // Recurser dans les enfants
       if (node.children && node.children.length > 0) {
         traverse(node.children, level + 1, path, fill, nodeValue);
-=======
-        // Recurser dans les enfants
-        if (node.children && node.children.length > 0) {
-          traverse(node.children, level + 1, path, fill, nodeValue);
-        }
->>>>>>> main
       }
     });
   }
