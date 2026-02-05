@@ -699,9 +699,27 @@ export const PivotTable: React.FC = () => {
         let rows: any[] = [];
 
         if (isTemporalMode && temporalConfig) {
-            fields = [...(temporalConfig.groupByFields || []), ...(temporalConfig.sources || []).map((s: any) => s.label)];
-            rows = temporalResultToRows(temporalResults, temporalConfig.groupByFields || [], temporalConfig);
-            createDerivedDataset(name, true, temporalConfig, fields, rows);
+            fields = [...(rowFields || []), ...(temporalConfig.sources || []).map((s: any) => s.label)];
+            rows = temporalResultToRows(temporalResults, rowFields, temporalConfig);
+
+            const config = {
+                sources,
+                rowFields,
+                valField,
+                aggType,
+                metrics,
+                filters,
+                sortBy,
+                sortOrder,
+                temporalComparison: {
+                    ...temporalConfig,
+                    groupByFields: rowFields,
+                    valueField: valField,
+                    aggType: aggType as any
+                }
+            };
+
+            createDerivedDataset(name, true, config, fields, rows);
         } else if (pivotData) {
             fields = [...rowFields, ...pivotData.colHeaders];
             rows = pivotResultToRows(pivotData, rowFields);
