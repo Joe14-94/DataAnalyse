@@ -257,6 +257,10 @@ export const readExcelFile = async (file: File): Promise<RawImportData> => {
 };
 
 
+// BOLT OPTIMIZATION: Move boolean values to static Sets to avoid repeated array allocations
+const TRUE_VALUES = new Set(['oui', 'yes', 'true', '1', 'vrai', 'ok']);
+const FALSE_VALUES = new Set(['non', 'no', 'false', '0', 'faux', 'ko']);
+
 /**
  * Convertit les données brutes avec des clés dynamiques
  */
@@ -264,28 +268,39 @@ export const mapDataToSchema = (
   rawData: RawImportData,
   mapping: Record<number, string | 'ignore'>
 ): DataRow[] => {
+  // BOLT OPTIMIZATION: Pre-calculate active mapping to avoid Object.entries and parseInt in the loop
+  const activeMappings = Object.entries(mapping)
+    .filter(([_, fieldKey]) => fieldKey !== 'ignore')
+    .map(([colIndexStr, fieldKey]) => ({
+      colIndex: parseInt(colIndexStr, 10),
+      fieldKey: fieldKey as string
+    }));
+
+  const numMappings = activeMappings.length;
+
   return rawData.rows.map(rowCells => {
     const newRow: DataRow = {
       id: generateId()
     };
 
-    Object.entries(mapping).forEach(([colIndexStr, fieldKey]) => {
-      const colIndex = parseInt(colIndexStr, 10);
-      if (fieldKey === 'ignore') return;
-
+    // BOLT OPTIMIZATION: Use standard for loop for better performance over forEach
+    for (let i = 0; i < numMappings; i++) {
+      const { colIndex, fieldKey } = activeMappings[i];
       const cellValue = rowCells[colIndex];
-      if (cellValue === undefined) return;
+
+      if (cellValue === undefined || cellValue === null || cellValue === '') continue;
 
       // Détection basique de booléen pour les champs de type commentaire/statut
+      // BOLT OPTIMIZATION: Use Set.has (O(1)) instead of array.includes
       const lower = cellValue.toLowerCase();
-      if (['oui', 'yes', 'true', '1', 'vrai', 'ok'].includes(lower)) {
+      if (TRUE_VALUES.has(lower)) {
         newRow[fieldKey] = true;
-      } else if (['non', 'no', 'false', '0', 'faux', 'ko'].includes(lower)) {
+      } else if (FALSE_VALUES.has(lower)) {
         newRow[fieldKey] = false;
       } else {
         newRow[fieldKey] = cellValue;
       }
-    });
+    }
 
     return newRow;
   });

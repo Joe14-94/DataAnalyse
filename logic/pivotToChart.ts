@@ -844,8 +844,8 @@ export const getChartTypeConfig = (chartType: ChartType) => {
     },
     'treemap': {
       label: 'Treemap',
-      description: 'Carte arborescente hierarchique',
-      bestFor: 'Hierarchies et proportions avec drill-down'
+      description: 'Carte arborescente hiérarchique',
+      bestFor: 'Hiérarchies et proportions avec drill-down'
     },
     'sunburst': {
       label: 'Rayon de soleil',

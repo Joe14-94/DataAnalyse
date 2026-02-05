@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSmartNumber, evaluateFormula, detectColumnType, getGroupedLabel } from '../utils';
+import { parseSmartNumber, evaluateFormula, detectColumnType, getGroupedLabel, mapDataToSchema } from '../utils';
 
 describe('Parser de Formules Sécurisé', () => {
   it('devrait calculer des formules arithmétiques simples', () => {
@@ -143,6 +143,64 @@ describe('Regroupement Temporel', () => {
   it('devrait gérer les valeurs vides', () => {
     expect(getGroupedLabel('', 'year')).toBe('');
     expect(getGroupedLabel('(Vide)', 'month')).toBe('(Vide)');
+  });
+});
+
+describe('Mapping de Données (mapDataToSchema)', () => {
+  it('devrait mapper correctement les données avec types booléens', () => {
+    const rawData = {
+      headers: ['Nom', 'Actif', 'Score'],
+      rows: [
+        ['Jean', 'oui', '100'],
+        ['Marie', 'non', '200'],
+        ['Pierre', 'true', '300'],
+        ['Sophie', 'false', '400']
+      ],
+      totalRows: 4
+    };
+    const mapping = { 0: 'name', 1: 'isActive', 2: 'score' };
+    const result = mapDataToSchema(rawData, mapping);
+
+    expect(result).toHaveLength(4);
+    expect(result[0].isActive).toBe(true);
+    expect(result[1].isActive).toBe(false);
+    expect(result[2].isActive).toBe(true);
+    expect(result[3].isActive).toBe(false);
+    expect(result[0].name).toBe('Jean');
+    expect(result[0].score).toBe('100');
+  });
+
+  it('devrait ignorer les colonnes marquées "ignore"', () => {
+    const rawData = {
+      headers: ['X', 'B', 'C'],
+      rows: [['valX', '2', '3']],
+      totalRows: 1
+    };
+    const mapping = { 0: 'colX', 1: 'ignore', 2: 'colC' };
+    const result = mapDataToSchema(rawData, mapping);
+
+    expect(result[0].colX).toBe('valX');
+    expect(result[0].colC).toBe('3');
+    expect(result[0].colB).toBeUndefined();
+  });
+
+  it('devrait gérer des milliers de lignes efficacement', () => {
+    const rowCount = 1000;
+    const colCount = 10;
+    const rows = Array.from({ length: rowCount }, (_, i) =>
+      Array.from({ length: colCount }, (_, j) => (j % 2 === 0 ? 'oui' : `val-${i}-${j}`))
+    );
+    const rawData = { headers: [], rows, totalRows: rowCount };
+    const mapping: any = {};
+    for (let j = 0; j < colCount; j++) mapping[j] = `field-${j}`;
+
+    const start = performance.now();
+    const result = mapDataToSchema(rawData, mapping);
+    const end = performance.now();
+
+    expect(result).toHaveLength(rowCount);
+    expect(result[0]['field-0']).toBe(true);
+    console.log(`⏱️ mapDataToSchema (1000 rows, 10 cols): ${(end - start).toFixed(2)}ms`);
   });
 });
 
