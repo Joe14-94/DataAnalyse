@@ -1662,35 +1662,6 @@ export const CustomAnalytics: React.FC = () => {
                     <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">4. Style & Rendu</span>
                  </div>
 
-                 <div className="space-y-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center gap-2 mb-2">
-                       <Settings2 className="w-4 h-4 text-brand-600" />
-                       <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">5. Titre & Unité</span>
-                    </div>
-                    <div className="space-y-3">
-                       <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Titre du graphique</label>
-                          <input
-                             type="text"
-                             className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
-                             placeholder="Auto..."
-                             value={chartTitle}
-                             onChange={(e) => setChartTitle(e.target.value)}
-                          />
-                       </div>
-                       <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Unité des valeurs</label>
-                          <input
-                             type="text"
-                             className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
-                             placeholder="Ex: €, k€, %..."
-                             value={customUnit}
-                             onChange={(e) => setCustomUnit(e.target.value)}
-                          />
-                       </div>
-                    </div>
-                 </div>
-
                  <div className="grid grid-cols-4 gap-1">
                     {mode === 'snapshot' ? (
                        <>
@@ -1814,6 +1785,36 @@ export const CustomAnalytics: React.FC = () => {
                           </div>
                        </div>
                     )}
+                 </div>
+              </div>
+
+              {/* SECTION 5: TITRE & UNITE */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                 <div className="flex items-center gap-2 mb-2">
+                    <Settings2 className="w-4 h-4 text-brand-600" />
+                    <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">5. Titre & Unité</span>
+                 </div>
+                 <div className="space-y-3">
+                    <div>
+                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Titre du graphique</label>
+                       <input
+                          type="text"
+                          className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
+                          placeholder="Auto..."
+                          value={chartTitle}
+                          onChange={(e) => setChartTitle(e.target.value)}
+                       />
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Unité des valeurs</label>
+                       <input
+                          type="text"
+                          className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
+                          placeholder="Ex: €, k€, %..."
+                          value={customUnit}
+                          onChange={(e) => setCustomUnit(e.target.value)}
+                       />
+                    </div>
                  </div>
               </div>
            </div>

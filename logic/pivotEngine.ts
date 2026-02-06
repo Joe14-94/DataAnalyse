@@ -278,36 +278,54 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           });
       });
 
-      // TIME INTELLIGENCE (only for the first metric for now to keep it simple, or apply to all?)
-      // Apply to all metrics if variations are enabled
-      if (showVariations && colFields && colFields.length > 0) {
-          metricConfigs.forEach((mc) => {
-             if (!['sum', 'count', 'avg'].includes(mc.aggType)) return;
-             const metricLabel = mc.label || `${mc.field} (${mc.aggType})`;
+      // TIME INTELLIGENCE / COMPARISONS
+      if (showVariations) {
+          if (colFields && colFields.length > 0) {
+              // Comparison between columns (for each metric)
+              metricConfigs.forEach((mc) => {
+                 if (!['sum', 'count', 'avg'].includes(mc.aggType)) return;
+                 const metricLabel = mc.label || `${mc.field} (${mc.aggType})`;
 
-             for (let i = 1; i < headers.length; i++) {
-                const h = headers[i];
-                const prevH = headers[i-1];
+                 for (let i = 1; i < headers.length; i++) {
+                    const h = headers[i];
+                    const prevH = headers[i-1];
 
-                const currKey = metricConfigs.length > 1 ? `${h}\x1F${metricLabel}` : h;
-                const prevKey = metricConfigs.length > 1 ? `${prevH}\x1F${metricLabel}` : prevH;
+                    const currKey = metricConfigs.length > 1 ? `${h}\x1F${metricLabel}` : h;
+                    const prevKey = metricConfigs.length > 1 ? `${prevH}\x1F${metricLabel}` : prevH;
 
-                const currVal = Number(finalMetrics[currKey] || 0);
-                const prevVal = Number(finalMetrics[prevKey] || 0);
+                    const currVal = Number(finalMetrics[currKey] || 0);
+                    const prevVal = Number(finalMetrics[prevKey] || 0);
 
-                const diff = currVal - prevVal;
-                let pct = 0;
-                if (prevVal !== 0) pct = (diff / Math.abs(prevVal)) * 100;
+                    const diff = currVal - prevVal;
+                    let pct = 0;
+                    if (prevVal !== 0) pct = (diff / Math.abs(prevVal)) * 100;
 
-                if (metricConfigs.length > 1) {
-                    finalMetrics[`${h}\x1F${metricLabel}_DIFF`] = diff;
-                    finalMetrics[`${h}\x1F${metricLabel}_PCT`] = pct;
-                } else {
-                    finalMetrics[`${h}_DIFF`] = diff;
-                    finalMetrics[`${h}_PCT`] = pct;
-                }
-             }
-          });
+                    if (metricConfigs.length > 1) {
+                        finalMetrics[`${h}\x1F${metricLabel}_DIFF`] = diff;
+                        finalMetrics[`${h}\x1F${metricLabel}_PCT`] = pct;
+                    } else {
+                        finalMetrics[`${h}_DIFF`] = diff;
+                        finalMetrics[`${h}_PCT`] = pct;
+                    }
+                 }
+              });
+          } else if (metricConfigs.length > 1) {
+              // Comparison between metrics (when no columns)
+              for (let i = 1; i < metricConfigs.length; i++) {
+                 const mLabel = metricConfigs[i].label || `${metricConfigs[i].field} (${metricConfigs[i].aggType})`;
+                 const prevMLabel = metricConfigs[i-1].label || `${metricConfigs[i-1].field} (${metricConfigs[i-1].aggType})`;
+
+                 const currVal = Number(finalMetrics[mLabel] || 0);
+                 const prevVal = Number(finalMetrics[prevMLabel] || 0);
+
+                 const diff = currVal - prevVal;
+                 let pct = 0;
+                 if (prevVal !== 0) pct = (diff / Math.abs(prevVal)) * 100;
+
+                 finalMetrics[`${mLabel}_DIFF`] = diff;
+                 finalMetrics[`${mLabel}_PCT`] = pct;
+              }
+          }
       }
 
       return {
@@ -430,7 +448,13 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           });
       });
   } else {
-      finalHeaders = metricLabels;
+      metricLabels.forEach((ml, mIdx) => {
+          if (showVariations && mIdx > 0) {
+              finalHeaders.push(`${ml}_DIFF`);
+              finalHeaders.push(`${ml}_PCT`);
+          }
+          finalHeaders.push(ml);
+      });
   }
 
   return {
