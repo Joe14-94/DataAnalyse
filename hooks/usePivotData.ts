@@ -34,7 +34,7 @@ export const usePivotData = ({
 
    const [pivotData, setPivotData] = useState<PivotResult | null>(null);
    const [temporalResults, setTemporalResults] = useState<TemporalComparisonResult[]>([]);
-   const [temporalColTotals, setTemporalColTotals] = useState<{ [sourceId: string]: number }>({});
+   const [temporalColTotals, setTemporalColTotals] = useState<{ [sourceId: string]: { [metricLabel: string]: number } }>({});
    const [isCalculating, setIsCalculating] = useState(false);
 
    const primarySourceConfig = sources.find(s => s.isPrimary);
@@ -102,9 +102,9 @@ export const usePivotData = ({
            return;
        }
 
-       const activeMetric = metrics.length > 0 ? metrics[0] : (valField ? { field: valField, aggType } : null);
+       const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
 
-       if (rowFields.length === 0 || !activeMetric || (temporalConfig?.sources?.length || 0) < 2) {
+       if (rowFields.length === 0 || activeMetrics.length === 0 || (temporalConfig?.sources?.length || 0) < 2) {
            setTemporalResults([]);
            return;
        }
@@ -143,12 +143,13 @@ export const usePivotData = ({
            });
 
            const dateColumn = detectDateColumn(primaryDataset?.fields || []) || 'Date écriture';
-           const validAggType = activeMetric.aggType === 'list' ? 'sum' : activeMetric.aggType;
+
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
                groupByFields: rowFields,
-               valueField: activeMetric.field,
-               aggType: validAggType as any,
+               valueField: activeMetrics[0].field, // Backward compatibility
+               aggType: (activeMetrics[0].aggType === 'list' ? 'sum' : activeMetrics[0].aggType) as any, // Backward compatibility
+               metrics: activeMetrics.map(m => ({ ...m, aggType: m.aggType === 'list' ? 'sum' : m.aggType })),
                sortBy,
                sortOrder
            };
@@ -160,7 +161,7 @@ export const usePivotData = ({
        }, 150);
 
        return () => clearTimeout(timer);
-   }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, metrics, showSubtotals, searchTerm]);
+   }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, metrics, showSubtotals, searchTerm, sortBy, sortOrder, filters]);
 
    return {
       blendedRows,

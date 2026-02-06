@@ -497,14 +497,14 @@ export const PivotTable: React.FC = () => {
         setSpecificDashboardItems(prev => [...prev, newItem]);
     };
 
-    const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string) => {
+    const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string, metricLabel: string) => {
         const source = temporalConfig?.sources.find(s => s.id === sourceId);
-        const value = result.values[sourceId] || 0;
+        const value = result.values[sourceId]?.[metricLabel] || 0;
         const label = source?.label || sourceId;
 
         if (formattingSelectionRule) {
             const rowKeys = result.groupLabel.split('\x1F');
-            const targetKey = `${rowKeys.join('\x1F')}|${label}`;
+            const targetKey = `${rowKeys.join('\x1F')}|${sourceId}_${metricLabel}`;
 
             if (formattingSelectionRule.type === 'style') {
                 setStyleRules(prev => prev.map(r => r.id === formattingSelectionRule.id ? {
@@ -737,16 +737,38 @@ export const PivotTable: React.FC = () => {
 
     const chartPivotData = useMemo(() => {
         if (isTemporalMode && temporalConfig) {
-            const colHeaders = (temporalConfig.sources || []).map((s: any) => s.label);
+            const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
+            const colHeaders: string[] = [];
+
+            temporalConfig.sources.forEach((s: any) => {
+                activeMetrics.forEach(m => {
+                    const mLabel = m.label || `${m.field} (${m.aggType})`;
+                    colHeaders.push(activeMetrics.length > 1 ? `${s.label} - ${mLabel}` : s.label);
+                });
+            });
+
             const displayRows = (temporalResults || []).map(r => {
                 const keys = r.groupLabel.split('\x1F');
+                const rowMetrics: Record<string, number> = {};
+                let rowTotal = 0;
+
+                temporalConfig.sources.forEach((s: any) => {
+                    activeMetrics.forEach(m => {
+                        const mLabel = m.label || `${m.field} (${m.aggType})`;
+                        const val = r.values[s.id]?.[mLabel] || 0;
+                        const key = activeMetrics.length > 1 ? `${s.label} - ${mLabel}` : s.label;
+                        rowMetrics[key] = val;
+                        rowTotal += val;
+                    });
+                });
+
                 return {
                     type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
                     keys: keys,
                     level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
                     label: r.groupLabel.replace(/\x1F/g, ' > '),
-                    metrics: temporalConfig.sources.reduce((acc: any, s: any) => ({ ...acc, [s.label]: r.values[s.id] || 0 }), {}),
-                    rowTotal: Object.values(r.values).reduce((a: number, b: any) => a + (b || 0), 0)
+                    metrics: rowMetrics,
+                    rowTotal: rowTotal
                 };
             });
             return { colHeaders, displayRows, colTotals: {}, grandTotal: 0, isTemporal: true };
@@ -851,7 +873,7 @@ export const PivotTable: React.FC = () => {
                    selectedBatchId={selectedBatchId}
                 />
             )}
-            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, extra) => setTemporalConfig({ ...temporalConfig, ...extra, sources: s, referenceSourceId: r, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any })} />
+            <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, extra) => setTemporalConfig({ ...temporalConfig, ...extra, sources: s, referenceSourceId: r, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any, metrics })} />
             <CalculatedFieldModal
                 isOpen={isCalcModalOpen}
                 onClose={() => { setIsCalcModalOpen(false); setEditingCalcField(null); }}

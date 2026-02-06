@@ -1151,6 +1151,7 @@ export const DataExplorer: React.FC = () => {
 
                                  if (!isEditMode || isBlended) {
                                     if (config?.type === 'number' && val !== undefined && val !== '') displayVal = formatNumberValue(val, config);
+                                    else if (config?.type === 'date' && val !== undefined && val !== '') displayVal = formatDateFr(val);
                                     else if (typeof val === 'boolean') displayVal = val ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Oui</span> : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Non</span>;
                                     else if (!val && val !== 0) displayVal = <span className="text-slate-300">-</span>;
                                  }

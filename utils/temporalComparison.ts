@@ -103,20 +103,18 @@ export const filterDataByPeriod = (
 };
 
 /**
- * Agrège les données par clé de regroupement
+ * Agrège les données par clé de regroupement pour plusieurs métriques
  */
 export const aggregateDataByGroup = (
   data: DataRow[],
   groupByFields: string[],
-  valueField: string,
-  aggType: 'sum' | 'count' | 'avg' | 'min' | 'max'
-): Map<string, { label: string; value: number; details: DataRow[] }> => {
-  const groups = new Map<string, { label: string; value: number; details: DataRow[] }>();
+  metrics: { field: string; aggType: string; label?: string }[]
+): Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }> => {
+  const groups = new Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }>();
 
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
 
-    // BOLT OPTIMIZATION: Use manual loop instead of map().join() to avoid temporary array allocations
     let groupKey = "";
     let groupLabel = "";
     for (let j = 0; j < groupByFields.length; j++) {
@@ -128,9 +126,15 @@ export const aggregateDataByGroup = (
     }
 
     if (!groups.has(groupKey)) {
+      const initialMetrics: Record<string, number> = {};
+      metrics.forEach(m => {
+         const mLabel = m.label || `${m.field} (${m.aggType})`;
+         initialMetrics[mLabel] = 0;
+      });
+
       groups.set(groupKey, {
         label: groupLabel,
-        value: 0,
+        metrics: initialMetrics,
         details: []
       });
     }
@@ -138,49 +142,52 @@ export const aggregateDataByGroup = (
     const group = groups.get(groupKey)!;
     group.details.push(row);
 
-    // Valeur à agréger - utiliser parseSmartNumber pour gérer les formats français
-    const rawValue = row[valueField];
-    let value = 0;
+    metrics.forEach(m => {
+       const mLabel = m.label || `${m.field} (${m.aggType})`;
+       const rawValue = row[m.field];
+       let value = 0;
 
-    if (typeof rawValue === 'number') {
-      value = rawValue;
-    } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
-      value = parseSmartNumber(String(rawValue));
-    }
+       if (typeof rawValue === 'number') {
+         value = rawValue;
+       } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+         value = parseSmartNumber(String(rawValue));
+       }
 
-    // Calcul selon le type d'agrégation
-    switch (aggType) {
-      case 'sum':
-        group.value += value;
-        break;
-      case 'count':
-        group.value += 1;
-        break;
-      case 'avg':
-        // Calculé après
-        group.value += value;
-        break;
-      case 'min':
-        group.value = group.details.length === 1 ? value : Math.min(group.value, value);
-        break;
-      case 'max':
-        group.value = group.details.length === 1 ? value : Math.max(group.value, value);
-        break;
-    }
-  }
-
-  // Finaliser la moyenne si nécessaire
-  if (aggType === 'avg') {
-    groups.forEach(group => {
-      group.value = group.value / group.details.length;
+       switch (m.aggType) {
+         case 'sum':
+           group.metrics[mLabel] += value;
+           break;
+         case 'count':
+           group.metrics[mLabel] += 1;
+           break;
+         case 'min':
+           group.metrics[mLabel] = group.details.length === 1 ? value : Math.min(group.metrics[mLabel], value);
+           break;
+         case 'max':
+           group.metrics[mLabel] = group.details.length === 1 ? value : Math.max(group.metrics[mLabel], value);
+           break;
+         case 'avg':
+           group.metrics[mLabel] += value;
+           break;
+       }
     });
   }
+
+  // Finalize averages
+  groups.forEach(group => {
+     metrics.forEach(m => {
+        if (m.aggType === 'avg') {
+           const mLabel = m.label || `${m.field} (${m.aggType})`;
+           group.metrics[mLabel] = group.metrics[mLabel] / group.details.length;
+        }
+     });
+  });
 
   return groups;
 };
 
 /**
- * Calcule les résultats de comparaison temporelle
+ * Calcule les résultats de comparaison temporelle avec support multi-métriques
  */
 export const calculateTemporalComparison = (
   sourceDataMap: Map<string, DataRow[]>,
@@ -188,14 +195,19 @@ export const calculateTemporalComparison = (
   dateColumn: string = 'Date écriture',
   showSubtotals: boolean = false,
   filters: FilterRule[] = []
-): { results: TemporalComparisonResult[], colTotals: { [sourceId: string]: number } } => {
-  const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType } = config;
+): { results: TemporalComparisonResult[], colTotals: { [sourceId: string]: { [metricLabel: string]: number } } } => {
+  const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType, metrics: configMetrics } = config;
+
+  // Use configMetrics if available, otherwise fallback to single metric (backward compatibility)
+  const metrics = (configMetrics && configMetrics.length > 0)
+     ? configMetrics
+     : [{ field: valueField, aggType: aggType || 'sum' }];
 
   // Préparer les filtres une seule fois
   const preparedFilters = prepareFilters(filters);
 
   // Filtrer et agréger chaque source
-  const aggregatedSources = new Map<string, Map<string, { label: string; value: number; details: DataRow[] }>>();
+  const aggregatedSources = new Map<string, Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }>>();
 
   sources.forEach(source => {
     const sourceData = sourceDataMap.get(source.id);
@@ -204,7 +216,6 @@ export const calculateTemporalComparison = (
       return;
     }
 
-    // Filtrer par période et par filtres personnalisés
     const filteredData = filterDataByPeriod(
       sourceData,
       dateColumn,
@@ -212,89 +223,93 @@ export const calculateTemporalComparison = (
       periodFilter.endMonth
     ).filter(row => applyPreparedFilters(row, preparedFilters));
 
-    // Agréger
-    const aggregated = aggregateDataByGroup(filteredData, groupByFields, valueField, aggType);
+    const aggregated = aggregateDataByGroup(filteredData, groupByFields, metrics);
     aggregatedSources.set(source.id, aggregated);
   });
 
-  // Collecter toutes les clés de regroupement uniques
   const allGroupKeys = new Set<string>();
   aggregatedSources.forEach(sourceAgg => {
     sourceAgg.forEach((_, key) => allGroupKeys.add(key));
   });
 
-  // Créer les résultats
   const results: TemporalComparisonResult[] = [];
-  const colTotals: { [sourceId: string]: number } = {};
-  sources.forEach(s => { colTotals[s.id] = 0; });
+  const colTotals: { [sourceId: string]: { [metricLabel: string]: number } } = {};
+
+  sources.forEach(s => {
+     colTotals[s.id] = {};
+     metrics.forEach(m => {
+        const mLabel = m.label || `${m.field} (${m.aggType})`;
+        colTotals[s.id][mLabel] = 0;
+     });
+  });
 
   allGroupKeys.forEach(groupKey => {
-    const values: { [sourceId: string]: number } = {};
-    const deltas: { [sourceId: string]: { value: number; percentage: number } } = {};
+    const values: { [sourceId: string]: { [metricLabel: string]: number } } = {};
+    const deltas: { [sourceId: string]: { [metricLabel: string]: { value: number; percentage: number } } } = {};
     let groupLabel = '';
     const details: { [sourceId: string]: DataRow[] } = {};
 
-    // Récupérer les valeurs pour chaque source
     sources.forEach(source => {
       const sourceAgg = aggregatedSources.get(source.id);
       const group = sourceAgg?.get(groupKey);
 
-      if (group) {
-        values[source.id] = group.value;
-        if (!groupLabel) groupLabel = group.label;
-        details[source.id] = group.details;
+      values[source.id] = {};
+      deltas[source.id] = {};
+      details[source.id] = group?.details || [];
+
+      metrics.forEach(m => {
+        const mLabel = m.label || `${m.field} (${m.aggType})`;
+        const val = group ? (group.metrics[mLabel] || 0) : 0;
+        values[source.id][mLabel] = val;
+
+        if (group && !groupLabel) groupLabel = group.label;
 
         // Sum for column totals
-        if (aggType === 'sum' || aggType === 'count') {
-           colTotals[source.id] += group.value;
-        } else if (aggType === 'avg') {
-           colTotals[source.id] += group.value;
-        } else if (aggType === 'min') {
-           colTotals[source.id] = (colTotals[source.id] === 0 && results.length === 0) ? group.value : Math.min(colTotals[source.id], group.value);
-        } else if (aggType === 'max') {
-           colTotals[source.id] = (colTotals[source.id] === 0 && results.length === 0) ? group.value : Math.max(colTotals[source.id], group.value);
+        if (m.aggType === 'sum' || m.aggType === 'count' || m.aggType === 'avg') {
+           colTotals[source.id][mLabel] += val;
+        } else if (m.aggType === 'min') {
+           colTotals[source.id][mLabel] = (colTotals[source.id][mLabel] === 0 && results.length === 0) ? val : Math.min(colTotals[source.id][mLabel], val);
+        } else if (m.aggType === 'max') {
+           colTotals[source.id][mLabel] = (colTotals[source.id][mLabel] === 0 && results.length === 0) ? val : Math.max(colTotals[source.id][mLabel], val);
         }
-      } else {
-        values[source.id] = 0;
-        details[source.id] = [];
-      }
+      });
     });
 
-    // Calculer les deltas par rapport à la référence
-    const referenceValue = values[referenceSourceId] || 0;
-
+    // Calculer les deltas
     sources.forEach(source => {
-      if (source.id === referenceSourceId) {
-        deltas[source.id] = { value: 0, percentage: 0 };
-      } else {
-        const sourceValue = values[source.id] || 0;
-        const deltaValue = sourceValue - referenceValue;
-        const deltaPercentage = referenceValue !== 0
-          ? (deltaValue / referenceValue) * 100
-          : (sourceValue !== 0 ? 100 : 0);
+      metrics.forEach(m => {
+        const mLabel = m.label || `${m.field} (${m.aggType})`;
+        const referenceValue = values[referenceSourceId][mLabel] || 0;
 
-        deltas[source.id] = {
-          value: deltaValue,
-          percentage: deltaPercentage
-        };
-      }
+        if (source.id === referenceSourceId) {
+          deltas[source.id][mLabel] = { value: 0, percentage: 0 };
+        } else {
+          const sourceValue = values[source.id][mLabel] || 0;
+          const deltaValue = sourceValue - referenceValue;
+          const deltaPercentage = referenceValue !== 0
+            ? (deltaValue / referenceValue) * 100
+            : (sourceValue !== 0 ? 100 : 0);
+
+          deltas[source.id][mLabel] = {
+            value: deltaValue,
+            percentage: deltaPercentage
+          };
+        }
+      });
     });
 
-    results.push({
-      groupKey,
-      groupLabel,
-      values,
-      deltas,
-      details
-    });
+    results.push({ groupKey, groupLabel, values, deltas, details });
   });
 
-  // Average calculation for totals if needed
-  if (aggType === 'avg' && results.length > 0) {
-    sources.forEach(source => {
-      colTotals[source.id] = colTotals[source.id] / results.length;
-    });
-  }
+  // Finalize averages for totals
+  sources.forEach(source => {
+     metrics.forEach(m => {
+        if (m.aggType === 'avg' && results.length > 0) {
+           const mLabel = m.label || `${m.field} (${m.aggType})`;
+           colTotals[source.id][mLabel] = colTotals[source.id][mLabel] / results.length;
+        }
+     });
+  });
 
   // Trier les résultats
   const sortBy = (config as any).sortBy || 'label';
@@ -304,48 +319,46 @@ export const calculateTemporalComparison = (
     if (sortBy === 'label') {
       return sortOrder === 'asc' ? a.groupLabel.localeCompare(b.groupLabel) : b.groupLabel.localeCompare(a.groupLabel);
     } else {
-      const valA = a.values[sortBy] || 0;
-      const valB = b.values[sortBy] || 0;
+      // Logic for sorting by value (needs to handle specific metric if possible, defaulting to first metric)
+      const firstMetricLabel = metrics[0].label || `${metrics[0].field} (${metrics[0].aggType})`;
+      const valA = a.values[sortBy]?.[firstMetricLabel] || 0;
+      const valB = b.values[sortBy]?.[firstMetricLabel] || 0;
       return sortOrder === 'asc' ? valA - valB : valB - valA;
     }
   });
 
-  // Générer les sous-totaux si on a plusieurs champs de regroupement ET que showSubtotals est activé
+  // Générer les sous-totaux
   if (showSubtotals && groupByFields.length > 1) {
     const resultsWithSubtotals: TemporalComparisonResult[] = [];
-    const subtotalMap = new Map<string, Map<string, number[]>>();
+    const subtotalMap = new Map<string, Map<string, Record<string, number[]>>>();
 
-    // Calculer les sous-totaux pour chaque niveau de groupement
     results.forEach(result => {
       const groupValues = result.groupLabel.split('\x1F');
 
-      // Pour chaque niveau de hiérarchie (sauf le dernier qui est le détail)
       for (let level = 0; level < groupByFields.length - 1; level++) {
         const subtotalKey = groupValues.slice(0, level + 1).join('\x1F');
-
-        if (!subtotalMap.has(subtotalKey)) {
-          subtotalMap.set(subtotalKey, new Map());
-        }
+        if (!subtotalMap.has(subtotalKey)) subtotalMap.set(subtotalKey, new Map());
 
         const subtotalData = subtotalMap.get(subtotalKey)!;
 
-        // Accumuler les valeurs pour chaque source
         sources.forEach(source => {
-          if (!subtotalData.has(source.id)) {
-            subtotalData.set(source.id, []);
-          }
-          subtotalData.get(source.id)!.push(result.values[source.id] || 0);
+          if (!subtotalData.has(source.id)) subtotalData.set(source.id, {});
+          const sourceSubtotals = subtotalData.get(source.id)!;
+
+          metrics.forEach(m => {
+             const mLabel = m.label || `${m.field} (${m.aggType})`;
+             if (!sourceSubtotals[mLabel]) sourceSubtotals[mLabel] = [];
+             sourceSubtotals[mLabel].push(result.values[source.id][mLabel] || 0);
+          });
         });
       }
     });
 
-    // Insérer les résultats avec sous-totaux
     const processed = new Set<string>();
 
     results.forEach(result => {
       const groupValues = result.groupLabel.split('\x1F');
 
-      // Insérer les sous-totaux des niveaux supérieurs si pas déjà fait
       for (let level = 0; level < groupByFields.length - 1; level++) {
         const subtotalKey = groupValues.slice(0, level + 1).join('\x1F');
 
@@ -353,35 +366,38 @@ export const calculateTemporalComparison = (
           processed.add(subtotalKey);
 
           const subtotalData = subtotalMap.get(subtotalKey)!;
-          const subtotalValues: { [sourceId: string]: number } = {};
-          const subtotalDeltas: { [sourceId: string]: { value: number; percentage: number } } = {};
+          const subtotalValues: { [sourceId: string]: { [mLabel: string]: number } } = {};
+          const subtotalDeltas: { [sourceId: string]: { [mLabel: string]: { value: number; percentage: number } } } = {};
 
-          // Calculer la somme pour chaque source
           sources.forEach(source => {
-            const values = subtotalData.get(source.id) || [];
-            subtotalValues[source.id] = values.reduce((sum, val) => sum + val, 0);
+            subtotalValues[source.id] = {};
+            subtotalDeltas[source.id] = {};
+            const sourceSubtotals = subtotalData.get(source.id)!;
+
+            metrics.forEach(m => {
+               const mLabel = m.label || `${m.field} (${m.aggType})`;
+               const vals = sourceSubtotals[mLabel] || [];
+               subtotalValues[source.id][mLabel] = vals.reduce((sum, val) => sum + val, 0);
+            });
           });
 
-          // Calculer les deltas
-          const referenceValue = subtotalValues[referenceSourceId] || 0;
+          // Deltas for subtotal
           sources.forEach(source => {
-            if (source.id === referenceSourceId) {
-              subtotalDeltas[source.id] = { value: 0, percentage: 0 };
-            } else {
-              const sourceValue = subtotalValues[source.id] || 0;
-              const deltaValue = sourceValue - referenceValue;
-              const deltaPercentage = referenceValue !== 0
-                ? (deltaValue / referenceValue) * 100
-                : (sourceValue !== 0 ? 100 : 0);
+            metrics.forEach(m => {
+               const mLabel = m.label || `${m.field} (${m.aggType})`;
+               const referenceValue = subtotalValues[referenceSourceId][mLabel] || 0;
 
-              subtotalDeltas[source.id] = {
-                value: deltaValue,
-                percentage: deltaPercentage
-              };
-            }
+               if (source.id === referenceSourceId) {
+                 subtotalDeltas[source.id][mLabel] = { value: 0, percentage: 0 };
+               } else {
+                 const sourceValue = subtotalValues[source.id][mLabel] || 0;
+                 const deltaValue = sourceValue - referenceValue;
+                 const deltaPercentage = referenceValue !== 0 ? (deltaValue / referenceValue) * 100 : (sourceValue !== 0 ? 100 : 0);
+                 subtotalDeltas[source.id][mLabel] = { value: deltaValue, percentage: deltaPercentage };
+               }
+            });
           });
 
-          // Ajouter le sous-total
           resultsWithSubtotals.push({
             groupKey: `subtotal_${subtotalKey}`,
             groupLabel: subtotalKey,
@@ -392,8 +408,6 @@ export const calculateTemporalComparison = (
           });
         }
       }
-
-      // Ajouter la ligne de détail
       resultsWithSubtotals.push(result);
     });
 

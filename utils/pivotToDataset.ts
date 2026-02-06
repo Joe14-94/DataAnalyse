@@ -50,7 +50,11 @@ export const temporalResultToRows = (
 
             // Add source values
             config.sources.forEach(source => {
-                newRow[source.label] = r.values[source.id];
+                const sourceValues = r.values[source.id] || {};
+                Object.entries(sourceValues).forEach(([mLabel, val]) => {
+                    const key = (config.metrics && config.metrics.length > 1) ? `${source.label} - ${mLabel}` : source.label;
+                    newRow[key] = val;
+                });
 
                 // Optional: add deltas if needed, but let's keep it simple for now
                 // if (source.id !== config.referenceSourceId) {
