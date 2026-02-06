@@ -57,7 +57,7 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800">Constructeur de Dashboard Spécifique</h3>
-                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Arrangez vos indicateurs clés</p>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Arrangez vos indicateurs clés</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-white rounded-full transition-colors"><X className="w-5 h-5" /></button>
@@ -74,13 +74,13 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                                 <MousePointerClick className="w-4 h-4" />
                                 Sélectionner des cellules
                             </Button>
-                            <p className="text-[10px] text-slate-400 mt-2 italic text-center">
+                            <p className="text-xs text-slate-400 mt-2 italic text-center">
                                 Cliquez sur les cellules du tableau pour les ajouter
                             </p>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Composants ({items.length})</h4>
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Composants ({items.length})</h4>
                             {items.length === 0 ? (
                                 <div className="text-center py-10 px-4">
                                     <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -109,7 +109,7 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                                                         <button onClick={() => startEditing(item)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-brand-500 transition-opacity"><Edit2 className="w-2.5 h-2.5" /></button>
                                                     </div>
                                                 )}
-                                                <div className="text-[9px] text-slate-400 truncate">{item.rowPath.join(' > ')} | {item.colLabel}</div>
+                                                <div className="text-xs text-slate-400 truncate">{item.rowPath.join(' > ')} | {item.colLabel}</div>
                                             </div>
                                             <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 ml-2"><Trash2 className="w-3.5 h-3.5" /></button>
                                         </div>
@@ -165,14 +165,14 @@ export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
                                         items.map((item) => (
                                             <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
                                                 <div className="mb-4">
-                                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] mb-1">{item.label}</h5>
+                                                    <h5 className="text-xs font-black text-slate-400 uppercase tracking-[0.1em] mb-1">{item.label}</h5>
                                                     <div className="h-1 w-8 bg-brand-500 rounded-full"></div>
                                                 </div>
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-3xl font-black text-slate-800 tracking-tight font-mono">{item.value}</span>
                                                 </div>
                                                 <div className="mt-4 pt-3 border-t border-slate-50">
-                                                    <p className="text-[9px] text-slate-400 leading-tight italic truncate">
+                                                    <p className="text-xs text-slate-400 leading-tight italic truncate">
                                                         {item.rowPath[item.rowPath.length-1]} ({item.colLabel})
                                                     </p>
                                                 </div>

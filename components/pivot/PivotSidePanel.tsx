@@ -248,7 +248,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                        {datasetBatches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)}</option>)}
                                     </select>
                                  ) : (
-                                    <div className="text-[10px] text-slate-500 truncate">Jointure: {src.joinConfig?.primaryKey} = {src.joinConfig?.secondaryKey}</div>
+                                    <div className="text-xs text-slate-500 truncate">Jointure: {src.joinConfig?.primaryKey} = {src.joinConfig?.secondaryKey}</div>
                                  )}
                               </div>
                            );
@@ -366,7 +366,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
                      return (
                         <div key={group.id} className="mb-2">
-                           <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-[10px] font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
+                           <button onClick={() => toggleSection(group.id)} className={`w-full flex items-center gap-1 text-xs font-bold px-1.5 py-1 rounded transition-colors ${(SOURCE_COLOR_CLASSES as any)[group.color]?.text || 'text-slate-600'} ${(SOURCE_COLOR_CLASSES as any)[group.color]?.bg || 'bg-slate-100'}`}>
                               {expandedSections[group.id] || fieldSearchTerm ? <ChevronDown className="w-2 h-2" /> : <ChevronRightIcon className="w-2 h-2" />}{group.name}
                            </button>
                            {(expandedSections[group.id] || fieldSearchTerm) && (
@@ -416,7 +416,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             <div ref={dropZonesRef} className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div className="grid grid-cols-2 gap-2 min-h-0" style={{ height: `${dropZonesHeight}px` }}>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
                      <div className="space-y-2">
                         {filters.map((f, idx) => {
                            const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f.field);
@@ -432,7 +432,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                               />
                               <div className="flex flex-col gap-1 mt-1.5">
                                  <select
-                                    className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white font-medium"
+                                    className="w-full text-xs border border-slate-200 rounded p-1 bg-white font-medium"
                                     value={f.operator || 'eq'}
                                     onChange={(e) => {
                                        const n = [...filters];
@@ -456,7 +456,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                  </select>
                                  <input
                                     type="text"
-                                    className="w-full text-[10px] border border-slate-200 rounded p-1 bg-white"
+                                    className="w-full text-xs border border-slate-200 rounded p-1 bg-white"
                                     placeholder={f.operator === 'in' ? "Valeur1, Valeur2..." : "Valeur..."}
                                     value={Array.isArray(f.value) ? f.value.join(', ') : (f.value || '')}
                                     onChange={(e) => {
@@ -477,7 +477,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      </div>
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'col')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Table2 className="w-2 h-2" /> Colonnes</div>
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Table2 className="w-2 h-2" /> Colonnes</div>
                      <div className="space-y-1">
                         {colFields.map(f => {
                            const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
@@ -493,7 +493,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                               />
                            );
                         })}
-                        {isColFieldDate && <select className="w-full text-[10px] border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
+                        {isColFieldDate && <select className="w-full text-xs border-slate-200 rounded bg-slate-50 p-0.5" value={colGrouping} onChange={(e) => setColGrouping(e.target.value as any)}><option value="none">Brut</option><option value="year">Année</option><option value="quarter">T.</option><option value="month">Mois</option></select>}
                      </div>
                   </div>
                </div>
@@ -509,7 +509,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
                <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'row')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Layers className="w-2 h-2" /> Lignes</div>
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Layers className="w-2 h-2" /> Lignes</div>
                      {rowFields.map(f => {
                         const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === f);
                         return (
@@ -526,7 +526,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                      })}
                   </div>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'val')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
-                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
                         <div className="flex items-center gap-1"><Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)</div>
                         {openCalcModal && (
                            <button onClick={openCalcModal} className="p-0.5 hover:bg-indigo-50 text-indigo-500 rounded transition-colors" title="Ajouter un champ calculé">
@@ -556,7 +556,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                           n[idx] = { ...n[idx], aggType: t as any };
                                           setMetrics(n);
                                        }}
-                                       className={`px-0.5 py-0.5 text-[8px] uppercase rounded border ${m.aggType === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                       className={`px-0.5 py-0.5 text-xs uppercase rounded border ${m.aggType === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-500 border-slate-200'}`}
                                     >
                                        {t.substring(0, 3)}
                                     </button>

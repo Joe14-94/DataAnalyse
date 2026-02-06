@@ -130,7 +130,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
         {/* Advanced Toolbar */}
         <div className="px-4 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase">Type:</label>
+            <label className="text-xs font-black text-slate-400 uppercase">Type:</label>
             <select
               value={chartType}
               onChange={(e) => setChartType(e.target.value as QuickChartType)}
@@ -154,7 +154,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
           </div>
 
           <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-            <label className="text-[10px] font-black text-slate-400 uppercase">Couleurs:</label>
+            <label className="text-xs font-black text-slate-400 uppercase">Couleurs:</label>
             <select
               value={colorMode}
               onChange={(e) => setColorMode(e.target.value as ColorMode)}

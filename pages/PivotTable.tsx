@@ -795,7 +795,7 @@ export const PivotTable: React.FC = () => {
                                 <span className="text-xs font-bold uppercase tracking-wider">Mode sélection : Cliquez sur une cellule pour l'ajouter</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] font-black border border-white/30">{specificDashboardItems.length} CELLULES</span>
+                                <span className="bg-white/20 text-white px-2 py-0.5 rounded text-xs font-black border border-white/30">{specificDashboardItems.length} CELLULES</span>
                                 <Button size="sm" className="bg-brand-800 text-white font-black hover:bg-brand-900 py-1 shadow-sm border-none" onClick={() => setIsQuickChartModalOpen(true)} disabled={specificDashboardItems.length === 0}>Visualiser</Button>
                                 <Button size="sm" className="bg-white text-slate-900 font-black hover:bg-brand-50 py-1 shadow-sm border-none" onClick={() => { setIsSelectionMode(false); setIsSpecificDashboardModalOpen(true); }}>Créer Rapport</Button>
                                 <Button size="sm" variant="outline" className="text-white border-white/30 hover:bg-white/10 py-1" onClick={() => { setIsSelectionMode(false); setSpecificDashboardItems([]); }}>Annuler</Button>

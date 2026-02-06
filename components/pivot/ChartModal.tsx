@@ -791,7 +791,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
           )}
         </div>
         {data.path.length > 1 && (
-          <p className="text-[10px] text-slate-400 mt-2 pt-1 border-t border-slate-100">
+          <p className="text-xs text-slate-400 mt-2 pt-1 border-t border-slate-100">
             {data.path.join(' › ')}
           </p>
         )}

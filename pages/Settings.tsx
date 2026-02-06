@@ -800,7 +800,7 @@ export const Settings: React.FC = () => {
                                              ) : (
                                                 <h4 className="font-bold text-slate-800 truncate">{analysis.name}</h4>
                                              )}
-                                             <div className="flex flex-wrap items-center gap-3 mt-1 text-[10px] text-slate-500">
+                                             <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
                                                 <span className="flex items-center gap-1">
                                                    <Database className="w-3 h-3" />
                                                    Source: {ds?.name || 'Dataset supprimé'}

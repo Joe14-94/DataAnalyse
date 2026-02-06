@@ -441,21 +441,21 @@ export const buildHierarchicalTree = (
       // Si après filtrage il reste des enfants, les utiliser
       // Sinon, fallback sur rowTotal
       if (childrenWithValues.length > 0) {
-        leafNode.children = childrenWithValues;
+        // Accumuler les enfants si le noeud en a déjà (ragged hierarchy)
+        leafNode.children = [...(leafNode.children || []), ...childrenWithValues];
       } else {
         // Pas de métriques valides, utiliser rowTotal
-        leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
-        leafNode.children = undefined;
+        leafNode.value = (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
         if (dataRows.indexOf(row) < 2) {
           console.log(`🌞 Using rowTotal fallback: ${leafNode.value}`);
         }
       }
     } else {
       // Pas de colonnes multiples ou pas de métriques : utiliser rowTotal comme valeur
-      leafNode.value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
-      leafNode.children = undefined;
+      leafNode.value = (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
+      // IMPORTANT: Dans une hiérarchie ragged, on ne vide pas les enfants
       if (dataRows.indexOf(row) < 2) {
-        console.log(`🌞 No multiCols, using rowTotal: ${leafNode.value}`);
+        console.log(`🌞 No multiCols, adding to rowTotal: ${leafNode.value}`);
       }
     }
   }

@@ -290,7 +290,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                         </div>
 
                         <div className="flex-1 flex justify-end items-center gap-4">
-                           <span className="text-[10px] font-bold text-slate-400 uppercase">Aperçu :</span>
+                           <span className="text-xs font-bold text-slate-400 uppercase">Aperçu :</span>
                            <div className="px-3 py-1 border rounded min-w-[100px] text-center text-sm" style={{
                              backgroundColor: rule.style.backgroundColor || 'transparent',
                              color: rule.style.textColor || 'inherit',
@@ -414,7 +414,7 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                         </div>
 
                         <div className="flex items-center gap-4">
-                           <span className="text-[10px] font-bold text-slate-400 uppercase">Aperçu :</span>
+                           <span className="text-xs font-bold text-slate-400 uppercase">Aperçu :</span>
                            <div className="px-3 py-1 border rounded min-w-[100px] text-center text-sm font-bold" style={{
                              backgroundColor: rule.style.backgroundColor || 'transparent',
                              color: rule.style.textColor || 'inherit',

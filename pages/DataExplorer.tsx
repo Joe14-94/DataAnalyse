@@ -817,26 +817,36 @@ export const DataExplorer: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-3 w-full md:w-auto">
-               <div className="relative flex-1 md:w-64">
+               <div className="relative flex-1 md:w-64 group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                      <Search className="h-4 w-4 text-slate-400" />
                   </div>
                   <input
                      type="text"
-                     className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md bg-white placeholder-slate-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-all"
+                     className="block w-full pl-10 pr-9 py-2 border border-slate-300 rounded-md bg-white placeholder-slate-400 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-all"
                      placeholder="Recherche globale..."
                      value={searchTerm}
                      onChange={(e) => setSearchTerm(e.target.value)}
                   />
+                  {searchTerm && (
+                     <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        title="Effacer la recherche"
+                        aria-label="Effacer la recherche"
+                     >
+                        <X className="w-4 h-4" />
+                     </button>
+                  )}
                </div>
 
-               <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
-               <Button variant={isCalcModalOpen ? "primary" : "secondary"} onClick={() => setIsCalcModalOpen(!isCalcModalOpen)} className="whitespace-nowrap"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
-               <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
-               <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`}><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
-               <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
-               <Button variant={isColumnDrawerOpen ? "primary" : "secondary"} onClick={() => setIsColumnDrawerOpen(!isColumnDrawerOpen)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Colonnes</span></Button>
-               <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
+               <Button variant={isFormatDrawerOpen ? "primary" : "secondary"} onClick={() => setIsFormatDrawerOpen(!isFormatDrawerOpen)} className="whitespace-nowrap" title="Formatage Conditionnel"><Palette className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Conditionnel</span></Button>
+               <Button variant={isCalcModalOpen ? "primary" : "secondary"} onClick={() => setIsCalcModalOpen(!isCalcModalOpen)} className="whitespace-nowrap" title="Calculs et Formules"><FunctionSquare className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Calculs</span></Button>
+               <Button variant={isVlookupDrawerOpen ? "primary" : "secondary"} onClick={() => setIsVlookupDrawerOpen(!isVlookupDrawerOpen)} className="whitespace-nowrap" title="Enrichissement RECHERCHEV"><LinkIcon className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">RECHERCHEV</span></Button>
+               <Button variant={isEditMode ? "primary" : "outline"} onClick={() => setIsEditMode(!isEditMode)} className={`whitespace-nowrap ${isEditMode ? 'bg-brand-600 text-white' : ''}`} title="Mode Édition"><GitCommit className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Mode Édition</span></Button>
+               <Button variant={showFilters ? "primary" : "outline"} onClick={() => setShowFilters(!showFilters)} className="whitespace-nowrap" title="Filtres de colonnes"><Filter className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Filtres</span></Button>
+               <Button variant={isColumnDrawerOpen ? "primary" : "secondary"} onClick={() => setIsColumnDrawerOpen(!isColumnDrawerOpen)} className="whitespace-nowrap" title="Gestion des colonnes"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Colonnes</span></Button>
+               <Button variant={showColumnBorders ? "primary" : "outline"} onClick={() => setShowColumnBorders(!showColumnBorders)} className="whitespace-nowrap" title="Bordures des colonnes"><Columns className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Bordures</span></Button>
 
                {(Object.keys(columnFilters).length > 0 || searchTerm) && (
                   <Button variant="danger" onClick={clearFilters} className="whitespace-nowrap px-3" title="Effacer tous les filtres"><FilterX className="w-4 h-4" /></Button>
@@ -1517,7 +1527,7 @@ export const DataExplorer: React.FC = () => {
                               </button>
                            </div>
                            <span className="text-sm font-medium text-slate-700 truncate flex-1">{field}</span>
-                           <div className="text-[10px] font-bold text-slate-300 uppercase px-1.5 py-0.5 border border-slate-100 rounded">
+                           <div className="text-xs font-bold text-slate-300 uppercase px-1.5 py-0.5 border border-slate-100 rounded">
                               Pos. {idx + 1}
                            </div>
                         </div>

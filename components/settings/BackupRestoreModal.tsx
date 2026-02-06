@@ -101,7 +101,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
                 </div>
                 <div className="flex-1 pr-6">
                   <div className="text-sm font-bold text-txt-main">{opt.label}</div>
-                  <div className="text-[10px] text-txt-secondary mt-0.5 leading-tight">{opt.desc}</div>
+                  <div className="text-xs text-txt-secondary mt-0.5 leading-tight">{opt.desc}</div>
                 </div>
                 {isAvailable && (
                   <div className="absolute top-4 right-4">

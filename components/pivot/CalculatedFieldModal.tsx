@@ -185,7 +185,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800">{initialField ? 'Modifier le champ calculé' : 'Nouveau champ calculé'}</h3>
-                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Assistant de création</p>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Assistant de création</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-white rounded-full transition-colors"><X className="w-5 h-5" /></button>
@@ -197,7 +197,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         <div className="lg:col-span-4 space-y-4">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Nom du champ</label>
                                     <input
                                         type="text"
                                         className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all focus:border-indigo-500"
@@ -209,7 +209,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Type de résultat</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Type de résultat</label>
                                         <select
                                             className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                                             value={outputType}
@@ -222,7 +222,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                     </div>
                                     {outputType === 'number' && (
                                         <div>
-                                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Unité</label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Unité</label>
                                             <input
                                                 type="text"
                                                 className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -235,7 +235,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                 </div>
 
                                 <div className="pt-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">Mode de création</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-wider">Mode de création</label>
                                     <div className="flex p-1 bg-slate-200 rounded-lg gap-1">
                                         <button
                                             onClick={() => setMode('formula')}
@@ -261,9 +261,9 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
                             {mode === 'formula' ? (
                                 <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider flex justify-between">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 tracking-wider flex justify-between">
                                         <span>Formule</span>
-                                        <span className="text-[9px] normal-case font-medium text-slate-400">Ex: [Ventes] - [Coûts]</span>
+                                        <span className="text-xs normal-case font-medium text-slate-400">Ex: [Ventes] - [Coûts]</span>
                                     </label>
                                     <div className="relative group">
                                         <textarea
@@ -277,15 +277,15 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             <button onClick={() => setFormula('')} className="p-1 text-slate-300 hover:text-slate-500 transition-colors" title="Effacer"><X className="w-3 h-3" /></button>
                                         </div>
                                     </div>
-                                    <p className="text-[10px] text-slate-400 italic">
+                                    <p className="text-xs text-slate-400 italic">
                                         Cliquez sur les champs et fonctions à droite pour les insérer dans la formule.
                                     </p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Séquence d'actions</label>
-                                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">Ordre séquentiel</span>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Séquence d'actions</label>
+                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">Ordre séquentiel</span>
                                     </div>
 
                                     <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
@@ -299,8 +299,8 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                 <div key={action.id} className={`bg-white border rounded-xl shadow-sm overflow-hidden group transition-all ${action.type === 'source' ? 'border-brand-200' : 'border-slate-200 hover:border-indigo-300'}`}>
                                                     <div className={`px-3 py-2 border-b flex items-center justify-between ${action.type === 'source' ? 'bg-brand-50 border-brand-100' : 'bg-slate-50 border-slate-200'}`}>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`${action.type === 'source' ? 'bg-brand-600' : 'bg-indigo-600'} text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold`}>{idx + 1}</span>
-                                                            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight truncate w-32">
+                                                            <span className={`${action.type === 'source' ? 'bg-brand-600' : 'bg-indigo-600'} text-white w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold`}>{idx + 1}</span>
+                                                            <span className="text-xs font-bold text-slate-700 uppercase tracking-tight truncate w-32">
                                                                 {action.type === 'source' ? 'Source des données' : action.type.toUpperCase()}
                                                             </span>
                                                         </div>
@@ -317,7 +317,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                     <div className="p-3 space-y-3">
                                                         {action.type === 'source' && (
                                                             <div>
-                                                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Champ source</label>
+                                                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Champ source</label>
                                                                 <select
                                                                     className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 focus:bg-white font-bold text-slate-700"
                                                                     value={action.params.field || ''}
@@ -333,11 +333,11 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                         {action.type === 'replace' && (
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Chercher</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Chercher</label>
                                                                     <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.search || ''} onChange={e => updateAction(action.id, { search: e.target.value })} />
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Remplacer</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Remplacer</label>
                                                                     <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.replacement || ''} onChange={e => updateAction(action.id, { replacement: e.target.value })} />
                                                                 </div>
                                                             </div>
@@ -345,11 +345,11 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                         {action.type === 'regex' && (
                                                             <div className="space-y-2">
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Motif Regex</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Motif Regex</label>
                                                                     <input type="text" className="w-full text-xs font-mono border border-slate-200 rounded px-2 py-1" value={action.params.pattern || ''} onChange={e => updateAction(action.id, { pattern: e.target.value })} placeholder="Ex: [0-9]+" />
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Remplacement</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Remplacement</label>
                                                                     <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.replacement || ''} onChange={e => updateAction(action.id, { replacement: e.target.value })} />
                                                                 </div>
                                                             </div>
@@ -357,16 +357,16 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                         {action.type === 'concat' && (
                                                             <div className="space-y-2">
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Colonnes à ajouter</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Colonnes à ajouter</label>
                                                                     <div className="flex flex-wrap gap-1 p-2 bg-slate-50 border border-slate-200 rounded-lg min-h-[40px]">
                                                                         {(action.params.otherFields || []).map((f: string) => (
-                                                                            <span key={f} className="inline-flex items-center gap-1 bg-white border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                                                            <span key={f} className="inline-flex items-center gap-1 bg-white border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded text-xs font-bold">
                                                                                 {f}
                                                                                 <button onClick={() => updateAction(action.id, { otherFields: action.params.otherFields.filter((of: string) => of !== f) })} className="hover:text-red-500"><X className="w-2.5 h-2.5" /></button>
                                                                             </span>
                                                                         ))}
                                                                         <select
-                                                                            className="text-[9px] bg-transparent border-none focus:ring-0 text-slate-400"
+                                                                            className="text-xs bg-transparent border-none focus:ring-0 text-slate-400"
                                                                             onChange={e => {
                                                                                 if (!e.target.value) return;
                                                                                 const current = action.params.otherFields || [];
@@ -382,31 +382,31 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                                     </div>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Séparateur</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Séparateur</label>
                                                                     <input type="text" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.separator || ''} onChange={e => updateAction(action.id, { separator: e.target.value })} placeholder="Ex: - , /" />
                                                                 </div>
                                                             </div>
                                                         )}
                                                         {['add', 'subtract', 'multiply', 'divide'].includes(action.type) && (
                                                             <div>
-                                                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Valeur</label>
+                                                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Valeur</label>
                                                                 <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.value || 0} onChange={e => updateAction(action.id, { value: parseFloat(e.target.value) })} />
                                                             </div>
                                                         )}
                                                         {['left', 'right'].includes(action.type) && (
                                                             <div>
-                                                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Nombre de caractères</label>
+                                                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre de caractères</label>
                                                                 <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.count || 5} onChange={e => updateAction(action.id, { count: parseInt(e.target.value) })} />
                                                             </div>
                                                         )}
                                                         {action.type === 'substring' && (
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Position début</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Position début</label>
                                                                     <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.start || 0} onChange={e => updateAction(action.id, { start: parseInt(e.target.value) })} />
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Longueur</label>
+                                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Longueur</label>
                                                                     <input type="number" className="w-full text-xs border border-slate-200 rounded px-2 py-1" value={action.params.length || 5} onChange={e => updateAction(action.id, { length: parseInt(e.target.value) })} />
                                                                 </div>
                                                             </div>
@@ -420,23 +420,23 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                     <div className="pt-2">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Plus className="w-3 h-3 text-indigo-600" />
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ajouter une transformation</span>
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ajouter une transformation</span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-1.5">
-                                            <button onClick={() => addAction('trim')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Scissors className="w-3 h-3" /> Nettoyer (Trim)</button>
-                                            <button onClick={() => addAction('upper')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><TypeIcon className="w-3 h-3" /> Majuscule</button>
-                                            <button onClick={() => addAction('replace')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Wand2 className="w-3 h-3" /> Remplacer</button>
-                                            <button onClick={() => addAction('regex')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><MessageSquare className="w-3 h-3" /> Regex</button>
-                                            <button onClick={() => addAction('concat')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Plus className="w-3 h-3" /> Concaténer</button>
+                                            <button onClick={() => addAction('trim')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Scissors className="w-3 h-3" /> Nettoyer (Trim)</button>
+                                            <button onClick={() => addAction('upper')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><TypeIcon className="w-3 h-3" /> Majuscule</button>
+                                            <button onClick={() => addAction('replace')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Wand2 className="w-3 h-3" /> Remplacer</button>
+                                            <button onClick={() => addAction('regex')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><MessageSquare className="w-3 h-3" /> Regex</button>
+                                            <button onClick={() => addAction('concat')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Plus className="w-3 h-3" /> Concaténer</button>
                                             {outputType === 'number' && (
-                                                <button onClick={() => addAction('add')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Calculator className="w-3 h-3" /> Calculer</button>
+                                                <button onClick={() => addAction('add')} className="text-left px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center gap-1.5"><Calculator className="w-3 h-3" /> Calculer</button>
                                             )}
                                         </div>
                                     </div>
 
                                     <div className="mt-4 pt-4 border-t border-slate-200">
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Formule générée (Lecture seule)</label>
-                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-[10px] font-mono text-slate-600 break-all h-20 overflow-y-auto custom-scrollbar">
+                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">Formule générée (Lecture seule)</label>
+                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs font-mono text-slate-600 break-all h-20 overflow-y-auto custom-scrollbar">
                                             {formula || "Choisissez un champ source pour commencer..."}
                                         </div>
                                     </div>
@@ -448,7 +448,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         <div className="lg:col-span-5 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
                             <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
                                 <Database className="w-3.5 h-3.5 text-indigo-600" />
-                                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Champs</span>
+                                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Champs</span>
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 custom-scrollbar min-h-[300px]">
                                 <div className="grid grid-cols-1 gap-1.5">
@@ -471,7 +471,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         <div className="lg:col-span-3 flex flex-col border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
                             <div className="flex bg-white border-b border-slate-200 p-2.5 items-center gap-2">
                                 <FunctionSquare className="w-3.5 h-3.5 text-indigo-600" />
-                                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Fonctions</span>
+                                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Fonctions</span>
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
                                 <div className="space-y-3">
@@ -480,7 +480,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         if (categoryFunctions.length === 0) return null;
                                         return (
                                             <div key={category}>
-                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">{category}</div>
+                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">{category}</div>
                                                 <div className="space-y-1.5">
                                                     {categoryFunctions.map(fn => (
                                                         <button
@@ -492,8 +492,8 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                                 <span className="text-[11px] font-bold text-indigo-700 font-mono">{fn.name}</span>
                                                                 <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
                                                             </div>
-                                                            <div className="text-[9px] text-slate-400 font-mono mb-1">{fn.syntax}</div>
-                                                            <div className="text-[9px] text-slate-500 leading-tight">{fn.desc}</div>
+                                                            <div className="text-xs text-slate-400 font-mono mb-1">{fn.syntax}</div>
+                                                            <div className="text-xs text-slate-500 leading-tight">{fn.desc}</div>
                                                         </button>
                                                     ))}
                                                 </div>
@@ -508,11 +508,11 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                     {/* Preview Section */}
                     <div className={`p-4 rounded-xl border ${previewResult?.error ? 'bg-red-50 border-red-200' : 'bg-green-50/50 border-green-200'} transition-all shadow-sm`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${previewResult?.error ? 'text-red-700' : 'text-green-700'}`}>
+                            <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${previewResult?.error ? 'text-red-700' : 'text-green-700'}`}>
                                 {previewResult?.error ? <X className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
                                 {previewResult?.error ? 'Erreur dans la formule' : 'Aperçu du résultat'}
                             </span>
-                            {!previewResult?.error && formula && <span className="text-[10px] text-green-600 font-medium italic">Calculé sur la 1ère ligne</span>}
+                            {!previewResult?.error && formula && <span className="text-xs text-green-600 font-medium italic">Calculé sur la 1ère ligne</span>}
                         </div>
                         <div className={`text-base font-mono break-all ${previewResult?.error ? 'text-red-800 italic opacity-80' : 'text-slate-800 font-bold'}`}>
                             {previewResult ? (previewResult.error || (previewResult.value === null ? 'null' : String(previewResult.value)) + (unit && outputType === 'number' ? ` ${unit}` : '')) : <span className="text-slate-400 italic">Saisissez une formule pour voir un aperçu...</span>}
@@ -525,7 +525,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             onClick={() => setShowExamples(!showExamples)}
                             className="w-full p-3 flex items-center justify-between hover:bg-indigo-100/50 transition-colors"
                         >
-                            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-2">
+                            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-2">
                                 <BookOpen className="w-4 h-4" />
                                 Exemples d'utilisation (REMPLACER, Regex, Remplacements multiples)
                             </span>
@@ -536,25 +536,25 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             <div className="p-4 space-y-3 bg-white border-t border-indigo-200">
                                 {/* Example 1: Simple replacement */}
                                 <div className="border-l-4 border-indigo-400 pl-3 py-2 bg-indigo-50/30">
-                                    <div className="text-[10px] font-bold text-indigo-900 mb-1">✓ Remplacement simple</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Test], "AZERTY", "QSDFGH")</code>
-                                    <div className="text-[9px] text-slate-600">→ Remplace toutes les occurrences de "AZERTY" par "QSDFGH"</div>
+                                    <div className="text-xs font-bold text-indigo-900 mb-1">✓ Remplacement simple</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">REMPLACER([Test], "AZERTY", "QSDFGH")</code>
+                                    <div className="text-xs text-slate-600">→ Remplace toutes les occurrences de "AZERTY" par "QSDFGH"</div>
                                 </div>
 
                                 {/* Example 2: Multiple replacements */}
                                 <div className="border-l-4 border-amber-400 pl-3 py-2 bg-amber-50/30">
-                                    <div className="text-[10px] font-bold text-amber-900 mb-1">✓ Remplacements multiples en chaîne (ordre d'exécution)</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">
+                                    <div className="text-xs font-bold text-amber-900 mb-1">✓ Remplacements multiples en chaîne (ordre d'exécution)</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">
                                         REMPLACER(REMPLACER(REMPLACER([Statut], "En cours", "Active"), "Terminé", "Done"), "Annulé", "Cancelled")
                                     </code>
-                                    <div className="text-[9px] text-slate-600">→ Remplace plusieurs chaînes différentes en imbriquant les fonctions</div>
-                                    <div className="text-[9px] text-amber-700 font-medium mt-1 bg-amber-100 p-1.5 rounded">
+                                    <div className="text-xs text-slate-600">→ Remplace plusieurs chaînes différentes en imbriquant les fonctions</div>
+                                    <div className="text-xs text-amber-700 font-medium mt-1 bg-amber-100 p-1.5 rounded">
                                         ⚠️ Ordre d'exécution : 1️⃣ "En cours"→"Active" 2️⃣ "Terminé"→"Done" 3️⃣ "Annulé"→"Cancelled"
                                     </div>
-                                    <div className="text-[9px] text-amber-700 mt-1">Les remplacements s'exécutent de l'intérieur vers l'extérieur, dans l'ordre des imbrications</div>
-                                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-[9px]">
+                                    <div className="text-xs text-amber-700 mt-1">Les remplacements s'exécutent de l'intérieur vers l'extérieur, dans l'ordre des imbrications</div>
+                                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
                                         <div className="font-bold text-red-900 mb-1">❌ ERREUR COURANTE : Ne mettez PAS les REMPLACER sur plusieurs lignes !</div>
-                                        <code className="text-red-700 block font-mono text-[8px]">
+                                        <code className="text-red-700 block font-mono text-xs">
                                             REMPLACER([Code], "A", "B")<br/>
                                             REMPLACER([Code], "C", "D") ← Ignoré !
                                         </code>
@@ -564,67 +564,67 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
                                 {/* Example 3: Regex - Remove all digits */}
                                 <div className="border-l-4 border-purple-400 pl-3 py-2 bg-purple-50/30">
-                                    <div className="text-[10px] font-bold text-purple-900 mb-1">✓ Regex : Supprimer tous les chiffres</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Code], "[0-9]+", "")</code>
-                                    <div className="text-[9px] text-slate-600">→ "ABC123DEF" devient "ABCDEF"</div>
-                                    <div className="text-[9px] text-purple-700 font-medium mt-1">Pattern: [0-9]+ = un ou plusieurs chiffres</div>
+                                    <div className="text-xs font-bold text-purple-900 mb-1">✓ Regex : Supprimer tous les chiffres</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">REMPLACER([Code], "[0-9]+", "")</code>
+                                    <div className="text-xs text-slate-600">→ "ABC123DEF" devient "ABCDEF"</div>
+                                    <div className="text-xs text-purple-700 font-medium mt-1">Pattern: [0-9]+ = un ou plusieurs chiffres</div>
                                 </div>
 
                                 {/* Example 4: Regex - Replace spaces */}
                                 <div className="border-l-4 border-green-400 pl-3 py-2 bg-green-50/30">
-                                    <div className="text-[10px] font-bold text-green-900 mb-1">✓ Regex : Remplacer tous les espaces</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Tel], " ", "")</code>
-                                    <div className="text-[9px] text-slate-600">→ "06 12 34 56 78" devient "0612345678"</div>
+                                    <div className="text-xs font-bold text-green-900 mb-1">✓ Regex : Remplacer tous les espaces</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">REMPLACER([Tel], " ", "")</code>
+                                    <div className="text-xs text-slate-600">→ "06 12 34 56 78" devient "0612345678"</div>
                                 </div>
 
                                 {/* Example 5: Regex - Replace special chars */}
                                 <div className="border-l-4 border-pink-400 pl-3 py-2 bg-pink-50/30">
-                                    <div className="text-[10px] font-bold text-pink-900 mb-1">✓ Regex : Supprimer caractères spéciaux</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Texte], "[^a-zA-Z0-9 ]", "")</code>
-                                    <div className="text-[9px] text-slate-600">→ Garde uniquement lettres, chiffres et espaces</div>
-                                    <div className="text-[9px] text-pink-700 font-medium mt-1">Pattern: [^...] = tout SAUF ce qui est dans les crochets</div>
+                                    <div className="text-xs font-bold text-pink-900 mb-1">✓ Regex : Supprimer caractères spéciaux</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">REMPLACER([Texte], "[^a-zA-Z0-9 ]", "")</code>
+                                    <div className="text-xs text-slate-600">→ Garde uniquement lettres, chiffres et espaces</div>
+                                    <div className="text-xs text-pink-700 font-medium mt-1">Pattern: [^...] = tout SAUF ce qui est dans les crochets</div>
                                 </div>
 
                                 {/* Example 6: Regex - Extract domain from email */}
                                 <div className="border-l-4 border-cyan-400 pl-3 py-2 bg-cyan-50/30">
-                                    <div className="text-[10px] font-bold text-cyan-900 mb-1">✓ Regex : Remplacer tout après @</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Email], "@.*", "@example.com")</code>
-                                    <div className="text-[9px] text-slate-600">→ "user@ancien.com" devient "user@example.com"</div>
-                                    <div className="text-[9px] text-cyan-700 font-medium mt-1">Pattern: .* = n'importe quoi après @</div>
+                                    <div className="text-xs font-bold text-cyan-900 mb-1">✓ Regex : Remplacer tout après @</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">REMPLACER([Email], "@.*", "@example.com")</code>
+                                    <div className="text-xs text-slate-600">→ "user@ancien.com" devient "user@example.com"</div>
+                                    <div className="text-xs text-cyan-700 font-medium mt-1">Pattern: .* = n'importe quoi après @</div>
                                 </div>
 
                                 {/* Example 7: Regex - Replace text with dots (escaped) */}
                                 <div className="border-l-4 border-orange-400 pl-3 py-2 bg-orange-50/30">
-                                    <div className="text-[10px] font-bold text-orange-900 mb-1">✓ Regex : Remplacer texte avec points (A.B.C.D)</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1">REMPLACER([Code], "A\\.B\\.C\\.[A-Z]", "X.Y.Z")</code>
-                                    <div className="text-[9px] text-slate-600">→ "A.B.C.D" ou "A.B.C.E" deviennent "X.Y.Z"</div>
-                                    <div className="text-[9px] text-orange-700 font-medium mt-1">Important : Le point doit être échappé avec \. car en regex, . = n'importe quel caractère</div>
-                                    <div className="text-[9px] text-orange-700 font-medium mt-1">Pattern: [A-Z] = une lettre majuscule (D, E, F, etc.)</div>
+                                    <div className="text-xs font-bold text-orange-900 mb-1">✓ Regex : Remplacer texte avec points (A.B.C.D)</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1">REMPLACER([Code], "A\\.B\\.C\\.[A-Z]", "X.Y.Z")</code>
+                                    <div className="text-xs text-slate-600">→ "A.B.C.D" ou "A.B.C.E" deviennent "X.Y.Z"</div>
+                                    <div className="text-xs text-orange-700 font-medium mt-1">Important : Le point doit être échappé avec \. car en regex, . = n'importe quel caractère</div>
+                                    <div className="text-xs text-orange-700 font-medium mt-1">Pattern: [A-Z] = une lettre majuscule (D, E, F, etc.)</div>
                                 </div>
 
                                 {/* Example 8: Multiple regex replacements with dots */}
                                 <div className="border-l-4 border-teal-400 pl-3 py-2 bg-teal-50/30">
-                                    <div className="text-[10px] font-bold text-teal-900 mb-1">✓ Regex : Remplacements multiples de codes avec points</div>
-                                    <code className="text-[10px] font-mono text-slate-700 block mb-1 break-all">
+                                    <div className="text-xs font-bold text-teal-900 mb-1">✓ Regex : Remplacements multiples de codes avec points</div>
+                                    <code className="text-xs font-mono text-slate-700 block mb-1 break-all">
                                         REMPLACER(REMPLACER(REMPLACER([Code Entité], "0\\.1\\.17\\.0", "AZERTT"), "A\\.6\\..*", "DAS"), "[0-9]+\\..*", "Autres")
                                     </code>
-                                    <div className="text-[9px] text-slate-600 space-y-0.5">
+                                    <div className="text-xs text-slate-600 space-y-0.5">
                                         <div>→ 1️⃣ "0.1.17.0" devient "AZERTT"</div>
                                         <div>→ 2️⃣ "A.6.x.x" (A.6 suivi de n'importe quoi) devient "DAS"</div>
                                         <div>→ 3️⃣ Tous les autres codes commençant par un chiffre deviennent "Autres"</div>
                                     </div>
-                                    <div className="text-[9px] text-teal-700 font-medium mt-2 bg-teal-100 p-1.5 rounded">
+                                    <div className="text-xs text-teal-700 font-medium mt-2 bg-teal-100 p-1.5 rounded">
                                         💡 Astuce : Mettez les patterns les plus spécifiques EN PREMIER (au centre de l'imbrication), et les plus généraux à la fin (à l'extérieur)
                                     </div>
                                 </div>
 
                                 {/* Regex Quick Reference */}
                                 <div className="border border-slate-300 rounded-lg p-3 bg-slate-50 mt-3">
-                                    <div className="text-[10px] font-bold text-slate-700 mb-2 flex items-center gap-1">
+                                    <div className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1">
                                         <Info className="w-3 h-3" />
                                         Aide Regex (expressions régulières)
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 text-[9px]">
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div>
                                             <code className="font-mono text-indigo-700">[0-9]</code>
                                             <span className="text-slate-600"> = un chiffre</span>
@@ -666,14 +666,14 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             <span className="text-slate-600"> = échapper un caractère spécial</span>
                                         </div>
                                     </div>
-                                    <div className="mt-2 text-[9px] text-slate-500 italic">
+                                    <div className="mt-2 text-xs text-slate-500 italic">
                                         Note : SUBSTITUER ne supporte pas les regex, utilisez REMPLACER pour les patterns complexes
                                     </div>
                                 </div>
 
                                 {/* Practical tip */}
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
-                                    <div className="text-[9px] text-blue-900 flex items-start gap-1">
+                                    <div className="text-xs text-blue-900 flex items-start gap-1">
                                         <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                         <div>
                                             <strong>Astuce :</strong> Pour remplacer plusieurs chaînes différentes, imbriquez les REMPLACER les uns dans les autres comme dans l'exemple 2. Les remplacements sont ordonnancés : la première règle (la plus imbriquée) s'exécute en premier, puis la seconde, puis la troisième, etc. Testez avec l'aperçu en temps réel pour vérifier le résultat !
