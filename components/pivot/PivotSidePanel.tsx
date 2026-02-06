@@ -586,7 +586,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             </button>
             <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
             <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
-            {(isTemporalMode || colFields.length > 0) && <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-brand-700 font-bold" />}
+            <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Variations" className="text-brand-700 font-bold" />
          </div>
       </div>
    );
