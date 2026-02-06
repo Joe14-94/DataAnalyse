@@ -455,17 +455,18 @@ export const DataExplorer: React.FC = () => {
          }
       }
 
-      // BOLT OPTIMIZATION: Pre-calculate search index for O(N) global search
+      // BOLT OPTIMIZATION: Pre-calculate searchable keys and use efficient join/lowercase
+      const searchableKeys = rows.length > 0 ? Object.keys(rows[0]).filter(k => !k.startsWith('_') || k === '_importDate') : [];
+
       return rows.map(row => {
-         let searchStr = "";
-         for (const k in row) {
-            if (k.startsWith('_') && k !== '_importDate') continue;
-            const v = row[k];
+         const vals: string[] = [];
+         for (let i = 0; i < searchableKeys.length; i++) {
+            const v = row[searchableKeys[i]];
             if (v !== null && v !== undefined && v !== '') {
-               searchStr += String(v) + " ";
+               vals.push(String(v));
             }
          }
-         return { ...row, _searchIndex: searchStr.toLowerCase() };
+         return { ...row, _searchIndex: vals.join(' ').toLowerCase() };
       });
    }, [currentDataset, batches, blendingConfig, datasets]);
 
@@ -486,55 +487,80 @@ export const DataExplorer: React.FC = () => {
    const processedRows = useMemo(() => {
       let data = allRows;
 
-      if (searchTerm.trim()) {
-         const lowerTerm = searchTerm.toLowerCase();
-         // BOLT OPTIMIZATION: Use pre-calculated search index (O(N) instead of O(N*M))
-         data = data.filter(row => row._searchIndex.includes(lowerTerm));
-      }
-
-      Object.entries(columnFilters).forEach(([key, filterValue]) => {
-         if (filterValue !== undefined && filterValue !== null) {
-            if (filterValue === '__EMPTY__') {
-               data = data.filter(row => {
-                  const val = row[key];
-                  return val === undefined || val === null || val === '';
-               });
-            } else {
-               let targetVal = filterValue as string;
-               let isExact = false;
-               if (targetVal.startsWith('=')) { isExact = true; targetVal = targetVal.substring(1); }
-               const lowerFilter = targetVal.toLowerCase();
-
-               data = data.filter(row => {
-                  const val = row[key];
-                  if (key === '_batchId') return String(val) === String(targetVal);
-
-                  const valStr = String(val ?? '').toLowerCase();
-                  const config = currentDataset?.fieldConfigs?.[key];
-
-                  if (isExact) {
-                     if (valStr === lowerFilter) return true;
-                     // Support for Date groupings from TCD Drilldown
-                     if (config?.type === 'date' || key.toLowerCase().includes('date')) {
-                        if (getGroupedLabel(valStr, 'month').toLowerCase() === lowerFilter) return true;
-                        if (getGroupedLabel(valStr, 'year').toLowerCase() === lowerFilter) return true;
-                        if (getGroupedLabel(valStr, 'quarter').toLowerCase() === lowerFilter) return true;
-                     }
-                  }
-
-                  if (key === '_importDate') {
-                     const dateStr = val as string;
-                     if (isExact) return dateStr === targetVal || formatDateFr(dateStr) === targetVal;
-                     if (formatDateFr(dateStr).toLowerCase().includes(lowerFilter)) return true;
-                     if (dateStr.includes(lowerFilter)) return true;
-                     return false;
-                  }
-
-                  return isExact ? valStr === lowerFilter : valStr.includes(lowerFilter);
-               });
+      // BOLT OPTIMIZATION: Consolidate all filtering into a single O(N) pass
+      const activeFilters = Object.entries(columnFilters)
+         .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+         .map(([key, value]) => {
+            let targetVal = String(value);
+            let isExact = false;
+            if (targetVal.startsWith('=')) {
+               isExact = true;
+               targetVal = targetVal.substring(1);
             }
-         }
-      });
+            return {
+               key,
+               targetVal,
+               lowerFilter: targetVal.toLowerCase(),
+               isExact,
+               isEmpty: value === '__EMPTY__'
+            };
+         });
+
+      const lowerSearchTerm = searchTerm.trim().toLowerCase();
+
+      if (lowerSearchTerm || activeFilters.length > 0) {
+         data = data.filter(row => {
+            // 1. Global search
+            if (lowerSearchTerm && !row._searchIndex.includes(lowerSearchTerm)) return false;
+
+            // 2. Column filters
+            for (let i = 0; i < activeFilters.length; i++) {
+               const f = activeFilters[i];
+               const val = row[f.key];
+
+               if (f.isEmpty) {
+                  if (val !== undefined && val !== null && val !== '') return false;
+                  continue;
+               }
+
+               if (f.key === '_batchId') {
+                  if (String(val) !== f.targetVal) return false;
+                  continue;
+               }
+
+               const valStr = String(val ?? '').toLowerCase();
+               const config = currentDataset?.fieldConfigs?.[f.key];
+
+               if (f.isExact) {
+                  let matched = (valStr === f.lowerFilter);
+
+                  if (!matched && (config?.type === 'date' || f.key.toLowerCase().includes('date'))) {
+                     if (getGroupedLabel(valStr, 'month').toLowerCase() === f.lowerFilter) matched = true;
+                     else if (getGroupedLabel(valStr, 'year').toLowerCase() === f.lowerFilter) matched = true;
+                     else if (getGroupedLabel(valStr, 'quarter').toLowerCase() === f.lowerFilter) matched = true;
+                  }
+
+                  if (!matched && f.key === '_importDate') {
+                     const dateStr = val as string;
+                     if (dateStr === f.targetVal || formatDateFr(dateStr) === f.targetVal) matched = true;
+                  }
+
+                  if (!matched) return false;
+                  continue;
+               }
+
+               // Non-exact matches
+               if (f.key === '_importDate') {
+                  const dateStr = val as string;
+                  if (!formatDateFr(dateStr).toLowerCase().includes(f.lowerFilter) && !dateStr.includes(f.lowerFilter)) return false;
+                  continue;
+               }
+
+               if (!valStr.includes(f.lowerFilter)) return false;
+            }
+            return true;
+         });
+      }
 
       if (sortConfig) {
          data.sort((a, b) => {
