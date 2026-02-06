@@ -415,7 +415,7 @@ export const CustomAnalytics: React.FC = () => {
             link.click();
          }
       } else if (format === 'xlsx') {
-         const data = mode === 'snapshot' ? snapshotData : trendData.data;
+         const data = mode === 'snapshot' ? snapshotData.data : trendData.data;
          const worksheet = XLSX.utils.json_to_sheet(data);
          const workbook = XLSX.utils.book_new();
          XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
