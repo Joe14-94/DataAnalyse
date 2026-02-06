@@ -518,17 +518,19 @@ export const AnalysisStudio: React.FC = () => {
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f8fafc; }
     .container { max-width: 1200px; margin: 0 auto; background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-    .header { border-bottom: 1px solid #e2e8f0; margin-bottom: 20px; padding-bottom: 10px; }
-    h1 { font-size: 1.5rem; color: #1e293b; margin: 0; }
+    .header { border-bottom: 1px solid #e2e8f0; margin-bottom: 20px; padding-bottom: 15px; display: flex; align-items: center; gap: 20px; }
+    .logo { height: 40px; width: auto; object-fit: contain; }
+    h1 { font-size: 1.5rem; color: #1e293b; margin: 0; flex: 1; }
     .metadata { font-size: 0.875rem; color: #64748b; margin-top: 5px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
+      ${companyLogo ? `<img src="${companyLogo}" class="logo" alt="Logo" />` : ''}
       <h1>${title}</h1>
-      <div class="metadata">Exporté le ${new Date().toLocaleDateString()} | Unité: ${unit || 'Standard'}</div>
     </div>
+    <div class="metadata">Exporté le ${new Date().toLocaleDateString()} | Unité: ${unit || 'Standard'}</div>
     <div id="chart" style="width:100%;height:600px;"></div>
   </div>
   <script>

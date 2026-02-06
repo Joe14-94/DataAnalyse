@@ -20,6 +20,7 @@ import { pivotResultToRows, temporalResultToRows } from '../utils/pivotToDataset
 import { detectDateColumn, formatCurrency, formatPercentage } from '../utils/temporalComparison';
 
 import { usePivotData } from '../hooks/usePivotData';
+import { formatPivotOutput } from '../logic/pivotEngine';
 import { PivotHeader } from '../components/pivot/PivotHeader';
 import { PivotSidePanel } from '../components/pivot/PivotSidePanel';
 import { PivotGrid } from '../components/pivot/PivotGrid';
@@ -295,11 +296,33 @@ export const PivotTable: React.FC = () => {
     const handleExport = (format: 'pdf' | 'html', mode: any = 'adaptive') => {
         setShowExportMenu(false);
 
-        if (format === 'html' && pivotData) {
-            // Use data-based export for HTML to include all rows (not just virtualized ones)
-            exportPivotToHTML(pivotData, rowFields, showTotalCol, `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo);
+        if (format === 'html') {
+            const title = `TCD - ${primaryDataset?.name || 'Analyse'}`;
+            const formatOutput = (val: string | number, metric?: any) => {
+                const field = metric?.field || valField;
+                const type = metric?.aggType || aggType;
+                return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
+            };
+
+            if (isTemporalMode && (temporalResults?.length > 0)) {
+                exportPivotToHTML(temporalResults, rowFields, showTotalCol, title, companyLogo, {
+                    isTemporalMode: true,
+                    temporalConfig,
+                    temporalColTotals,
+                    metrics: metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []),
+                    showVariations,
+                    formatOutput
+                });
+            } else if (pivotData) {
+                exportPivotToHTML(pivotData, rowFields, showTotalCol, title, companyLogo, {
+                    formatOutput,
+                    metrics: metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : [])
+                });
+            } else {
+                alert("Aucune donnée à exporter");
+            }
         } else {
-            // Use DOM-based export for PDF
+            // Use DOM-based export for PDF/PNG
             exportView(format, 'pivot-export-container', `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo, mode);
         }
     };
@@ -307,90 +330,132 @@ export const PivotTable: React.FC = () => {
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
         setShowExportMenu(false);
 
-        if (!pivotData || !primaryDataset) {
+        if (!primaryDataset) {
+            alert("Veuillez sélectionner un dataset");
+            return;
+        }
+
+        if (!isTemporalMode && !pivotData) {
+            alert("Aucune donnée à exporter");
+            return;
+        }
+
+        if (isTemporalMode && (!temporalResults || temporalResults.length === 0)) {
             alert("Aucune donnée à exporter");
             return;
         }
 
         // Build export data structure
         const exportData: any[][] = [];
+        const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
 
-        // Header row - separate column for each row field
-        const headers: string[] = [];
+        if (isTemporalMode && temporalConfig) {
+            // --- TEMPORAL MODE EXPORT ---
+            const headers: string[] = [...rowFields];
 
-        // Add a column for each row field
-        rowFields.forEach(field => {
-            headers.push(field);
-        });
-
-        // Add column headers (metrics)
-        pivotData.colHeaders.forEach(header => {
-            headers.push(header);
-        });
-
-        // Add "Total" column if row totals are shown
-        if (showTotalCol) {
-            headers.push('Total');
-        }
-
-        exportData.push(headers);
-
-        // Data rows
-        pivotData.displayRows.forEach(row => {
-            const rowData: any[] = [];
-
-            // Add each key in its own column
-            // row.keys contains the hierarchy: ["France", "Paris", "Ordinateur"]
-            rowFields.forEach((field, index) => {
-                if (index < row.keys.length) {
-                    // Add indentation for subtotals
-                    const indent = row.type === 'subtotal' && index === row.keys.length - 1
-                        ? '  '.repeat(row.level || 0)
-                        : '';
-                    rowData.push(indent + row.keys[index]);
-                } else {
-                    // Empty cell for higher level subtotals
-                    rowData.push('');
+            temporalConfig.sources.forEach((s: any) => {
+                activeMetrics.forEach(m => {
+                    const mLabel = m.label || `${m.field} (${m.aggType})`;
+                    headers.push(activeMetrics.length > 1 ? `${s.label} - ${mLabel}` : s.label);
+                });
+                if (showVariations && s.id !== temporalConfig.referenceSourceId) {
+                    activeMetrics.forEach(m => {
+                        const mLabel = m.label || `${m.field} (${m.aggType})`;
+                        headers.push(activeMetrics.length > 1 ? `Var. ${s.label} - ${mLabel}` : `Var. ${s.label}`);
+                    });
                 }
             });
+            exportData.push(headers);
 
-            // Metric values for each column
-            pivotData.colHeaders.forEach(colHeader => {
-                const value = row.metrics[colHeader];
-                rowData.push(value !== undefined && value !== null ? value : '');
+            temporalResults.forEach(result => {
+                const rowData: any[] = [];
+                const keys = result.groupLabel.split('\x1F');
+                const isSubtotal = result.isSubtotal;
+                const subLevel = result.subtotalLevel || 0;
+
+                rowFields.forEach((_, idx) => {
+                    if (isSubtotal) {
+                        if (idx === subLevel) rowData.push(`Total ${keys[idx]}`);
+                        else if (idx < subLevel) rowData.push(keys[idx]);
+                        else rowData.push('');
+                    } else {
+                        rowData.push(keys[idx] || '');
+                    }
+                });
+
+                temporalConfig.sources.forEach((s: any) => {
+                    activeMetrics.forEach(m => {
+                        const mLabel = m.label || `${m.field} (${m.aggType})`;
+                        rowData.push(result.values[s.id]?.[mLabel] ?? '');
+                    });
+                    if (showVariations && s.id !== temporalConfig.referenceSourceId) {
+                        activeMetrics.forEach(m => {
+                            const mLabel = m.label || `${m.field} (${m.aggType})`;
+                            const delta = result.deltas[s.id]?.[mLabel];
+                            if (temporalConfig.deltaFormat === 'percentage') {
+                                rowData.push(delta ? `${delta.percentage.toFixed(1)}%` : '');
+                            } else {
+                                rowData.push(delta?.value ?? '');
+                            }
+                        });
+                    }
+                });
+                exportData.push(rowData);
             });
-
-            // Row total
-            if (showTotalCol) {
-                const total = row.rowTotal;
-                rowData.push(total !== undefined && total !== null ? total : '');
-            }
-
-            exportData.push(rowData);
-        });
-
-        // Column totals row
-        if (pivotData.colTotals) {
-            const totalsRow: any[] = [];
-
-            // "Total" label in first column, empty for others
-            totalsRow.push('Total');
-            for (let i = 1; i < rowFields.length; i++) {
-                totalsRow.push('');
-            }
 
             // Column totals
-            pivotData.colHeaders.forEach(colHeader => {
-                const total = pivotData.colTotals[colHeader];
-                totalsRow.push(total !== undefined && total !== null ? total : '');
+            if (temporalColTotals) {
+                const totalsRow: any[] = ['TOTAL'];
+                for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
+
+                temporalConfig.sources.forEach((s: any) => {
+                    activeMetrics.forEach(m => {
+                        const mLabel = m.label || `${m.field} (${m.aggType})`;
+                        totalsRow.push(temporalColTotals[s.id]?.[mLabel] ?? '');
+                    });
+                    if (showVariations && s.id !== temporalConfig.referenceSourceId) {
+                        activeMetrics.forEach(() => totalsRow.push(''));
+                    }
+                });
+                exportData.push(totalsRow);
+            }
+        } else if (pivotData) {
+            // --- STANDARD MODE EXPORT ---
+            const headers: string[] = [...rowFields];
+            pivotData.colHeaders.forEach(header => headers.push(header));
+            if (showTotalCol) headers.push('Total');
+            exportData.push(headers);
+
+            pivotData.displayRows.forEach(row => {
+                const rowData: any[] = [];
+                rowFields.forEach((field, index) => {
+                    if (index < row.keys.length) {
+                        const indent = row.type === 'subtotal' && index === row.keys.length - 1
+                            ? '  '.repeat(row.level || 0)
+                            : '';
+                        rowData.push(indent + row.keys[index]);
+                    } else {
+                        rowData.push('');
+                    }
+                });
+
+                pivotData.colHeaders.forEach(colHeader => {
+                    rowData.push(row.metrics[colHeader] ?? '');
+                });
+
+                if (showTotalCol) {
+                    rowData.push(row.rowTotal ?? '');
+                }
+                exportData.push(rowData);
             });
 
-            // Grand total
-            if (showTotalCol && pivotData.grandTotal !== undefined) {
-                totalsRow.push(pivotData.grandTotal);
+            if (pivotData.colTotals) {
+                const totalsRow: any[] = ['Total'];
+                for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
+                pivotData.colHeaders.forEach(colHeader => totalsRow.push(pivotData.colTotals[colHeader] ?? ''));
+                if (showTotalCol && pivotData.grandTotal !== undefined) totalsRow.push(pivotData.grandTotal);
+                exportData.push(totalsRow);
             }
-
-            exportData.push(totalsRow);
         }
 
         // Export based on format
@@ -871,6 +936,7 @@ export const PivotTable: React.FC = () => {
                    isTemporalMode={isTemporalMode}
                    temporalComparison={temporalConfig}
                    selectedBatchId={selectedBatchId}
+                   companyLogo={companyLogo}
                 />
             )}
             <TemporalSourceModal isOpen={isTemporalSourceModalOpen} onClose={() => setIsTemporalSourceModalOpen(false)} primaryDataset={primaryDataset || null} batches={batches} currentSources={temporalConfig?.sources || []} onSourcesChange={(s, r, extra) => setTemporalConfig({ ...temporalConfig, ...extra, sources: s, referenceSourceId: r, deltaFormat: temporalConfig?.deltaFormat || 'value', groupByFields: rowFields, valueField: valField, aggType: aggType as any, metrics })} />
