@@ -307,90 +307,106 @@ export const PivotTable: React.FC = () => {
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
         setShowExportMenu(false);
 
-        if (!pivotData || !primaryDataset) {
+        if (!primaryDataset || (!pivotData && !isTemporalMode)) {
             alert("Aucune donnée à exporter");
             return;
         }
 
-        // Build export data structure
         const exportData: any[][] = [];
-
-        // Header row - separate column for each row field
         const headers: string[] = [];
 
-        // Add a column for each row field
-        rowFields.forEach(field => {
-            headers.push(field);
-        });
+        // Common Row Headers
+        rowFields.forEach(field => headers.push(field));
 
-        // Add column headers (metrics)
-        pivotData.colHeaders.forEach(header => {
-            headers.push(header);
-        });
+        if (isTemporalMode && temporalConfig) {
+            // --- TEMPORAL EXPORT ---
+            const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
 
-        // Add "Total" column if row totals are shown
-        if (showTotalCol) {
-            headers.push('Total');
-        }
+            temporalConfig.sources.forEach(src => {
+                activeMetrics.forEach(m => {
+                    const mLabel = m.label || `${m.field} (${m.aggType})`;
+                    headers.push(`${src.label} - ${mLabel}`);
+                    if (showVariations) {
+                        headers.push(`${src.label} - Δ`);
+                        headers.push(`${src.label} - %`);
+                    }
+                });
+            });
+            exportData.push(headers);
 
-        exportData.push(headers);
+            temporalResults.forEach(res => {
+                const rowData: any[] = [];
+                const keys = res.groupLabel.split('\x1F');
 
-        // Data rows
-        pivotData.displayRows.forEach(row => {
-            const rowData: any[] = [];
+                rowFields.forEach((_, idx) => {
+                    const indent = res.isSubtotal && idx === keys.length - 1 ? '  '.repeat(res.subtotalLevel || 0) : '';
+                    rowData.push(idx < keys.length ? indent + keys[idx] : '');
+                });
 
-            // Add each key in its own column
-            // row.keys contains the hierarchy: ["France", "Paris", "Ordinateur"]
-            rowFields.forEach((field, index) => {
-                if (index < row.keys.length) {
-                    // Add indentation for subtotals
-                    const indent = row.type === 'subtotal' && index === row.keys.length - 1
-                        ? '  '.repeat(row.level || 0)
-                        : '';
-                    rowData.push(indent + row.keys[index]);
-                } else {
-                    // Empty cell for higher level subtotals
-                    rowData.push('');
-                }
+                temporalConfig.sources.forEach(src => {
+                    activeMetrics.forEach(m => {
+                        const mLabel = m.label || `${m.field} (${m.aggType})`;
+                        rowData.push(res.values[src.id]?.[mLabel] ?? '');
+                        if (showVariations) {
+                            rowData.push(res.deltas[src.id]?.[mLabel]?.value ?? '');
+                            rowData.push(res.deltas[src.id]?.[mLabel]?.percentage ? (res.deltas[src.id]?.[mLabel]?.percentage / 100) : '');
+                        }
+                    });
+                });
+                exportData.push(rowData);
             });
 
-            // Metric values for each column
-            pivotData.colHeaders.forEach(colHeader => {
-                const value = row.metrics[colHeader];
-                rowData.push(value !== undefined && value !== null ? value : '');
+            // Footer / Totals for Temporal
+            if (temporalColTotals) {
+                const totalsRow: any[] = [];
+                totalsRow.push('Total');
+                for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
+
+                temporalConfig.sources.forEach(src => {
+                    activeMetrics.forEach(m => {
+                        const mLabel = m.label || `${m.field} (${m.aggType})`;
+                        totalsRow.push(temporalColTotals[src.id]?.[mLabel] ?? '');
+                        if (showVariations) {
+                           totalsRow.push(''); // No delta total for now
+                           totalsRow.push('');
+                        }
+                    });
+                });
+                exportData.push(totalsRow);
+            }
+        } else if (pivotData) {
+            // --- STANDARD EXPORT ---
+            pivotData.colHeaders.forEach(header => headers.push(header));
+            if (showTotalCol) headers.push('Total');
+            exportData.push(headers);
+
+            pivotData.displayRows.forEach(row => {
+                const rowData: any[] = [];
+                rowFields.forEach((field, index) => {
+                    if (index < row.keys.length) {
+                        const indent = row.type === 'subtotal' && index === row.keys.length - 1 ? '  '.repeat(row.level || 0) : '';
+                        rowData.push(indent + row.keys[index]);
+                    } else {
+                        rowData.push('');
+                    }
+                });
+
+                pivotData.colHeaders.forEach(colHeader => {
+                    rowData.push(row.metrics[colHeader] ?? '');
+                });
+
+                if (showTotalCol) rowData.push(row.rowTotal ?? '');
+                exportData.push(rowData);
             });
 
-            // Row total
-            if (showTotalCol) {
-                const total = row.rowTotal;
-                rowData.push(total !== undefined && total !== null ? total : '');
+            if (pivotData.colTotals) {
+                const totalsRow: any[] = [];
+                totalsRow.push('Total');
+                for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
+                pivotData.colHeaders.forEach(colHeader => totalsRow.push(pivotData.colTotals[colHeader] ?? ''));
+                if (showTotalCol && pivotData.grandTotal !== undefined) totalsRow.push(pivotData.grandTotal);
+                exportData.push(totalsRow);
             }
-
-            exportData.push(rowData);
-        });
-
-        // Column totals row
-        if (pivotData.colTotals) {
-            const totalsRow: any[] = [];
-
-            // "Total" label in first column, empty for others
-            totalsRow.push('Total');
-            for (let i = 1; i < rowFields.length; i++) {
-                totalsRow.push('');
-            }
-
-            // Column totals
-            pivotData.colHeaders.forEach(colHeader => {
-                const total = pivotData.colTotals[colHeader];
-                totalsRow.push(total !== undefined && total !== null ? total : '');
-            });
-
-            // Grand total
-            if (showTotalCol && pivotData.grandTotal !== undefined) {
-                totalsRow.push(pivotData.grandTotal);
-            }
-
-            exportData.push(totalsRow);
         }
 
         // Export based on format

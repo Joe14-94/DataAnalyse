@@ -821,6 +821,10 @@ export const prepareFilters = (filters: any[]) => {
       preparedValue = new Set((f.value as any[]).map(v => String(v)));
     } else if (typeof f.value === 'string' && f.operator !== 'in') {
       preparedValue = f.value.toLowerCase();
+      // Support multiple values for contains/starts_with (OR logic)
+      if ((f.operator === 'contains' || f.operator === 'starts_with') && preparedValue.includes(',')) {
+        preparedValue = preparedValue.split(',').map(v => v.trim()).filter(Boolean);
+      }
     }
     return { ...f, preparedValue, isArrayIn };
   });
@@ -850,11 +854,26 @@ export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean 
     }
 
     const strRowVal = String(rowVal || '').toLowerCase();
-    const strFilterVal = String(f.preparedValue || '');
 
-    if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) return false;
-    if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) return false;
-    if (f.operator === 'eq' && strRowVal !== strFilterVal) return false;
+    if (f.operator === 'starts_with') {
+      if (Array.isArray(f.preparedValue)) {
+        if (!f.preparedValue.some(v => strRowVal.startsWith(v))) return false;
+      } else {
+        if (!strRowVal.startsWith(String(f.preparedValue || ''))) return false;
+      }
+      continue;
+    }
+
+    if (f.operator === 'contains') {
+      if (Array.isArray(f.preparedValue)) {
+        if (!f.preparedValue.some(v => strRowVal.includes(v))) return false;
+      } else {
+        if (!strRowVal.includes(String(f.preparedValue || ''))) return false;
+      }
+      continue;
+    }
+
+    if (f.operator === 'eq' && strRowVal !== String(f.preparedValue || '')) return false;
   }
 
   return true;

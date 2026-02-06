@@ -1,44 +1,30 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, parseSmartNumber, exportView, calculateLinearRegression } from '../utils';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import { formatDateFr, parseSmartNumber, exportView, calculateLinearRegression, prepareFilters, applyPreparedFilters } from '../utils';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
   PieChart, Pie, AreaChart, Area, Treemap, LineChart, Line, ComposedChart,
   RadialBarChart, RadialBar, FunnelChart, Funnel, LabelList
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { 
-  BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
+import {
+  BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon,
   LayoutGrid, TrendingUp, Settings2, Database,
   Filter, Table as TableIcon, Check, X, CalendarRange, Calculator, ChevronDown,
-  LayoutDashboard, Save, FileDown, FileType, Printer
+  LayoutDashboard, Save, FileDown, FileType, Printer, Layers
 } from 'lucide-react';
 import { FieldConfig, ChartType as WidgetChartType, FilterRule, ColorMode, ColorPalette } from '../types';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getChartColors, generateGradient, formatChartValue } from '../logic/pivotToChart';
+import { SunburstD3 } from '../components/charts/SunburstD3';
+import { TreemapContent } from '../components/ui/TreemapContent';
 
 type ChartType = 'bar' | 'column' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'pie' | 'donut' | 'area' | 'stacked-area' | 'radar' | 'treemap' | 'kpi' | 'line' | 'sunburst' | 'radial' | 'funnel';
 type AnalysisMode = 'snapshot' | 'trend';
 type MetricType = 'count' | 'distinct' | 'sum';
-
-// --- Treemap Content ---
-const TreemapContent = (props: any) => {
-  const { x, y, width, height, name, index, colors } = props;
-  const fill = colors ? colors[index % colors.length] : '#64748b';
-  return (
-    <g>
-      <rect x={x} y={y} width={width} height={height} fill={fill} stroke="#fff" />
-      {width > 60 && height > 30 && (
-        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize={12} dy={4} style={{textShadow: '0 1px 2px rgba(0,0,0,0.2)'}}>
-           {name.substring(0, 12)}
-        </text>
-      )}
-    </g>
-  );
-};
 
 // --- Multi Select Component ---
 interface MultiSelectProps {
@@ -86,10 +72,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
         className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-brand-300 focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
       >
         <span className="truncate text-slate-700">
-          {selected.length === 0 
-            ? placeholder 
-            : selected.length === options.length 
-               ? 'Tout sélectionné' 
+          {selected.length === 0
+            ? placeholder
+            : selected.length === options.length
+               ? 'Tout sélectionné'
                : `${selected.length} sélectionné(s)`
           }
         </span>
@@ -135,12 +121,12 @@ export const AnalysisStudio: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [dimension, setDimension] = useState<string>(''); 
+  const [dimension, setDimension] = useState<string>('');
   const [metric, setMetric] = useState<MetricType>('count');
-  const [valueField, setValueField] = useState<string>(''); 
+  const [valueField, setValueField] = useState<string>('');
   const [metric2, setMetric2] = useState<MetricType | 'none'>('none');
   const [valueField2, setValueField2] = useState<string>('');
-  const [segment, setSegment] = useState<string>(''); 
+  const [segment, setSegment] = useState<string>('');
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [limit, setLimit] = useState<number>(10);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'alpha'>('desc');
@@ -154,6 +140,9 @@ export const AnalysisStudio: React.FC = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [chartTitle, setChartTitle] = useState('');
   const [customUnit, setCustomUnit] = useState('');
+  const [decimals, setDecimals] = useState<number>(0);
+  const [isSmooth, setIsSmooth] = useState<boolean>(true);
+  const [showPoints, setShowPoints] = useState<boolean>(true);
 
   // Color options
   const [colorMode, setColorMode] = useState<ColorMode>('multi');
@@ -193,7 +182,7 @@ export const AnalysisStudio: React.FC = () => {
     if (!selectedBatchId && batches.length > 0) {
       setSelectedBatchId(batches[batches.length - 1].id);
     }
-    
+
     if (batches.length > 0) {
        const sortedDates = batches.map(b => b.date).sort();
        if (!startDate) setStartDate(sortedDates[0]);
@@ -220,8 +209,8 @@ export const AnalysisStudio: React.FC = () => {
       }
   }, [successMessage]);
 
-  const currentBatch = useMemo(() => 
-    batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1], 
+  const currentBatch = useMemo(() =>
+    batches.find(b => b.id === selectedBatchId) || batches[batches.length - 1],
   [batches, selectedBatchId]);
 
   const getDistinctValuesForField = (field: string) => {
@@ -240,7 +229,7 @@ export const AnalysisStudio: React.FC = () => {
      const configuredNumeric = Object.entries(currentDataset.fieldConfigs || ({} as Record<string, FieldConfig>))
         .filter(([_, config]) => (config as FieldConfig).type === 'number')
         .map(([name, _]) => name);
-     
+
      if (configuredNumeric.length > 0) {
         return configuredNumeric.filter(f => fields.includes(f));
      }
@@ -320,9 +309,9 @@ export const AnalysisStudio: React.FC = () => {
          size: 'md',
          height: 'md',
          config: {
-            source: { 
-               datasetId: currentDataset.id, 
-               mode: 'latest' 
+            source: {
+               datasetId: currentDataset.id,
+               mode: 'latest'
             },
             metric: metric === 'distinct' ? 'distinct' : (metric === 'sum' ? 'sum' : 'count'),
             dimension: dimension,
@@ -332,7 +321,7 @@ export const AnalysisStudio: React.FC = () => {
             limit: limit
          }
       });
-      
+
       setSuccessMessage("Le graphique a été ajouté au tableau de bord.");
    };
 
@@ -365,7 +354,7 @@ export const AnalysisStudio: React.FC = () => {
       if (analysis.datasetId && analysis.datasetId !== currentDatasetId) {
           switchDataset(analysis.datasetId);
       }
-      
+
       if (c.mode) setMode(c.mode);
       if (c.selectedBatchId) setSelectedBatchId(c.selectedBatchId);
       if (c.dimension) setDimension(c.dimension);
@@ -388,8 +377,8 @@ export const AnalysisStudio: React.FC = () => {
       if (c.customUnit) setCustomUnit(c.customUnit);
       if (c.filters) {
           const loadedFilters = c.filters.map((f: any) => {
-              if (f.values) return { field: f.field, operator: 'in', value: f.values }; 
-              return f; 
+              if (f.values) return { field: f.field, operator: 'in', value: f.values };
+              return f;
           });
           setFilters(loadedFilters);
       }
@@ -415,8 +404,21 @@ export const AnalysisStudio: React.FC = () => {
             link.click();
          }
       } else if (format === 'xlsx') {
-         const data = mode === 'snapshot' ? snapshotData.data : trendData.data;
-         const worksheet = XLSX.utils.json_to_sheet(data);
+         let exportData = [];
+         if (mode === 'snapshot' && chartType === 'sunburst' && sunburstD3Data) {
+            const flatten = (node: any, path = ''): any[] => {
+               const currentPath = path ? `${path} > ${node.name}` : node.name;
+               const rows = [{ Chemin: currentPath, Nom: node.name, Valeur: node.value || 0 }];
+               if (node.children) {
+                  node.children.forEach((c: any) => rows.push(...flatten(c, currentPath)));
+               }
+               return rows;
+            };
+            exportData = flatten(sunburstD3Data);
+         } else {
+            exportData = mode === 'snapshot' ? snapshotData.data : trendData.data;
+         }
+         const worksheet = XLSX.utils.json_to_sheet(exportData);
          const workbook = XLSX.utils.book_new();
          XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
          XLSX.writeFile(workbook, `analyse_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -439,7 +441,38 @@ export const AnalysisStudio: React.FC = () => {
 
       if (mode === 'snapshot') {
          const labels = snapshotData.data.map(d => d.name);
-         if (segment && snapshotData.series.length > 0) {
+         if (chartType === 'sunburst' || chartType === 'treemap') {
+            // Hierarchical data for Sunburst/Treemap in Plotly
+            const plotlyLabels: string[] = ['Total'];
+            const plotlyParents: string[] = [''];
+            const plotlyValues: number[] = [snapshotData.data.reduce((acc, d) => acc + (d.value || 0), 0)];
+
+            snapshotData.data.forEach(d => {
+               plotlyLabels.push(d.name);
+               plotlyParents.push('Total');
+               plotlyValues.push(d.value);
+
+               if (segment) {
+                  snapshotData.series.forEach(s => {
+                     const val = d[s] || 0;
+                     if (val > 0) {
+                        plotlyLabels.push(`${d.name} - ${s}`); // Unique label
+                        plotlyParents.push(d.name);
+                        plotlyValues.push(val);
+                     }
+                  });
+               }
+            });
+
+            plotlyData.push({
+               type: chartType,
+               labels: plotlyLabels,
+               parents: plotlyParents,
+               values: plotlyValues,
+               branchvalues: 'total',
+               marker: { colors: [chartColors[0], ...chartColors] }
+            });
+         } else if (segment && snapshotData.series.length > 0) {
             snapshotData.series.forEach((s, idx) => {
                plotlyData.push({
                   x: labels,
@@ -554,31 +587,15 @@ export const AnalysisStudio: React.FC = () => {
   const snapshotData = useMemo(() => {
     if (mode !== 'snapshot' || !currentBatch || !dimension) return { data: [], series: [] };
 
-    const filteredRows = currentBatch.rows.filter((row: any) => {
-       if (filters.length === 0) return true;
-       return filters.every(f => {
-          const rowVal = row[f.field];
-          const strRowVal = String(rowVal || '').toLowerCase();
-          const strFilterVal = String(f.value || '').toLowerCase();
-
-          if (f.operator === 'in') {
-              if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
-              return true;
-          }
-          if (f.operator === 'starts_with') {
-              const values = strFilterVal.split(',').map(v => v.trim()).filter(v => v !== '');
-              return values.length === 0 || values.some(v => strRowVal.startsWith(v));
-          }
-          if (f.operator === 'contains') {
-              const values = strFilterVal.split(',').map(v => v.trim()).filter(v => v !== '');
-              return values.length === 0 || values.some(v => strRowVal.includes(v));
-          }
-          if (f.operator === 'eq') return strRowVal === strFilterVal;
-          if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
-          if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
-          return true;
-       });
+    // Use shared filtering logic from utils
+    const preparedFiltersForEngine = filters.map(f => {
+       let val = f.value;
+       if (f.operator === 'in' && !Array.isArray(val)) val = [val];
+       return { ...f, value: val };
     });
+    const prepared = prepareFilters(preparedFiltersForEngine);
+
+    const filteredRows = currentBatch.rows.filter((row: any) => applyPreparedFilters(row, prepared));
 
     const agg: Record<string, any> = {};
     filteredRows.forEach((row: any) => {
@@ -651,34 +668,18 @@ export const AnalysisStudio: React.FC = () => {
 
     if (targetBatches.length === 0) return { data: [], series: [] };
 
-    const globalCounts: Record<string, number> = {};
-    
-    targetBatches.forEach(batch => {
-       const batchRows = batch.rows.filter((row: any) => {
-          if (filters.length === 0) return true;
-          return filters.every(f => {
-             const rowVal = row[f.field];
-             const strRowVal = String(rowVal || '').toLowerCase();
-             const strFilterVal = String(f.value || '').toLowerCase();
+    // Prepare filters once
+    const preparedFiltersForEngine = filters.map(f => {
+       let val = f.value;
+       if (f.operator === 'in' && !Array.isArray(val)) val = [val];
+       return { ...f, value: val };
+    });
+    const prepared = prepareFilters(preparedFiltersForEngine);
 
-             if (f.operator === 'in') {
-                 if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
-                 return true;
-             }
-             if (f.operator === 'starts_with') {
-                 const values = strFilterVal.split(',').map(v => v.trim()).filter(v => v !== '');
-                 return values.length === 0 || values.some(v => strRowVal.startsWith(v));
-             }
-             if (f.operator === 'contains') {
-                 const values = strFilterVal.split(',').map(v => v.trim()).filter(v => v !== '');
-                 return values.length === 0 || values.some(v => strRowVal.includes(v));
-             }
-             if (f.operator === 'eq') return strRowVal === strFilterVal;
-             if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
-             if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
-             return true;
-          });
-       });
+    const globalCounts: Record<string, number> = {};
+
+    targetBatches.forEach(batch => {
+       const batchRows = batch.rows.filter((row: any) => applyPreparedFilters(row, prepared));
 
        batchRows.forEach((row: any) => {
           const val = String(row[dimension] || 'Non défini');
@@ -694,31 +695,7 @@ export const AnalysisStudio: React.FC = () => {
        .map(e => e[0]);
 
     const timeData = targetBatches.map(batch => {
-       const batchRows = batch.rows.filter((row: any) => {
-          if (filters.length === 0) return true;
-          return filters.every(f => {
-             const rowVal = row[f.field];
-             const strRowVal = String(rowVal || '').toLowerCase();
-             const strFilterVal = String(f.value || '').toLowerCase();
-
-             if (f.operator === 'in') {
-                 if (Array.isArray(f.value)) return f.value.length === 0 || f.value.includes(String(rowVal));
-                 return true;
-             }
-             if (f.operator === 'starts_with') {
-                 const values = strFilterVal.split(',').map(v => v.trim()).filter(v => v !== '');
-                 return values.length === 0 || values.some(v => strRowVal.startsWith(v));
-             }
-             if (f.operator === 'contains') {
-                 const values = strFilterVal.split(',').map(v => v.trim()).filter(v => v !== '');
-                 return values.length === 0 || values.some(v => strRowVal.includes(v));
-             }
-             if (f.operator === 'eq') return strRowVal === strFilterVal;
-             if (f.operator === 'gt') return parseSmartNumber(rowVal) > parseSmartNumber(f.value);
-             if (f.operator === 'lt') return parseSmartNumber(rowVal) < parseSmartNumber(f.value);
-             return true;
-          });
-       });
+       const batchRows = batch.rows.filter((row: any) => applyPreparedFilters(row, prepared));
 
        const point: any = {
           date: batch.date,
@@ -753,7 +730,7 @@ export const AnalysisStudio: React.FC = () => {
              else point.total2++;
           }
        });
-       
+
        point.total = parseFloat(point.total.toFixed(2));
        if (metric2 !== 'none') point.total2 = parseFloat(point.total2.toFixed(2));
        return point;
@@ -782,9 +759,45 @@ export const AnalysisStudio: React.FC = () => {
     return { data: timeData, series: topSeries };
   }, [mode, batches, startDate, endDate, dimension, limit, filters, currentDataset, metric, valueField, metric2, valueField2, showForecast]);
 
+  // Sunburst hierarchical data
+  const sunburstD3Data = useMemo(() => {
+    if (chartType !== 'sunburst' || !snapshotData.data || snapshotData.data.length === 0) return null;
+
+    if (!segment) {
+       return {
+          name: 'Total',
+          children: snapshotData.data.map((d: any) => ({
+             name: d.name,
+             value: d.value
+          }))
+       };
+    }
+
+    return {
+       name: 'Total',
+       children: snapshotData.data.map((d: any) => {
+          const children = snapshotData.series.map(s => ({
+             name: s,
+             value: d[s] || 0
+          })).filter(c => c.value > 0);
+
+          return {
+             name: d.name,
+             children: children.length > 0 ? children : undefined,
+             value: children.length > 0 ? undefined : d.value
+          };
+       })
+    };
+  }, [chartType, snapshotData, segment]);
+
   // Dynamic colors
   const chartColors = useMemo(() => {
-    const dataCount = mode === 'snapshot' ? (segment ? snapshotData.series.length : snapshotData.data.length) : trendData.series.length;
+    let dataCount = 1;
+    if (chartType === 'sunburst' && sunburstD3Data) {
+       dataCount = sunburstD3Data.children?.length || 1;
+    } else {
+       dataCount = mode === 'snapshot' ? (segment ? snapshotData.series.length : snapshotData.data.length) : trendData.series.length;
+    }
     const count = Math.max(dataCount, 1);
 
     if (colorMode === 'single') {
@@ -794,10 +807,10 @@ export const AnalysisStudio: React.FC = () => {
     } else {
       return getChartColors(count, colorPalette);
     }
-  }, [colorMode, colorPalette, singleColor, gradientStart, gradientEnd, snapshotData, trendData, mode]);
+  }, [colorMode, colorPalette, singleColor, gradientStart, gradientEnd, snapshotData, trendData, mode, chartType, sunburstD3Data]);
 
   const insightText = useMemo(() => {
-    const unitLabel = (metric === 'sum' && valueField && currentDataset?.fieldConfigs?.[valueField]?.unit) 
+    const unitLabel = (metric === 'sum' && valueField && currentDataset?.fieldConfigs?.[valueField]?.unit)
        ? ` ${currentDataset.fieldConfigs[valueField].unit}`
        : '';
 
@@ -926,16 +939,16 @@ export const AnalysisStudio: React.FC = () => {
                <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
                {metric2 !== 'none' && !isStacked && <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={12} />}
-               <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+               <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
                <Legend verticalAlign="top" iconType="circle" wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
 
                {trendData.series.map((s, idx) => {
                   if (isBar) {
                      return <Bar key={s} yAxisId="left" dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} fill={chartColors[idx % chartColors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0} />;
                   } else if (chartType === 'area' || chartType === 'stacked-area') {
-                     return <Area key={s} yAxisId="left" type="monotone" dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />;
+                     return <Area key={s} yAxisId="left" type={isSmooth ? "monotone" : "linear"} dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />;
                   } else {
-                     return <Line yAxisId="left" key={s} type="monotone" dataKey={s} stroke={chartColors[idx % chartColors.length]} strokeWidth={2} dot={true} />;
+                     return <Line yAxisId="left" key={s} type={isSmooth ? "monotone" : "linear"} dataKey={s} stroke={chartColors[idx % chartColors.length]} strokeWidth={2} dot={showPoints} />;
                   }
                })}
 
@@ -963,7 +976,7 @@ export const AnalysisStudio: React.FC = () => {
               <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} fontSize={11} height={60} stroke="#94a3b8" />
               <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
               {metric2 !== 'none' && !isStacked && <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={12} />}
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
 
               {segment ? (
                   snapshotData.series.map((s, idx) => (
@@ -996,7 +1009,7 @@ export const AnalysisStudio: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
               <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
               <YAxis dataKey="name" type="category" width={140} tick={{fontSize: 11}} stroke="#94a3b8" />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
 
               {segment ? (
                   snapshotData.series.map((s, idx) => (
@@ -1035,9 +1048,28 @@ export const AnalysisStudio: React.FC = () => {
                   <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '12px', color: '#64748b'}} />
             </PieChart>
+          </ResponsiveContainer>
+        );
+      case 'line':
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={snapshotData.data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{fontSize: 11}} stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" fontSize={12} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
+              {segment ? (
+                  snapshotData.series.map((s, idx) => (
+                      <Line key={s} type={isSmooth ? "monotone" : "linear"} dataKey={s} name={s} stroke={chartColors[idx % chartColors.length]} strokeWidth={2} dot={showPoints} />
+                  ))
+              ) : (
+                  <Line type={isSmooth ? "monotone" : "linear"} dataKey={isCumulative ? "cumulative" : "value"} stroke="#60a5fa" strokeWidth={2} dot={showPoints} />
+              )}
+              {segment && <Legend verticalAlign="top" />}
+            </LineChart>
           </ResponsiveContainer>
         );
       case 'area':
@@ -1049,13 +1081,13 @@ export const AnalysisStudio: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{fontSize: 11}} stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
               {segment ? (
                   snapshotData.series.map((s, idx) => (
-                      <Area key={s} type="monotone" dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />
+                      <Area key={s} type={isSmooth ? "monotone" : "linear"} dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />
                   ))
               ) : (
-                  <Area type="monotone" dataKey={isCumulative ? "cumulative" : "value"} stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.2} />
+                  <Area type={isSmooth ? "monotone" : "linear"} dataKey={isCumulative ? "cumulative" : "value"} stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.2} />
               )}
               {segment && <Legend verticalAlign="top" />}
             </AreaChart>
@@ -1076,7 +1108,7 @@ export const AnalysisStudio: React.FC = () => {
               ) : (
                   <Radar name={metric === 'sum' ? 'Somme' : 'Volume'} dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.3} />
               )}
-              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
               {segment && <Legend verticalAlign="top" />}
             </RadarChart>
           </ResponsiveContainer>
@@ -1092,44 +1124,22 @@ export const AnalysisStudio: React.FC = () => {
               fill="#8884d8"
               content={<TreemapContent colors={chartColors} />}
             >
-              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
             </Treemap>
           </ResponsiveContainer>
         );
       case 'sunburst':
+        if (!sunburstD3Data) return null;
         return (
-          <ResponsiveContainer width="100%" height="100%">
-             <PieChart>
-                <Pie
-                   data={snapshotData.data}
-                   dataKey="value"
-                   cx="50%"
-                   cy="50%"
-                   innerRadius={0}
-                   outerRadius={60}
-                   fill="#8884d8"
-                >
-                   {snapshotData.data.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-                   ))}
-                </Pie>
-                {segment && (
-                   <Pie
-                      data={snapshotData.data.flatMap((d: any) => snapshotData.series.map(s => ({ name: `${d.name} - ${s}`, value: d[s] || 0, parentColor: chartColors[snapshotData.data.indexOf(d) % chartColors.length] })))}
-                      dataKey="value"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={100}
-                   >
-                      {snapshotData.data.flatMap((d: any, idx: number) => snapshotData.series.map((s, sIdx) => (
-                         <Cell key={`cell-outer-${idx}-${sIdx}`} fill={chartColors[sIdx % chartColors.length]} />
-                      )))}
-                   </Pie>
-                )}
-                <Tooltip contentStyle={tooltipStyle} />
-             </PieChart>
-          </ResponsiveContainer>
+          <SunburstD3
+             data={sunburstD3Data}
+             width={800}
+             height={800}
+             unit={customUnit || ''}
+             title={chartTitle}
+             rowFields={[dimension, segment].filter(Boolean)}
+             colors={chartColors}
+          />
         );
       case 'radial':
         return (
@@ -1144,7 +1154,7 @@ export const AnalysisStudio: React.FC = () => {
                   <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                 ))}
               </RadialBar>
-              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
               <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{right: 0, top: 0, bottom: 0, width: 140}} />
             </RadialBarChart>
           </ResponsiveContainer>
@@ -1153,7 +1163,7 @@ export const AnalysisStudio: React.FC = () => {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <FunnelChart>
-              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit, decimals } } as any)} />
               <Funnel
                 dataKey="value"
                 data={snapshotData.data}
@@ -1212,7 +1222,7 @@ export const AnalysisStudio: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] gap-4 relative">
-      
+
       {/* HEADER & MODE SELECTOR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0 gap-4">
         <div className="flex items-center gap-2">
@@ -1255,10 +1265,10 @@ export const AnalysisStudio: React.FC = () => {
               Évolution Temporelle
            </button>
         </div>
-        
+
         {/* Right Controls */}
         <div className="flex items-center gap-2 w-full xl:w-auto">
-             
+
              {/* Load Saved Views */}
              <div className="relative">
                 <select
@@ -1299,14 +1309,14 @@ export const AnalysisStudio: React.FC = () => {
                 {showExportMenu && (
                    <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
                       <div className="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Format PDF</div>
-                      <button 
+                      <button
                          onClick={() => handleExport('pdf', 'A4')}
                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
                          title="Redimensionne le contenu pour tenir sur une page A4"
                       >
                          <FileType className="w-4 h-4 text-red-500" /> PDF (A4 ajusté)
                       </button>
-                      <button 
+                      <button
                          onClick={() => handleExport('pdf', 'adaptive')}
                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
                          title="Adapte la hauteur de la page au contenu (tout sur une page)"
@@ -1315,7 +1325,7 @@ export const AnalysisStudio: React.FC = () => {
                       </button>
                       <div className="border-t border-slate-100 my-1"></div>
                       <div className="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Format Web & Image</div>
-                      <button 
+                      <button
                          onClick={() => handleExport('html')}
                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-2"
                       >
@@ -1349,7 +1359,7 @@ export const AnalysisStudio: React.FC = () => {
 
            {mode === 'snapshot' ? (
               <div className="flex items-center gap-2 w-full xl:w-auto ml-2">
-                 <select 
+                 <select
                     className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2 min-w-[200px]"
                     value={selectedBatchId}
                     onChange={(e) => setSelectedBatchId(e.target.value)}
@@ -1360,16 +1370,16 @@ export const AnalysisStudio: React.FC = () => {
            ) : (
               <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto p-1 ml-2">
                  <CalendarRange className="w-4 h-4 text-slate-500" />
-                 <input 
-                    type="date" 
-                    value={startDate} 
+                 <input
+                    type="date"
+                    value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
                  />
                  <span className="text-slate-400 text-sm">à</span>
-                 <input 
-                    type="date" 
-                    value={endDate} 
+                 <input
+                    type="date"
+                    value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
                  />
@@ -1379,22 +1389,22 @@ export const AnalysisStudio: React.FC = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
-        
+
         {/* SIDEBAR CONTROLS */}
         <div className="lg:w-72 flex-shrink-0 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
            <div className="p-4 border-b border-slate-100 bg-slate-50 font-semibold text-slate-700 flex items-center justify-between">
               <span>Configuration</span>
-              <button 
-                onClick={() => setFilters([])} 
+              <button
+                onClick={() => setFilters([])}
                 className="text-xs text-brand-600 hover:underline disabled:text-slate-400"
                 disabled={filters.length === 0}
               >
                 Reset Filtres
               </button>
            </div>
-           
+
            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar bg-white">
-              
+
               {/* SECTION 1: DONNEES & METRIQUES */}
               <div className="space-y-4">
                  <div className="flex items-center gap-2 mb-2">
@@ -1403,11 +1413,11 @@ export const AnalysisStudio: React.FC = () => {
                  </div>
 
                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                       {mode === 'snapshot' ? 'Axe Analyse (X)' : 'Champ de données à suivre'}
+                    <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase">
+                       Champ de données à suivre
                     </label>
                     <select
-                       className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
+                       className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded focus:ring-2 focus:ring-brand-500 shadow-sm font-semibold"
                        value={dimension}
                        onChange={(e) => setDimension(e.target.value)}
                     >
@@ -1417,7 +1427,7 @@ export const AnalysisStudio: React.FC = () => {
 
                  <div className="space-y-3">
                     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
-                        <label className="block text-[10px] font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
+                        <label className="block text-[10px] font-black text-slate-600 uppercase">Champ de données à afficher (Y1)</label>
                         <div className="grid grid-cols-3 gap-1">
                            <button
                               onClick={() => setMetric('count')}
@@ -1462,7 +1472,7 @@ export const AnalysisStudio: React.FC = () => {
 
                     <div className="p-3 bg-brand-50/30 rounded-lg border border-brand-100 space-y-3">
                         <div className="flex justify-between items-center">
-                           <label className="block text-[10px] font-black text-brand-700 uppercase">Métrique Secondaire (Y2)</label>
+                           <label className="block text-[10px] font-black text-brand-700 uppercase">Champ de données à afficher (Y2)</label>
                            {metric2 !== 'none' && (
                               <button onClick={() => setMetric2('none')} className="text-[9px] font-bold text-brand-600 hover:underline uppercase">Masquer</button>
                            )}
@@ -1513,16 +1523,16 @@ export const AnalysisStudio: React.FC = () => {
                     <Filter className="w-4 h-4 text-brand-600" />
                     <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">2. Filtrage avancé ({filters.length})</span>
                  </div>
-                 
+
                  <div className="space-y-3 mb-3">
                     {filters.map((filter, idx) => (
                        <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 text-xs space-y-2 relative group">
                           <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500">
                              <X className="w-3 h-3" />
                           </button>
-                          
+
                           {/* Field Selector */}
-                          <select 
+                          <select
                              className="w-full bg-white border border-slate-200 rounded px-1 py-1"
                              value={filter.field}
                              onChange={(e) => updateFilter(idx, { field: e.target.value })}
@@ -1531,7 +1541,7 @@ export const AnalysisStudio: React.FC = () => {
                           </select>
 
                           {/* Operator Selector */}
-                          <select 
+                          <select
                              className="w-full bg-white border border-slate-200 rounded px-1 py-1 font-medium text-indigo-700"
                              value={filter.operator || 'in'}
                              onChange={(e) => updateFilter(idx, { operator: e.target.value as any })}
@@ -1543,17 +1553,17 @@ export const AnalysisStudio: React.FC = () => {
                              <option value="lt">Inférieur à (&lt;)</option>
                              <option value="eq">Égal à (=)</option>
                           </select>
-                          
+
                           {/* Value Input (Dynamic based on operator) */}
                           {(!filter.operator || filter.operator === 'in') ? (
-                              <MultiSelect 
+                              <MultiSelect
                                  options={getDistinctValuesForField(filter.field)}
                                  selected={Array.isArray(filter.value) ? filter.value : []}
                                  onChange={(newValues) => updateFilter(idx, { value: newValues })}
                                  placeholder="Sélectionner valeurs..."
                               />
                           ) : (
-                              <input 
+                              <input
                                 type={['gt', 'lt'].includes(filter.operator) ? "number" : "text"}
                                 className="w-full bg-white border border-slate-200 rounded px-2 py-1"
                                 placeholder="Valeur..."
@@ -1643,7 +1653,7 @@ export const AnalysisStudio: React.FC = () => {
                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                           Sous-Groupement (Séries)
                        </label>
-                       <select 
+                       <select
                           className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded focus:ring-brand-500"
                           value={segment}
                           onChange={(e) => setSegment(e.target.value)}
@@ -1662,9 +1672,13 @@ export const AnalysisStudio: React.FC = () => {
                     <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">4. Style & Rendu</span>
                  </div>
 
-                 <div className="grid grid-cols-4 gap-1">
-                    {mode === 'snapshot' ? (
-                       <>
+                 <div className="space-y-4">
+                    {/* Comparison Group */}
+                    <div className="space-y-1">
+                       <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1">
+                          <BarChart3 className="w-3 h-3" /> Comparaison
+                       </label>
+                       <div className="grid grid-cols-4 gap-1">
                           {[
                              { id: 'column', icon: BarChart3, label: 'Histo' },
                              { id: 'bar', icon: BarChart3, label: 'Barres', rotate: 90 },
@@ -1672,55 +1686,57 @@ export const AnalysisStudio: React.FC = () => {
                              { id: 'stacked-bar', icon: BarChart3, label: 'Barres Emp', rotate: 90 },
                              { id: 'percent-column', icon: BarChart3, label: 'Histo 100%' },
                              { id: 'percent-bar', icon: BarChart3, label: 'Barres 100%', rotate: 90 },
-                             { id: 'pie', icon: PieIcon, label: 'Camem.' },
-                             { id: 'donut', icon: PieIcon, label: 'Donut' },
+                             { id: 'radar', icon: RadarIcon, label: 'Radar' },
+                             { id: 'kpi', icon: Activity, label: 'KPI' },
+                          ].map(t => (
+                             <button key={t.id} onClick={() => setChartType(t.id as ChartType)} className={`flex flex-col items-center justify-center p-1.5 rounded border transition-all ${chartType === t.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-brand-300'}`} title={t.label}>
+                                <t.icon className={`w-3.5 h-3.5 ${t.rotate ? 'transform rotate-90' : ''}`} />
+                                <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{t.label}</span>
+                             </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    {/* Evolution Group */}
+                    <div className="space-y-1">
+                       <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1">
+                          <Activity className="w-3 h-3" /> Évolution
+                       </label>
+                       <div className="grid grid-cols-4 gap-1">
+                          {[
                              { id: 'line', icon: Activity, label: 'Ligne' },
                              { id: 'area', icon: TrendingUp, label: 'Aire' },
                              { id: 'stacked-area', icon: TrendingUp, label: 'Aire Emp' },
-                             { id: 'radar', icon: RadarIcon, label: 'Radar' },
-                             { id: 'treemap', icon: LayoutGrid, label: 'Carte' },
+                             { id: 'funnel', icon: Layers, label: 'Entonnoir' },
+                          ].map(t => (
+                             <button key={t.id} onClick={() => setChartType(t.id as ChartType)} className={`flex flex-col items-center justify-center p-1.5 rounded border transition-all ${chartType === t.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-brand-300'}`} title={t.label}>
+                                <t.icon className="w-3.5 h-3.5" />
+                                <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{t.label}</span>
+                             </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    {/* Distribution Group */}
+                    <div className="space-y-1">
+                       <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1">
+                          <PieIcon className="w-3 h-3" /> Répartition & Hiérarchie
+                       </label>
+                       <div className="grid grid-cols-4 gap-1">
+                          {[
+                             { id: 'pie', icon: PieIcon, label: 'Camem.' },
+                             { id: 'donut', icon: PieIcon, label: 'Donut' },
                              { id: 'sunburst', icon: PieIcon, label: 'Sunburst' },
-                             { id: 'kpi', icon: Activity, label: 'KPI' },
-                          ].map((type) => {
-                             const Icon = type.icon;
-                             return (
-                                <button
-                                   key={type.id}
-                                   onClick={() => setChartType(type.id as ChartType)}
-                                   className={`flex flex-col items-center justify-center p-1.5 rounded border transition-all ${chartType === type.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-brand-300'}`}
-                                   title={type.label}
-                                >
-                                   <Icon className={`w-4 h-4 ${type.rotate ? 'transform rotate-90' : ''}`} />
-                                   <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{type.label}</span>
-                                </button>
-                             )
-                          })}
-                       </>
-                    ) : (
-                       <>
-                           {[
-                              { id: 'line', icon: Activity, label: 'Lignes' },
-                              { id: 'area', icon: TrendingUp, label: 'Aires' },
-                              { id: 'stacked-area', icon: TrendingUp, label: 'Aires Emp.' },
-                              { id: 'column', icon: BarChart3, label: 'Histo' },
-                              { id: 'stacked-column', icon: BarChart3, label: 'Histo Emp.' },
-                              { id: 'percent-column', icon: BarChart3, label: 'Histo 100%' },
-                           ].map((type) => {
-                              const Icon = type.icon;
-                              return (
-                                 <button
-                                    key={type.id}
-                                    onClick={() => setChartType(type.id as ChartType)}
-                                    className={`flex flex-col items-center justify-center p-1.5 rounded border transition-all ${chartType === type.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-brand-300'}`}
-                                    title={type.label}
-                                 >
-                                    <Icon className="w-4 h-4" />
-                                    <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{type.label}</span>
-                                 </button>
-                              )
-                           })}
-                       </>
-                    )}
+                             { id: 'treemap', icon: LayoutGrid, label: 'Carte' },
+                             { id: 'radial', icon: Activity, label: 'Radial' },
+                          ].map(t => (
+                             <button key={t.id} onClick={() => setChartType(t.id as ChartType)} className={`flex flex-col items-center justify-center p-1.5 rounded border transition-all ${chartType === t.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-brand-300'}`} title={t.label}>
+                                <t.icon className="w-3.5 h-3.5" />
+                                <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{t.label}</span>
+                             </button>
+                          ))}
+                       </div>
+                    </div>
                  </div>
 
                  {/* COLORS */}
@@ -1815,6 +1831,35 @@ export const AnalysisStudio: React.FC = () => {
                           onChange={(e) => setCustomUnit(e.target.value)}
                        />
                     </div>
+                    <div className="flex items-center justify-between">
+                       <label className="text-[10px] font-bold text-slate-500 uppercase">Décimales :</label>
+                       <input
+                          type="number"
+                          className="w-16 text-xs border border-slate-200 rounded p-1 bg-slate-50 text-right font-bold"
+                          min="0"
+                          max="5"
+                          value={decimals}
+                          onChange={(e) => setDecimals(Number(e.target.value))}
+                       />
+                    </div>
+                    {(chartType === 'line' || chartType === 'area' || chartType === 'stacked-area') && (
+                       <div className="flex flex-col gap-2 pt-1 border-t border-slate-50">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                             <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSmooth ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
+                                {isSmooth && <Check className="w-3 h-3" />}
+                             </div>
+                             <input type="checkbox" className="hidden" checked={isSmooth} onChange={() => setIsSmooth(!isSmooth)} />
+                             <span className="text-xs text-slate-700">Lissage courbes</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                             <div className={`w-4 h-4 rounded border flex items-center justify-center ${showPoints ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
+                                {showPoints && <Check className="w-3 h-3" />}
+                             </div>
+                             <input type="checkbox" className="hidden" checked={showPoints} onChange={() => setShowPoints(!showPoints)} />
+                             <span className="text-xs text-slate-700">Afficher points</span>
+                          </label>
+                       </div>
+                    )}
                  </div>
               </div>
            </div>
@@ -1822,7 +1867,7 @@ export const AnalysisStudio: React.FC = () => {
 
         {/* MAIN AREA */}
         <div className="flex-1 flex flex-col gap-4 min-w-0 min-h-0">
-           
+
            {/* Insight Panel */}
            <div className="bg-white border border-slate-200 rounded-lg p-3 flex items-start gap-3 shrink-0 shadow-sm">
               <div className="bg-slate-100 p-1.5 rounded-full text-slate-500 mt-0.5">
@@ -1857,7 +1902,7 @@ export const AnalysisStudio: React.FC = () => {
                     <span className="text-xs bg-brand-50 text-brand-600 px-2 py-1 rounded font-bold uppercase">{customUnit}</span>
                  ) : null}
               </div>
-              
+
               <div className="flex-1 w-full min-h-0 p-4 relative">
                  {renderVisuals()}
               </div>
