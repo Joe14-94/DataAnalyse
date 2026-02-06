@@ -1,5 +1,48 @@
 import { describe, it, expect } from 'vitest';
-import { parseSmartNumber, evaluateFormula, detectColumnType, getGroupedLabel, mapDataToSchema } from '../utils';
+import { parseSmartNumber, evaluateFormula, detectColumnType, getGroupedLabel, mapDataToSchema, prepareFilters, applyPreparedFilters } from '../utils';
+
+describe('Filtrage (prepareFilters & applyPreparedFilters)', () => {
+  const row = { category: 'Informatique', brand: 'Apple', price: 1200 };
+
+  it('devrait filtrer avec l\'opérateur contains simple', () => {
+    const filters = [{ field: 'category', operator: 'contains', value: 'Info' }];
+    const prepared = prepareFilters(filters);
+    expect(applyPreparedFilters(row, prepared)).toBe(true);
+
+    const filters2 = [{ field: 'category', operator: 'contains', value: 'Buro' }];
+    const prepared2 = prepareFilters(filters2);
+    expect(applyPreparedFilters(row, prepared2)).toBe(false);
+  });
+
+  it('devrait filtrer avec l\'opérateur contains multi-valeurs (OU)', () => {
+    const filters = [{ field: 'brand', operator: 'contains', value: 'Apple, Samsung, Sony' }];
+    const prepared = prepareFilters(filters);
+    expect(applyPreparedFilters(row, prepared)).toBe(true);
+
+    const filters2 = [{ field: 'brand', operator: 'contains', value: 'Samsung, Sony' }];
+    const prepared2 = prepareFilters(filters2);
+    expect(applyPreparedFilters(row, prepared2)).toBe(false);
+  });
+
+  it('devrait filtrer avec l\'opérateur starts_with multi-valeurs (OU)', () => {
+    const filters = [{ field: 'brand', operator: 'starts_with', value: 'Ap, Sa' }];
+    const prepared = prepareFilters(filters);
+    expect(applyPreparedFilters(row, prepared)).toBe(true);
+
+    const filters2 = [{ field: 'brand', operator: 'starts_with', value: 'Sa, So' }];
+    const prepared2 = prepareFilters(filters2);
+    expect(applyPreparedFilters(row, prepared2)).toBe(false);
+  });
+
+  it('devrait ignorer les virgules si elles ne sont pas utilisées comme séparateurs (valeurs vides)', () => {
+    const filters = [{ field: 'brand', operator: 'contains', value: 'Apple, , ' }];
+    const prepared = prepareFilters(filters);
+    expect(applyPreparedFilters(row, prepared)).toBe(true);
+    expect(Array.isArray(prepared[0].preparedValue)).toBe(true);
+    expect(prepared[0].preparedValue).toHaveLength(1);
+    expect(prepared[0].preparedValue[0]).toBe('apple');
+  });
+});
 
 describe('Parser de Formules Sécurisé', () => {
   it('devrait calculer des formules arithmétiques simples', () => {
