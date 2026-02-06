@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { X, BarChart3, TrendingUp, Download, ExternalLink, PlusSquare, ChevronDown, ChevronRight, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie,
@@ -33,6 +32,7 @@ import {
 } from '../../logic/pivotToChart';
 import { PivotResult, PivotConfig, TemporalComparisonConfig } from '../../types';
 import { useWidgets, useDatasets } from '../../context/DataContext';
+import { getSafeLogo } from '../../utils/common';
 
 
 interface ChartModalProps {
@@ -280,6 +280,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       const colorsJson = JSON.stringify(sunburstColors);
       const rowFieldsJson = JSON.stringify(pivotConfig.rowFields);
       const unit = pivotConfig.valField || '';
+      const safeLogo = getSafeLogo(companyLogo);
 
       const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
@@ -315,7 +316,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 <body>
   <div class="container">
     <div class="header">
-      ${companyLogo ? `<img src="${companyLogo}" class="logo" alt="Logo" />` : ''}
+      ${safeLogo ? `<img src="${safeLogo}" class="logo" alt="Logo" />` : ''}
       <h1>${title}</h1>
     </div>
     <div class="metadata">
@@ -488,6 +489,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
     // Standard HTML export for other chart types
     const chartHtml = chartContainerRef.current.innerHTML;
+    const safeLogo = getSafeLogo(companyLogo);
     const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -508,7 +510,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 <body>
   <div class="container">
     <div class="header">
-      ${companyLogo ? `<img src="${companyLogo}" class="logo" alt="Logo" />` : ''}
+      ${safeLogo ? `<img src="${safeLogo}" class="logo" alt="Logo" />` : ''}
       <h1>${title}</h1>
     </div>
     <div class="metadata">
@@ -538,6 +540,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     if (!chartContainerRef.current) return;
 
     try {
+      const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(chartContainerRef.current, { scale: 2, backgroundColor: '#ffffff' });
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
@@ -555,7 +558,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
     if (!chartContainerRef.current) return;
 
     try {
-      const jsPDF = (await import('jspdf')).jsPDF;
+      const [{ jsPDF }, html2canvas] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas').then(m => m.default)
+      ]);
       const canvas = await html2canvas(chartContainerRef.current, { scale: 2, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
 
@@ -572,15 +578,16 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 
       // Header
       let startY = 15;
-      if (companyLogo) {
-        pdf.addImage(companyLogo, 'PNG', 10, 10, 25, 12);
+      const safeLogo = getSafeLogo(companyLogo);
+      if (safeLogo) {
+        pdf.addImage(safeLogo, 'PNG', 10, 10, 25, 12);
         startY = 20;
       }
 
       pdf.setFontSize(14);
-      pdf.text(`Graphique TCD - ${pivotConfig.valField}`, companyLogo ? 40 : 10, 18);
+      pdf.text(`Graphique TCD - ${pivotConfig.valField}`, safeLogo ? 40 : 10, 18);
       pdf.setFontSize(10);
-      pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, companyLogo ? 40 : 10, 25);
+      pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, safeLogo ? 40 : 10, 25);
 
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);

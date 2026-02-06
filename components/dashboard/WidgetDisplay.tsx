@@ -12,13 +12,14 @@ import { CHART_COLORS } from '../../utils/constants';
 import { getChartColors, generateGradient, sunburstDataToD3Hierarchy } from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
 import { SunburstD3 } from '../charts/SunburstD3';
+import { ErrorBoundary } from '../ErrorBoundary';
 
 interface WidgetDisplayProps {
    widget: DashboardWidget;
    data: any;
 }
 
-export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
+const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
    const { setDashboardFilter } = useWidgets();
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-sm">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-500 text-sm text-center p-1">{data.error}</div>;
@@ -449,3 +450,9 @@ export const WidgetDisplay: React.FC<WidgetDisplayProps> = React.memo(({ widget,
       </ResponsiveContainer>
    );
 });
+
+export const WidgetDisplay: React.FC<WidgetDisplayProps> = (props) => (
+  <ErrorBoundary name={`Widget ${props.widget.type}`}>
+    <WidgetDisplayInternal {...props} />
+  </ErrorBoundary>
+);

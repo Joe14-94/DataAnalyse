@@ -50,11 +50,18 @@ export const temporalResultToRows = (
 
             // Add source values
             config.sources.forEach(source => {
-                const sourceValues = r.values[source.id] || {};
-                Object.entries(sourceValues).forEach(([mLabel, val]) => {
-                    const key = (config.metrics && config.metrics.length > 1) ? `${source.label} - ${mLabel}` : source.label;
-                    newRow[key] = val;
-                });
+                const sourceValues = r.values[source.id];
+                if (sourceValues === undefined || sourceValues === null) return;
+
+                if (typeof sourceValues === 'object') {
+                    Object.entries(sourceValues).forEach(([mLabel, val]) => {
+                        const key = (config.metrics && config.metrics.length > 1) ? `${source.label} - ${mLabel}` : source.label;
+                        newRow[key] = val;
+                    });
+                } else {
+                    // Legacy support for single metric results where sourceValues is the direct value
+                    newRow[source.label] = sourceValues;
+                }
 
                 // Optional: add deltas if needed, but let's keep it simple for now
                 // if (source.id !== config.referenceSourceId) {

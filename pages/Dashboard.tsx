@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
 import { X, Maximize2 } from 'lucide-react';
 import { DashboardWidget } from '../types';
-import html2canvas from 'html2canvas';
 import { useNavigate } from 'react-router-dom';
 
 import { WidgetCard } from '../components/dashboard/WidgetCard';

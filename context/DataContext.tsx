@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
-import { APP_VERSION, db, generateId, evaluateFormula, decompressBatch } from '../utils';
+import { APP_VERSION, generateId, decompressBatch } from '../utils/common';
+import { db } from '../utils/db';
+import { evaluateFormula } from '../utils/formulaEngine';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
@@ -770,6 +772,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const updateCompanyLogo = useCallback((logo: string | undefined) => {
+    // Validation de sécurité : n'accepte que les data URLs d'images ou les blobs
+    if (logo && !logo.startsWith('data:image/') && !logo.startsWith('blob:')) {
+      console.warn('Tentative d\'injection de logo invalide bloquée');
+      return;
+    }
     setCompanyLogo(logo);
   }, []);
 

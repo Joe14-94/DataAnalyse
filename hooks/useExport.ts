@@ -1,12 +1,12 @@
 
 import { useCallback } from 'react';
-import html2canvas from 'html2canvas';
 
 export const useExport = () => {
    const handleExportImage = useCallback(async (widgetId: string, title: string) => {
       const element = document.getElementById(`widget-container-${widgetId}`);
       if (!element) return;
       try {
+         const html2canvas = (await import('html2canvas')).default;
          const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff', logging: false });
          const url = canvas.toDataURL('image/png');
          const link = document.createElement('a');
