@@ -7,7 +7,7 @@ import { formatCurrency, formatPercentage } from '../../utils/temporalComparison
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
-   temporalColTotals?: { [sourceId: string]: number };
+   temporalColTotals?: { [sourceId: string]: { [metricLabel: string]: number } };
    temporalConfig?: any;
    rowFields: string[];
    columnWidths: Record<string, number>;
@@ -89,37 +89,45 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            {idx === rowFields.length - 1 ? 'Total' : ''}
                         </td>
                      ))}
-                     {(temporalConfig?.sources || []).map((source: any) => {
-                        const val = temporalColTotals[source.id] || 0;
-                        const customStyle = getCellStyle([], source.id, val, source.label, styleRules, conditionalRules, 'grandTotal');
-
-                        const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId] || 0;
-                        const deltaValue = val - referenceTotal;
-                        const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
-
+                     {(metrics || [{ field: valField, aggType }]).map((metric) => {
+                        const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                         return (
-                           <React.Fragment key={source.id}>
-                              <td
-                                 className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
-                                 style={{
-                                    ...customStyle,
-                                    width: `${columnWidths[source.id] || 120}px`,
-                                    minWidth: `${columnWidths[source.id] || 120}px`,
-                                    maxWidth: `${columnWidths[source.id] || 120}px`
-                                 }}
-                              >
-                                 {formatCurrency(val)}
-                              </td>
-                              {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                 <td
-                                    className={`px-2 py-2 text-right text-xs font-bold border-r border-slate-200 truncate ${deltaValue > 0 ? 'text-green-600' : deltaValue < 0 ? 'text-red-600' : 'text-slate-400'}`}
-                                    style={{ width: 60, minWidth: 60, maxWidth: 60 }}
-                                 >
-                                    {temporalConfig.deltaFormat === 'percentage'
-                                       ? (deltaPercentage !== 0 ? formatPercentage(deltaPercentage) : '-')
-                                       : (deltaValue !== 0 ? formatCurrency(deltaValue) : '-')}
-                                 </td>
-                              )}
+                           <React.Fragment key={mLabel}>
+                              {(temporalConfig?.sources || []).map((source: any) => {
+                                 const val = temporalColTotals[source.id]?.[mLabel] || 0;
+                                 const colKey = `${source.id}_${mLabel}`;
+                                 const customStyle = getCellStyle([], colKey, val, mLabel, styleRules, conditionalRules, 'grandTotal');
+
+                                 const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId]?.[mLabel] || 0;
+                                 const deltaValue = val - referenceTotal;
+                                 const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
+
+                                 return (
+                                    <React.Fragment key={source.id}>
+                                       <td
+                                          className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
+                                          style={{
+                                             ...customStyle,
+                                             width: `${columnWidths[colKey] || 120}px`,
+                                             minWidth: `${columnWidths[colKey] || 120}px`,
+                                             maxWidth: `${columnWidths[colKey] || 120}px`
+                                          }}
+                                       >
+                                          {formatOutput(val, metric)}
+                                       </td>
+                                       {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                          <td
+                                             className={`px-2 py-2 text-right text-xs font-bold border-r border-slate-200 truncate ${deltaValue > 0 ? 'text-green-600' : deltaValue < 0 ? 'text-red-600' : 'text-slate-400'}`}
+                                             style={{ width: 60, minWidth: 60, maxWidth: 60 }}
+                                          >
+                                             {temporalConfig.deltaFormat === 'percentage'
+                                                ? (deltaPercentage !== 0 ? formatPercentage(deltaPercentage) : '-')
+                                                : (deltaValue !== 0 ? formatOutput(deltaValue, metric) : '-')}
+                                          </td>
+                                       )}
+                                    </React.Fragment>
+                                 );
+                              })}
                            </React.Fragment>
                         );
                      })}

@@ -21,7 +21,7 @@ interface PivotGridProps {
    showVariations: boolean;
    showTotalCol: boolean;
    handleDrilldown: (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => void;
-   handleTemporalDrilldown: (result: TemporalComparisonResult, sourceId: string) => void;
+   handleTemporalDrilldown: (result: TemporalComparisonResult, sourceId: string, metricLabel: string) => void;
    primaryDataset: Dataset | null;
    datasets: Dataset[];
    aggType: string;
@@ -205,41 +205,51 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               </th>
                            );
                         })}
-                        {(temporalConfig?.sources || []).map((source: any) => {
-                           const width = columnWidths[source.id] || 120;
-                           const headerStyle = getCellFormatting([], source.id, undefined, source.label, 'data');
+                        {(metrics || [{ field: valField, aggType }]).map((metric, mIdx) => {
+                           const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                            return (
-                              <React.Fragment key={source.id}>
-                                 <th
-                                    className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                    style={{ width, minWidth: width, maxWidth: width, ...headerStyle }}
-                                    onClick={() => {
-                                       if (isEditMode) setEditingColumn(source.id);
-                                       else handleHeaderClick(source.id);
-                                    }}
-                                 >
-                                    <div className="flex items-center justify-end overflow-hidden gap-1">
-                                       <span className="truncate flex-1">
-                                          {editingColumn === source.id ? (
-                                             <input
-                                                type="text"
-                                                value={columnLabels[source.id] || source.label}
-                                                autoFocus
-                                                className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
-                                                onClick={(e) => e.stopPropagation()}
-                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [source.id]: e.target.value }))}
-                                                onBlur={() => setEditingColumn(null)}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
-                                             />
-                                          ) : (columnLabels[source.id] || source.label)}
-                                       </span>
-                                       {renderSortIcon(source.id)}
-                                    </div>
-                                    <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, source.id, 120)} />
-                                 </th>
-                                 {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                    <th className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>Δ</th>
-                                 )}
+                              <React.Fragment key={`m-${mIdx}`}>
+                                 {(temporalConfig?.sources || []).map((source: any) => {
+                                    const colKey = `${source.id}_${mLabel}`;
+                                    const width = columnWidths[colKey] || 120;
+                                    const headerStyle = getCellFormatting([], colKey, undefined, mLabel, 'data');
+                                    const displayLabel = metrics.length > 1 ? `${source.label} - ${mLabel}` : source.label;
+
+                                    return (
+                                       <React.Fragment key={source.id}>
+                                          <th
+                                             className={`px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 cursor-pointer group relative transition-colors ${isEditMode ? 'bg-amber-50/50 text-amber-700 border-dashed border-amber-200 hover:bg-amber-100' : source.id === temporalConfig.referenceSourceId ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                                             style={{ width, minWidth: width, maxWidth: width, ...headerStyle }}
+                                             onClick={() => {
+                                                if (isEditMode) setEditingColumn(colKey);
+                                                else handleHeaderClick(source.id); // Sort by source (uses first metric internally)
+                                             }}
+                                          >
+                                             <div className="flex items-center justify-end overflow-hidden gap-1">
+                                                <span className="truncate flex-1">
+                                                   {editingColumn === colKey ? (
+                                                      <input
+                                                         type="text"
+                                                         value={columnLabels[colKey] || displayLabel}
+                                                         autoFocus
+                                                         className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
+                                                         onClick={(e) => e.stopPropagation()}
+                                                         onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [colKey]: e.target.value }))}
+                                                         onBlur={() => setEditingColumn(null)}
+                                                         onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
+                                                      />
+                                                   ) : (columnLabels[colKey] || displayLabel)}
+                                                </span>
+                                                {mIdx === 0 && renderSortIcon(source.id)}
+                                             </div>
+                                             <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, colKey, 120)} />
+                                          </th>
+                                          {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                             <th className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>Δ</th>
+                                          )}
+                                       </React.Fragment>
+                                    );
+                                 })}
                               </React.Fragment>
                            );
                         })}
@@ -275,33 +285,41 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     );
                                  });
                               })()}
-                              {(temporalConfig?.sources || []).map((source: any) => {
-                                 const value = result.values[source.id] || 0;
-                                 const delta = result.deltas[source.id];
-                                 const width = columnWidths[source.id] || 120;
-                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), source.id, value, source.label, isSubtotal ? 'subtotal' : 'data');
-                                 const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), source.label);
-
+                              {(metrics || [{ field: valField, aggType }]).map((metric, mIdx) => {
+                                 const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                                  return (
-                                    <React.Fragment key={source.id}>
-                                       <td
-                                          className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
-                                          style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
-                                          onClick={() => {
-                                             if (isSelectionMode) {
-                                                handleDrilldown(result.groupLabel.split('\x1F'), source.id, value, source.label);
-                                             } else if (!isSubtotal) {
-                                                handleTemporalDrilldown(result, source.id);
-                                             }
-                                          }}
-                                       >
-                                          {formatCurrency(value)}
-                                       </td>
-                                       {showVariations && source.id !== temporalConfig.referenceSourceId && (
-                                          <td className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
-                                             {temporalConfig.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatCurrency(delta.value) : '-')}
-                                          </td>
-                                       )}
+                                    <React.Fragment key={`m-data-${mIdx}`}>
+                                       {(temporalConfig?.sources || []).map((source: any) => {
+                                          const value = result.values[source.id]?.[mLabel] || 0;
+                                          const delta = result.deltas[source.id]?.[mLabel] || { value: 0, percentage: 0 };
+                                          const colKey = `${source.id}_${mLabel}`;
+                                          const width = columnWidths[colKey] || 120;
+                                          const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, mLabel, isSubtotal ? 'subtotal' : 'data');
+                                          const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), source.label);
+
+                                          return (
+                                             <React.Fragment key={source.id}>
+                                                <td
+                                                   className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${source.id === temporalConfig.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
+                                                   style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
+                                                   onClick={() => {
+                                                      if (isSelectionMode) {
+                                                         handleDrilldown(result.groupLabel.split('\x1F'), colKey, value, mLabel);
+                                                      } else if (!isSubtotal) {
+                                                         handleTemporalDrilldown(result, source.id, mLabel);
+                                                      }
+                                                   }}
+                                                >
+                                                   {formatOutput(value, metric)}
+                                                </td>
+                                                {showVariations && source.id !== temporalConfig.referenceSourceId && (
+                                                   <td className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
+                                                      {temporalConfig.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatOutput(delta.value, metric) : '-')}
+                                                   </td>
+                                                )}
+                                             </React.Fragment>
+                                          );
+                                       })}
                                     </React.Fragment>
                                  );
                               })}

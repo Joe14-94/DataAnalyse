@@ -120,6 +120,7 @@ export interface TemporalComparisonConfig {
   groupByFields: string[];
   valueField: string;
   aggType: 'sum' | 'count' | 'avg' | 'min' | 'max';
+  metrics?: PivotMetric[];
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -127,8 +128,8 @@ export interface TemporalComparisonConfig {
 export interface TemporalComparisonResult {
   groupKey: string;
   groupLabel: string;
-  values: { [sourceId: string]: number };
-  deltas: { [sourceId: string]: { value: number; percentage: number } };
+  values: { [sourceId: string]: { [metricLabel: string]: number } };
+  deltas: { [sourceId: string]: { [metricLabel: string]: { value: number; percentage: number } } };
   details?: { [sourceId: string]: DataRow[] };
   isSubtotal?: boolean;
   subtotalLevel?: number;

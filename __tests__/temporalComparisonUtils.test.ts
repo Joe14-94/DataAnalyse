@@ -68,15 +68,15 @@ describe('utils/temporalComparison.ts', () => {
     ];
 
     it('should aggregate data by sum', () => {
-      const groups = aggregateDataByGroup(data, ['region'], 'sales', 'sum');
-      expect(groups.get('North')?.value).toBe(300);
-      expect(groups.get('South')?.value).toBe(300);
+      const groups = aggregateDataByGroup(data, ['region'], [{ field: 'sales', aggType: 'sum' }]);
+      expect(groups.get('North')?.metrics['sales (sum)']).toBe(300);
+      expect(groups.get('South')?.metrics['sales (sum)']).toBe(300);
     });
 
     it('should aggregate data by count', () => {
-      const groups = aggregateDataByGroup(data, ['region'], 'sales', 'count');
-      expect(groups.get('North')?.value).toBe(2);
-      expect(groups.get('South')?.value).toBe(1);
+      const groups = aggregateDataByGroup(data, ['region'], [{ field: 'sales', aggType: 'count' }]);
+      expect(groups.get('North')?.metrics['sales (count)']).toBe(2);
+      expect(groups.get('South')?.metrics['sales (count)']).toBe(1);
     });
 
     it('should handle multiple group by fields', () => {
@@ -84,7 +84,7 @@ describe('utils/temporalComparison.ts', () => {
         { id: '1', region: 'North', city: 'Paris', sales: 100 },
         { id: '2', region: 'North', city: 'Lyon', sales: 200 }
       ];
-      const groups = aggregateDataByGroup(multiData, ['region', 'city'], 'sales', 'sum');
+      const groups = aggregateDataByGroup(multiData, ['region', 'city'], [{ field: 'sales', aggType: 'sum' }]);
       expect(groups.has('North|Paris')).toBe(true);
       expect(groups.get('North|Paris')?.label).toBe('North\x1FParis');
     });
