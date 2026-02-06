@@ -43,6 +43,7 @@ interface ChartModalProps {
   isTemporalMode?: boolean;
   temporalComparison?: TemporalComparisonConfig | null;
   selectedBatchId?: string;
+  companyLogo?: string;
 }
 
 export const ChartModal: React.FC<ChartModalProps> = ({
@@ -52,7 +53,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   pivotConfig,
   isTemporalMode = false,
   temporalComparison = null,
-  selectedBatchId
+  selectedBatchId,
+  companyLogo
 }) => {
   const navigate = useNavigate();
   const { addDashboardWidget } = useWidgets();
@@ -289,8 +291,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
     .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
-    h1 { margin: 0; color: #1e293b; font-size: 24px; }
+    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; display: flex; align-items: center; gap: 20px; }
+    .logo { height: 40px; width: auto; object-fit: contain; }
+    h1 { margin: 0; color: #1e293b; font-size: 24px; flex: 1; }
     .metadata { margin-top: 10px; font-size: 12px; color: #64748b; }
     .chart-container { margin: 30px 0; display: flex; justify-content: center; align-items: center; min-height: 600px; }
     .tooltip { position: fixed; pointer-events: none; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; z-index: 9999; opacity: 0; transition: opacity 0.2s; }
@@ -312,12 +315,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 <body>
   <div class="container">
     <div class="header">
+      ${companyLogo ? `<img src="${companyLogo}" class="logo" alt="Logo" />` : ''}
       <h1>${title}</h1>
-      <div class="metadata">
-        <p>Champ: ${pivotConfig.valField}</p>
-        <p>Agrégation: ${pivotConfig.aggType}</p>
-        <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
-      </div>
+    </div>
+    <div class="metadata">
+      <p>Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}</p>
+      <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
     </div>
     <div class="chart-container" id="chart-container">
       <svg id="sunburst-svg"></svg>
@@ -495,8 +498,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
     .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
-    h1 { margin: 0; color: #1e293b; font-size: 24px; }
+    .header { margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; display: flex; align-items: center; gap: 20px; }
+    .logo { height: 40px; width: auto; object-fit: contain; }
+    h1 { margin: 0; color: #1e293b; font-size: 24px; flex: 1; }
     .metadata { margin-top: 10px; font-size: 12px; color: #64748b; }
     .chart-container { margin: 30px 0; }
   </style>
@@ -504,12 +508,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({
 <body>
   <div class="container">
     <div class="header">
+      ${companyLogo ? `<img src="${companyLogo}" class="logo" alt="Logo" />` : ''}
       <h1>${title}</h1>
-      <div class="metadata">
-        <p>Champ: ${pivotConfig.valField}</p>
-        <p>Agrégation: ${pivotConfig.aggType}</p>
-        <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
-      </div>
+    </div>
+    <div class="metadata">
+      <p>Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}</p>
+      <p>Exporté le: ${new Date().toLocaleString('fr-FR')}</p>
     </div>
     <div class="chart-container">
       ${chartHtml}
@@ -566,10 +570,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       const imgWidth = 210 - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
+      // Header
+      let startY = 15;
+      if (companyLogo) {
+        pdf.addImage(companyLogo, 'PNG', 10, 10, 25, 12);
+        startY = 20;
+      }
+
       pdf.setFontSize(14);
-      pdf.text(`Graphique TCD - ${pivotConfig.valField}`, 10, 15);
+      pdf.text(`Graphique TCD - ${pivotConfig.valField}`, companyLogo ? 40 : 10, 18);
       pdf.setFontSize(10);
-      pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, 10, 25);
+      pdf.text(`Champ: ${pivotConfig.valField} | Agrégation: ${pivotConfig.aggType}`, companyLogo ? 40 : 10, 25);
+
       pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
       pdf.save(`graphique_tcd_${new Date().toISOString().split('T')[0]}.pdf`);
       setShowExportMenu(false);
