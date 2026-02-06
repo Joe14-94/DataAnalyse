@@ -8,6 +8,7 @@ interface DatasetContextType {
   currentDatasetId: string | null;
   switchDataset: (id: string) => void;
   createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
+  createDerivedDataset: (name: string, fields: string[], rows: any[], sourcePivotConfig: any) => string;
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;

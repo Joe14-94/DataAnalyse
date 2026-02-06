@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } 
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, db, generateId, evaluateFormula, decompressBatch } from '../utils';
 import { getDemoData, createBackupJson } from '../logic/dataService';
+import { calculatePivotData } from '../logic/pivotEngine';
+import { pivotToDatasetRows } from '../utils/pivotToDataset';
 
 import { DatasetContext, useDatasets } from './DatasetContext';
 import { BatchContext, useBatches } from './BatchContext';
@@ -168,6 +170,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now()
     };
     setDatasets(prev => [...prev, newDataset]);
+    setCurrentDatasetId(newId);
+    return newId;
+  }, []);
+
+  const createDerivedDataset = useCallback((name: string, fields: string[], rows: any[], sourcePivotConfig: any) => {
+    const newId = generateId();
+    const newDataset: Dataset = {
+      id: newId,
+      name,
+      fields,
+      sourcePivotConfig,
+      createdAt: Date.now()
+    };
+    setDatasets(prev => [...prev, newDataset]);
+
+    const newBatch: ImportBatch = {
+      id: generateId(),
+      datasetId: newId,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: Date.now(),
+      rows
+    };
+    setAllBatches(prev => [...prev, newBatch]);
+
     setCurrentDatasetId(newId);
     return newId;
   }, []);
@@ -390,7 +416,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: Date.now(),
       rows: processedRows
     };
-    setAllBatches(prev => [...prev, newBatch]);
+
+    // --- SYNC DERIVED DATASETS ---
+    const derivedDatasets = datasets.filter(d => d.sourcePivotConfig?.datasetId === datasetId);
+    const additionalBatches: ImportBatch[] = [];
+
+    if (derivedDatasets.length > 0) {
+        // We need all rows from the source dataset including the new batch
+        const sourceBatches = batches.filter(b => b.datasetId === datasetId);
+        const allSourceRows = [...sourceBatches.flatMap(b => b.rows), ...processedRows];
+
+        derivedDatasets.forEach(derivedDs => {
+            const config = { ...derivedDs.sourcePivotConfig, rows: allSourceRows };
+            const pivotResult = calculatePivotData(config);
+            if (pivotResult) {
+                const flatRows = pivotToDatasetRows(
+                    pivotResult,
+                    config.rowFields,
+                    config.colFields || [],
+                    config.metrics || (config.valField ? [{ field: config.valField, aggType: config.aggType }] : [])
+                );
+
+                additionalBatches.push({
+                    id: generateId(),
+                    datasetId: derivedDs.id,
+                    date,
+                    createdAt: Date.now(),
+                    rows: flatRows
+                });
+            }
+        });
+    }
+
+    setAllBatches(prev => [...prev, newBatch, ...additionalBatches]);
   }, [datasets, batches]);
 
   const deleteBatch = useCallback((id: string) => {
@@ -711,7 +769,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
-                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
+                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, createDerivedDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields }}>
                 <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
                   <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
                     <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState }}>

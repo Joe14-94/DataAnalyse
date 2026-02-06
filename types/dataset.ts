@@ -58,6 +58,7 @@ export interface Dataset {
   fieldConfigs?: Record<string, FieldConfig>;
   calculatedFields?: CalculatedField[];
   enrichmentConfigs?: EnrichmentConfig[];
+  sourcePivotConfig?: any; // Using any to avoid circular dependency with PivotConfig
   createdAt: number;
 }
 

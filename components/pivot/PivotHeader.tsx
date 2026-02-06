@@ -28,6 +28,7 @@ interface PivotHeaderProps {
    openCalcModal: () => void;
    openFormattingModal: () => void;
    openSpecificDashboardModal: () => void;
+   openSaveAsDatasetModal: () => void;
    selectedItemsCount?: number;
    searchTerm: string;
    setSearchTerm: (v: string) => void;
@@ -38,7 +39,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    handleExport, handleExportSpreadsheet, showLoadMenu, setShowLoadMenu, savedAnalyses, handleLoadAnalysis,
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
-   openCalcModal, openFormattingModal, openSpecificDashboardModal, selectedItemsCount = 0,
+   openCalcModal, openFormattingModal, openSpecificDashboardModal, openSaveAsDatasetModal, selectedItemsCount = 0,
    searchTerm, setSearchTerm, setIsSelectionMode
 }) => {
    const [showChartMenu, setShowChartMenu] = useState(false);
@@ -132,6 +133,10 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                   </div>
                )}
             </div>
+
+            <button onClick={openSaveAsDatasetModal} disabled={!primaryDataset} className="px-3 py-1.5 text-xs text-brand-700 hover:bg-brand-50 border border-brand-200 rounded bg-white flex items-center gap-1 disabled:opacity-50 font-bold" title="Sauvegarder les résultats du TCD comme un nouveau Dataset">
+               <Database className="w-3 h-3 text-brand-600" /> Sauver comme Dataset
+            </button>
 
             <div className="relative">
                <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={!primaryDataset} className="px-3 py-1.5 text-xs text-slate-600 hover:text-brand-600 border border-slate-300 rounded bg-white hover:bg-slate-50 flex items-center gap-1 disabled:opacity-50">

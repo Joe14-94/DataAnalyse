@@ -15,7 +15,9 @@ import { TemporalSourceModal } from '../components/pivot/TemporalSourceModal';
 import { ChartModal } from '../components/pivot/ChartModal';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
 import { SpecificDashboardModal } from '../components/pivot/SpecificDashboardModal';
+import { SaveAsDatasetModal } from '../components/pivot/SaveAsDatasetModal';
 import { detectDateColumn, formatCurrency, formatPercentage } from '../utils/temporalComparison';
+import { pivotToDatasetRows } from '../utils/pivotToDataset';
 
 import { usePivotData } from '../hooks/usePivotData';
 import { PivotHeader } from '../components/pivot/PivotHeader';
@@ -66,6 +68,7 @@ export const PivotTable: React.FC = () => {
     const [isSpecificDashboardModalOpen, setIsSpecificDashboardModalOpen] = useState(false);
     const [isFormattingModalOpen, setIsFormattingModalOpen] = useState(false);
     const [isQuickChartModalOpen, setIsQuickChartModalOpen] = useState(false);
+    const [isSaveAsDatasetModalOpen, setIsSaveAsDatasetModalOpen] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [formattingSelectionRule, setFormattingSelectionRule] = useState<{id: string, type: 'style' | 'conditional'} | null>(null);
     const [specificDashboardItems, setSpecificDashboardItems] = useState<SpecificDashboardItem[]>([]);
@@ -665,6 +668,39 @@ export const PivotTable: React.FC = () => {
         navigate('/dashboard');
     };
 
+    const handleSaveAsDataset = (name: string) => {
+        if (!pivotData || !primaryDataset) return;
+
+        const rows = pivotToDatasetRows(pivotData, rowFields, colFields, metrics);
+        if (rows.length === 0) {
+            alert("Le TCD ne contient pas de données à sauvegarder.");
+            return;
+        }
+
+        const fields = [...rowFields, ...pivotData.colHeaders];
+
+        const sourcePivotConfig = {
+            datasetId: primaryDataset.id,
+            rowFields,
+            colFields,
+            colGrouping,
+            valField,
+            aggType,
+            metrics,
+            filters,
+            showSubtotals,
+            showVariations,
+            sortBy,
+            sortOrder,
+            isTemporalMode,
+            temporalComparison: temporalConfig
+        };
+
+        createDerivedDataset(name, fields, rows, sourcePivotConfig);
+        alert(`Dataset "${name}" créé avec succès !`);
+        navigate('/data');
+    };
+
     const handleSaveAnalysis = () => {
         if (analysisName.trim() && primaryDataset) {
             const currentTemporalComparison = temporalConfig ? {
@@ -721,6 +757,7 @@ export const PivotTable: React.FC = () => {
                openCalcModal={() => { setEditingCalcField(null); setIsCalcModalOpen(true); }}
                openFormattingModal={() => setIsFormattingModalOpen(true)}
                openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
+               openSaveAsDatasetModal={() => setIsSaveAsDatasetModalOpen(true)}
                selectedItemsCount={specificDashboardItems.length}
                searchTerm={searchTerm}
                setSearchTerm={setSearchTerm}
@@ -844,6 +881,13 @@ export const PivotTable: React.FC = () => {
                 isOpen={isQuickChartModalOpen}
                 onClose={() => setIsQuickChartModalOpen(false)}
                 items={specificDashboardItems}
+            />
+
+            <SaveAsDatasetModal
+                isOpen={isSaveAsDatasetModalOpen}
+                onClose={() => setIsSaveAsDatasetModalOpen(false)}
+                onSave={handleSaveAsDataset}
+                defaultName={`Synthèse ${primaryDataset?.name || ''}`}
             />
         </div>
     );
