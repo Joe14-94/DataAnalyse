@@ -157,7 +157,8 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
       .attr("dy", "0.35em")
       .attr("class", "text-xs fill-white font-medium drop-shadow-md")
       .text(d => {
-        return d.data.name.length > 15 ? d.data.name.substring(0, 12) + '...' : d.data.name;
+        const name = d.data.name || '';
+        return name.length > 15 ? name.substring(0, 12) + '...' : name;
       });
 
     // Center Text (Total)

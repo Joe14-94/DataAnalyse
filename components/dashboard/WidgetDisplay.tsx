@@ -67,7 +67,10 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                         innerRadius={chartType === 'donut' ? '45%' : 0}
                         outerRadius="75%"
                         paddingAngle={2}
-                        label={({ name, percent }) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }) => {
+                           const n = name || '';
+                           return `${n.length > 12 ? n.substring(0, 12) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
+                        }}
                         labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                         isAnimationActive={false}
                      >

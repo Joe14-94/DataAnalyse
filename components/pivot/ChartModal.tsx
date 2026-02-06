@@ -441,7 +441,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
       .attr('font-size', '10px')
       .attr('font-weight', '500')
       .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
-      .text(d => d.data.name.length > 15 ? d.data.name.substring(0, 12) + '...' : d.data.name);
+      .text(d => {
+        const name = d.data.name || '';
+        return name.length > 15 ? name.substring(0, 12) + '...' : name;
+      });
 
     if (sunburstTitle) {
       svg.append('text')
@@ -1021,7 +1024,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({
                 stroke="#fff"
                 strokeWidth={2}
                 labelLine={true}
-                label={({ name, percent }) => `${name.length > 15 ? name.substring(0, 15) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
+                label={({ name, percent }) => {
+                   const n = name || '';
+                   return `${n.length > 15 ? n.substring(0, 15) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
+                }}
               >
                 {chartData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />

@@ -7,7 +7,6 @@ import { Loader2 } from 'lucide-react';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Import = React.lazy(() => import('./pages/Import').then(m => ({ default: m.Import })));
-const History = React.lazy(() => import('./pages/History').then(m => ({ default: m.History })));
 const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const Customization = React.lazy(() => import('./pages/Customization').then(m => ({ default: m.Customization })));
 const AnalysisStudio = React.lazy(() => import('./pages/AnalysisStudio').then(m => ({ default: m.AnalysisStudio })));
@@ -36,7 +35,6 @@ const App: React.FC = () => {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/data" element={<DataExplorer />} />
                 <Route path="/import" element={<Import />} />
-                <Route path="/history" element={<History />} />
                 <Route path="/analytics" element={<AnalysisStudio />} />
                 <Route path="/pivot" element={<PivotTable />} />
                 <Route path="/budget" element={<Budget />} />
