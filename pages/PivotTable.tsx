@@ -33,7 +33,7 @@ export const PivotTable: React.FC = () => {
     const {
         batches, currentDataset, currentDatasetId, switchDataset, datasets, savedAnalyses, saveAnalysis,
         lastPivotState, savePivotState, isLoading, companyLogo, addCalculatedField,
-        removeCalculatedField, updateCalculatedField, addDashboardWidget
+        removeCalculatedField, updateCalculatedField, addDashboardWidget, createDerivedDataset
     } = useData();
     const navigate = useNavigate();
 
