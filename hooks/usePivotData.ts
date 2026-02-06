@@ -102,7 +102,9 @@ export const usePivotData = ({
            return;
        }
 
-       if (rowFields.length === 0 || !valField || (temporalConfig?.sources?.length || 0) < 2) {
+       const activeMetric = metrics.length > 0 ? metrics[0] : (valField ? { field: valField, aggType } : null);
+
+       if (rowFields.length === 0 || !activeMetric || (temporalConfig?.sources?.length || 0) < 2) {
            setTemporalResults([]);
            return;
        }
@@ -141,11 +143,11 @@ export const usePivotData = ({
            });
 
            const dateColumn = detectDateColumn(primaryDataset?.fields || []) || 'Date écriture';
-           const validAggType = aggType === 'list' ? 'sum' : aggType;
+           const validAggType = activeMetric.aggType === 'list' ? 'sum' : activeMetric.aggType;
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
                groupByFields: rowFields,
-               valueField: valField,
+               valueField: activeMetric.field,
                aggType: validAggType as any,
                sortBy,
                sortOrder
@@ -158,7 +160,7 @@ export const usePivotData = ({
        }, 150);
 
        return () => clearTimeout(timer);
-   }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, showSubtotals, searchTerm]);
+   }, [isTemporalMode, temporalConfig, batches, primaryDataset, rowFields, valField, aggType, metrics, showSubtotals, searchTerm]);
 
    return {
       blendedRows,

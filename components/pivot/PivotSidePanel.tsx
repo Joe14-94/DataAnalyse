@@ -131,7 +131,7 @@ const FieldChip: React.FC<{
 
 export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
    const [fieldsZoneHeight, setFieldsZoneHeight] = useState(240);
-   const [dropZonesHeight, setDropZonesHeight] = useState(300);
+   const [dropZonesHeight, setDropZonesHeight] = useState<number | null>(null);
    const [fieldSearchTerm, setFieldSearchTerm] = useState('');
    const isResizing = useRef(false);
    const isResizingDropZones = useRef(false);
@@ -150,7 +150,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       } else if (isResizingDropZones.current && dropZonesRef.current) {
          const dropZonesRect = dropZonesRef.current.getBoundingClientRect();
          const newHeight = e.clientY - dropZonesRect.top;
-         setDropZonesHeight(Math.max(80, Math.min(newHeight, 600)));
+         setDropZonesHeight(Math.max(40, Math.min(newHeight, 800)));
       }
    }, []);
 
@@ -262,56 +262,6 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             )}
          </div>
 
-         {/* 2. TEMPORAL COMPARISON CONFIG */}
-         {isTemporalMode && (
-            <div className="bg-white rounded-lg border border-brand-300 shadow-sm flex flex-col overflow-hidden" style={{ maxHeight: isTemporalConfigPanelCollapsed ? '40px' : 'none' }}>
-               <div className="p-2 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center justify-between gap-2">
-                     <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-purple-600" /> Configuration</div>
-                     <button onClick={() => setIsTemporalConfigPanelCollapsed(!isTemporalConfigPanelCollapsed)} className="text-slate-500 transition-colors">
-                        {isTemporalConfigPanelCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4 rotate-90" />}
-                     </button>
-                  </h3>
-               </div>
-               {!isTemporalConfigPanelCollapsed && (
-                  <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar">
-                     <button onClick={() => setIsTemporalSourceModalOpen(true)} className="w-full px-2 py-1 text-xs bg-purple-50 text-purple-700 border border-purple-300 rounded hover:bg-purple-100 font-bold" disabled={!primaryDataset}>
-                        + Configurer les sources
-                     </button>
-                     {temporalConfig && (
-                        <>
-                           <div>
-                              <label className="text-xs font-bold text-slate-600 mb-1 block">Regrouper par</label>
-                              <div className="space-y-1 mb-2">
-                                 {rowFields.map((field, idx) => (
-                                    <div key={field} className="flex items-center gap-1 bg-brand-50 border border-brand-300 rounded px-1.5 py-0.5">
-                                       <span className="text-xs font-medium text-brand-700 flex-1">{field}</span>
-                                       <div className="flex items-center gap-0.5">
-                                          <button onClick={() => { if (idx > 0) { const n = [...rowFields]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; setRowFields(n); } }} disabled={idx === 0} className="p-0.5 text-brand-600 hover:bg-brand-200 rounded disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
-                                          <button onClick={() => { if (idx < rowFields.length - 1) { const n = [...rowFields]; [n[idx + 1], n[idx]] = [n[idx], n[idx + 1]]; setRowFields(n); } }} disabled={idx === rowFields.length - 1} className="p-0.5 text-brand-600 hover:bg-brand-200 rounded disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
-                                          <button onClick={() => setRowFields(rowFields.filter(f => f !== field))} className="p-0.5 text-red-500 hover:bg-red-100 rounded"><X className="w-3 h-3" /></button>
-                                       </div>
-                                    </div>
-                                 ))}
-                              </div>
-                              <select className="w-full text-xs border border-slate-300 rounded px-1 py-1 bg-white" value="" onChange={(e) => { if (e.target.value && !rowFields.includes(e.target.value)) setRowFields([...rowFields, e.target.value]); }} disabled={!primaryDataset}>
-                                 <option value="">+ Ajouter un champ...</option>
-                                 {allAvailableFields.filter(field => !rowFields.includes(field)).map(field => <option key={field} value={field}>{field}</option>)}
-                              </select>
-                           </div>
-                           <div>
-                              <label className="text-xs font-bold text-slate-600 mb-1 block">Valeur à agréger</label>
-                              <select className="w-full text-xs border border-slate-300 rounded px-1 py-1 bg-white" value={valField} onChange={(e) => handleValFieldChange(e.target.value)} disabled={!primaryDataset}>
-                                 <option value="">-- Choisissez --</option>
-                                 {allAvailableFields.map(field => <option key={field} value={field}>{field}</option>)}
-                              </select>
-                           </div>
-                        </>
-                     )}
-                  </div>
-               )}
-            </div>
-         )}
 
          {/* 3. FIELDS ACCORDION */}
          <div
@@ -401,7 +351,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
          </div>
 
          {/* RESIZER SEPARATOR */}
-         {!isFieldsPanelCollapsed && !isTemporalMode && sources.length > 0 && (
+         {!isFieldsPanelCollapsed && sources.length > 0 && (
             <div
                onMouseDown={handleMouseDown}
                className="h-1.5 hover:h-2 bg-slate-200 hover:bg-indigo-400 cursor-row-resize transition-all rounded-full mx-12 -my-1 z-10 flex items-center justify-center group"
@@ -412,9 +362,18 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
          )}
 
          {/* 4. DROP ZONES */}
-         {!isTemporalMode && (
-            <div ref={dropZonesRef} className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-               <div className="grid grid-cols-2 gap-2 min-h-0" style={{ height: `${dropZonesHeight}px` }}>
+         <div ref={dropZonesRef} className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+               {isTemporalMode && (
+                  <button
+                     onClick={() => setIsTemporalSourceModalOpen(true)}
+                     className="w-full px-2 py-2 text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 font-bold flex items-center justify-center gap-2 mb-1 shadow-sm transition-all"
+                     disabled={!primaryDataset}
+                  >
+                     <Calendar className="w-3.5 h-3.5" />
+                     Configurer les périodes de comparaison
+                  </button>
+               )}
+               <div className="grid grid-cols-2 gap-2 min-h-0" style={dropZonesHeight ? { height: `${dropZonesHeight}px` } : { flex: 1 }}>
                   <div onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'filter')} className={`bg-white rounded border-2 border-dashed p-1 overflow-auto custom-scrollbar ${draggedField ? 'border-brand-300 bg-brand-50/30' : 'border-slate-200'}`}>
                      <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1 sticky top-0 bg-white/90 backdrop-blur-sm z-10"><Filter className="w-2 h-2" /> Filtres</div>
                      <div className="space-y-2">
@@ -574,7 +533,6 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                   </div>
                </div>
             </div>
-         )}
 
          <div className="p-1.5 bg-slate-50 rounded border border-slate-200 text-xs flex flex-col gap-1">
             <button

@@ -28,7 +28,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Données', icon: Table2, path: '/data', id: 'tour-nav-data' },
     { name: 'Importation', icon: Upload, path: '/import', id: 'tour-nav-import' },
     { name: 'Historique imports', icon: History, path: '/history' },
-    { name: 'Création de graphiques', icon: PieChart, path: '/analytics', id: 'tour-nav-analytics' },
+    { name: "Studio d'Analyse", icon: PieChart, path: '/analytics', id: 'tour-nav-analytics' },
     { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
     { name: 'Budgets', icon: DollarSign, path: '/budget' },
     { name: 'Forecasts', icon: TrendingUp, path: '/forecast' },
