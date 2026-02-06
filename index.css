@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --app-font-size: 11px;
+    --app-sidebar-width: 176px;
+
+    /* DEFAULT LIGHT THEME (BLUE) */
+    --brand-50: #eff6ff;
+    --brand-100: #dbeafe;
+    --brand-200: #bfdbfe;
+    --brand-500: #3b82f6;
+    --brand-600: #2563eb;
+    --brand-700: #1d4ed8;
+    --brand-900: #1e3a8a;
+
+    --canvas: #f8fafc;
+    --surface: #ffffff;
+
+    --txt-main: #1e293b;
+    --txt-secondary: #475569;
+    --txt-muted: #94a3b8;
+
+    --border-default: #e2e8f0;
+
+    --success-bg: #dcfce7;
+    --success-text: #15803d;
+    --success-border: #86efac;
+
+    --warning-bg: #fef9c3;
+    --warning-text: #a16207;
+    --warning-border: #fde047;
+
+    --danger-bg: #fee2e2;
+    --danger-text: #b91c1c;
+    --danger-border: #fca5a5;
+
+    --info-bg: #e0f2fe;
+    --info-text: #0369a1;
+    --info-border: #7dd3fc;
+
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --card-radius: 0.5rem;
+  }
+
+  /* MATERIAL STYLE */
+  html.style-material {
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --card-radius: 1rem;
+    --canvas: #f6f6f8;
+  }
+
+  /* GLASS STYLE */
+  html.style-glass {
+    --card-radius: 1.5rem;
+    --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+
+  html.style-glass body {
+    background: fixed;
+    background-image: linear-gradient(135deg, var(--canvas) 0%, var(--brand-50) 100%);
+  }
+
+  html {
+    font-size: var(--app-font-size);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+@layer components {
+  html.style-glass .bg-surface {
+    background-color: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  }
+
+  html.dark.style-glass .bg-surface {
+    background-color: rgba(15, 23, 42, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Glass Sidebar Specific */
+  html.style-glass aside {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  html.dark.style-glass aside {
+    background-color: rgba(15, 23, 42, 0.3) !important;
+  }
+
+  .glass-blobs {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  html.style-glass .glass-blobs {
+    display: block;
+  }
+
+  .blob {
+    @apply absolute rounded-full opacity-30;
+    width: 500px;
+    height: 500px;
+    background: var(--brand-200);
+    filter: blur(80px);
+    animation: move 25s infinite alternate ease-in-out;
+  }
+
+  .blob-2 {
+    background: var(--brand-500);
+    width: 400px;
+    height: 400px;
+    right: -100px;
+    top: -100px;
+    animation-duration: 30s;
+    animation-delay: -5s;
+    opacity: 0.2;
+  }
+
+  .blob-3 {
+    background: var(--brand-100);
+    width: 300px;
+    height: 300px;
+    left: 20%;
+    bottom: -50px;
+    animation-duration: 20s;
+    animation-delay: -10s;
+    opacity: 0.25;
+  }
+
+  @keyframes move {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(100px, 100px) scale(1.2); }
+  }
+
+  html.font-outfit,
+  html.font-outfit * {
+    font-family: 'Outfit', sans-serif !important;
+  }
+
+  html.font-inter,
+  html.font-inter * {
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  html.font-mono,
+  html.font-mono * {
+    font-family: 'Fira Code', 'Consolas', monospace !important;
+  }
+}

@@ -1,14 +1,13 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { formatDateFr, parseSmartNumber, exportView, calculateLinearRegression } from '../utils';
+import { formatDateFr, parseSmartNumber, exportView, calculateLinearRegression, getSafeLogo } from '../utils';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
   PieChart, Pie, AreaChart, Area, Treemap, LineChart, Line, ComposedChart,
   RadialBarChart, RadialBar, FunnelChart, Funnel, LabelList
 } from 'recharts';
-import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import { 
   BarChart3, PieChart as PieIcon, Activity, Radar as RadarIcon, 
@@ -408,6 +407,7 @@ export const AnalysisStudio: React.FC = () => {
       } else if (format === 'png') {
          const element = document.getElementById('analytics-export-container');
          if (element) {
+            const html2canvas = (await import('html2canvas')).default;
             const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
             const link = document.createElement('a');
             link.href = canvas.toDataURL('image/png');
@@ -527,7 +527,7 @@ export const AnalysisStudio: React.FC = () => {
 <body>
   <div class="container">
     <div class="header">
-      ${companyLogo ? `<img src="${companyLogo}" class="logo" alt="Logo" />` : ''}
+      ${getSafeLogo(companyLogo) ? `<img src="${getSafeLogo(companyLogo)}" class="logo" alt="Logo" />` : ''}
       <h1>${title}</h1>
     </div>
     <div class="metadata">Exporté le ${new Date().toLocaleDateString()} | Unité: ${unit || 'Standard'}</div>

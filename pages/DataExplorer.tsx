@@ -414,7 +414,7 @@ export const DataExplorer: React.FC = () => {
 
    const allRows = useMemo(() => {
       if (!currentDataset) return [];
-      const calcFields = currentDataset.calculatedFields || [];
+      const calcFields = currentDataset?.calculatedFields || [];
 
       let rows = (batches || [])
          .filter(b => b.datasetId === currentDataset.id)
@@ -485,6 +485,7 @@ export const DataExplorer: React.FC = () => {
    }, [currentDataset, blendingConfig, datasets]);
 
    const processedRows = useMemo(() => {
+      if (!currentDataset) return [];
       let data = allRows;
 
       // BOLT OPTIMIZATION: Consolidate all filtering into a single O(N) pass
@@ -578,7 +579,7 @@ export const DataExplorer: React.FC = () => {
 
    // --- DISTRIBUTION CHART DATA ---
    const distributionData = useMemo(() => {
-      if (!selectedCol || processedRows.length === 0) return [];
+      if (!currentDataset || !selectedCol || processedRows.length === 0) return [];
 
       const counts: Record<string, number> = {};
       processedRows.forEach(row => {
@@ -593,7 +594,7 @@ export const DataExplorer: React.FC = () => {
          .map(([name, value]) => ({ name, value }))
          .sort((a, b) => b.value - a.value)
          .slice(0, 15);
-   }, [selectedCol, processedRows]);
+   }, [selectedCol, processedRows, currentDataset]);
 
    // --- VIRTUALIZATION ---
    const rowVirtualizer = useVirtualizer({
@@ -604,7 +605,7 @@ export const DataExplorer: React.FC = () => {
    });
 
    const historyData = useMemo(() => {
-      if (!selectedRow || !trackingKey) return [];
+      if (!currentDataset || !selectedRow || !trackingKey) return [];
       const trackValue = selectedRow[trackingKey];
       if (trackValue === undefined || trackValue === '') return [selectedRow];
       const relevantBatches = batches.filter(b => b.datasetId === currentDataset?.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -677,6 +678,27 @@ export const DataExplorer: React.FC = () => {
       document.body.removeChild(link);
    };
 
+   const calculatedFields = currentDataset?.calculatedFields || [];
+   const activeBatchFilter = columnFilters['_batchId'] ? columnFilters['_batchId'].replace(/^=/, '') : null;
+   const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
+
+   const selectedConfig = useMemo(() => {
+      if (!selectedCol || !currentDataset) return null;
+      const config = currentDataset.fieldConfigs?.[selectedCol];
+      if (config) return config;
+
+      const calcField = calculatedFields.find(f => f.name === selectedCol);
+      if (calcField) {
+         return {
+            type: calcField.outputType,
+            unit: calcField.unit
+         } as FieldConfig;
+      }
+      return null;
+   }, [selectedCol, currentDataset, calculatedFields]);
+
+   const isSelectedNumeric = selectedConfig?.type === 'number';
+
    if (!currentDataset) {
       return (
          <div className="h-full flex flex-col items-center justify-center text-center bg-slate-50 rounded-lg border border-dashed border-slate-300 m-4">
@@ -702,27 +724,6 @@ export const DataExplorer: React.FC = () => {
          </div>
       );
    }
-
-   const calculatedFields = currentDataset.calculatedFields || [];
-   const activeBatchFilter = columnFilters['_batchId'] ? columnFilters['_batchId'].replace(/^=/, '') : null;
-   const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
-
-   const selectedConfig = useMemo(() => {
-      if (!selectedCol || !currentDataset) return null;
-      const config = currentDataset.fieldConfigs?.[selectedCol];
-      if (config) return config;
-
-      const calcField = calculatedFields.find(f => f.name === selectedCol);
-      if (calcField) {
-         return {
-            type: calcField.outputType,
-            unit: calcField.unit
-         } as FieldConfig;
-      }
-      return null;
-   }, [selectedCol, currentDataset, calculatedFields]);
-
-   const isSelectedNumeric = selectedConfig?.type === 'number';
 
    return (
       <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">

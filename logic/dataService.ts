@@ -1,6 +1,7 @@
 
 import { Dataset, ImportBatch, DashboardWidget, AppState, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
-import { generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData, generateId, APP_VERSION, compressBatch } from '../utils';
+import { generateId, APP_VERSION, compressBatch } from '../utils/common';
+import { generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData } from '../utils/dataGeneration';
 
 export const getDemoData = () => {
     // Dataset 1: RH
