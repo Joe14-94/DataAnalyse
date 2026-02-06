@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { FieldConfig, ChartType as WidgetChartType, FilterRule, ColorMode, ColorPalette } from '../types';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getChartColors, generateGradient, getSingleColors, formatChartValue } from '../logic/pivotToChart';
+import { getChartColors, generateGradient, formatChartValue } from '../logic/pivotToChart';
 
 type ChartType = 'bar' | 'column' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'pie' | 'donut' | 'area' | 'stacked-area' | 'radar' | 'treemap' | 'kpi' | 'line' | 'sunburst' | 'radial' | 'funnel';
 type AnalysisMode = 'snapshot' | 'trend';
@@ -125,7 +125,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onChange, 
   );
 };
 
-export const CustomAnalytics: React.FC = () => {
+export const AnalysisStudio: React.FC = () => {
   const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis, companyLogo, datasets, currentDatasetId, switchDataset } = useData();
   const fields = currentDataset ? currentDataset.fields : [];
   const navigate = useNavigate();

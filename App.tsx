@@ -7,7 +7,7 @@ import { Import } from './pages/Import';
 import { History } from './pages/History';
 import { Settings } from './pages/Settings';
 import { Customization } from './pages/Customization';
-import { CustomAnalytics } from './pages/CustomAnalytics';
+import { AnalysisStudio } from './pages/AnalysisStudio';
 import { DataExplorer } from './pages/DataExplorer';
 import { PivotTable } from './pages/PivotTable';
 import { Budget } from './pages/Budget';
@@ -25,7 +25,7 @@ const App: React.FC = () => {
             <Route path="/data" element={<DataExplorer />} />
             <Route path="/import" element={<Import />} />
             <Route path="/history" element={<History />} />
-            <Route path="/analytics" element={<CustomAnalytics />} />
+            <Route path="/analytics" element={<AnalysisStudio />} />
             <Route path="/pivot" element={<PivotTable />} />
             <Route path="/budget" element={<Budget />} />
             <Route path="/forecast" element={<Forecast />} />
