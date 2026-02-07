@@ -7,7 +7,11 @@ interface DatasetContextType {
   currentDataset: Dataset | null;
   currentDatasetId: string | null;
   switchDataset: (id: string) => void;
-  createDataset: (name: string, fields: string[], fieldConfigs?: Record<string, FieldConfig>) => string;
+  createDataset: (
+    name: string,
+    fields: string[],
+    fieldConfigs?: Record<string, FieldConfig>
+  ) => string;
   updateDatasetName: (id: string, name: string) => void;
   deleteDataset: (id: string) => void;
   addFieldToDataset: (datasetId: string, fieldName: string, config?: FieldConfig) => void;
@@ -16,9 +20,19 @@ interface DatasetContextType {
   updateDatasetConfigs: (datasetId: string, configs: Record<string, FieldConfig>) => void;
   addCalculatedField: (datasetId: string, field: CalculatedField) => void;
   removeCalculatedField: (datasetId: string, fieldId: string) => void;
-  updateCalculatedField: (datasetId: string, fieldId: string, updates: Partial<CalculatedField>) => void;
+  updateCalculatedField: (
+    datasetId: string,
+    fieldId: string,
+    updates: Partial<CalculatedField>
+  ) => void;
   reorderDatasetFields: (datasetId: string, fields: string[]) => void;
-  createDerivedDataset: (name: string, isTemporal: boolean, config: any, fields: string[], rows: any[]) => string;
+  createDerivedDataset: (
+    name: string,
+    isTemporal: boolean,
+    config: any,
+    fields: string[],
+    rows: any[]
+  ) => string;
 }
 
 export const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
@@ -27,17 +41,13 @@ export const DatasetProvider: React.FC<{
   children: React.ReactNode;
   value: DatasetContextType;
 }> = ({ children, value }) => {
-  return (
-    <DatasetContext.Provider value={value}>
-      {children}
-    </DatasetContext.Provider>
-  );
+  return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
 };
 
 export const useDatasets = () => {
   const context = useContext(DatasetContext);
   if (!context) {
-    throw new Error("useDatasets must be used within a DatasetProvider");
+    throw new Error('useDatasets must be used within a DatasetProvider');
   }
   return context;
 };

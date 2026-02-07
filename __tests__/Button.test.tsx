@@ -18,7 +18,11 @@ describe('Button Component', () => {
 
   it('is disabled when disabled prop is true', () => {
     const handleClick = vi.fn();
-    render(<Button disabled onClick={handleClick}>Click me</Button>);
+    render(
+      <Button disabled onClick={handleClick}>
+        Click me
+      </Button>
+    );
     const button = screen.getByRole('button') as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     fireEvent.click(button);
@@ -27,7 +31,11 @@ describe('Button Component', () => {
 
   it('shows loader and is disabled when isLoading is true', () => {
     const handleClick = vi.fn();
-    render(<Button isLoading onClick={handleClick}>Click me</Button>);
+    render(
+      <Button isLoading onClick={handleClick}>
+        Click me
+      </Button>
+    );
     const button = screen.getByRole('button') as HTMLButtonElement;
 
     // Check if button is disabled

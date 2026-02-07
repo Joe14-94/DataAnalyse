@@ -1,0 +1,205 @@
+components/OnboardingTour.tsx(2,10): error TS2305: Module '"react-shepherd"' has no exported member 'ShepherdTour'.
+components/OnboardingTour.tsx(2,24): error TS2724: '"react-shepherd"' has no exported member named 'ShepherdTourContext'. Did you mean 'ShepherdJourneyContext'?
+components/analytics/AnalysisChartDisplay.tsx(123,5): error TS2353: Object literal may only specify known properties, and 'rows' does not exist in type 'PivotConfig'.
+components/analytics/AnalysisSidebar.tsx(182,26): error TS2339: Property 'name' does not exist on type 'ImportBatch'.
+components/budget/BudgetComparison.tsx(109,25): error TS2571: Object is of type 'unknown'.
+components/budget/BudgetComparison.tsx(114,25): error TS2571: Object is of type 'unknown'.
+components/dashboard/WidgetCard.tsx(194,44): error TS2322: Type '{ text: string | undefined; style: { align?: "left" | "right" | "center" | undefined; size?: "xl" | "normal" | "large" | undefined; color?: "default" | "primary" | "muted" | undefined; } | undefined; ... 16 more ...; target?: undefined; } | ... 10 more ... | null' is not assignable to type 'WidgetData'.
+  Type 'null' is not assignable to type 'WidgetData'.
+components/dashboard/WidgetDisplay.tsx(31,37): error TS2305: Module '"../../types"' has no exported member 'SunburstData'.
+components/dashboard/WidgetDisplay.tsx(149,27): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(149,42): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(207,31): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(207,44): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(220,27): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(268,27): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(268,40): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(269,29): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(269,42): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(280,25): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(281,27): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(358,27): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(358,40): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(368,25): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(373,55): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(373,70): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(490,27): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(490,40): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(491,25): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(491,38): error TS18048: 'colors' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(569,24): error TS18048: 'trend' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(586,29): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+components/dashboard/WidgetDisplay.tsx(591,79): error TS18048: 'progress' is possibly 'undefined'.
+components/dashboard/WidgetDisplay.tsx(606,25): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+components/dashboard/WidgetDisplay.tsx(642,50): error TS18048: 'max' is possibly 'undefined'.
+components/dashboard/WidgetDrawer.tsx(62,40): error TS2322: Type '{ text: string | undefined; style: { align?: "left" | "right" | "center" | undefined; size?: "xl" | "normal" | "large" | undefined; color?: "default" | "primary" | "muted" | undefined; } | undefined; ... 16 more ...; target?: undefined; } | ... 10 more ... | null' is not assignable to type 'WidgetData'.
+  Type 'null' is not assignable to type 'WidgetData'.
+components/explorer/ExplorerDrawers.tsx(376,74): error TS7006: Parameter 'c' implicitly has an 'any' type.
+components/explorer/ExplorerGrid.tsx(312,31): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'string | number | boolean'.
+  No index signature with a parameter of type 'string' was found on type 'string | number | boolean'.
+components/explorer/ExplorerHeader.tsx(4,19): error TS2305: Module '"../../types"' has no exported member 'Batch'.
+components/forecast/ForecastReconciliation.tsx(4,10): error TS2305: Module '"../../types"' has no exported member 'ReconciliationReport'.
+components/pivot/ChartModal.tsx(127,15): error TS2322: Type 'boolean | null' is not assignable to type 'boolean'.
+  Type 'null' is not assignable to type 'boolean'.
+components/pivot/ChartModal.tsx(137,15): error TS2322: Type 'any[] | null' is not assignable to type 'any[]'.
+  Type 'null' is not assignable to type 'any[]'.
+hooks/useDataExplorerLogic.ts(278,23): error TS2345: Argument of type '(prev: Record<string, Record<string, string | number | boolean>>) => { [x: string]: Record<string, string | number | boolean> | { [x: string]: {}; }; }' is not assignable to parameter of type 'SetStateAction<Record<string, Record<string, string | number | boolean>>>'.
+  Type '(prev: Record<string, Record<string, string | number | boolean>>) => { [x: string]: Record<string, string | number | boolean> | { [x: string]: {}; }; }' is not assignable to type '(prevState: Record<string, Record<string, string | number | boolean>>) => Record<string, Record<string, string | number | boolean>>'.
+    Type '{ [x: string]: Record<string, string | number | boolean> | { [x: string]: {}; }; }' is not assignable to type 'Record<string, Record<string, string | number | boolean>>'.
+      'string' index signatures are incompatible.
+        Type 'Record<string, string | number | boolean> | { [x: string]: {}; }' is not assignable to type 'Record<string, string | number | boolean>'.
+          Type '{ [x: string]: {}; }' is not assignable to type 'Record<string, string | number | boolean>'.
+            'string' index signatures are incompatible.
+              Type '{}' is not assignable to type 'string | number | boolean'.
+hooks/usePivotData.ts(120,9): error TS2353: Object literal may only specify known properties, and 'rows' does not exist in type 'PivotConfig'.
+hooks/useWidgetData.ts(256,11): error TS2353: Object literal may only specify known properties, and 'rows' does not exist in type 'PivotConfig'.
+logic/pivotEngine.ts(46,5): error TS2339: Property 'rows' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(73,16): error TS2339: Property 'currentDataset' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(74,24): error TS2339: Property 'currentDataset' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(75,23): error TS2339: Property 'currentDataset' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(76,25): error TS2339: Property 'currentDataset' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(76,63): error TS7006: Parameter 'c' implicitly has an 'any' type.
+logic/pivotEngine.ts(78,23): error TS2339: Property 'datasets' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(83,33): error TS2339: Property 'datasets' does not exist on type 'PivotConfig'.
+logic/pivotEngine.ts(83,48): error TS7006: Parameter 'd' implicitly has an 'any' type.
+logic/pivotEngine.ts(87,54): error TS7006: Parameter 'c' implicitly has an 'any' type.
+pages/AnalysisStudio.tsx(15,5): error TS2339: Property 'datasets' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(68,5): error TS2339: Property 'handleOpenInDashboard' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(71,5): error TS2339: Property 'exportContainerRef' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(74,5): error TS2339: Property 'isCalculating' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(77,5): error TS2339: Property 'handleExportPNG' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(78,5): error TS2339: Property 'handleExportXLSX' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(79,5): error TS2339: Property 'handleExportHTML' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(80,5): error TS2339: Property 'navigate' does not exist on type '{ mode: AnalysisMode; setMode: Dispatch<SetStateAction<AnalysisMode>>; selectedBatchId: string; setSelectedBatchId: Dispatch<SetStateAction<string>>; ... 75 more ...; handleExport: (format: "pdf" | ... 2 more ... | "xlsx", pdfMode?: "A4" | "adaptive") => Promise<...>; }'.
+pages/AnalysisStudio.tsx(131,11): error TS2322: Type '"asc" | "desc" | "alpha"' is not assignable to type '"none" | "asc" | "desc"'.
+  Type '"alpha"' is not assignable to type '"none" | "asc" | "desc"'.
+pages/AnalysisStudio.tsx(132,11): error TS2322: Type 'Dispatch<SetStateAction<"asc" | "desc" | "alpha">>' is not assignable to type '(o: "none" | "asc" | "desc") => void'.
+  Types of parameters 'value' and 'o' are incompatible.
+    Type '"none" | "asc" | "desc"' is not assignable to type 'SetStateAction<"asc" | "desc" | "alpha">'.
+      Type '"none"' is not assignable to type 'SetStateAction<"asc" | "desc" | "alpha">'.
+pages/AnalysisStudio.tsx(169,15): error TS2322: Type '{ mode: AnalysisMode; chartType: ChartType; chartTitle: string; snapshotData: SnapshotData; trendData: { data: any[]; series: string[]; }; dimension: string; ... 9 more ...; customUnit: string; }' is not assignable to type 'IntrinsicAttributes & AnalysisChartDisplayProps'.
+  Property 'dimension' does not exist on type 'IntrinsicAttributes & AnalysisChartDisplayProps'.
+pages/AnalysisStudio.tsx(190,17): error TS2322: Type '{ mode: AnalysisMode; snapshotData: SnapshotData; trendData: { data: any[]; series: string[]; }; dimension: string; metric2: "none" | MetricType; isCumulative: boolean; customUnit: string; }' is not assignable to type 'IntrinsicAttributes & AnalysisTableDisplayProps'.
+  Property 'customUnit' does not exist on type 'IntrinsicAttributes & AnalysisTableDisplayProps'.
+pages/Budget.tsx(136,15): error TS2322: Type '{ selectedBudgetId: string | null; setSelectedBudgetId: (id: string | null) => void; selectedVersionId: string | null; setSelectedVersionId: (id: string | null) => void; budgets: Budget[]; ... 29 more ...; updateVersion: any; }' is not assignable to type 'IntrinsicAttributes & BudgetEditorProps'.
+  Property 'selectedBudgetId' does not exist on type 'IntrinsicAttributes & BudgetEditorProps'. Did you mean 'selectedBudget'?
+pages/Budget.tsx(150,39): error TS2551: Property 'setEditingCellId' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; activeTab: BudgetTab; setActiveTab: (tab: BudgetTab) => void; budgets: Budget[]; templates: BudgetTemplate[]; ... 93 more ...; getAxisValues: (axisId: string) => AxisValue[]; }'. Did you mean 'editingCellId'?
+pages/Budget.tsx(169,30): error TS2339: Property 'addLine' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; activeTab: BudgetTab; setActiveTab: (tab: BudgetTab) => void; budgets: Budget[]; templates: BudgetTemplate[]; ... 93 more ...; getAxisValues: (axisId: string) => AxisValue[]; }'.
+pages/Budget.tsx(170,36): error TS2339: Property 'updateVersion' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; activeTab: BudgetTab; setActiveTab: (tab: BudgetTab) => void; budgets: Budget[]; templates: BudgetTemplate[]; ... 93 more ...; getAxisValues: (axisId: string) => AxisValue[]; }'.
+pages/Budget.tsx(177,15): error TS2322: Type '{ selectedBudgetId: string | null; setSelectedBudgetId: (id: string | null) => void; budgets: Budget[]; compareVersion1Id: string | null; setCompareVersion1Id: Dispatch<SetStateAction<string | null>>; compareVersion2Id: string | null; setCompareVersion2Id: Dispatch<...>; compareVersions: (budgetId: string, version1I...' is not assignable to type 'IntrinsicAttributes & BudgetComparisonProps'.
+  Property 'setSelectedBudgetId' does not exist on type 'IntrinsicAttributes & BudgetComparisonProps'. Did you mean 'selectedBudgetId'?
+pages/Budget.tsx(191,15): error TS2322: Type '{ budgets: Budget[]; validateVersion: (budgetId: string, versionId: string, validatedBy: string) => void; rejectVersion: (budgetId: string, versionId: string, rejectedBy: string, reason: string) => void; submitVersion: (budgetId: string, versionId: string, submittedBy: string) => void; lockBudget: (budgetId: string)...' is not assignable to type 'IntrinsicAttributes & BudgetWorkflowProps'.
+  Property 'validateVersion' does not exist on type 'IntrinsicAttributes & BudgetWorkflowProps'. Did you mean 'onValidateVersion'?
+pages/Budget.tsx(203,15): error TS2322: Type '{ templates: BudgetTemplate[]; budgets: Budget[]; setShowTemplateModal: Dispatch<SetStateAction<boolean>>; showTemplateModal: boolean; ... 16 more ...; handleUpdateTemplate: () => void; }' is not assignable to type 'IntrinsicAttributes & BudgetTemplatesProps'.
+  Property 'setShowTemplateModal' does not exist on type 'IntrinsicAttributes & BudgetTemplatesProps'. Did you mean 'showTemplateModal'?
+pages/Budget.tsx(229,15): error TS2322: Type '{ analyticalAxes: AnalyticalAxis[]; getAxisValues: (axisId: string) => AxisValue[]; downloadAnalyticalAxisTemplate: any; setShowNewAxisModal: Dispatch<SetStateAction<boolean>>; ... 18 more ...; handleAxisFileSelect: (event: ChangeEvent<...>) => Promise<...>; }' is not assignable to type 'IntrinsicAttributes & BudgetReferentialsProps'.
+  Property 'downloadAnalyticalAxisTemplate' does not exist on type 'IntrinsicAttributes & BudgetReferentialsProps'.
+pages/Budget.tsx(229,53): error TS2339: Property 'downloadAnalyticalAxisTemplate' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; activeTab: BudgetTab; setActiveTab: (tab: BudgetTab) => void; budgets: Budget[]; templates: BudgetTemplate[]; ... 93 more ...; getAxisValues: (axisId: string) => AxisValue[]; }'.
+pages/Dashboard.tsx(22,41): error TS2322: Type '{ text: string | undefined; style: { align?: "left" | "right" | "center" | undefined; size?: "xl" | "normal" | "large" | undefined; color?: "default" | "primary" | "muted" | undefined; } | undefined; ... 16 more ...; target?: undefined; } | ... 10 more ... | null' is not assignable to type 'WidgetData'.
+  Type 'null' is not assignable to type 'WidgetData'.
+pages/DataExplorer.tsx(18,3): error TS2305: Module '"lucide-react"' has no exported member 'Bar'.
+pages/DataExplorer.tsx(19,3): error TS2305: Module '"lucide-react"' has no exported member 'XAxis'.
+pages/DataExplorer.tsx(20,3): error TS2305: Module '"lucide-react"' has no exported member 'YAxis'.
+pages/DataExplorer.tsx(21,3): error TS2305: Module '"lucide-react"' has no exported member 'Tooltip'.
+pages/DataExplorer.tsx(22,3): error TS2305: Module '"lucide-react"' has no exported member 'ResponsiveContainer'.
+pages/DataExplorer.tsx(52,5): error TS2339: Property 'activeBatchFilter' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; currentDataset: Dataset | null; batches: ImportBatch[]; datasets: Dataset[]; currentDatasetId: string | null; ... 70 more ...; navigate: NavigateFunction; }'.
+pages/DataExplorer.tsx(75,5): error TS2339: Property 'handleHeaderClick' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; currentDataset: Dataset | null; batches: ImportBatch[]; datasets: Dataset[]; currentDatasetId: string | null; ... 70 more ...; navigate: NavigateFunction; }'.
+pages/DataExplorer.tsx(360,27): error TS2322: Type '{ children: Element[]; data: { name: string; value: number; }[]; }' is not assignable to type 'IntrinsicAttributes & LucideProps'.
+  Property 'data' does not exist on type 'IntrinsicAttributes & LucideProps'.
+pages/DataExplorer.tsx(378,25): error TS2304: Cannot find name 'columnWidths'.
+pages/Forecast.tsx(52,44): error TS2345: Argument of type '"financial"' is not assignable to parameter of type 'ForecastType'.
+pages/Forecast.tsx(126,15): error TS2322: Type 'Forecast | null | undefined' is not assignable to type 'Forecast | null'.
+  Type 'undefined' is not assignable to type 'Forecast | null'.
+pages/Forecast.tsx(140,15): error TS2322: Type 'Forecast | null | undefined' is not assignable to type 'Forecast | null'.
+  Type 'undefined' is not assignable to type 'Forecast | null'.
+pages/Forecast.tsx(148,15): error TS2322: Type 'ForecastVersion | null | undefined' is not assignable to type 'ForecastVersion | null'.
+  Type 'undefined' is not assignable to type 'ForecastVersion | null'.
+pages/PivotTable.tsx(162,9): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+pages/PivotTable.tsx(191,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+pages/PivotTable.tsx(200,10): error TS2322: Type '{ sources: PivotSourceConfig[] | undefined; datasets: Dataset[]; datasetBatches: ImportBatch[]; selectedBatchId: string | undefined; setSelectedBatchId: (v: any) => void; ... 50 more ...; openFormattingModal: () => void; }' is not assignable to type 'PivotSidePanelProps'.
+  Types of property 'sources' are incompatible.
+    Type 'PivotSourceConfig[] | undefined' is not assignable to type 'PivotSourceConfig[]'.
+      Type 'undefined' is not assignable to type 'PivotSourceConfig[]'.
+pages/PivotTable.tsx(208,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+pages/PivotTable.tsx(208,63): error TS7006: Parameter 'x' implicitly has an 'any' type.
+pages/PivotTable.tsx(291,12): error TS2322: Type '{ isCalculating: boolean; isTemporalMode: boolean | undefined; pivotData: PivotResult | null; temporalResults: TemporalComparisonResult[]; ... 35 more ...; paddingBottom: number; }' is not assignable to type 'PivotGridProps'.
+  Types of property 'isTemporalMode' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+pages/PivotTable.tsx(344,12): error TS2322: Type '{ pivotData: PivotResult | null; temporalColTotals: { [sourceId: string]: { [metricLabel: string]: number; }; }; temporalConfig: TemporalComparisonConfig | undefined; ... 12 more ...; conditionalRules: ConditionalFormattingRule[] | undefined; }' is not assignable to type 'PivotFooterProps'.
+  Types of property 'columnWidths' are incompatible.
+    Type 'Record<string, number> | undefined' is not assignable to type 'Record<string, number>'.
+      Type 'undefined' is not assignable to type 'Record<string, number>'.
+pages/PivotTable.tsx(370,9): error TS2322: Type 'PivotSourceConfig[] | undefined' is not assignable to type 'PivotSourceConfig[]'.
+  Type 'undefined' is not assignable to type 'PivotSourceConfig[]'.
+pages/PivotTable.tsx(380,9): error TS2322: Type 'Record<string, string | number | boolean>[]' is not assignable to type 'DataRow[]'.
+  Property 'id' is missing in type 'Record<string, string | number | boolean>' but required in type 'DataRow'.
+pages/PivotTable.tsx(389,13): error TS2353: Object literal may only specify known properties, and 'rows' does not exist in type 'PivotConfig'.
+pages/PivotTable.tsx(445,9): error TS2322: Type 'PivotStyleRule[] | undefined' is not assignable to type 'PivotStyleRule[]'.
+  Type 'undefined' is not assignable to type 'PivotStyleRule[]'.
+pages/PivotTable.tsx(447,9): error TS2322: Type 'ConditionalFormattingRule[] | undefined' is not assignable to type 'ConditionalFormattingRule[]'.
+  Type 'undefined' is not assignable to type 'ConditionalFormattingRule[]'.
+pages/PivotTable.tsx(449,9): error TS2322: Type 'PivotMetric[] | undefined' is not assignable to type 'PivotMetric[]'.
+  Type 'undefined' is not assignable to type 'PivotMetric[]'.
+pages/Settings.tsx(13,28): error TS2305: Module '"../hooks/useSettingsLogic"' has no exported member 'SettingsTab'.
+pages/Settings.tsx(24,5): error TS2339: Property 'activeTab' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(25,5): error TS2339: Property 'setActiveTab' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(26,5): error TS2339: Property 'searchTerm' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(27,5): error TS2339: Property 'setSearchTerm' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(28,5): error TS2339: Property 'currentDataset' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(30,5): error TS2339: Property 'datasetsCount' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(31,5): error TS2339: Property 'totalRows' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(32,5): error TS2339: Property 'totalBatchesCount' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(33,5): error TS2339: Property 'storageUsed' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(34,5): error TS2339: Property 'storageLimit' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(128,17): error TS2322: Type '{ currentDataset: any; datasets: Dataset[]; switchDataset: any; companyLogo: any; setCompanyLogo: any; onRemoveLogo: any; primaryColor: any; setPrimaryColor: any; resetSettings: any; }' is not assignable to type 'IntrinsicAttributes & GeneralSettingsProps'.
+  Property 'currentDataset' does not exist on type 'IntrinsicAttributes & GeneralSettingsProps'.
+pages/Settings.tsx(130,38): error TS2339: Property 'switchDataset' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(131,36): error TS2339: Property 'companyLogo' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(132,39): error TS2339: Property 'setCompanyLogo' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(133,37): error TS2339: Property 'onRemoveLogo' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(134,37): error TS2339: Property 'primaryColor' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(135,40): error TS2339: Property 'setPrimaryColor' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(136,38): error TS2339: Property 'resetSettings' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(142,17): error TS2322: Type '{ uiPrefs: UIPrefs; updateUIPrefs: (updates: Partial<UIPrefs>) => void; compactMode: any; setCompactMode: any; animationsEnabled: any; setAnimationsEnabled: any; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'uiPrefs' does not exist on type 'IntrinsicAttributes'.
+pages/Settings.tsx(144,36): error TS2339: Property 'compactMode' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(145,39): error TS2339: Property 'setCompactMode' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(146,42): error TS2339: Property 'animationsEnabled' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(147,45): error TS2339: Property 'setAnimationsEnabled' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(153,17): error TS2322: Type '{ fiscalCalendars: FiscalCalendar[]; chartsOfAccounts: ChartOfAccounts[]; addFiscalCalendar: any; updateFiscalCalendar: any; deleteFiscalCalendar: any; addChartOfAccounts: (chart: Omit<...>) => void; updateChartOfAccounts: (id: string, updates: Partial<...>) => void; deleteChartOfAccounts: (id: string) => void; }' is not assignable to type 'IntrinsicAttributes & FinanceSettingsProps'.
+  Property 'fiscalCalendars' does not exist on type 'IntrinsicAttributes & FinanceSettingsProps'.
+pages/Settings.tsx(155,42): error TS2551: Property 'addFiscalCalendar' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'. Did you mean 'fiscalCalendars'?
+pages/Settings.tsx(156,45): error TS2551: Property 'updateFiscalCalendar' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'. Did you mean 'fiscalCalendars'?
+pages/Settings.tsx(157,45): error TS2551: Property 'deleteFiscalCalendar' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'. Did you mean 'fiscalCalendars'?
+pages/Settings.tsx(166,17): error TS2322: Type '{ o365Service: any; handleLogin: any; handleLogout: any; }' is not assignable to type 'IntrinsicAttributes & O365SectionProps'.
+  Property 'o365Service' does not exist on type 'IntrinsicAttributes & O365SectionProps'.
+pages/Settings.tsx(166,36): error TS2339: Property 'o365Service' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(167,36): error TS2339: Property 'handleLogin' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(168,37): error TS2339: Property 'handleLogout' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(185,40): error TS2339: Property 'handleExportBackup' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(191,46): error TS2339: Property 'setShowRestoreModal' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(269,23): error TS2339: Property 'showRestoreModal' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(270,30): error TS2339: Property 'setShowRestoreModal' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+pages/Settings.tsx(271,9): error TS2322: Type '{ isOpen: any; onClose: () => any; onRestore: any; }' is not assignable to type 'IntrinsicAttributes & BackupRestoreModalProps'.
+  Property 'onRestore' does not exist on type 'IntrinsicAttributes & BackupRestoreModalProps'.
+pages/Settings.tsx(271,26): error TS2339: Property 'importBackup' does not exist on type '{ diagResults: DiagnosticSuite[] | null; isRunningDiag: boolean; editingDatasetId: string | null; setEditingDatasetId: Dispatch<SetStateAction<string | null>>; ... 76 more ...; cancelChartEditing: () => void; }'.
+utils/diagnostics.ts(63,31): error TS2345: Argument of type '{ A: number; B: number; }' is not assignable to parameter of type 'DataRow'.
+  Property 'id' is missing in type '{ A: number; B: number; }' but required in type 'DataRow'.
+utils/diagnostics.ts(70,31): error TS2345: Argument of type '{ Prix: string; Qte: number; }' is not assignable to parameter of type 'DataRow'.
+  Property 'id' is missing in type '{ Prix: string; Qte: number; }' but required in type 'DataRow'.
+utils/diagnostics.ts(77,31): error TS2345: Argument of type '{ Age: number; }' is not assignable to parameter of type 'DataRow'.
+  Property 'id' is missing in type '{ Age: number; }' but required in type 'DataRow'.
+utils/diagnostics.ts(84,31): error TS2345: Argument of type '{ A: number; B: number; }' is not assignable to parameter of type 'DataRow'.
+  Property 'id' is missing in type '{ A: number; B: number; }' but required in type 'DataRow'.
+utils/diagnostics.ts(91,31): error TS2345: Argument of type '{}' is not assignable to parameter of type 'DataRow'.
+  Property 'id' is missing in type '{}' but required in type 'DataRow'.
+utils/diagnostics.ts(98,31): error TS2345: Argument of type '{}' is not assignable to parameter of type 'DataRow'.
+  Property 'id' is missing in type '{}' but required in type 'DataRow'.
+utils/formulaEngine.ts(219,15): error TS2531: Object is possibly 'null'.
+utils/formulaEngine.ts(248,38): error TS18047: 'a' is possibly 'null'.
+utils/formulaEngine.ts(248,38): error TS2365: Operator '+' cannot be applied to types 'string | number | boolean' and 'number'.

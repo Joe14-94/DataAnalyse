@@ -1,4 +1,13 @@
-import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
+import {
+  PivotResult,
+  PivotConfig,
+  PivotRow,
+  DateGrouping,
+  AggregationType,
+  ChartType,
+  ColorPalette,
+  ColorMode
+} from '../types';
 
 export type { ChartType, ColorPalette, ColorMode };
 
@@ -77,14 +86,11 @@ export const sunburstDataToD3Hierarchy = (sunburstData: SunburstData): Hierarchi
 /**
  * Détecte automatiquement le meilleur type de graphique selon la configuration TCD
  */
-export const detectBestChartType = (
-  config: PivotConfig,
-  result: PivotResult
-): ChartType => {
+export const detectBestChartType = (config: PivotConfig, result: PivotResult): ChartType => {
   const { rowFields, colFields, colGrouping, aggType } = config;
   const hasMultipleCols = (colFields || []).length > 0;
   const isTemporal = colGrouping !== 'none';
-  const dataRowsCount = (result?.displayRows || []).filter(r => r.type === 'data').length;
+  const dataRowsCount = (result?.displayRows || []).filter((r) => r.type === 'data').length;
   const hasHierarchy = (rowFields || []).length > 1;
 
   // Cas 1 : Données temporelles avec colonnes multiples → Line Chart
@@ -124,23 +130,20 @@ export const detectBestChartType = (
 /**
  * Génère les métadonnées du graphique
  */
-export const generateChartMetadata = (
-  config: PivotConfig,
-  result: PivotResult
-): ChartMetadata => {
+export const generateChartMetadata = (config: PivotConfig, result: PivotResult): ChartMetadata => {
   const { rowFields, colFields, colGrouping, valField, aggType } = config;
 
   // Utiliser result.colHeaders pour détecter multi-séries (fonctionne en mode temporel)
-  const seriesHeaders = (result?.colHeaders || []).filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const seriesHeaders = (result?.colHeaders || []).filter(
+    (h) => !h.endsWith('_DIFF') && !h.endsWith('_PCT')
+  );
   const isMultiSeries = seriesHeaders.length > 1;
   const hasTemporalData = colGrouping !== 'none';
   const hasHierarchy = (rowFields || []).length > 1;
-  const dataRows = (result?.displayRows || []).filter(r => r.type === 'data');
+  const dataRows = (result?.displayRows || []).filter((r) => r.type === 'data');
 
   // Noms des séries pour graphiques multi-séries
-  const seriesNames = isMultiSeries
-    ? seriesHeaders
-    : [getAggregationLabel(aggType, valField)];
+  const seriesNames = isMultiSeries ? seriesHeaders : [getAggregationLabel(aggType, valField)];
 
   return {
     suggestedType: detectBestChartType(config, result),
@@ -157,11 +160,11 @@ export const generateChartMetadata = (
  * Détecte les niveaux de hiérarchie disponibles dans les données
  */
 export const getAvailableHierarchyLevels = (result: PivotResult): number => {
-  const dataRows = (result.displayRows || []).filter(row => row.type === 'data');
+  const dataRows = (result.displayRows || []).filter((row) => row.type === 'data');
   if (dataRows.length === 0) return 0;
 
   // Trouver le niveau maximum
-  const maxLevel = Math.max(...dataRows.map(row => row.level || 0), -1);
+  const maxLevel = Math.max(...dataRows.map((row) => row.level || 0), -1);
   return maxLevel + 1; // Retourner le nombre de niveaux (0-indexed)
 };
 
@@ -188,7 +191,7 @@ export const transformPivotToChartData = (
   } = options;
 
   // Filtrer les lignes de données (exclure sous-totaux et grand total)
-  let dataRows = (result.displayRows || []).filter(row => {
+  let dataRows = (result.displayRows || []).filter((row) => {
     // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
     if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
       return row.type !== 'grandTotal' && row.level === hierarchyLevel;
@@ -202,7 +205,9 @@ export const transformPivotToChartData = (
   });
 
   // Détecter si multi-séries en utilisant result.colHeaders (fonctionne en mode temporel)
-  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const seriesHeaders = result.colHeaders.filter(
+    (h) => !h.endsWith('_DIFF') && !h.endsWith('_PCT')
+  );
   const isMultiSeries = seriesHeaders.length > 1;
 
   // DEBUG: Log pour vérifier la détection
@@ -218,7 +223,7 @@ export const transformPivotToChartData = (
   }
 
   // Transformer en ChartDataPoint
-  let chartData: ChartDataPoint[] = dataRows.map(row => {
+  let chartData: ChartDataPoint[] = dataRows.map((row) => {
     const dataPoint: ChartDataPoint = {
       name: formatRowLabel(row, config)
     };
@@ -227,10 +232,10 @@ export const transformPivotToChartData = (
     if (isMultiSeries && row.metrics && Object.keys(row.metrics).length > 0) {
       // Exclure les colonnes de variation (_DIFF, _PCT)
       const metricKeys = Object.keys(row.metrics).filter(
-        key => !key.endsWith('_DIFF') && !key.endsWith('_PCT')
+        (key) => !key.endsWith('_DIFF') && !key.endsWith('_PCT')
       );
 
-      metricKeys.forEach(key => {
+      metricKeys.forEach((key) => {
         const value = row.metrics[key];
         dataPoint[key] = typeof value === 'number' ? value : 0;
       });
@@ -242,7 +247,6 @@ export const transformPivotToChartData = (
     return dataPoint;
   });
 
-
   // Tri des données
   if (sortBy === 'name') {
     chartData.sort((a, b) => {
@@ -253,11 +257,15 @@ export const transformPivotToChartData = (
     chartData.sort((a, b) => {
       // Pour multi-séries, trier par la somme de toutes les séries
       const aValue = isMultiSeries
-        ? Object.keys(a).filter(k => k !== 'name').reduce((sum, k) => sum + (a[k] || 0), 0)
-        : (a.value || 0);
+        ? Object.keys(a)
+            .filter((k) => k !== 'name')
+            .reduce((sum, k) => sum + (a[k] || 0), 0)
+        : a.value || 0;
       const bValue = isMultiSeries
-        ? Object.keys(b).filter(k => k !== 'name').reduce((sum, k) => sum + (b[k] || 0), 0)
-        : (b.value || 0);
+        ? Object.keys(b)
+            .filter((k) => k !== 'name')
+            .reduce((sum, k) => sum + (b[k] || 0), 0)
+        : b.value || 0;
 
       return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
     });
@@ -273,8 +281,8 @@ export const transformPivotToChartData = (
       const othersPoint: ChartDataPoint = { name: 'Autres' };
 
       if (isMultiSeries) {
-        const metricKeys = Object.keys(topN[0]).filter(k => k !== 'name');
-        metricKeys.forEach(key => {
+        const metricKeys = Object.keys(topN[0]).filter((k) => k !== 'name');
+        metricKeys.forEach((key) => {
           othersPoint[key] = others.reduce((sum, item) => sum + (item[key] || 0), 0);
         });
       } else {
@@ -302,20 +310,22 @@ export const transformPivotToTreemapData = (
   // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
   let dataRows: PivotRow[];
   if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
-    dataRows = (result.displayRows || []).filter(r => r.type !== 'grandTotal' && r.level === hierarchyLevel);
+    dataRows = (result.displayRows || []).filter(
+      (r) => r.type !== 'grandTotal' && r.level === hierarchyLevel
+    );
   } else {
-    dataRows = (result.displayRows || []).filter(r => r.type === 'data');
+    dataRows = (result.displayRows || []).filter((r) => r.type === 'data');
   }
 
   console.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
 
   // Convertir en format plat pour Recharts Treemap
-  const flatData = dataRows.map(row => {
+  const flatData = dataRows.map((row) => {
     const keys = row.keys;
     const value = typeof row.rowTotal === 'number' ? row.rowTotal : 0;
 
     // Créer un label hiérarchique si plusieurs niveaux
-    const label = keys.length > 1 ? keys.join(' > ') : (keys[0] || '(Vide)');
+    const label = keys.length > 1 ? keys.join(' > ') : keys[0] || '(Vide)';
 
     return {
       name: String(label),
@@ -332,7 +342,10 @@ export const transformPivotToTreemapData = (
 
   console.log('🌳 Données treemap (top 10):', topData);
   console.log('🌳 Premier élément:', topData[0]);
-  console.log('🌳 Format correct pour Recharts:', topData.every(d => d.name && typeof d.size === 'number'));
+  console.log(
+    '🌳 Format correct pour Recharts:',
+    topData.every((d) => d.name && typeof d.size === 'number')
+  );
 
   return topData;
 };
@@ -375,8 +388,10 @@ export const buildHierarchicalTree = (
   config: PivotConfig,
   options?: { limit?: number; showOthers?: boolean }
 ): HierarchicalNode[] => {
-  const dataRows = (result.displayRows || []).filter(r => r.type === 'data');
-  const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
+  const dataRows = (result.displayRows || []).filter((r) => r.type === 'data');
+  const seriesHeaders = result.colHeaders.filter(
+    (h) => !h.endsWith('_DIFF') && !h.endsWith('_PCT')
+  );
   const hasMultiCols = seriesHeaders.length > 1;
 
   console.log('🌞🌞🌞 buildHierarchicalTree START:', {
@@ -422,11 +437,13 @@ export const buildHierarchicalTree = (
 
     if (hasMultiCols && row.metrics && Object.keys(row.metrics).length > 0) {
       // Ajouter les colonnes comme niveau feuille
-      const childrenWithValues = seriesHeaders.map(header => ({
-        name: header,
-        value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
-        path: [...row.keys, header]
-      })).filter(item => item.value! > 0);
+      const childrenWithValues = seriesHeaders
+        .map((header) => ({
+          name: header,
+          value: typeof row.metrics[header] === 'number' ? (row.metrics[header] as number) : 0,
+          path: [...row.keys, header]
+        }))
+        .filter((item) => item.value! > 0);
 
       if (dataRows.indexOf(row) < 2) {
         console.log(`🌞 LEAF row ${dataRows.indexOf(row)}:`, {
@@ -445,14 +462,16 @@ export const buildHierarchicalTree = (
         leafNode.children = [...(leafNode.children || []), ...childrenWithValues];
       } else {
         // Pas de métriques valides, utiliser rowTotal
-        leafNode.value = (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
+        leafNode.value =
+          (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
         if (dataRows.indexOf(row) < 2) {
           console.log(`🌞 Using rowTotal fallback: ${leafNode.value}`);
         }
       }
     } else {
       // Pas de colonnes multiples ou pas de métriques : utiliser rowTotal comme valeur
-      leafNode.value = (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
+      leafNode.value =
+        (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
       // IMPORTANT: Dans une hiérarchie ragged, on ne vide pas les enfants
       if (dataRows.indexOf(row) < 2) {
         console.log(`🌞 No multiCols, adding to rowTotal: ${leafNode.value}`);
@@ -551,7 +570,9 @@ export const treeToSunburstRings = (
         });
 
         if (level === 0 && idx < 2) {
-          console.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
+          console.log(
+            `🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`
+          );
         }
       }
 
@@ -566,7 +587,7 @@ export const treeToSunburstRings = (
 
   console.log('🌞🌞🌞 treeToSunburstRings END:', {
     ringsLength: rings.length,
-    ringsItemCounts: rings.map(r => r.length),
+    ringsItemCounts: rings.map((r) => r.length),
     firstRing: rings[0]?.slice(0, 3)
   });
 
@@ -611,11 +632,19 @@ export const transformPivotToHierarchicalTreemap = (
 
   // Assigner des couleurs et la propriété 'size' pour Recharts Treemap
   let colorIdx = 0;
-  function assignColorsAndSize(nodes: HierarchicalNode[], parentColor?: string, depth: number = 0): any[] {
+  function assignColorsAndSize(
+    nodes: HierarchicalNode[],
+    parentColor?: string,
+    depth: number = 0
+  ): any[] {
     return nodes.map((node, idx) => {
-      const color = depth === 0
-        ? baseColors[colorIdx++ % baseColors.length]
-        : lightenColor(parentColor || baseColors[0], 0.15 + (idx / Math.max(nodes.length - 1, 1)) * 0.3);
+      const color =
+        depth === 0
+          ? baseColors[colorIdx++ % baseColors.length]
+          : lightenColor(
+              parentColor || baseColors[0],
+              0.15 + (idx / Math.max(nodes.length - 1, 1)) * 0.3
+            );
 
       if (node.children && node.children.length > 0) {
         return {
@@ -663,25 +692,31 @@ const getAggregationLabel = (aggType: AggregationType, valField: string): string
   const fieldLabel = valField || 'Valeur';
 
   switch (aggType) {
-    case 'count': return 'Nombre';
-    case 'sum': return `Somme de ${fieldLabel}`;
-    case 'avg': return `Moyenne de ${fieldLabel}`;
-    case 'min': return `Min de ${fieldLabel}`;
-    case 'max': return `Max de ${fieldLabel}`;
-    case 'list': return fieldLabel;
-    default: return fieldLabel;
+    case 'count':
+      return 'Nombre';
+    case 'sum':
+      return `Somme de ${fieldLabel}`;
+    case 'avg':
+      return `Moyenne de ${fieldLabel}`;
+    case 'min':
+      return `Min de ${fieldLabel}`;
+    case 'max':
+      return `Max de ${fieldLabel}`;
+    case 'list':
+      return fieldLabel;
+    default:
+      return fieldLabel;
   }
 };
 
 /**
  * Détermine si un graphique multi-séries est approprié
  */
-export const isMultiSeriesAppropriate = (
-  config: PivotConfig,
-  result: PivotResult
-): boolean => {
-  const seriesCount = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT')).length;
-  const dataPointsCount = result.displayRows.filter(r => r.type === 'data').length;
+export const isMultiSeriesAppropriate = (config: PivotConfig, result: PivotResult): boolean => {
+  const seriesCount = result.colHeaders.filter(
+    (h) => !h.endsWith('_DIFF') && !h.endsWith('_PCT')
+  ).length;
+  const dataPointsCount = result.displayRows.filter((r) => r.type === 'data').length;
 
   // Limites raisonnables pour éviter les graphiques illisibles
   return seriesCount >= 2 && seriesCount <= 8 && dataPointsCount <= 50;
@@ -700,7 +735,7 @@ const PALETTES = {
     '#fbbf24', // Amber
     '#22d3ee', // Cyan
     '#f472b6', // Pink
-    '#a3e635'  // Lime
+    '#a3e635' // Lime
   ],
   pastel: [
     '#d4a5a5', // Rose pastel
@@ -711,7 +746,7 @@ const PALETTES = {
     '#fd79a8', // Pink pastel
     '#a29bfe', // Purple pastel
     '#74b9ff', // Blue pastel
-    '#81ecec'  // Cyan pastel
+    '#81ecec' // Cyan pastel
   ],
   vibrant: [
     '#ff006e', // Vivid Pink
@@ -722,7 +757,7 @@ const PALETTES = {
     '#3a86ff', // Vivid Blue
     '#06ffa5', // Vivid Green
     '#ff006e', // Vivid Red
-    '#ffbe0b'  // Vivid Yellow (repeat for variety)
+    '#ffbe0b' // Vivid Yellow (repeat for variety)
   ]
 };
 
@@ -761,19 +796,22 @@ export const generateGradient = (startColor: string, endColor: string, count: nu
   // Convertir les couleurs hex en RGB
   const hexToRgb = (hex: string): [number, number, number] => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? [
-      parseInt(result[1], 16),
-      parseInt(result[2], 16),
-      parseInt(result[3], 16)
-    ] : [0, 0, 0];
+    return result
+      ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+      : [0, 0, 0];
   };
 
   // Convertir RGB en hex
   const rgbToHex = (r: number, g: number, b: number): string => {
-    return '#' + [r, g, b].map(x => {
-      const hex = Math.round(x).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    }).join('');
+    return (
+      '#' +
+      [r, g, b]
+        .map((x) => {
+          const hex = Math.round(x).toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+        })
+        .join('')
+    );
   };
 
   const [r1, g1, b1] = hexToRgb(startColor);
@@ -811,10 +849,7 @@ export const getChartColors = (count: number = 9, palette: ColorPalette = 'defau
 /**
  * Formate une valeur pour l'affichage dans un tooltip
  */
-export const formatChartValue = (
-  value: number | string,
-  config: PivotConfig
-): string => {
+export const formatChartValue = (value: number | string, config: PivotConfig): string => {
   if (typeof value === 'string') return value;
 
   const valFormatting = config.valFormatting;
@@ -860,32 +895,32 @@ export const formatChartValue = (
  */
 export const getChartTypeConfig = (chartType: ChartType) => {
   const configs: Record<ChartType, { label: string; description: string; bestFor: string }> = {
-    'bar': {
+    bar: {
       label: 'Barres horizontales',
       description: 'Barres horizontales',
       bestFor: 'Comparaisons simples, longs labels'
     },
-    'column': {
+    column: {
       label: 'Barres verticales',
       description: 'Barres verticales',
       bestFor: 'Comparaisons de valeurs'
     },
-    'line': {
+    line: {
       label: 'Courbes',
       description: 'Graphique en courbes',
       bestFor: 'Tendances temporelles'
     },
-    'area': {
+    area: {
       label: 'Aires',
       description: 'Graphique en aires',
       bestFor: 'Evolution cumulee dans le temps'
     },
-    'pie': {
+    pie: {
       label: 'Camembert',
       description: 'Graphique circulaire',
       bestFor: 'Repartition en pourcentages (<= 7 elements)'
     },
-    'donut': {
+    donut: {
       label: 'Anneau',
       description: 'Graphique en anneau',
       bestFor: 'Repartition avec focus sur le total'
@@ -915,27 +950,27 @@ export const getChartTypeConfig = (chartType: ChartType) => {
       description: 'Colonnes empilees 100% verticales',
       bestFor: 'Proportions relatives entre series'
     },
-    'radar': {
+    radar: {
       label: 'Radar',
       description: 'Graphique radar/toile',
       bestFor: 'Comparaison multi-dimensionnelle'
     },
-    'treemap': {
+    treemap: {
       label: 'Treemap',
       description: 'Carte arborescente hiérarchique',
       bestFor: 'Hiérarchies et proportions avec drill-down'
     },
-    'sunburst': {
+    sunburst: {
       label: 'Rayon de soleil',
       description: 'Anneaux concentriques hierarchiques',
       bestFor: 'Repartition hierarchique multi-niveaux'
     },
-    'radial': {
+    radial: {
       label: 'Jauge radiale',
       description: 'Graphique en barres radiales',
       bestFor: 'KPI et indicateurs circulaires'
     },
-    'funnel': {
+    funnel: {
       label: 'Entonnoir',
       description: 'Graphique en entonnoir',
       bestFor: 'Etapes de conversion et processus'

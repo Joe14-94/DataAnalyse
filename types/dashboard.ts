@@ -1,6 +1,21 @@
-
 export type WidgetType = 'kpi' | 'chart' | 'list' | 'text' | 'report';
-export type ChartType = 'bar' | 'column' | 'line' | 'area' | 'pie' | 'donut' | 'radial' | 'radar' | 'treemap' | 'sunburst' | 'funnel' | 'stacked-bar' | 'stacked-column' | 'stacked-area' | 'percent-bar' | 'percent-column';
+export type ChartType =
+  | 'bar'
+  | 'column'
+  | 'line'
+  | 'area'
+  | 'pie'
+  | 'donut'
+  | 'radial'
+  | 'radar'
+  | 'treemap'
+  | 'sunburst'
+  | 'funnel'
+  | 'stacked-bar'
+  | 'stacked-column'
+  | 'stacked-area'
+  | 'percent-bar'
+  | 'percent-column';
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full';
 export type WidgetHeight = 'sm' | 'md' | 'lg' | 'xl';
 export type KpiStyle = 'simple' | 'trend' | 'progress';

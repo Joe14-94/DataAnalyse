@@ -20,7 +20,7 @@ export const WidgetContext = createContext<WidgetContextType | undefined>(undefi
 export const useWidgets = () => {
   const context = useContext(WidgetContext);
   if (!context) {
-    throw new Error("useWidgets must be used within a WidgetProvider");
+    throw new Error('useWidgets must be used within a WidgetProvider');
   }
   return context;
 };

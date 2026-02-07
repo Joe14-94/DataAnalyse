@@ -30,12 +30,16 @@ export const readBudgetExcelFile = async (file: File): Promise<BudgetImportData>
         const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
 
         if (jsonData.length < 2) {
-          reject(new Error('Le fichier doit contenir au moins une ligne d\'en-tête et une ligne de données'));
+          reject(
+            new Error(
+              "Le fichier doit contenir au moins une ligne d'en-tête et une ligne de données"
+            )
+          );
           return;
         }
 
         const headers = jsonData[0].map((h: any) => String(h).trim());
-        const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== ''));
+        const rows = jsonData.slice(1).filter((row) => row.some((cell) => cell !== ''));
 
         // Détection des colonnes
         const result = detectBudgetColumns(headers, rows);
@@ -58,26 +62,33 @@ export const readBudgetExcelFile = async (file: File): Promise<BudgetImportData>
 /**
  * Parse un fichier CSV pour l'import de budget
  */
-export const readBudgetCSVFile = async (file: File, encoding: string = 'UTF-8'): Promise<BudgetImportData> => {
+export const readBudgetCSVFile = async (
+  file: File,
+  encoding: string = 'UTF-8'
+): Promise<BudgetImportData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(line => line.trim());
+        const lines = text.split(/\r?\n/).filter((line) => line.trim());
 
         if (lines.length < 2) {
-          reject(new Error('Le fichier doit contenir au moins une ligne d\'en-tête et une ligne de données'));
+          reject(
+            new Error(
+              "Le fichier doit contenir au moins une ligne d'en-tête et une ligne de données"
+            )
+          );
           return;
         }
 
         // Détection du délimiteur
         const delimiter = detectDelimiter(lines[0]);
 
-        const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-        const rows = lines.slice(1).map(line => {
-          return line.split(delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''));
+        const headers = lines[0].split(delimiter).map((h) => h.trim().replace(/^"|"$/g, ''));
+        const rows = lines.slice(1).map((line) => {
+          return line.split(delimiter).map((cell) => cell.trim().replace(/^"|"$/g, ''));
         });
 
         // Détection des colonnes
@@ -120,7 +131,10 @@ const detectDelimiter = (firstLine: string): string => {
 /**
  * Détecte les colonnes de compte et de périodes
  */
-const detectBudgetColumns = (headers: string[], rows: any[][]): {
+const detectBudgetColumns = (
+  headers: string[],
+  rows: any[][]
+): {
   periodColumns: { index: number; periodId: string; periodName: string }[];
   accountCodeColumn: number;
   accountLabelColumn: number;
@@ -187,18 +201,18 @@ const detectBudgetColumns = (headers: string[], rows: any[][]): {
 const isPeriodColumn = (header: string, rows: any[][], columnIndex: number): boolean => {
   // Check si le header ressemble à une période
   const periodPatterns = [
-    /^\d{4}-\d{2}$/,           // 2025-01
-    /^\d{2}\/\d{4}$/,          // 01/2025
-    /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,  // Jan, Feb, etc.
-    /^(janv|fév|mars|avr|mai|juin|juil|août|sep|oct|nov|déc)/i,  // Français
+    /^\d{4}-\d{2}$/, // 2025-01
+    /^\d{2}\/\d{4}$/, // 01/2025
+    /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i, // Jan, Feb, etc.
+    /^(janv|fév|mars|avr|mai|juin|juil|août|sep|oct|nov|déc)/i, // Français
     /^(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/i,
-    /^(m|q|t|s)\d+$/i,        // M1, M2, Q1, T1, S1
+    /^(m|q|t|s)\d+$/i, // M1, M2, Q1, T1, S1
     /^période/i,
     /^period/i,
-    /^\d{4}$/                  // Juste une année
+    /^\d{4}$/ // Juste une année
   ];
 
-  if (periodPatterns.some(pattern => pattern.test(header))) {
+  if (periodPatterns.some((pattern) => pattern.test(header))) {
     return true;
   }
 
@@ -244,34 +258,56 @@ const parsePeriodHeader = (header: string): { periodId: string; periodName: stri
 
   // Mois en texte (français)
   const frenchMonths: { [key: string]: string } = {
-    'janv': '01', 'janvier': '01',
-    'fév': '02', 'févr': '02', 'février': '02',
-    'mars': '03',
-    'avr': '04', 'avril': '04',
-    'mai': '05',
-    'juin': '06',
-    'juil': '07', 'juillet': '07',
-    'août': '08', 'aout': '08',
-    'sep': '09', 'sept': '09', 'septembre': '09',
-    'oct': '10', 'octobre': '10',
-    'nov': '11', 'novembre': '11',
-    'déc': '12', 'décembre': '12'
+    janv: '01',
+    janvier: '01',
+    fév: '02',
+    févr: '02',
+    février: '02',
+    mars: '03',
+    avr: '04',
+    avril: '04',
+    mai: '05',
+    juin: '06',
+    juil: '07',
+    juillet: '07',
+    août: '08',
+    aout: '08',
+    sep: '09',
+    sept: '09',
+    septembre: '09',
+    oct: '10',
+    octobre: '10',
+    nov: '11',
+    novembre: '11',
+    déc: '12',
+    décembre: '12'
   };
 
   // Mois en texte (anglais)
   const englishMonths: { [key: string]: string } = {
-    'jan': '01', 'january': '01',
-    'feb': '02', 'february': '02',
-    'mar': '03', 'march': '03',
-    'apr': '04', 'april': '04',
-    'may': '05',
-    'jun': '06', 'june': '06',
-    'jul': '07', 'july': '07',
-    'aug': '08', 'august': '08',
-    'sep': '09', 'september': '09',
-    'oct': '10', 'october': '10',
-    'nov': '11', 'november': '11',
-    'dec': '12', 'december': '12'
+    jan: '01',
+    january: '01',
+    feb: '02',
+    february: '02',
+    mar: '03',
+    march: '03',
+    apr: '04',
+    april: '04',
+    may: '05',
+    jun: '06',
+    june: '06',
+    jul: '07',
+    july: '07',
+    aug: '08',
+    august: '08',
+    sep: '09',
+    september: '09',
+    oct: '10',
+    october: '10',
+    nov: '11',
+    november: '11',
+    dec: '12',
+    december: '12'
   };
 
   // Recherche dans les mois français et anglais
@@ -324,9 +360,10 @@ export const convertImportToBudgetLines = (
     // Skip empty rows
     if (!accountCode) continue;
 
-    const accountLabel = importData.accountLabelColumn >= 0
-      ? String(row[importData.accountLabelColumn] || '').trim()
-      : '';
+    const accountLabel =
+      importData.accountLabelColumn >= 0
+        ? String(row[importData.accountLabelColumn] || '').trim()
+        : '';
 
     // Extract period values
     const periodValues: { [periodId: string]: number } = {};
@@ -365,14 +402,11 @@ export const exportBudgetToExcel = (
   periods: { id: string; name: string }[]
 ): void => {
   // Créer les headers
-  const headers = ['Code Compte', 'Libellé', ...periods.map(p => p.name), 'Total'];
+  const headers = ['Code Compte', 'Libellé', ...periods.map((p) => p.name), 'Total'];
 
   // Créer les lignes de données
-  const data = lines.map(line => {
-    const row: any[] = [
-      line.accountCode,
-      line.accountLabel || ''
-    ];
+  const data = lines.map((line) => {
+    const row: any[] = [line.accountCode, line.accountLabel || ''];
 
     // Ajouter les valeurs par période
     let total = 0;
@@ -396,7 +430,7 @@ export const exportBudgetToExcel = (
     { wch: 15 }, // Code
     { wch: 30 }, // Libellé
     ...periods.map(() => ({ wch: 12 })), // Périodes
-    { wch: 15 }  // Total
+    { wch: 15 } // Total
   ];
   ws['!cols'] = colWidths;
 
@@ -413,21 +447,72 @@ export const exportBudgetToExcel = (
  */
 export const downloadBudgetTemplate = (fiscalYear: number): void => {
   const months = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre'
   ];
 
-  const headers = [
-    'Code Compte',
-    'Libellé',
-    ...months.map((m, i) => `${m} ${fiscalYear}`)
-  ];
+  const headers = ['Code Compte', 'Libellé', ...months.map((m, i) => `${m} ${fiscalYear}`)];
 
   // Ajouter quelques lignes d'exemple
   const exampleData = [
-    ['601000', 'Achats de matières premières', 10000, 10500, 11000, 10800, 11200, 11500, 12000, 11800, 12200, 12500, 13000, 13500],
-    ['641000', 'Rémunérations du personnel', 50000, 50000, 50000, 52000, 52000, 52000, 54000, 54000, 54000, 56000, 56000, 56000],
-    ['615000', 'Entretien et réparations', 2000, 2000, 2000, 2000, 2000, 2000, 2500, 2500, 2500, 2500, 2500, 2500]
+    [
+      '601000',
+      'Achats de matières premières',
+      10000,
+      10500,
+      11000,
+      10800,
+      11200,
+      11500,
+      12000,
+      11800,
+      12200,
+      12500,
+      13000,
+      13500
+    ],
+    [
+      '641000',
+      'Rémunérations du personnel',
+      50000,
+      50000,
+      50000,
+      52000,
+      52000,
+      52000,
+      54000,
+      54000,
+      54000,
+      56000,
+      56000,
+      56000
+    ],
+    [
+      '615000',
+      'Entretien et réparations',
+      2000,
+      2000,
+      2000,
+      2000,
+      2000,
+      2000,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500
+    ]
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleData]);

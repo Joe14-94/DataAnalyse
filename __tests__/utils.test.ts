@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseSmartNumber, evaluateFormula, detectColumnType, getGroupedLabel, mapDataToSchema } from '../utils';
+import {
+  parseSmartNumber,
+  evaluateFormula,
+  detectColumnType,
+  getGroupedLabel,
+  mapDataToSchema
+} from '../utils';
 
 describe('Parser de Formules Sécurisé', () => {
   it('devrait calculer des formules arithmétiques simples', () => {
@@ -46,7 +52,9 @@ describe('Parser de Formules Sécurisé', () => {
   it('devrait gérer les fonctions texte', () => {
     expect(evaluateFormula({ Nom: 'dupont' }, 'MAJUSCULE([Nom])')).toBe('DUPONT');
     expect(evaluateFormula({ Nom: 'MARTIN' }, 'MINUSCULE([Nom])')).toBe('martin');
-    expect(evaluateFormula({ Prenom: 'Jean', Nom: 'Dupont' }, 'CONCAT([Prenom], " ", [Nom])')).toBe('Jean Dupont');
+    expect(evaluateFormula({ Prenom: 'Jean', Nom: 'Dupont' }, 'CONCAT([Prenom], " ", [Nom])')).toBe(
+      'Jean Dupont'
+    );
   });
 
   it('devrait respecter le outputType pour forcer le format', () => {

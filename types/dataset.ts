@@ -1,4 +1,3 @@
-
 import { DataRow } from './common';
 
 export interface ConditionalRule {
@@ -21,10 +20,21 @@ export interface FieldConfig {
 }
 
 export type CalculatedFieldActionType =
-  | 'source' | 'trim' | 'upper' | 'lower' | 'proper'
-  | 'replace' | 'regex' | 'concat'
-  | 'left' | 'right' | 'substring'
-  | 'add' | 'subtract' | 'multiply' | 'divide';
+  | 'source'
+  | 'trim'
+  | 'upper'
+  | 'lower'
+  | 'proper'
+  | 'replace'
+  | 'regex'
+  | 'concat'
+  | 'left'
+  | 'right'
+  | 'substring'
+  | 'add'
+  | 'subtract'
+  | 'multiply'
+  | 'divide';
 
 export interface CalculatedFieldAction {
   id: string;
@@ -60,8 +70,8 @@ export interface Dataset {
   enrichmentConfigs?: EnrichmentConfig[];
   createdAt: number;
   sourcePivotConfig?: {
-      isTemporal?: boolean;
-      config: any; // Equivalent to PivotState['config'] or TemporalComparisonConfig
+    isTemporal?: boolean;
+    config: any; // Equivalent to PivotState['config'] or TemporalComparisonConfig
   };
 }
 

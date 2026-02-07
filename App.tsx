@@ -3,19 +3,36 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { OnboardingTour } from './components/OnboardingTour';
 import { Loader2 } from 'lucide-react';
 
-const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const Import = React.lazy(() => import('./pages/Import').then(m => ({ default: m.Import })));
-const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
-const Customization = React.lazy(() => import('./pages/Customization').then(m => ({ default: m.Customization })));
-const AnalysisStudio = React.lazy(() => import('./pages/AnalysisStudio').then(m => ({ default: m.AnalysisStudio })));
-const DataExplorer = React.lazy(() => import('./pages/DataExplorer').then(m => ({ default: m.DataExplorer })));
-const PivotTable = React.lazy(() => import('./pages/PivotTable').then(m => ({ default: m.PivotTable })));
-const Budget = React.lazy(() => import('./pages/Budget').then(m => ({ default: m.Budget })));
-const Forecast = React.lazy(() => import('./pages/Forecast').then(m => ({ default: m.Forecast })));
-const ETLPipeline = React.lazy(() => import('./pages/ETLPipeline').then(m => ({ default: m.ETLPipeline })));
-const Help = React.lazy(() => import('./pages/Help').then(m => ({ default: m.Help })));
+const Dashboard = React.lazy(() =>
+  import('./pages/Dashboard').then((m) => ({ default: m.Dashboard }))
+);
+const Import = React.lazy(() => import('./pages/Import').then((m) => ({ default: m.Import })));
+const Settings = React.lazy(() =>
+  import('./pages/Settings').then((m) => ({ default: m.Settings }))
+);
+const Customization = React.lazy(() =>
+  import('./pages/Customization').then((m) => ({ default: m.Customization }))
+);
+const AnalysisStudio = React.lazy(() =>
+  import('./pages/AnalysisStudio').then((m) => ({ default: m.AnalysisStudio }))
+);
+const DataExplorer = React.lazy(() =>
+  import('./pages/DataExplorer').then((m) => ({ default: m.DataExplorer }))
+);
+const PivotTable = React.lazy(() =>
+  import('./pages/PivotTable').then((m) => ({ default: m.PivotTable }))
+);
+const Budget = React.lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
+const Forecast = React.lazy(() =>
+  import('./pages/Forecast').then((m) => ({ default: m.Forecast }))
+);
+const ETLPipeline = React.lazy(() =>
+  import('./pages/ETLPipeline').then((m) => ({ default: m.ETLPipeline }))
+);
+const Help = React.lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })));
 
 const LoadingPage = () => (
   <div className="flex flex-col items-center justify-center h-screen bg-canvas">
@@ -27,11 +44,19 @@ const LoadingPage = () => (
 const App: React.FC = () => {
   return (
     <DataProvider>
+      <OnboardingTour />
       <HashRouter>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:shadow-xl focus:font-bold focus:outline-none focus:ring-4 focus:ring-brand-200"
+        >
+          Passer au contenu principal
+        </a>
         <Layout>
           <ErrorBoundary name="Application">
             <React.Suspense fallback={<LoadingPage />}>
-              <Routes>
+              <div id="main-content" tabIndex={-1} className="h-full focus:outline-none">
+                <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/data" element={<DataExplorer />} />
                 <Route path="/import" element={<Import />} />
@@ -43,8 +68,9 @@ const App: React.FC = () => {
                 <Route path="/customization" element={<Customization />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/help" element={<Help />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
             </React.Suspense>
           </ErrorBoundary>
         </Layout>

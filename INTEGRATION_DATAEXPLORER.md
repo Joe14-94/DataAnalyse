@@ -5,12 +5,14 @@
 La fonctionnalité de création de champs calculés avec manipulation de texte est maintenant **disponible dans la page "Données" (DataExplorer)** !
 
 ### Avant
+
 - ❌ Drawer basique avec seulement 7 fonctions mathématiques
 - ❌ Pas de fonctions de manipulation de texte
 - ❌ Pas d'aide pour les regex
 - ❌ Interface différente du TCD
 
 ### Après
+
 - ✅ Modal complet `CalculatedFieldModal` avec 16+ fonctions
 - ✅ Toutes les fonctions de manipulation de chaînes de caractères disponibles
 - ✅ Aide interactive avec exemples de regex et remplacements multiples
@@ -34,6 +36,7 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 ### Exemple concret
 
 **Créer une colonne "Nom complet" :**
+
 1. Cliquez sur "Calculs"
 2. Nom : `Nom complet`
 3. Formule : `CONCAT([Prénom], [Nom], " ")`
@@ -41,6 +44,7 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 5. Créez → Le champ est appliqué **immédiatement** sur toutes les données
 
 **Nettoyer un code produit :**
+
 1. Cliquez sur "Calculs"
 2. Nom : `Code nettoyé`
 3. Formule : `REMPLACER([Code], "[^a-zA-Z0-9]", "")`
@@ -56,6 +60,7 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 **Fichier modifié :** `pages/DataExplorer.tsx`
 
 **Changements :**
+
 - ✅ Import de `CalculatedFieldModal` (ligne 16)
 - ✅ Remplacement des états du drawer par `isCalcModalOpen` et `editingCalcField` (lignes 42-43)
 - ✅ Nouveau handler `handleSaveCalculatedField` compatible avec le modal (lignes 268-296)
@@ -73,9 +78,11 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 ## 🎨 Fonctions disponibles dans la page "Données"
 
 ### Catégorie "Logique"
+
 - `SI(condition, vrai, faux)` - Condition logique
 
 ### Catégorie "Math"
+
 - `SOMME(v1, v2...)` - Additionne les valeurs
 - `MOYENNE(v1, v2...)` - Moyenne des valeurs
 - `ARRONDI(nombre, décimales)` - Arrondit un nombre
@@ -86,6 +93,7 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 ### Catégorie "Texte" ⭐ NOUVEAU !
 
 **Concaténation et transformation :**
+
 - `CONCAT(texte1, texte2, [sep])` - Concatène avec séparateur optionnel
 - `MAJUSCULE(texte)` - Convertit en majuscules
 - `MINUSCULE(texte)` - Convertit en minuscules
@@ -93,17 +101,20 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 - `CAPITALISEMOTS(texte)` - Chaque mot commence par une majuscule
 
 **Recherche et remplacement :**
+
 - `REMPLACER(texte, cherche, remplace)` - Remplace avec regex
 - `SUBSTITUER(texte, ancien, nouveau)` - Remplace sans regex
 - `TROUVE(cherche, texte, [début])` - Position de la sous-chaîne
 - `CONTIENT(texte, cherche)` - Vérifie si contient la sous-chaîne
 
 **Extraction :**
+
 - `EXTRAIRE(texte, début, [long])` - Extrait une sous-chaîne
 - `GAUCHE(texte, nb)` - Premiers n caractères
 - `DROITE(texte, nb)` - Derniers n caractères
 
 **Utilitaires :**
+
 - `LONGUEUR(texte)` - Nombre de caractères
 - `SUPPRESPACE(texte)` - Supprime les espaces de début/fin
 
@@ -114,6 +125,7 @@ La fonctionnalité de création de champs calculés avec manipulation de texte e
 Le modal contient une section **"Exemples d'utilisation"** (repliable) avec :
 
 ### 6 exemples pratiques :
+
 1. **Remplacement simple** : `REMPLACER([Test], "AZERTY", "QSDFGH")`
 2. **Remplacements multiples** : Imbrication de REMPLACER
 3. **Regex : Supprimer chiffres** : `REMPLACER([Code], "[0-9]+", "")`
@@ -122,6 +134,7 @@ Le modal contient une section **"Exemples d'utilisation"** (repliable) avec :
 6. **Regex : Après @** : `REMPLACER([Email], "@.*", "@example.com")`
 
 ### Tableau de référence Regex :
+
 - `[0-9]` = un chiffre
 - `[a-z]` = une lettre minuscule
 - `[A-Z]` = une lettre majuscule
@@ -138,12 +151,14 @@ Le modal contient une section **"Exemples d'utilisation"** (repliable) avec :
 **Important :** Les champs calculés créés dans DataExplorer sont **automatiquement appliqués** lors de l'import de nouvelles versions du dataset.
 
 **Workflow :**
+
 1. Créez un champ calculé dans la page "Données"
 2. Importez une nouvelle version du dataset
 3. Le champ calculé est **automatiquement recalculé** sur les nouvelles données
 4. Pas besoin de recréer le champ à chaque import !
 
 **Exemple :**
+
 - Créez `Nom complet = CONCAT([Prénom], [Nom], " ")`
 - Importez de nouvelles données
 - La colonne "Nom complet" est automatiquement ajoutée aux nouvelles données
@@ -154,11 +169,11 @@ Le modal contient une section **"Exemples d'utilisation"** (repliable) avec :
 
 Comme dans le TCD, le type de champ détermine son placement :
 
-| Type de résultat | Zone TCD | Utilisation |
-|------------------|----------|-------------|
-| **Nombre** | Valeurs (métriques) | Calculs, sommes, moyennes |
-| **Texte** | Lignes (dimensions) | Concaténations, transformations |
-| **Vrai/Faux** | Lignes (dimensions) | Conditions, tests |
+| Type de résultat | Zone TCD            | Utilisation                     |
+| ---------------- | ------------------- | ------------------------------- |
+| **Nombre**       | Valeurs (métriques) | Calculs, sommes, moyennes       |
+| **Texte**        | Lignes (dimensions) | Concaténations, transformations |
+| **Vrai/Faux**    | Lignes (dimensions) | Conditions, tests               |
 
 ---
 

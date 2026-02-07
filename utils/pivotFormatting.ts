@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { PivotStyleRule, ConditionalFormattingRule } from '../types';
 
@@ -14,7 +13,7 @@ export const getCellStyle = (
   let finalStyle: React.CSSProperties = {};
 
   // 1. Manual rules
-  styleRules.forEach(rule => {
+  styleRules.forEach((rule) => {
     // Check scope
     if (rule.scope === 'data' && rowType !== 'data') return;
     if (rule.scope === 'totals' && rowType === 'data') return;
@@ -25,7 +24,12 @@ export const getCellStyle = (
     } else if (rule.targetType === 'row') {
       if (rowKeys.includes(rule.targetKey!)) match = true;
     } else if (rule.targetType === 'col') {
-      if (col === rule.targetKey || col.includes(`\x1F${rule.targetKey}`) || (metricLabel && metricLabel === rule.targetKey)) match = true;
+      if (
+        col === rule.targetKey ||
+        col.includes(`\x1F${rule.targetKey}`) ||
+        (metricLabel && metricLabel === rule.targetKey)
+      )
+        match = true;
     } else if (rule.targetType === 'cell') {
       // Cell target key is usually "rowKey1\x1FrowKey2...|colLabel"
       if (rule.targetKey === `${rowKeys.join('\x1F')}|${col}`) match = true;
@@ -41,7 +45,7 @@ export const getCellStyle = (
 
   // 2. Conditional rules (only for numeric or matching values)
   if (value !== undefined && value !== null) {
-    conditionalRules.forEach(rule => {
+    conditionalRules.forEach((rule) => {
       if (rule.metricLabel && rule.metricLabel !== metricLabel) return;
 
       // Check scope
@@ -49,15 +53,26 @@ export const getCellStyle = (
       if (rule.scope === 'totals' && rowType === 'data') return;
 
       let match = false;
-      const numVal = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^\d.-]/g, ''));
+      const numVal =
+        typeof value === 'number' ? value : parseFloat(String(value).replace(/[^\d.-]/g, ''));
       const ruleVal = typeof rule.value === 'number' ? rule.value : parseFloat(String(rule.value));
 
       switch (rule.operator) {
-        case 'gt': match = !isNaN(numVal) && numVal > ruleVal; break;
-        case 'lt': match = !isNaN(numVal) && numVal < ruleVal; break;
-        case 'eq': match = numVal === ruleVal || String(value) === String(rule.value); break;
-        case 'between': match = !isNaN(numVal) && numVal >= ruleVal && numVal <= (rule.value2 || 0); break;
-        case 'contains': match = String(value).toLowerCase().includes(String(rule.value).toLowerCase()); break;
+        case 'gt':
+          match = !isNaN(numVal) && numVal > ruleVal;
+          break;
+        case 'lt':
+          match = !isNaN(numVal) && numVal < ruleVal;
+          break;
+        case 'eq':
+          match = numVal === ruleVal || String(value) === String(rule.value);
+          break;
+        case 'between':
+          match = !isNaN(numVal) && numVal >= ruleVal && numVal <= (rule.value2 || 0);
+          break;
+        case 'contains':
+          match = String(value).toLowerCase().includes(String(rule.value).toLowerCase());
+          break;
       }
 
       if (match) {

@@ -6,18 +6,19 @@
 
 Toutes les pages et composants doivent utiliser les classes Tailwind standards pour assurer la cohérence :
 
-| Classe Tailwind | Taille | Pixels | Usage |
-|----------------|--------|---------|-------|
-| `text-xs` | 0.75rem | 12px | Petits textes, labels secondaires, aide contextuelle |
-| `text-sm` | 0.875rem | 14px | Texte standard, corps de texte, descriptions |
-| `text-base` | 1rem | 16px | Texte principal, contenu (classe par défaut) |
-| `text-lg` | 1.125rem | 18px | Titres de sections, en-têtes secondaires |
-| `text-xl` | 1.25rem | 20px | Titres principaux |
-| `text-2xl` | 1.5rem | 24px | Grands titres |
+| Classe Tailwind | Taille   | Pixels | Usage                                                |
+| --------------- | -------- | ------ | ---------------------------------------------------- |
+| `text-xs`       | 0.75rem  | 12px   | Petits textes, labels secondaires, aide contextuelle |
+| `text-sm`       | 0.875rem | 14px   | Texte standard, corps de texte, descriptions         |
+| `text-base`     | 1rem     | 16px   | Texte principal, contenu (classe par défaut)         |
+| `text-lg`       | 1.125rem | 18px   | Titres de sections, en-têtes secondaires             |
+| `text-xl`       | 1.25rem  | 20px   | Titres principaux                                    |
+| `text-2xl`      | 1.5rem   | 24px   | Grands titres                                        |
 
 ### Règles d'Utilisation
 
 #### ✅ À FAIRE
+
 ```tsx
 // Labels et textes secondaires
 <label className="text-xs text-slate-500">Date de création</label>
@@ -33,6 +34,7 @@ Toutes les pages et composants doivent utiliser les classes Tailwind standards p
 ```
 
 #### ❌ À ÉVITER
+
 ```tsx
 // NE PAS utiliser de tailles personnalisées
 <span className="text-[10px]">❌ Incorrect</span>
@@ -75,14 +77,14 @@ Toutes les pages et composants doivent utiliser les classes Tailwind standards p
 
 Utiliser l'échelle Tailwind standard (multiples de 4px):
 
-| Classe | Pixels | Usage |
-|--------|--------|-------|
-| `p-1` | 4px | Espacement minimal |
-| `p-2` | 8px | Espacement standard pour composants compacts |
-| `p-3` | 12px | Espacement standard |
-| `p-4` | 16px | Espacement confortable |
-| `p-6` | 24px | Espacement large |
-| `p-8` | 32px | Espacement extra-large |
+| Classe | Pixels | Usage                                        |
+| ------ | ------ | -------------------------------------------- |
+| `p-1`  | 4px    | Espacement minimal                           |
+| `p-2`  | 8px    | Espacement standard pour composants compacts |
+| `p-3`  | 12px   | Espacement standard                          |
+| `p-4`  | 16px   | Espacement confortable                       |
+| `p-6`  | 24px   | Espacement large                             |
+| `p-8`  | 32px   | Espacement extra-large                       |
 
 ## Composants
 
@@ -142,16 +144,12 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 <table className="min-w-full divide-y divide-slate-200">
   <thead className="bg-slate-50">
     <tr>
-      <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">
-        Colonne
-      </th>
+      <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Colonne</th>
     </tr>
   </thead>
   <tbody className="bg-white divide-y divide-slate-200">
     <tr>
-      <td className="px-4 py-3 text-sm text-slate-700">
-        Valeur
-      </td>
+      <td className="px-4 py-3 text-sm text-slate-700">Valeur</td>
     </tr>
   </tbody>
 </table>
@@ -160,12 +158,14 @@ Utiliser l'échelle Tailwind standard (multiples de 4px):
 ## Bordures & Ombres
 
 ### Bordures
+
 - Standard : `border border-slate-200`
 - Accentuée : `border-2 border-brand-300`
 - Arrondie standard : `rounded` ou `rounded-lg`
 - Très arrondie : `rounded-xl`
 
 ### Ombres
+
 - Légère : `shadow-sm`
 - Normale : `shadow`
 - Importante : `shadow-lg`

@@ -1,4 +1,6 @@
-export const calculateLinearRegression = (yValues: number[]): { slope: number, intercept: number, r2: number } => {
+export const calculateLinearRegression = (
+  yValues: number[]
+): { slope: number; intercept: number; r2: number } => {
   const n = yValues.length;
   if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
 
@@ -15,7 +17,7 @@ export const calculateLinearRegression = (yValues: number[]): { slope: number, i
   // R Squared calculation
   const ssTot = sumYY - (sumY * sumY) / n;
   const ssRes = sumYY - intercept * sumY - slope * sumXY; // Simplified for linear
-  const r2 = 1 - (ssRes / (ssTot || 1));
+  const r2 = 1 - ssRes / (ssTot || 1);
 
   return { slope, intercept, r2 };
 };

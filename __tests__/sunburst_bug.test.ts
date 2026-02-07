@@ -1,6 +1,9 @@
-
 import { describe, it, expect } from 'vitest';
-import { buildHierarchicalTree, treeToSunburstRings, SunburstRingItem } from '../logic/pivotToChart';
+import {
+  buildHierarchicalTree,
+  treeToSunburstRings,
+  SunburstRingItem
+} from '../logic/pivotToChart';
 import { PivotResult, PivotConfig } from '../types';
 
 describe('Sunburst Data Transformation', () => {

@@ -24,24 +24,28 @@ Ce POC (Proof of Concept) démontre l'intégration de Microsoft 365 dans DataSco
 ## 🚀 Fonctionnalités implémentées
 
 ### ✅ Authentification & Sécurité
+
 - Login/Logout via popup Microsoft
 - Gestion automatique des tokens (refresh automatique)
 - Scopes minimaux : `User.Read`, `Files.ReadWrite`
 - Stockage sécurisé des tokens par MSAL (LocalStorage)
 
 ### ✅ Sauvegarde Cloud
+
 - Upload de backups complets vers OneDrive
 - Dossier dédié : `DataScope_Backups/`
 - Format : JSON avec timestamp automatique
 - Limite POC : 4MB par fichier
 
 ### ✅ Restauration
+
 - Liste des backups disponibles avec métadonnées (date, taille)
 - Restauration sélective (écrase les données actuelles)
 - Confirmation utilisateur avant restauration
 - Suppression de backups
 
 ### ✅ Interface Utilisateur
+
 - Section dédiée dans Settings (page Paramètres)
 - Activation via feature flag `ENABLE_O365_POC`
 - Messages d'erreur explicites
@@ -53,6 +57,7 @@ Ce POC (Proof of Concept) démontre l'intégration de Microsoft 365 dans DataSco
 ## 📁 Fichiers ajoutés/modifiés
 
 ### Nouveaux fichiers
+
 ```
 services/
 └── o365Service.ts           # Service principal Microsoft 365 (406 lignes)
@@ -65,6 +70,7 @@ components/settings/
 ```
 
 ### Fichiers modifiés
+
 ```
 pages/Settings.tsx           # Intégration du composant O365Section
 types.ts                     # Export des types O365
@@ -73,6 +79,7 @@ package-lock.json            # Verrouillage des dépendances
 ```
 
 ### Dépendances ajoutées
+
 ```json
 {
   "@azure/msal-browser": "^3.7.0",
@@ -112,6 +119,7 @@ VITE_O365_CLIENT_ID=votre-client-id-azure-ad
 **⚠️ IMPORTANT:** Ne jamais committer `.env.local` dans Git !
 
 Ajouter à `.gitignore` si pas déjà présent :
+
 ```
 .env.local
 .env*.local
@@ -131,6 +139,7 @@ const ENABLE_O365_POC = true; // Mettre à false pour désactiver
 ## 🧪 Tests et validation
 
 ### Test 1 : Configuration
+
 ```bash
 # Vérifier que le clientId est configuré
 # Ouvrir DevTools Console
@@ -139,6 +148,7 @@ const ENABLE_O365_POC = true; // Mettre à false pour désactiver
 ```
 
 ### Test 2 : Authentification
+
 1. Cliquer sur "Se connecter à Microsoft 365"
 2. Popup d'authentification Microsoft apparaît
 3. Sélectionner compte Microsoft
@@ -146,6 +156,7 @@ const ENABLE_O365_POC = true; // Mettre à false pour désactiver
 5. Retour à DataScope avec nom d'utilisateur affiché
 
 ### Test 3 : Sauvegarde
+
 1. Importer des données de test dans DataScope
 2. Aller dans Settings → Section Microsoft 365
 3. Cliquer "Sauvegarder sur OneDrive"
@@ -153,6 +164,7 @@ const ENABLE_O365_POC = true; // Mettre à false pour désactiver
 5. Vérifier dans OneDrive : dossier `DataScope_Backups/` créé
 
 ### Test 4 : Restauration
+
 1. Cliquer "Restaurer depuis OneDrive"
 2. Liste des backups s'affiche avec dates/tailles
 3. Sélectionner un backup → Cliquer "Restaurer"
@@ -160,6 +172,7 @@ const ENABLE_O365_POC = true; // Mettre à false pour désactiver
 5. Page se recharge avec données restaurées
 
 ### Test 5 : Régression (NON-REGRESSION TEST)
+
 ```bash
 # Désactiver O365
 const ENABLE_O365_POC = false;
@@ -179,6 +192,7 @@ npm run build
 ## 🔒 Sécurité
 
 ### Points forts
+
 ✅ **OAuth 2.0 avec PKCE** (standard industrie)
 ✅ **Tokens jamais exposés** (gérés par MSAL)
 ✅ **HTTPS obligatoire** en production
@@ -186,11 +200,13 @@ npm run build
 ✅ **Pas de stockage de credentials**
 
 ### Points d'attention
+
 ⚠️ **LocalStorage pour tokens** : Acceptable pour SPA, mais vulnérable si XSS
 ⚠️ **Pas de chiffrement additionnel** : Données en clair dans OneDrive
 ⚠️ **4MB limit** : Pour POC uniquement (à étendre avec Upload Session)
 
 ### Recommandations production
+
 1. Ajouter CSP (Content Security Policy) headers
 2. Implémenter SRI (Subresource Integrity)
 3. Chiffrement optionnel avant upload (AES-256)
@@ -202,12 +218,14 @@ npm run build
 ## 📊 Performance
 
 ### Temps d'exécution mesurés (estimation)
+
 - **Login popup:** 2-5 secondes (dépend de Microsoft)
 - **Upload 100KB backup:** < 1 seconde
 - **Liste backups (10 fichiers):** < 500ms
 - **Download + restore 1MB:** 2-3 secondes
 
 ### Optimisations possibles
+
 - ✅ Memoization des appels Graph API
 - ✅ Cache local des métadonnées de fichiers
 - ⏳ Upload en arrière-plan (Web Workers)
@@ -238,24 +256,28 @@ npm run build
 ## 🚀 Prochaines étapes
 
 ### Phase 1 : Améliorations POC (3-5 jours)
+
 - [ ] Support fichiers > 4MB (Upload Session)
 - [ ] Compression GZIP des backups
 - [ ] UI pour créer des liens de partage
 - [ ] Import depuis lien partagé
 
 ### Phase 2 : SharePoint (5-7 jours)
+
 - [ ] Intégration SharePoint Sites
 - [ ] Dossiers partagés équipe
 - [ ] Permissions granulaires
 - [ ] Versioning automatique
 
 ### Phase 3 : Collaboration (10+ jours)
+
 - [ ] Auto-sync périodique (1h, 4h, 24h)
 - [ ] Notifications de changements
 - [ ] Résolution de conflits
 - [ ] Mode multi-utilisateurs
 
 ### Phase 4 : Production
+
 - [ ] Tests E2E avec Playwright
 - [ ] Documentation utilisateur complète
 - [ ] Chiffrement optionnel
@@ -310,19 +332,24 @@ R: Chiffrement au repos par Microsoft (AES-256), mais pas de chiffrement additio
 ## 📝 Notes développeur
 
 ### Architecture
+
 Le service `o365Service.ts` est un **singleton** pour garantir une seule instance MSAL.
 
 ### Feature Flag
+
 Le flag `ENABLE_O365_POC` permet de :
+
 - ✅ Activer/désactiver sans rebuild
 - ✅ Tests A/B faciles
 - ✅ Rollback instantané si problème
 - ✅ Déploiement progressif (10% users → 100%)
 
 ### Types TypeScript
+
 Tous les types O365 sont dans `types/o365.ts` pour faciliter maintenance.
 
 ### Gestion d'erreurs
+
 Tous les try/catch loggent dans console ET affichent message utilisateur.
 
 ---

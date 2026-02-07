@@ -2,15 +2,71 @@ import { ImportBatch, DataRow } from '../types';
 import { generateId } from './common';
 
 // Données partagées pour les jointures
-const ORGS_LIST = ['TechCorp', 'Innovate SA', 'Global Services', 'Alpha Solutions', 'Mairie de Paris', 'Ministère Intérieur', 'CyberDefense Ltd', 'Green Energy', 'Transport Express', 'Banque Populaire'];
+const ORGS_LIST = [
+  'TechCorp',
+  'Innovate SA',
+  'Global Services',
+  'Alpha Solutions',
+  'Mairie de Paris',
+  'Ministère Intérieur',
+  'CyberDefense Ltd',
+  'Green Energy',
+  'Transport Express',
+  'Banque Populaire'
+];
 
 /**
  * Génère des données synthétiques (RH)
  */
 export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[] => {
-  const firstNames = ['Pierre', 'Paul', 'Jacques', 'Marie', 'Sophie', 'Isabelle', 'Thomas', 'Lucas', 'Nicolas', 'Julien', 'Camille', 'Antoine', 'Sarah', 'Alexandre', 'Manon', 'Emma', 'Chloé', 'Inès'];
-  const lastNames = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand'];
-  const domains = ['gmail.com', 'outlook.com', 'techcorp.com', 'innovate.fr', 'gouv.fr', 'cyber-defense.eu', 'energy.com'];
+  const firstNames = [
+    'Pierre',
+    'Paul',
+    'Jacques',
+    'Marie',
+    'Sophie',
+    'Isabelle',
+    'Thomas',
+    'Lucas',
+    'Nicolas',
+    'Julien',
+    'Camille',
+    'Antoine',
+    'Sarah',
+    'Alexandre',
+    'Manon',
+    'Emma',
+    'Chloé',
+    'Inès'
+  ];
+  const lastNames = [
+    'Martin',
+    'Bernard',
+    'Dubois',
+    'Thomas',
+    'Robert',
+    'Richard',
+    'Petit',
+    'Durand',
+    'Leroy',
+    'Moreau',
+    'Simon',
+    'Laurent',
+    'Lefebvre',
+    'Michel',
+    'Garcia',
+    'David',
+    'Bertrand'
+  ];
+  const domains = [
+    'gmail.com',
+    'outlook.com',
+    'techcorp.com',
+    'innovate.fr',
+    'gouv.fr',
+    'cyber-defense.eu',
+    'energy.com'
+  ];
 
   const batches: ImportBatch[] = [];
 
@@ -20,7 +76,7 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
     date.setDate(15);
 
     const dateStr = date.toISOString().split('T')[0];
-    const baseCount = 65 + (5 - i) * 6 + (Math.random() * 15);
+    const baseCount = 65 + (5 - i) * 6 + Math.random() * 15;
     const rowCount = Math.floor(baseCount);
     const rows: DataRow[] = [];
 
@@ -42,14 +98,14 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
       const amount = Math.floor(Math.random() * 1400) + 150;
 
       rows.push({
-        id: `REF-${(10 - i)}-${j.toString().padStart(4, '0')}`,
-        'Nom': `${firstName} ${lastName}`,
-        'Email': `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
-        'Organisation': ORGS_LIST[orgIndex],
-        'DateModif': lastChangeDate.toISOString().split('T')[0],
-        'Commentaire': hasComment,
-        'Budget': `${amount} k€`,
-        'Quantité': Math.floor(Math.random() * 25) + 1
+        id: `REF-${10 - i}-${j.toString().padStart(4, '0')}`,
+        Nom: `${firstName} ${lastName}`,
+        Email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
+        Organisation: ORGS_LIST[orgIndex],
+        DateModif: lastChangeDate.toISOString().split('T')[0],
+        Commentaire: hasComment,
+        Budget: `${amount} k€`,
+        Quantité: Math.floor(Math.random() * 25) + 1
       });
     }
 
@@ -57,7 +113,7 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
       id: generateId(),
       datasetId: datasetId,
       date: dateStr,
-      createdAt: Date.now() - (i * 30 * 24 * 60 * 60 * 1000),
+      createdAt: Date.now() - i * 30 * 24 * 60 * 60 * 1000,
       rows
     });
   }
@@ -69,12 +125,29 @@ export const generateSyntheticData = (datasetId: string = 'demo'): ImportBatch[]
  */
 export const generateProjectsData = (datasetId: string): ImportBatch[] => {
   const projectNames = [
-    'Migration Cloud', 'Refonte CRM', 'Cybersécurité', 'Dashboard Analytics',
-    'Formation DevOps', 'API Gateway', 'Application Mobile', 'Infrastructure Azure',
-    'Data Lake', 'Automatisation RH', 'Plateforme E-commerce', 'Business Intelligence'
+    'Migration Cloud',
+    'Refonte CRM',
+    'Cybersécurité',
+    'Dashboard Analytics',
+    'Formation DevOps',
+    'API Gateway',
+    'Application Mobile',
+    'Infrastructure Azure',
+    'Data Lake',
+    'Automatisation RH',
+    'Plateforme E-commerce',
+    'Business Intelligence'
   ];
   const statuses = ['Planifié', 'En cours', 'En pause', 'Terminé', 'Annulé'];
-  const responsables = ['Pierre Martin', 'Sophie Bernard', 'Thomas Dubois', 'Marie Laurent', 'Lucas Moreau', 'Antoine Simon', 'Sarah Michel'];
+  const responsables = [
+    'Pierre Martin',
+    'Sophie Bernard',
+    'Thomas Dubois',
+    'Marie Laurent',
+    'Lucas Moreau',
+    'Antoine Simon',
+    'Sarah Michel'
+  ];
 
   const batches: ImportBatch[] = [];
 
@@ -90,7 +163,7 @@ export const generateProjectsData = (datasetId: string): ImportBatch[] => {
       const org = ORGS_LIST[Math.floor(Math.random() * ORGS_LIST.length)];
       const projectName = projectNames[j % projectNames.length];
       const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const budget = (50 + Math.floor(Math.random() * 450)) + ' k€';
+      const budget = 50 + Math.floor(Math.random() * 450) + ' k€';
       const responsable = responsables[Math.floor(Math.random() * responsables.length)];
 
       const startDate = new Date(date);
@@ -98,13 +171,13 @@ export const generateProjectsData = (datasetId: string): ImportBatch[] => {
 
       rows.push({
         id: generateId(),
-        'Projet': projectName,
-        'Organisation': org,
-        'Statut': status,
-        'DateDébut': startDate.toISOString().split('T')[0],
-        'Budget': budget,
-        'Responsable': responsable,
-        'Priorité': ['Haute', 'Moyenne', 'Basse'][Math.floor(Math.random() * 3)]
+        Projet: projectName,
+        Organisation: org,
+        Statut: status,
+        DateDébut: startDate.toISOString().split('T')[0],
+        Budget: budget,
+        Responsable: responsable,
+        Priorité: ['Haute', 'Moyenne', 'Basse'][Math.floor(Math.random() * 3)]
       });
     }
 
@@ -112,7 +185,7 @@ export const generateProjectsData = (datasetId: string): ImportBatch[] => {
       id: generateId(),
       datasetId,
       date: dateStr,
-      createdAt: Date.now() - (i * 60 * 24 * 60 * 60 * 1000),
+      createdAt: Date.now() - i * 60 * 24 * 60 * 60 * 1000,
       rows
     });
   }
@@ -146,12 +219,12 @@ export const generateBudgetData = (datasetId: string): ImportBatch[] => {
 
         rows.push({
           id: generateId(),
-          'Département': dept,
-          'Organisation': org,
-          'Prévisionnel': `${previsionnel} k€`,
-          'Réalisé': `${realise} k€`,
-          'Ecart': `${ecart >= 0 ? '+' : ''}${ecart} k€`,
-          'Trimestre': quarterLabel
+          Département: dept,
+          Organisation: org,
+          Prévisionnel: `${previsionnel} k€`,
+          Réalisé: `${realise} k€`,
+          Ecart: `${ecart >= 0 ? '+' : ''}${ecart} k€`,
+          Trimestre: quarterLabel
         });
       }
     }
@@ -160,7 +233,7 @@ export const generateBudgetData = (datasetId: string): ImportBatch[] => {
       id: generateId(),
       datasetId,
       date: dateStr,
-      createdAt: Date.now() - ((3 - quarter) * 90 * 24 * 60 * 60 * 1000),
+      createdAt: Date.now() - (3 - quarter) * 90 * 24 * 60 * 60 * 1000,
       rows
     });
   }
@@ -172,7 +245,14 @@ export const generateBudgetData = (datasetId: string): ImportBatch[] => {
  * Génère des données de ventes avec produits et organisations
  */
 export const generateSalesData = (datasetId: string): ImportBatch[] => {
-  const products = ['Licence Pro', 'Licence Standard', 'Support Premium', 'Support Basic', 'Formation', 'Consulting'];
+  const products = [
+    'Licence Pro',
+    'Licence Standard',
+    'Support Premium',
+    'Support Basic',
+    'Formation',
+    'Consulting'
+  ];
   const regions = ['Nord', 'Sud', 'Est', 'Ouest', 'Centre'];
 
   const batches: ImportBatch[] = [];
@@ -189,7 +269,7 @@ export const generateSalesData = (datasetId: string): ImportBatch[] => {
       const org = ORGS_LIST[Math.floor(Math.random() * ORGS_LIST.length)];
       const product = products[Math.floor(Math.random() * products.length)];
       const quantity = 1 + Math.floor(Math.random() * 50);
-      const unitPrice = product.includes('Premium') ? 500 : (product.includes('Licence') ? 200 : 150);
+      const unitPrice = product.includes('Premium') ? 500 : product.includes('Licence') ? 200 : 150;
       const total = quantity * unitPrice;
       const region = regions[Math.floor(Math.random() * regions.length)];
 
@@ -198,14 +278,16 @@ export const generateSalesData = (datasetId: string): ImportBatch[] => {
 
       rows.push({
         id: generateId(),
-        'Produit': product,
-        'Organisation': org,
-        'Région': region,
-        'Quantité': quantity,
+        Produit: product,
+        Organisation: org,
+        Région: region,
+        Quantité: quantity,
         'Prix Unitaire': `${unitPrice} €`,
         'Montant Total': `${total} €`,
         'Date Vente': saleDate.toISOString().split('T')[0],
-        'Commercial': ['Alice Dupont', 'Bob Martin', 'Claire Durand', 'David Leroy'][Math.floor(Math.random() * 4)]
+        Commercial: ['Alice Dupont', 'Bob Martin', 'Claire Durand', 'David Leroy'][
+          Math.floor(Math.random() * 4)
+        ]
       });
     }
 
@@ -213,7 +295,7 @@ export const generateSalesData = (datasetId: string): ImportBatch[] => {
       id: generateId(),
       datasetId,
       date: dateStr,
-      createdAt: Date.now() - (i * 30 * 24 * 60 * 60 * 1000),
+      createdAt: Date.now() - i * 30 * 24 * 60 * 60 * 1000,
       rows
     });
   }

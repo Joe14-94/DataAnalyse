@@ -1,4 +1,3 @@
-
 import { DataRow, FilterRule } from './common';
 import { Dataset, FieldConfig } from './dataset';
 
@@ -25,25 +24,29 @@ export interface PivotMetric {
 }
 
 export interface PivotConfig {
-  rows: any[];
   rowFields: string[];
   colFields: string[];
   colGrouping: DateGrouping;
-  valField: string; // Keep for backward compatibility
-  aggType: AggregationType; // Keep for backward compatibility
+  valField: string;
+  aggType: AggregationType;
   metrics?: PivotMetric[];
   filters: FilterRule[];
   sortBy: SortBy;
   sortOrder: SortOrder;
   showSubtotals: boolean;
+  showTotalCol?: boolean;
   showVariations?: boolean;
-
-  currentDataset?: Dataset | null;
-  joins?: PivotJoin[];
-  datasets?: Dataset[];
-  valFormatting?: Partial<FieldConfig>;
+  selectedBatchId?: string;
+  searchTerm?: string;
+  columnLabels?: Record<string, string>;
+  columnWidths?: Record<string, number>;
   styleRules?: PivotStyleRule[];
   conditionalRules?: ConditionalFormattingRule[];
+  isTemporalMode?: boolean;
+  temporalComparison?: TemporalComparisonConfig;
+  sources?: PivotSourceConfig[];
+  joins?: PivotJoin[];
+  valFormatting?: Partial<FieldConfig>;
 }
 
 export interface PivotResult {
@@ -61,14 +64,14 @@ export interface PivotJoin {
 }
 
 export interface PivotSourceConfig {
-    id: string;
-    datasetId: string;
-    isPrimary: boolean;
-    joinConfig?: {
-        primaryKey: string;
-        secondaryKey: string;
-    };
-    color: string;
+  id: string;
+  datasetId: string;
+  isPrimary: boolean;
+  joinConfig?: {
+    primaryKey: string;
+    secondaryKey: string;
+  };
+  color: string;
 }
 
 export interface PivotStyleRule {
@@ -137,21 +140,7 @@ export interface TemporalComparisonResult {
 
 export interface PivotState {
   datasetId: string;
-  config: {
-    rowFields: string[];
-    colFields: string[];
-    valField: string;
-    aggType: string;
-    metrics?: PivotMetric[];
-    filters: FilterRule[];
-    joins?: PivotJoin[];
-    sources?: PivotSourceConfig[];
-    temporalComparison?: TemporalComparisonConfig;
-    columnLabels?: Record<string, string>;
-    styleRules?: PivotStyleRule[];
-    conditionalRules?: ConditionalFormattingRule[];
-    [key: string]: any;
-  };
+  config: PivotConfig;
 }
 
 export interface AnalyticsState {

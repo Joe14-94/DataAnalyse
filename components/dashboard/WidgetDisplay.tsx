@@ -1,457 +1,864 @@
-
 import React from 'react';
 import {
-   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-   Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  Cell,
+  PieChart,
+  Pie,
+  RadialBarChart,
+  RadialBar,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Treemap,
+  Funnel,
+  FunnelChart,
+  LabelList
 } from 'recharts';
 import { TrendingUp, Link as LinkIcon } from 'lucide-react';
-import { DashboardWidget } from '../../types';
+import { DashboardWidget, PivotRow, SunburstData } from '../../types';
 import { useWidgets } from '../../context/DataContext';
 import { CHART_COLORS } from '../../utils/constants';
-import { getChartColors, generateGradient, sunburstDataToD3Hierarchy } from '../../logic/pivotToChart';
+import {
+  getChartColors,
+  generateGradient,
+  sunburstDataToD3Hierarchy,
+  HierarchicalNode
+} from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
 import { SunburstD3 } from '../charts/SunburstD3';
 import { ErrorBoundary } from '../ErrorBoundary';
 
+interface WidgetData {
+  error?: string;
+  isSelective?: boolean;
+  data?: any[];
+  colors?: string[];
+  unit?: string;
+  seriesName?: string;
+  sunburstData?: SunburstData;
+  hierarchicalData?: HierarchicalNode[];
+  items?: any[];
+  textContent?: string;
+  textStyle?: any;
+  current?: any;
+  max?: number;
+  trend?: number;
+  progress?: number;
+  target?: number;
+  isPivot?: boolean;
+}
+
 interface WidgetDisplayProps {
-   widget: DashboardWidget;
-   data: any;
+  widget: DashboardWidget;
+  data: WidgetData;
 }
 
 const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
-   const { setDashboardFilter } = useWidgets();
-   if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-sm">Chargement...</div>;
-   if (data.error) return <div className="flex items-center justify-center h-full text-red-500 text-sm text-center p-1">{data.error}</div>;
+  const { setDashboardFilter } = useWidgets();
+  if (!data)
+    return (
+      <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+        Chargement...
+      </div>
+    );
+  if (data.error)
+    return (
+      <div className="flex items-center justify-center h-full text-red-500 text-sm text-center p-1">
+        {data.error}
+      </div>
+    );
 
-   // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
-   if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
-      const { colors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
-      const chartType = widget.config.pivotChart ? widget.config.pivotChart.chartType : widget.config.chartType;
+  // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
+  if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
+    const { colors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
+    const chartType = widget.config.pivotChart
+      ? widget.config.pivotChart.chartType
+      : widget.config.chartType;
 
-      // Pour Sunburst et Treemap, les données sont dans sunburstData/hierarchicalData, pas chartData
-      const hasHierarchicalData = chartType === 'sunburst' ? sunburstData : chartType === 'treemap' ? hierarchicalData : null;
+    // Pour Sunburst et Treemap, les données sont dans sunburstData/hierarchicalData, pas chartData
+    const hasHierarchicalData =
+      chartType === 'sunburst' ? sunburstData : chartType === 'treemap' ? hierarchicalData : null;
 
-      if (!chartData || chartData.length === 0) {
-         // Si c'est un graphique hiérarchique, vérifier les données hiérarchiques au lieu de chartData
-         if (hasHierarchicalData) {
-            // Continue pour afficher le graphique hiérarchique
-         } else {
-            return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
-         }
-      }
-
-      // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
-      const seriesKeys = Array.from(new Set(chartData.flatMap((d: any) =>
-         Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')
-      ))) as string[];
-
-      const displaySeriesNames: Record<string, string> = (seriesKeys.length === 1 && seriesName)
-         ? { [seriesKeys[0]]: seriesName }
-         : {};
-
-      try {
-         if (chartType === 'pie' || chartType === 'donut') {
-            const pieDataKey = seriesKeys[0] || 'value';
-            const pieName = displaySeriesNames[pieDataKey] || pieDataKey || 'Valeur';
-            return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                     <Pie
-                        data={chartData}
-                        dataKey={pieDataKey}
-                        nameKey="name"
-                        name={pieName}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={chartType === 'donut' ? '45%' : 0}
-                        outerRadius="75%"
-                        paddingAngle={2}
-                        label={({ name, percent }) => {
-                           const n = name || '';
-                           return `${n.length > 12 ? n.substring(0, 12) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
-                        }}
-                        labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
-                        isAnimationActive={false}
-                     >
-                        {chartData.map((entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="#fff" strokeWidth={2} />
-                        ))}
-                     </Pie>
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }} />
-                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />
-                  </PieChart>
-               </ResponsiveContainer>
-            );
-         } else if (chartType === 'line') {
-            const isMultiSeries = seriesKeys.length > 1;
-            return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
-                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                     <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={40} />
-                     <YAxis fontSize={10} stroke="#94a3b8" />
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
-                     {isMultiSeries ? (
-                        <>
-                           <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />
-                           {seriesKeys.map((key, idx) => (
-                              <Line key={key} type="monotone" dataKey={key} name={displaySeriesNames[key] || key} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} isAnimationActive={false} />
-                           ))}
-                        </>
-                     ) : (
-                        <Line type="monotone" dataKey={seriesKeys[0] || 'value'} name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]} stroke={colors[0]} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} isAnimationActive={false} />
-                     )}
-                  </LineChart>
-               </ResponsiveContainer>
-            );
-         } else if (chartType === 'area' || chartType === 'stacked-area') {
-            const isMultiSeries = seriesKeys.length > 1;
-            const isStacked = chartType === 'stacked-area';
-            return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
-                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                     <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={40} />
-                     <YAxis fontSize={10} stroke="#94a3b8" />
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
-                     {(isMultiSeries || isStacked) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />}
-                     {isMultiSeries || isStacked ? (
-                        seriesKeys.map((key, idx) => (
-                           <Area key={key} type="monotone" dataKey={key} name={displaySeriesNames[key] || key} fill={colors[idx % colors.length]} stroke={colors[idx % colors.length]} fillOpacity={0.6} stackId={isStacked ? 'stack' : undefined} isAnimationActive={false} />
-                        ))
-                     ) : (
-                        <Area type="monotone" dataKey={seriesKeys[0] || 'value'} name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]} fill={colors[0]} stroke={colors[0]} fillOpacity={0.6} isAnimationActive={false} />
-                     )}
-                  </AreaChart>
-               </ResponsiveContainer>
-            );
-         } else if (chartType === 'bar' || chartType === 'column' || chartType === 'stacked-bar' || chartType === 'stacked-column' || chartType === 'percent-bar' || chartType === 'percent-column') {
-            const isHorizontal = chartType === 'bar' || chartType === 'stacked-bar' || chartType === 'percent-bar';
-            const isStacked = chartType.startsWith('stacked-') || chartType.startsWith('percent-');
-            const isPercent = chartType.startsWith('percent-');
-            const isMultiSeries = seriesKeys.length > 1;
-
-            return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout={isHorizontal ? 'vertical' : 'horizontal'} margin={{ top: 10, right: 10, left: 10, bottom: isHorizontal ? 25 : 35 }}>
-                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={isHorizontal} horizontal={!isHorizontal} />
-                     <XAxis type={isHorizontal ? 'number' : 'category'} dataKey={isHorizontal ? undefined : 'name'} fontSize={10} stroke="#94a3b8" angle={isHorizontal ? 0 : -45} textAnchor={isHorizontal ? 'middle' : 'end'} height={isHorizontal ? 25 : 40} hide={isPercent} domain={isPercent ? [0, 100] : [0, 'auto']} />
-                     <YAxis type={isHorizontal ? 'category' : 'number'} dataKey={isHorizontal ? 'name' : undefined} fontSize={10} stroke="#94a3b8" hide={!isHorizontal && isPercent} domain={!isHorizontal && isPercent ? [0, 100] : [0, 'auto']} width={isHorizontal ? 100 : 30} />
-                     <Tooltip
-                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }}
-                        formatter={(val: any) => isPercent ? `${Number(val).toFixed(1)}%` : val}
-                     />
-                     {(isMultiSeries || isStacked) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />}
-                     {isMultiSeries || isStacked ? (
-                        seriesKeys.map((key, idx) => (
-                           <Bar key={key} dataKey={key} name={displaySeriesNames[key] || key} fill={colors[idx % colors.length]} stackId={isStacked ? 'stack' : undefined} radius={!isStacked ? (isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]) : 0} isAnimationActive={false} />
-                        ))
-                     ) : (
-                        <Bar dataKey={seriesKeys[0] || 'value'} name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]} fill={colors[0]} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false}>
-                           {chartData.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                           ))}
-                        </Bar>
-                     )}
-                  </BarChart>
-               </ResponsiveContainer>
-            );
-         } else if (chartType === 'sunburst') {
-            const sbData = data.sunburstData;
-            const sunburstConfig = widget.config.pivotChart?.sunburstConfig;
-            const title = sunburstConfig?.title;
-            const rowFields = widget.config.pivotChart?.pivotConfig?.rowFields || [];
-
-            if (!sbData || !sbData.rings || sbData.rings.length === 0) {
-               return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Aucune donnée hiérarchique</div>;
-            }
-
-            // Convert sunburst data to D3 hierarchy format
-            const d3HierarchyData = sunburstDataToD3Hierarchy(sbData);
-
-            if (!d3HierarchyData) {
-               return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Erreur de conversion des données</div>;
-            }
-
-            return (
-               <div className="relative w-full h-full flex flex-col">
-                  {title && (
-                     <div className="text-center mb-1">
-                        <h4 className="text-xs font-bold text-slate-800">{title}</h4>
-                     </div>
-                  )}
-                  <div className="flex-1">
-                     <SunburstD3
-                        data={d3HierarchyData}
-                        width={400}
-                        height={400}
-                        unit={unit || ''}
-                        title={title}
-                        rowFields={rowFields}
-                        colors={colors}
-                     />
-                  </div>
-               </div>
-            );
-         } else if (chartType === 'treemap') {
-            // Utiliser les données hiérarchiques si disponibles
-            const treemapDisplayData = data.hierarchicalData || chartData;
-            return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <Treemap data={treemapDisplayData} dataKey="size" stroke="#fff" content={<TreemapContent colors={colors} />} isAnimationActive={false}>
-                     <Tooltip
-                        content={({ active, payload }: any) => {
-                           if (!active || !payload || !payload.length) return null;
-                           const d = payload[0].payload;
-                           const path = d.path || [d.name];
-                           const value = d.value || d.size || 0;
-                           return (
-                              <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                 <p style={{ fontWeight: 600, marginBottom: 2 }}>{path.join(' > ')}</p>
-                                 <p>{value?.toLocaleString('fr-FR')} {unit || ''}</p>
-                              </div>
-                           );
-                        }}
-                     />
-                  </Treemap>
-               </ResponsiveContainer>
-            );
-         } else if (chartType === 'radar') {
-            return (
-               <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                     <PolarGrid stroke="#e2e8f0" />
-                     <PolarAngleAxis dataKey="name" tick={{ fontSize: 9 }} />
-                     <PolarRadiusAxis tick={{ fontSize: 9 }} />
-                     <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }} />
-                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />
-                     {seriesKeys.map((key, idx) => (
-                        <Radar key={key} name={displaySeriesNames[key] || key} dataKey={key} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.6} isAnimationActive={false} />
-                     ))}
-                  </RadarChart>
-               </ResponsiveContainer>
-            );
-         }
-      } catch (error) {
-         console.error('Erreur rendu graphique TCD:', error);
-         return <div className="flex items-center justify-center h-full text-red-500">Erreur de rendu</div>;
-      }
-   }
-
-   if (widget.type === 'report') {
-      const items = data.items || [];
-      return (
-         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1 h-full overflow-y-auto custom-scrollbar">
-            {items.map((item: any) => (
-               <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                  <div className="mb-2">
-                     <h5 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-1 truncate" title={item.label}>{item.label}</h5>
-                     <div className="h-0.5 w-6 bg-emerald-500 rounded-full"></div>
-                  </div>
-                  <div className="text-xl font-black text-slate-800 tracking-tight font-mono truncate">{item.value}</div>
-                  <div className="mt-2 pt-2 border-t border-slate-200/50">
-                     <p className="text-xs text-slate-400 italic truncate">{item.rowPath[item.rowPath.length-1]} | {item.colLabel}</p>
-                  </div>
-               </div>
-            ))}
-         </div>
-      );
-   }
-
-   if (widget.type === 'text') {
-      const style = widget.config.textStyle || {};
-      const align = style.align || 'left';
-      const size = style.size === 'large' ? 'text-lg' : style.size === 'xl' ? 'text-2xl' : 'text-sm';
-      const color = style.color === 'primary' ? 'text-brand-600' : style.color === 'muted' ? 'text-slate-400' : 'text-slate-800';
-      return <div className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: align }}>{widget.config.textContent || '...'}</div>;
-   }
-
-   const { unit } = data;
-   const handleChartClick = (e: any) => {
-      if (!e || !e.activePayload || !e.activePayload.length) return;
-      if (widget.config.dimension && e.activePayload[0].payload.name) setDashboardFilter(widget.config.dimension, e.activePayload[0].payload.name);
-   };
-
-   if (widget.type === 'kpi') {
-      const { current, trend, progress, target } = data;
-      const isPositive = trend >= 0;
-      const style = widget.config.kpiStyle || 'simple';
-      const showTrend = widget.config.showTrend && !widget.config.secondarySource;
-
-      return (
-         <div className="flex flex-col h-full justify-center">
-            <div className="flex items-end gap-1.5 mb-1.5">
-               <span className="text-2xl font-bold text-slate-800">{current.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-               <span className="text-sm text-slate-500 mb-1 font-medium">{unit}</span>
-            </div>
-            {style === 'progress' && target ? (
-               <div className="w-full space-y-1">
-                  <div className="flex justify-between text-sm text-slate-500">
-                     <span>Objectif</span>
-                     <span>{Math.round(progress)}% / {target.toLocaleString()}</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                     <div className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-brand-600'}`} style={{ width: `${progress}%` }} />
-                  </div>
-               </div>
-            ) : (style === 'trend' || showTrend) && (
-               <div className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingUp className="w-3 h-3 mr-1 transform rotate-180" />}
-                  {Math.abs(trend).toFixed(1)}% vs préc.
-               </div>
-            )}
-            {widget.config.secondarySource && <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><LinkIcon className="w-3 h-3" /> Données croisées</div>}
-         </div>
-      );
-   }
-
-   if (widget.type === 'list') {
-      const { current, max } = data;
-      return (
-         <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
-            {current.map((item: any, idx: number) => (
-               <div key={idx} className="flex flex-col gap-0.5 cursor-pointer group" onClick={() => widget.config.dimension && setDashboardFilter(widget.config.dimension, item.name)}>
-                  <div className="flex justify-between text-xs group-hover:text-brand-600 transition-colors">
-                     <span className="font-bold text-slate-800 truncate pr-2">{idx + 1}. {item.name}</span>
-                     <span className="text-slate-500 font-mono">{item.value.toLocaleString()} {unit}</span>
-                  </div>
-                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-brand-500 rounded-full opacity-80" style={{ width: `${(item.value / max) * 100}%` }} />
-                  </div>
-               </div>
-            ))}
-         </div>
-      );
-   }
-
-   const chartData = data.data || [];
-   const { chartType, colorMode, colorPalette, singleColor, gradientStart, gradientEnd } = widget.config;
-   const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
-   const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
-
-   // Calculer les couleurs à utiliser
-   const colors = React.useMemo(() => {
-      const count = Math.max(chartData.length, 1);
-      if (colorMode === 'single') {
-         return Array(count).fill(singleColor || '#3b82f6');
-      } else if (colorMode === 'gradient') {
-         return generateGradient(gradientStart || '#3b82f6', gradientEnd || '#ef4444', count);
+    if (!chartData || chartData.length === 0) {
+      // Si c'est un graphique hiérarchique, vérifier les données hiérarchiques au lieu de chartData
+      if (hasHierarchicalData) {
+        // Continue pour afficher le graphique hiérarchique
       } else {
-         return getChartColors(count, colorPalette || 'default');
+        return (
+          <div className="flex items-center justify-center h-full text-slate-400 italic">
+            Aucune donnée
+          </div>
+        );
       }
-   }, [chartData.length, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+    }
 
-   if (chartType === 'radial') {
-      return (
-         <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="100%" barSize={10} data={chartData}>
-               <RadialBar background dataKey="value" cornerRadius={10} onClick={handleChartClick} className="cursor-pointer">
-                  {chartData.map((entry: any, index: number) => (
-                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                  ))}
-               </RadialBar>
-               <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ fontSize: '10px' }} align="right" />
-               <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-            </RadialBarChart>
-         </ResponsiveContainer>
-      );
-   }
+    // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
+    const seriesKeys = Array.from(
+      new Set(
+        (chartData || []).flatMap((d: any) =>
+          Object.keys(d).filter(
+            (k) => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal'
+          )
+        )
+      )
+    ) as string[];
 
-   if (chartType === 'pie' || chartType === 'donut') {
-      return (
-         <ResponsiveContainer width="100%" height="100%">
+    const displaySeriesNames: Record<string, string> =
+      seriesKeys.length === 1 && seriesName ? { [seriesKeys[0]]: seriesName } : {};
+
+    try {
+      if (chartType === 'pie' || chartType === 'donut') {
+        const pieDataKey = seriesKeys[0] || 'value';
+        const pieName = displaySeriesNames[pieDataKey] || pieDataKey || 'Valeur';
+        return (
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-               <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={chartType === 'donut' ? 40 : 0}
-                  outerRadius={60}
-                  paddingAngle={2}
-                  dataKey="value"
-                  onClick={handleChartClick}
-                  className="cursor-pointer"
-               >
-                  {chartData.map((entry: any, index: number) => (
-                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                  ))}
-               </Pie>
-               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+              <Pie
+                data={chartData}
+                dataKey={pieDataKey}
+                nameKey="name"
+                name={pieName}
+                cx="50%"
+                cy="50%"
+                innerRadius={chartType === 'donut' ? '45%' : 0}
+                outerRadius="75%"
+                paddingAngle={2}
+                label={({ name, percent }) => {
+                  const n = name || '';
+                  return `${n.length > 12 ? n.substring(0, 12) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
+                }}
+                labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                isAnimationActive={false}
+              >
+                {(chartData || []).map((entry: any, index: number) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={colors[index % colors.length]}
+                    stroke="#fff"
+                    strokeWidth={2}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '11px'
+                }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{ fontSize: '10px', bottom: 0 }}
+              />
             </PieChart>
-         </ResponsiveContainer>
-      );
-   }
-
-   if (chartType === 'line') {
-      return (
-         <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} onClick={handleChartClick} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-               <YAxis fontSize={10} stroke="#94a3b8" />
-               <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-               <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={2} dot={{ r: 2 }} />
+          </ResponsiveContainer>
+        );
+      } else if (chartType === 'line') {
+        const isMultiSeries = seriesKeys.length > 1;
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="name"
+                fontSize={10}
+                stroke="#94a3b8"
+                angle={-45}
+                textAnchor="end"
+                height={40}
+              />
+              <YAxis fontSize={10} stroke="#94a3b8" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '10px'
+                }}
+              />
+              {isMultiSeries ? (
+                <>
+                  <Legend
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{ fontSize: '10px', bottom: 0 }}
+                  />
+                  {seriesKeys.map((key, idx) => (
+                    <Line
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      name={displaySeriesNames[key] || key}
+                      stroke={colors[idx % colors.length]}
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
+                      isAnimationActive={false}
+                    />
+                  ))}
+                </>
+              ) : (
+                <Line
+                  type="monotone"
+                  dataKey={seriesKeys[0] || 'value'}
+                  name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                  stroke={colors[0]}
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={false}
+                />
+              )}
             </LineChart>
-         </ResponsiveContainer>
-      );
-   }
-
-   if (chartType === 'area' || chartType === 'stacked-area') {
-      return (
-         <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} onClick={handleChartClick} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-               <YAxis fontSize={10} stroke="#94a3b8" />
-               <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-               <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.3} strokeWidth={2} />
+          </ResponsiveContainer>
+        );
+      } else if (chartType === 'area' || chartType === 'stacked-area') {
+        const isMultiSeries = seriesKeys.length > 1;
+        const isStacked = chartType === 'stacked-area';
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="name"
+                fontSize={10}
+                stroke="#94a3b8"
+                angle={-45}
+                textAnchor="end"
+                height={40}
+              />
+              <YAxis fontSize={10} stroke="#94a3b8" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '10px'
+                }}
+              />
+              {(isMultiSeries || isStacked) && (
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  wrapperStyle={{ fontSize: '10px', bottom: 0 }}
+                />
+              )}
+              {isMultiSeries || isStacked ? (
+                seriesKeys.map((key, idx) => (
+                  <Area
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    name={displaySeriesNames[key] || key}
+                    fill={colors[idx % colors.length]}
+                    stroke={colors[idx % colors.length]}
+                    fillOpacity={0.6}
+                    stackId={isStacked ? 'stack' : undefined}
+                    isAnimationActive={false}
+                  />
+                ))
+              ) : (
+                <Area
+                  type="monotone"
+                  dataKey={seriesKeys[0] || 'value'}
+                  name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                  fill={colors[0]}
+                  stroke={colors[0]}
+                  fillOpacity={0.6}
+                  isAnimationActive={false}
+                />
+              )}
             </AreaChart>
-         </ResponsiveContainer>
-      );
-   }
+          </ResponsiveContainer>
+        );
+      } else if (
+        chartType === 'bar' ||
+        chartType === 'column' ||
+        chartType === 'stacked-bar' ||
+        chartType === 'stacked-column' ||
+        chartType === 'percent-bar' ||
+        chartType === 'percent-column'
+      ) {
+        const isHorizontal =
+          chartType === 'bar' || chartType === 'stacked-bar' || chartType === 'percent-bar';
+        const isStacked = chartType.startsWith('stacked-') || chartType.startsWith('percent-');
+        const isPercent = chartType.startsWith('percent-');
+        const isMultiSeries = seriesKeys.length > 1;
 
-   if (chartType === 'radar') {
-      return (
-         <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={chartData}>
-               <PolarGrid stroke="#e2e8f0" />
-               <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
-               <PolarRadiusAxis tick={{ fontSize: 10 }} />
-               <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
-               <Radar name="Valeur" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.6} />
-            </RadarChart>
-         </ResponsiveContainer>
-      );
-   }
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              layout={isHorizontal ? 'vertical' : 'horizontal'}
+              margin={{ top: 10, right: 10, left: 10, bottom: isHorizontal ? 25 : 35 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f1f5f9"
+                vertical={isHorizontal}
+                horizontal={!isHorizontal}
+              />
+              <XAxis
+                type={isHorizontal ? 'number' : 'category'}
+                dataKey={isHorizontal ? undefined : 'name'}
+                fontSize={10}
+                stroke="#94a3b8"
+                angle={isHorizontal ? 0 : -45}
+                textAnchor={isHorizontal ? 'middle' : 'end'}
+                height={isHorizontal ? 25 : 40}
+                hide={isPercent}
+                domain={isPercent ? [0, 100] : [0, 'auto']}
+              />
+              <YAxis
+                type={isHorizontal ? 'category' : 'number'}
+                dataKey={isHorizontal ? 'name' : undefined}
+                fontSize={10}
+                stroke="#94a3b8"
+                hide={!isHorizontal && isPercent}
+                domain={!isHorizontal && isPercent ? [0, 100] : [0, 'auto']}
+                width={isHorizontal ? 100 : 30}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '10px'
+                }}
+                formatter={(val: any) => (isPercent ? `${Number(val).toFixed(1)}%` : val)}
+              />
+              {(isMultiSeries || isStacked) && (
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  wrapperStyle={{ fontSize: '10px', bottom: 0 }}
+                />
+              )}
+              {isMultiSeries || isStacked ? (
+                seriesKeys.map((key, idx) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    name={displaySeriesNames[key] || key}
+                    fill={colors[idx % colors.length]}
+                    stackId={isStacked ? 'stack' : undefined}
+                    radius={!isStacked ? (isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]) : 0}
+                    isAnimationActive={false}
+                  />
+                ))
+              ) : (
+                <Bar
+                  dataKey={seriesKeys[0] || 'value'}
+                  name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]}
+                  fill={colors[0]}
+                  radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+                  isAnimationActive={false}
+                >
+                  {(chartData || []).map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  ))}
+                </Bar>
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      } else if (chartType === 'sunburst') {
+        const sbData = data.sunburstData;
+        const sunburstConfig = widget.config.pivotChart?.sunburstConfig;
+        const title = sunburstConfig?.title;
+        const rowFields = widget.config.pivotChart?.pivotConfig?.rowFields || [];
 
-   if (chartType === 'treemap') {
-      return (
-         <ResponsiveContainer width="100%" height="100%">
+        if (!sbData || !sbData.rings || sbData.rings.length === 0) {
+          return (
+            <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">
+              Aucune donnée hiérarchique
+            </div>
+          );
+        }
+
+        // Convert sunburst data to D3 hierarchy format
+        const d3HierarchyData = sunburstDataToD3Hierarchy(sbData);
+
+        if (!d3HierarchyData) {
+          return (
+            <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">
+              Erreur de conversion des données
+            </div>
+          );
+        }
+
+        return (
+          <div className="relative w-full h-full flex flex-col">
+            {title && (
+              <div className="text-center mb-1">
+                <h4 className="text-xs font-bold text-slate-800">{title}</h4>
+              </div>
+            )}
+            <div className="flex-1">
+              <SunburstD3
+                data={d3HierarchyData}
+                width={400}
+                height={400}
+                unit={unit || ''}
+                title={title}
+                rowFields={rowFields}
+                colors={colors}
+              />
+            </div>
+          </div>
+        );
+      } else if (chartType === 'treemap') {
+        // Utiliser les données hiérarchiques si disponibles
+        const treemapDisplayData = data.hierarchicalData || chartData;
+        return (
+          <ResponsiveContainer width="100%" height="100%">
             <Treemap
-               data={chartData}
-               dataKey="value"
-               stroke="#fff"
-               content={<TreemapContent colors={colors} />}
-            />
-         </ResponsiveContainer>
+              data={treemapDisplayData}
+              dataKey="size"
+              stroke="#fff"
+              content={<TreemapContent colors={colors} />}
+              isAnimationActive={false}
+            >
+              <Tooltip
+                content={({ active, payload }: any) => {
+                  if (!active || !payload || !payload.length) return null;
+                  const d = payload[0].payload;
+                  const path = d.path || [d.name];
+                  const value = d.value || d.size || 0;
+                  return (
+                    <div
+                      style={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        fontSize: '10px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <p style={{ fontWeight: 600, marginBottom: 2 }}>{path.join(' > ')}</p>
+                      <p>
+                        {value?.toLocaleString('fr-FR')} {unit || ''}
+                      </p>
+                    </div>
+                  );
+                }}
+              />
+            </Treemap>
+          </ResponsiveContainer>
+        );
+      } else if (chartType === 'radar') {
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+              <PolarGrid stroke="#e2e8f0" />
+              <PolarAngleAxis dataKey="name" tick={{ fontSize: 9 }} />
+              <PolarRadiusAxis tick={{ fontSize: 9 }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '10px'
+                }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{ fontSize: '10px', bottom: 0 }}
+              />
+              {seriesKeys.map((key, idx) => (
+                <Radar
+                  key={key}
+                  name={displaySeriesNames[key] || key}
+                  dataKey={key}
+                  stroke={colors[idx % colors.length]}
+                  fill={colors[idx % colors.length]}
+                  fillOpacity={0.6}
+                  isAnimationActive={false}
+                />
+              ))}
+            </RadarChart>
+          </ResponsiveContainer>
+        );
+      }
+    } catch (error) {
+      console.error('Erreur rendu graphique TCD:', error);
+      return (
+        <div className="flex items-center justify-center h-full text-red-500">Erreur de rendu</div>
       );
-   }
+    }
+  }
 
-   const isVertical = chartType === 'bar';
-   return (
+  if (widget.type === 'report') {
+    const items = data.items || [];
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1 h-full overflow-y-auto custom-scrollbar">
+        {items.map((item: any) => (
+          <div
+            key={item.id}
+            className="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+          >
+            <div className="mb-2">
+              <h5
+                className="text-xs font-black text-slate-400 uppercase tracking-wider mb-1 truncate"
+                title={item.label}
+              >
+                {item.label}
+              </h5>
+              <div className="h-0.5 w-6 bg-emerald-500 rounded-full"></div>
+            </div>
+            <div className="text-xl font-black text-slate-800 tracking-tight font-mono truncate">
+              {item.value}
+            </div>
+            <div className="mt-2 pt-2 border-t border-slate-200/50">
+              <p className="text-xs text-slate-400 italic truncate">
+                {item.rowPath[item.rowPath.length - 1]} | {item.colLabel}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (widget.type === 'text') {
+    const style = widget.config.textStyle || {};
+    const align = style.align || 'left';
+    const size = style.size === 'large' ? 'text-lg' : style.size === 'xl' ? 'text-2xl' : 'text-sm';
+    const color =
+      style.color === 'primary'
+        ? 'text-brand-600'
+        : style.color === 'muted'
+          ? 'text-slate-400'
+          : 'text-slate-800';
+    return (
+      <div
+        className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`}
+        style={{ textAlign: align }}
+      >
+        {widget.config.textContent || '...'}
+      </div>
+    );
+  }
+
+  const { unit } = data;
+  const handleChartClick = (e: any) => {
+    if (!e || !e.activePayload || !e.activePayload.length) return;
+    if (widget.config.dimension && e.activePayload[0].payload.name)
+      setDashboardFilter(widget.config.dimension, e.activePayload[0].payload.name);
+  };
+
+  if (widget.type === 'kpi') {
+    const { current, trend, progress, target } = data;
+    const isPositive = trend >= 0;
+    const style = widget.config.kpiStyle || 'simple';
+    const showTrend = widget.config.showTrend && !widget.config.secondarySource;
+
+    return (
+      <div className="flex flex-col h-full justify-center">
+        <div className="flex items-end gap-1.5 mb-1.5">
+          <span className="text-2xl font-bold text-slate-800">
+            {current.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+          </span>
+          <span className="text-sm text-slate-500 mb-1 font-medium">{unit}</span>
+        </div>
+        {style === 'progress' && target ? (
+          <div className="w-full space-y-1">
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Objectif</span>
+              <span>
+                {Math.round(progress)}% / {target.toLocaleString()}
+              </span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-brand-600'}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          (style === 'trend' || showTrend) && (
+            <div
+              className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}
+            >
+              {isPositive ? (
+                <TrendingUp className="w-3 h-3 mr-1" />
+              ) : (
+                <TrendingUp className="w-3 h-3 mr-1 transform rotate-180" />
+              )}
+              {Math.abs(trend).toFixed(1)}% vs préc.
+            </div>
+          )
+        )}
+        {widget.config.secondarySource && (
+          <div className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+            <LinkIcon className="w-3 h-3" /> Données croisées
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (widget.type === 'list') {
+    const { current, max } = data;
+    return (
+      <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
+        {current.map((item: any, idx: number) => (
+          <div
+            key={idx}
+            className="flex flex-col gap-0.5 cursor-pointer group"
+            onClick={() =>
+              widget.config.dimension && setDashboardFilter(widget.config.dimension, item.name)
+            }
+          >
+            <div className="flex justify-between text-xs group-hover:text-brand-600 transition-colors">
+              <span className="font-bold text-slate-800 truncate pr-2">
+                {idx + 1}. {item.name}
+              </span>
+              <span className="text-slate-500 font-mono">
+                {item.value.toLocaleString()} {unit}
+              </span>
+            </div>
+            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-brand-500 rounded-full opacity-80"
+                style={{ width: `${(item.value / max) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const chartData = data.data || [];
+  const { chartType, colorMode, colorPalette, singleColor, gradientStart, gradientEnd } =
+    widget.config;
+  const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
+  const tooltipStyle = {
+    backgroundColor: '#ffffff',
+    color: '#1e293b',
+    borderRadius: '6px',
+    border: 'none',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+  };
+
+  // Calculer les couleurs à utiliser
+  const colors = React.useMemo(() => {
+    const count = Math.max(chartData.length, 1);
+    if (colorMode === 'single') {
+      return Array(count).fill(singleColor || '#3b82f6');
+    } else if (colorMode === 'gradient') {
+      return generateGradient(gradientStart || '#3b82f6', gradientEnd || '#ef4444', count);
+    } else {
+      return getChartColors(count, colorPalette || 'default');
+    }
+  }, [chartData.length, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
+  if (chartType === 'radial') {
+    return (
       <ResponsiveContainer width="100%" height="100%">
-         <BarChart data={chartData} onClick={handleChartClick} layout={isVertical ? 'vertical' : 'horizontal'}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis type={isVertical ? 'number' : 'category'} dataKey={isVertical ? undefined : 'name'} fontSize={10} stroke="#94a3b8" />
-            <YAxis type={isVertical ? 'category' : 'number'} dataKey={isVertical ? 'name' : undefined} fontSize={10} stroke="#94a3b8" width={isVertical ? 80 : 30} />
-            <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-            <Bar dataKey="value" radius={isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0]} className="cursor-pointer">
-               {chartData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />)}
-            </Bar>
-         </BarChart>
+        <RadialBarChart
+          cx="50%"
+          cy="50%"
+          innerRadius="10%"
+          outerRadius="100%"
+          barSize={10}
+          data={chartData}
+        >
+          <RadialBar
+            background
+            dataKey="value"
+            cornerRadius={10}
+            onClick={handleChartClick}
+            className="cursor-pointer"
+          >
+            {chartData.map((entry: any, index: number) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </RadialBar>
+          <Legend
+            iconSize={10}
+            layout="vertical"
+            verticalAlign="middle"
+            wrapperStyle={{ fontSize: '10px' }}
+            align="right"
+          />
+          <Tooltip
+            formatter={tooltipFormatter}
+            cursor={{ fill: '#f8fafc' }}
+            contentStyle={tooltipStyle}
+          />
+        </RadialBarChart>
       </ResponsiveContainer>
-   );
+    );
+  }
+
+  if (chartType === 'pie' || chartType === 'donut') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            innerRadius={chartType === 'donut' ? 40 : 0}
+            outerRadius={60}
+            paddingAngle={2}
+            dataKey="value"
+            onClick={handleChartClick}
+            className="cursor-pointer"
+          >
+            {chartData.map((entry: any, index: number) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (chartType === 'line') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={chartData}
+          onClick={handleChartClick}
+          margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+          <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+          <YAxis fontSize={10} stroke="#94a3b8" />
+          <Tooltip
+            formatter={tooltipFormatter}
+            cursor={{ fill: '#f8fafc' }}
+            contentStyle={tooltipStyle}
+          />
+          <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={2} dot={{ r: 2 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (chartType === 'area' || chartType === 'stacked-area') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={chartData}
+          onClick={handleChartClick}
+          margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+          <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+          <YAxis fontSize={10} stroke="#94a3b8" />
+          <Tooltip
+            formatter={tooltipFormatter}
+            cursor={{ fill: '#f8fafc' }}
+            contentStyle={tooltipStyle}
+          />
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={colors[0]}
+            fill={colors[0]}
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (chartType === 'radar') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart data={chartData}>
+          <PolarGrid stroke="#e2e8f0" />
+          <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+          <PolarRadiusAxis tick={{ fontSize: 10 }} />
+          <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
+          <Radar
+            name="Valeur"
+            dataKey="value"
+            stroke={colors[0]}
+            fill={colors[0]}
+            fillOpacity={0.6}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (chartType === 'treemap') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <Treemap
+          data={chartData}
+          dataKey="value"
+          stroke="#fff"
+          content={<TreemapContent colors={colors} />}
+        />
+      </ResponsiveContainer>
+    );
+  }
+
+  const isVertical = chartType === 'bar';
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={chartData}
+        onClick={handleChartClick}
+        layout={isVertical ? 'vertical' : 'horizontal'}
+      >
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+        <XAxis
+          type={isVertical ? 'number' : 'category'}
+          dataKey={isVertical ? undefined : 'name'}
+          fontSize={10}
+          stroke="#94a3b8"
+        />
+        <YAxis
+          type={isVertical ? 'category' : 'number'}
+          dataKey={isVertical ? 'name' : undefined}
+          fontSize={10}
+          stroke="#94a3b8"
+          width={isVertical ? 80 : 30}
+        />
+        <Tooltip
+          formatter={tooltipFormatter}
+          cursor={{ fill: '#f8fafc' }}
+          contentStyle={tooltipStyle}
+        />
+        <Bar
+          dataKey="value"
+          radius={isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+          className="cursor-pointer"
+        >
+          {chartData.map((entry: any, index: number) => (
+            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
 });
 
 export const WidgetDisplay: React.FC<WidgetDisplayProps> = (props) => (

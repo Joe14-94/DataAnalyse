@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useWidgetData } from '../useWidgetData';
@@ -8,12 +7,17 @@ import { DashboardWidget } from '../../types';
 vi.mock('../../context/DataContext', () => ({
   useBatches: vi.fn(),
   useDatasets: vi.fn(),
-  useWidgets: vi.fn(),
+  useWidgets: vi.fn()
 }));
 
 describe('useWidgetData', () => {
   const mockDatasets = [
-    { id: 'ds1', name: 'Dataset 1', fields: ['Region', 'Amount'], fieldConfigs: { Amount: { type: 'number', unit: '€' } } }
+    {
+      id: 'ds1',
+      name: 'Dataset 1',
+      fields: ['Region', 'Amount'],
+      fieldConfigs: { Amount: { type: 'number', unit: '€' } }
+    }
   ];
 
   const mockBatches = [
@@ -57,7 +61,7 @@ describe('useWidgetData', () => {
 
     expect(result.current).toMatchObject({
       current: 2, // Latest batch (b2) has 2 rows
-      prev: 2,    // Previous batch (b1) has 2 rows
+      prev: 2, // Previous batch (b1) has 2 rows
       trend: 0
     });
   });
@@ -83,7 +87,7 @@ describe('useWidgetData', () => {
 
     expect(result.current).toMatchObject({
       current: 400, // 150 + 250
-      prev: 300,    // 100 + 200
+      prev: 300, // 100 + 200
       trend: ((400 - 300) / 300) * 100
     });
   });
@@ -105,11 +109,13 @@ describe('useWidgetData', () => {
     };
 
     // Only allow b1
-    const { result } = renderHook(() => useWidgetData(widget, { start: '2024-01-01', end: '2024-01-15' }));
+    const { result } = renderHook(() =>
+      useWidgetData(widget, { start: '2024-01-01', end: '2024-01-15' })
+    );
 
     expect(result.current).toMatchObject({
       current: 2,
-      prev: 0, // No previous batch in this range
+      prev: 0 // No previous batch in this range
     });
   });
 

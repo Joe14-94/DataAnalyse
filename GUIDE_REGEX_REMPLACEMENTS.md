@@ -7,11 +7,13 @@
 Pour remplacer plusieurs chaînes différentes, vous devez **imbriquer** plusieurs fonctions REMPLACER les unes dans les autres.
 
 **Syntaxe générale :**
+
 ```
 REMPLACER(REMPLACER(REMPLACER([Colonne], "ancien1", "nouveau1"), "ancien2", "nouveau2"), "ancien3", "nouveau3")
 ```
 
 **Comment ça marche :**
+
 1. Le REMPLACER le plus à l'intérieur s'exécute en premier
 2. Son résultat est passé au REMPLACER suivant
 3. Et ainsi de suite jusqu'au dernier REMPLACER
@@ -25,11 +27,13 @@ REMPLACER(REMPLACER(REMPLACER([Colonne], "ancien1", "nouveau1"), "ancien2", "nou
 **Objectif :** Traduire en anglais tous les statuts
 
 **Formule :**
+
 ```
 REMPLACER(REMPLACER(REMPLACER([Statut], "En cours", "Active"), "Terminé", "Done"), "Annulé", "Cancelled")
 ```
 
 **Étape par étape :**
+
 1. `REMPLACER([Statut], "En cours", "Active")` → Remplace "En cours" par "Active"
 2. Le résultat passe au suivant : `REMPLACER(résultat, "Terminé", "Done")` → Remplace "Terminé" par "Done"
 3. Le résultat passe au dernier : `REMPLACER(résultat, "Annulé", "Cancelled")` → Remplace "Annulé" par "Cancelled"
@@ -37,10 +41,10 @@ REMPLACER(REMPLACER(REMPLACER([Statut], "En cours", "Active"), "Terminé", "Done
 **Résultats :**
 | Statut original | Statut traduit |
 |----------------|----------------|
-| En cours       | Active         |
-| Terminé        | Done           |
-| Annulé         | Cancelled      |
-| En attente     | En attente     | (pas changé car non spécifié)
+| En cours | Active |
+| Terminé | Done |
+| Annulé | Cancelled |
+| En attente | En attente | (pas changé car non spécifié)
 
 ---
 
@@ -51,6 +55,7 @@ REMPLACER(REMPLACER(REMPLACER([Statut], "En cours", "Active"), "Terminé", "Done
 **Objectif :** Remplacer tous les séparateurs par des espaces
 
 **Formule :**
+
 ```
 REMPLACER(REMPLACER(REMPLACER([Code], "-", " "), "_", " "), "/", " ")
 ```
@@ -66,11 +71,13 @@ REMPLACER(REMPLACER(REMPLACER([Code], "-", " "), "_", " "), "/", " ")
 **Objectif :** Tout normaliser en "France"
 
 **Formule :**
+
 ```
 REMPLACER(REMPLACER(REMPLACER(CAPITALISEPREMIER([Pays]), "Fr", "France"), "Fra", "France"), "France", "France")
 ```
 
 Ou plus simplement avec des conditions :
+
 ```
 SI(CONTIENT(MAJUSCULE([Pays]), "FR"), "France", [Pays])
 ```
@@ -98,10 +105,12 @@ REMPLACER([Colonne], "pattern_regex", "remplacement")
 **Pattern :** `[0-9]+`
 
 **Signification :**
+
 - `[0-9]` = un chiffre de 0 à 9
 - `+` = un ou plusieurs
 
 **Formule :**
+
 ```
 REMPLACER([Code], "[0-9]+", "")
 ```
@@ -120,6 +129,7 @@ REMPLACER([Code], "[0-9]+", "")
 **Pattern :** ` ` (un espace simple) ou `\s` (tous types d'espaces)
 
 **Formule :**
+
 ```
 REMPLACER([Téléphone], " ", "")
 ```
@@ -137,11 +147,13 @@ REMPLACER([Téléphone], " ", "")
 **Pattern :** `[^a-zA-Z0-9 ]`
 
 **Signification :**
+
 - `[^...]` = tout **SAUF** ce qui est dans les crochets
 - `a-zA-Z0-9 ` = lettres minuscules, majuscules, chiffres et espaces
 - Donc : tout sauf lettres, chiffres et espaces
 
 **Formule :**
+
 ```
 REMPLACER([Texte], "[^a-zA-Z0-9 ]", "")
 ```
@@ -160,6 +172,7 @@ REMPLACER([Texte], "[^a-zA-Z0-9 ]", "")
 **Pattern :** `[^a-zA-Z]`
 
 **Formule :**
+
 ```
 REMPLACER([Nom], "[^a-zA-Z]", "")
 ```
@@ -178,12 +191,14 @@ REMPLACER([Nom], "[^a-zA-Z]", "")
 **Pattern :** `@.*`
 
 **Signification :**
+
 - `@` = le caractère arobase
 - `.` = n'importe quel caractère
 - `*` = zéro ou plusieurs fois
 - Donc : @ suivi de n'importe quoi
 
 **Formule :**
+
 ```
 REMPLACER([Email], "@.*", "@example.com")
 ```
@@ -201,6 +216,7 @@ REMPLACER([Email], "@.*", "@example.com")
 **Pattern :** ` +` (espace suivi de +)
 
 **Formule :**
+
 ```
 REMPLACER([Texte], " +", " ")
 ```
@@ -208,8 +224,8 @@ REMPLACER([Texte], " +", " ")
 **Exemples :**
 | Avant | Après |
 |-------|-------|
-| Hello  World | Hello World |
-| A    B    C | A B C |
+| Hello World | Hello World |
+| A B C | A B C |
 
 ---
 
@@ -218,9 +234,11 @@ REMPLACER([Texte], " +", " ")
 **Pattern :** `[-_]`
 
 **Signification :**
+
 - `[-_]` = soit un tiret, soit un underscore
 
 **Formule :**
+
 ```
 REMPLACER([Code], "[-_]", "")
 ```
@@ -239,10 +257,12 @@ REMPLACER([Code], "[-_]", "")
 **Pattern :** `[ \-_/]+`
 
 **Signification :**
+
 - `[ \-_/]` = espace, tiret, underscore ou slash
 - `+` = un ou plusieurs
 
 **Formule :**
+
 ```
 REMPLACER([Code], "[ \-_/]+", " ")
 ```
@@ -259,35 +279,35 @@ REMPLACER([Code], "[ \-_/]+", " ")
 
 ### Caractères spéciaux
 
-| Pattern | Signification | Exemple |
-|---------|---------------|---------|
-| `.` | N'importe quel caractère | `a.c` trouve "abc", "adc", "a1c" |
-| `*` | 0 ou plusieurs | `ab*` trouve "a", "ab", "abb" |
-| `+` | 1 ou plusieurs | `ab+` trouve "ab", "abb" (pas "a") |
-| `?` | 0 ou 1 | `ab?` trouve "a", "ab" |
-| `^` | Début de chaîne | `^Hello` trouve "Hello" en début |
-| `$` | Fin de chaîne | `World$` trouve "World" en fin |
+| Pattern | Signification            | Exemple                            |
+| ------- | ------------------------ | ---------------------------------- |
+| `.`     | N'importe quel caractère | `a.c` trouve "abc", "adc", "a1c"   |
+| `*`     | 0 ou plusieurs           | `ab*` trouve "a", "ab", "abb"      |
+| `+`     | 1 ou plusieurs           | `ab+` trouve "ab", "abb" (pas "a") |
+| `?`     | 0 ou 1                   | `ab?` trouve "a", "ab"             |
+| `^`     | Début de chaîne          | `^Hello` trouve "Hello" en début   |
+| `$`     | Fin de chaîne            | `World$` trouve "World" en fin     |
 
 ### Classes de caractères
 
-| Pattern | Signification | Équivalent |
-|---------|---------------|------------|
-| `[0-9]` | Un chiffre | `[0123456789]` |
-| `[a-z]` | Une lettre minuscule | - |
-| `[A-Z]` | Une lettre majuscule | - |
-| `[a-zA-Z]` | Une lettre (min ou maj) | - |
-| `[^0-9]` | Tout SAUF un chiffre | - |
-| `\d` | Un chiffre | `[0-9]` |
-| `\s` | Un espace blanc | `[ \t\n\r]` |
-| `\w` | Lettre, chiffre ou _ | `[a-zA-Z0-9_]` |
+| Pattern    | Signification           | Équivalent     |
+| ---------- | ----------------------- | -------------- |
+| `[0-9]`    | Un chiffre              | `[0123456789]` |
+| `[a-z]`    | Une lettre minuscule    | -              |
+| `[A-Z]`    | Une lettre majuscule    | -              |
+| `[a-zA-Z]` | Une lettre (min ou maj) | -              |
+| `[^0-9]`   | Tout SAUF un chiffre    | -              |
+| `\d`       | Un chiffre              | `[0-9]`        |
+| `\s`       | Un espace blanc         | `[ \t\n\r]`    |
+| `\w`       | Lettre, chiffre ou \_   | `[a-zA-Z0-9_]` |
 
 ### Quantificateurs
 
-| Pattern | Signification | Exemple |
-|---------|---------------|---------|
-| `{n}` | Exactement n fois | `[0-9]{3}` = 3 chiffres |
-| `{n,}` | Au moins n fois | `[0-9]{2,}` = 2 chiffres ou plus |
-| `{n,m}` | Entre n et m fois | `[0-9]{2,4}` = 2 à 4 chiffres |
+| Pattern | Signification     | Exemple                          |
+| ------- | ----------------- | -------------------------------- |
+| `{n}`   | Exactement n fois | `[0-9]{3}` = 3 chiffres          |
+| `{n,}`  | Au moins n fois   | `[0-9]{2,}` = 2 chiffres ou plus |
+| `{n,m}` | Entre n et m fois | `[0-9]{2,4}` = 2 à 4 chiffres    |
 
 ---
 
@@ -300,11 +320,13 @@ REMPLACER([Code], "[ \-_/]+", " ")
 **Colonne :** `Téléphone` = "06.12.34.56.78", "(01) 23 45 67 89"
 
 **Formule :**
+
 ```
 REMPLACER([Téléphone], "[ .\-()]", "")
 ```
 
 **Résultat :**
+
 - "06.12.34.56.78" → "0612345678"
 - "(01) 23 45 67 89" → "0123456789"
 
@@ -317,6 +339,7 @@ REMPLACER([Téléphone], "[ .\-()]", "")
 **Colonne :** `Code` = "ABC-123-DEF"
 
 **Formule :**
+
 ```
 REMPLACER([Code], "[^0-9]", "")
 ```
@@ -330,6 +353,7 @@ REMPLACER([Code], "[^0-9]", "")
 **Colonne :** `SIRET` = "123 456 789 00012"
 
 **Formule :**
+
 ```
 REMPLACER([SIRET], " ", "")
 ```
@@ -345,6 +369,7 @@ REMPLACER([SIRET], " ", "")
 **Colonne :** `URL` = "http://example.com"
 
 **Formule :**
+
 ```
 REMPLACER([URL], "^http://", "https://")
 ```
@@ -355,16 +380,17 @@ REMPLACER([URL], "^http://", "https://")
 
 ### Cas 5 : Masquer les emails
 
-**Objectif :** Remplacer le domaine par ***
+**Objectif :** Remplacer le domaine par \*\*\*
 
 **Colonne :** `Email` = "user@example.com"
 
 **Formule :**
+
 ```
 REMPLACER([Email], "@.*", "@***")
 ```
 
-**Résultat :** "user@***"
+**Résultat :** "user@\*\*\*"
 
 ---
 
@@ -375,6 +401,7 @@ REMPLACER([Email], "@.*", "@***")
 **Colonne :** `Texte` avec espaces/tabs/retours multiples
 
 **Formule :**
+
 ```
 REMPLACER([Texte], "[ \t\n\r]+", " ")
 ```
@@ -390,11 +417,13 @@ REMPLACER([Texte], "[ \t\n\r]+", " ")
 **Colonne :** `Code Postal` = "75001"
 
 **Formule (sans regex) :**
+
 ```
 GAUCHE([Code Postal], 2)
 ```
 
 **Formule (avec regex) :**
+
 ```
 REMPLACER([Code Postal], "^([0-9]{2}).*", "$1")
 ```
@@ -410,6 +439,7 @@ REMPLACER([Code Postal], "^([0-9]{2}).*", "$1")
 ```
 MAJUSCULE(REMPLACER([Nom], "[^a-zA-Z]", ""))
 ```
+
 - Supprime tous les caractères non-lettres
 - Puis convertit en majuscules
 
@@ -418,6 +448,7 @@ MAJUSCULE(REMPLACER([Nom], "[^a-zA-Z]", ""))
 ```
 SUPPRESPACE(REMPLACER(REMPLACER([Texte], "-", " "), "_", " "))
 ```
+
 - Remplace tirets et underscores par des espaces
 - Puis supprime les espaces de début/fin
 
@@ -426,6 +457,7 @@ SUPPRESPACE(REMPLACER(REMPLACER([Texte], "-", " "), "_", " "))
 ```
 SI(CONTIENT([Code], "-"), REMPLACER([Code], "-", ""), [Code])
 ```
+
 - Si le code contient un tiret, le remplace
 - Sinon, garde l'original
 
@@ -438,11 +470,13 @@ SI(CONTIENT([Code], "-"), REMPLACER([Code], "-", ""), [Code])
 Certains caractères ont un sens spécial en regex : `. * + ? ^ $ ( ) [ ] { } | \`
 
 **Mauvais :**
+
 ```
 REMPLACER([Texte], ".", "")  ← Supprime TOUS les caractères !
 ```
 
 **Correct :**
+
 ```
 REMPLACER([Texte], "\.", "")  ← Supprime uniquement les points
 ```
@@ -450,11 +484,13 @@ REMPLACER([Texte], "\.", "")  ← Supprime uniquement les points
 ### Erreur 2 : Confondre REMPLACER et SUBSTITUER
 
 **REMPLACER** supporte les regex :
+
 ```
 REMPLACER([Code], "[0-9]+", "")  ✅ Fonctionne
 ```
 
 **SUBSTITUER** ne supporte PAS les regex :
+
 ```
 SUBSTITUER([Code], "[0-9]+", "")  ❌ Cherche littéralement "[0-9]+"
 ```
@@ -462,11 +498,13 @@ SUBSTITUER([Code], "[0-9]+", "")  ❌ Cherche littéralement "[0-9]+"
 ### Erreur 3 : Pattern trop large
 
 **Trop large :**
+
 ```
 REMPLACER([Email], ".*@", "user@")  ← Remplace tout jusqu'au dernier @
 ```
 
 **Plus précis :**
+
 ```
 REMPLACER([Email], "^.*@", "user@")  ← Remplace seulement avant le premier @
 ```

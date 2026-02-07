@@ -42,7 +42,7 @@ export const db = {
         const batchStore = transaction.objectStore(BATCHES_STORE);
         const batches = data.batches as any[];
 
-        batches.forEach(b => {
+        batches.forEach((b) => {
           // Only save to batch store if it has rows (prevent redundant saves of metadata-only objects)
           if (b.rows) {
             batchStore.put(compressBatch(b), b.id);
@@ -57,7 +57,7 @@ export const db = {
       if (hasBatches) {
         stateToSave = {
           ...data,
-          batches: (data.batches as any[]).map(b => {
+          batches: (data.batches as any[]).map((b) => {
             const { rows, f, d, _c, ...meta } = b;
             return meta; // Only metadata stays in appState
           })
@@ -91,22 +91,24 @@ export const db = {
       const tx = database.transaction(BATCHES_STORE, 'readonly');
       const batchStore = tx.objectStore(BATCHES_STORE);
 
-      const fullBatches = await Promise.all(mainData.batches.map((meta: any) => {
-        return new Promise((res) => {
-          const req = batchStore.get(meta.id);
-          req.onsuccess = () => {
-            if (req.result) {
-              res(decompressBatch(req.result));
-            } else {
-              // Fallback for legacy data that might still be in the meta object
-              res(decompressBatch(meta));
-            }
-          };
-          req.onerror = () => res(decompressBatch(meta));
-        });
-      }));
+      const fullBatches = await Promise.all(
+        mainData.batches.map((meta: any) => {
+          return new Promise((res) => {
+            const req = batchStore.get(meta.id);
+            req.onsuccess = () => {
+              if (req.result) {
+                res(decompressBatch(req.result));
+              } else {
+                // Fallback for legacy data that might still be in the meta object
+                res(decompressBatch(meta));
+              }
+            };
+            req.onerror = () => res(decompressBatch(meta));
+          });
+        })
+      );
 
-      mainData.batches = fullBatches.filter(b => b && (b as any).rows);
+      mainData.batches = fullBatches.filter((b) => b && (b as any).rows);
     }
 
     return mainData;

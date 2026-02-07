@@ -1,6 +1,14 @@
-
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Palette, AlertCircle, Check, Info, MousePointerClick } from 'lucide-react';
+import {
+  X,
+  Plus,
+  Trash2,
+  Palette,
+  AlertCircle,
+  Check,
+  Info,
+  MousePointerClick
+} from 'lucide-react';
 import { PivotStyleRule, ConditionalFormattingRule, PivotMetric } from '../../types/pivot';
 import { Button } from '../ui/Button';
 
@@ -29,11 +37,21 @@ const COLORS = [
   { name: 'Jaune', value: '#fef9c3', text: '#854d0e' },
   { name: 'Orange', value: '#ffedd5', text: '#9a3412' },
   { name: 'Gris', value: '#f1f5f9', text: '#334155' },
-  { name: 'Noir', value: '#1e293b', text: '#ffffff' },
+  { name: 'Noir', value: '#1e293b', text: '#ffffff' }
 ];
 
 export const FormattingModal: React.FC<FormattingModalProps> = ({
-  isOpen, onClose, styleRules, setStyleRules, conditionalRules, setConditionalRules, metrics, rowFields, colFields, additionalLabels = [], onStartSelection
+  isOpen,
+  onClose,
+  styleRules,
+  setStyleRules,
+  conditionalRules,
+  setConditionalRules,
+  metrics,
+  rowFields,
+  colFields,
+  additionalLabels = [],
+  onStartSelection
 }) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'conditional'>('manual');
 
@@ -43,22 +61,24 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
     const newRule: PivotStyleRule = {
       id: Math.random().toString(36).substr(2, 9),
       targetType: 'metric',
-      targetKey: metrics[0]?.label || (metrics[0]?.field ? `${metrics[0].field} (${metrics[0].aggType})` : ''),
+      targetKey:
+        metrics[0]?.label ||
+        (metrics[0]?.field ? `${metrics[0].field} (${metrics[0].aggType})` : ''),
       style: { fontWeight: 'normal' }
     };
     setStyleRules([...styleRules, newRule]);
   };
 
   const removeStyleRule = (id: string) => {
-    setStyleRules(styleRules.filter(r => r.id !== id));
+    setStyleRules(styleRules.filter((r) => r.id !== id));
   };
 
   const updateStyleRule = (id: string, updates: Partial<PivotStyleRule>) => {
-    setStyleRules(styleRules.map(r => r.id === id ? { ...r, ...updates } : r));
+    setStyleRules(styleRules.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
   const updateStyle = (id: string, styleUpdates: any) => {
-    const rule = styleRules.find(r => r.id === id);
+    const rule = styleRules.find((r) => r.id === id);
     if (rule) {
       updateStyleRule(id, { style: { ...rule.style, ...styleUpdates } });
     }
@@ -75,32 +95,41 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
   };
 
   const removeConditionalRule = (id: string) => {
-    setConditionalRules(conditionalRules.filter(r => r.id !== id));
+    setConditionalRules(conditionalRules.filter((r) => r.id !== id));
   };
 
   const updateConditionalRule = (id: string, updates: Partial<ConditionalFormattingRule>) => {
-    setConditionalRules(conditionalRules.map(r => r.id === id ? { ...r, ...updates } : r));
+    setConditionalRules(conditionalRules.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
   const updateConditionalStyle = (id: string, styleUpdates: any) => {
-    const rule = conditionalRules.find(r => r.id === id);
+    const rule = conditionalRules.find((r) => r.id === id);
     if (rule) {
       updateConditionalRule(id, { style: { ...rule.style, ...styleUpdates } });
     }
   };
 
-  const metricLabels = [...metrics.map(m => m.label || `${m.field} (${m.aggType})`), ...additionalLabels];
+  const metricLabels = [
+    ...metrics.map((m) => m.label || `${m.field} (${m.aggType})`),
+    ...additionalLabels
+  ];
   const rowColLabels = [...rowFields, ...colFields];
 
   const SCOPE_OPTIONS = [
     { label: 'Toutes les cellules', value: 'all' },
     { label: 'Données uniquement', value: 'data' },
-    { label: 'Totaux uniquement', value: 'totals' },
+    { label: 'Totaux uniquement', value: 'totals' }
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -112,7 +141,10 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
               <p className="text-xs text-slate-500">Personnalisez l'apparence de vos données</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+          >
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
@@ -142,7 +174,11 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                   <Info className="w-4 h-4 text-brand-500" />
                   Règles de style fixes
                 </h4>
-                <Button onClick={addStyleRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                <Button
+                  onClick={addStyleRule}
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
                   <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
                 </Button>
               </div>
@@ -154,15 +190,23 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {styleRules.map(rule => (
-                    <div key={rule.id} className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col gap-4">
+                  {styleRules.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col gap-4"
+                    >
                       <div className="flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-500">Appliquer à:</span>
                           <select
                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
                             value={rule.targetType}
-                            onChange={(e) => updateStyleRule(rule.id, { targetType: e.target.value as any, targetKey: '' })}
+                            onChange={(e) =>
+                              updateStyleRule(rule.id, {
+                                targetType: e.target.value as any,
+                                targetKey: ''
+                              })
+                            }
                           >
                             <option value="metric">Métriques</option>
                             <option value="row">Lignes spécifiques</option>
@@ -176,9 +220,15 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                           <select
                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
                             value={rule.scope || 'all'}
-                            onChange={(e) => updateStyleRule(rule.id, { scope: e.target.value as any })}
+                            onChange={(e) =>
+                              updateStyleRule(rule.id, { scope: e.target.value as any })
+                            }
                           >
-                            {SCOPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            {SCOPE_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
@@ -188,10 +238,16 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                             <select
                               className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1"
                               value={rule.targetKey || ''}
-                              onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
+                              onChange={(e) =>
+                                updateStyleRule(rule.id, { targetKey: e.target.value })
+                              }
                             >
                               <option value="">Toutes les métriques</option>
-                              {metricLabels.map(m => <option key={m} value={m}>{m}</option>)}
+                              {metricLabels.map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
                             </select>
                           ) : rule.targetType === 'cell' ? (
                             <div className="flex-1 flex gap-2">
@@ -200,50 +256,65 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                                 className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1 font-mono"
                                 placeholder="Cliquez sur une cellule..."
                                 value={rule.targetKey || ''}
-                                onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
+                                onChange={(e) =>
+                                  updateStyleRule(rule.id, { targetKey: e.target.value })
+                                }
                                 readOnly
                               />
                               <Button
-                                  size="xs"
-                                  variant="outline"
-                                  onClick={() => onStartSelection?.(rule.id, 'style')}
-                                  className="shrink-0"
-                                  title="Sélectionner dans le TCD"
+                                size="xs"
+                                variant="outline"
+                                onClick={() => onStartSelection?.(rule.id, 'style')}
+                                className="shrink-0"
+                                title="Sélectionner dans le TCD"
                               >
-                                  <MousePointerClick className="w-3 h-3" />
+                                <MousePointerClick className="w-3 h-3" />
                               </Button>
                             </div>
                           ) : (
                             <div className="flex-1 flex gap-2">
-                                <select
-                                    className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-32"
-                                    value={rowColLabels.includes(rule.targetKey || '') ? rule.targetKey : ''}
-                                    onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
-                                >
-                                    <option value="">Liste...</option>
-                                    {rowColLabels.map(l => <option key={l} value={l}>{l}</option>)}
-                                </select>
-                                <Button
-                                    size="xs"
-                                    variant="outline"
-                                    onClick={() => onStartSelection?.(rule.id, 'style')}
-                                    className="shrink-0"
-                                    title="Sélectionner directement dans le TCD"
-                                >
-                                    <MousePointerClick className="w-3 h-3" />
-                                </Button>
-                                <input
-                                    type="text"
-                                    className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1"
-                                    placeholder="Ou saisir manuellement..."
-                                    value={rule.targetKey || ''}
-                                    onChange={(e) => updateStyleRule(rule.id, { targetKey: e.target.value })}
-                                />
+                              <select
+                                className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-32"
+                                value={
+                                  rowColLabels.includes(rule.targetKey || '') ? rule.targetKey : ''
+                                }
+                                onChange={(e) =>
+                                  updateStyleRule(rule.id, { targetKey: e.target.value })
+                                }
+                              >
+                                <option value="">Liste...</option>
+                                {rowColLabels.map((l) => (
+                                  <option key={l} value={l}>
+                                    {l}
+                                  </option>
+                                ))}
+                              </select>
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onClick={() => onStartSelection?.(rule.id, 'style')}
+                                className="shrink-0"
+                                title="Sélectionner directement dans le TCD"
+                              >
+                                <MousePointerClick className="w-3 h-3" />
+                              </Button>
+                              <input
+                                type="text"
+                                className="text-xs border border-slate-300 rounded px-2 py-1 bg-white flex-1"
+                                placeholder="Ou saisir manuellement..."
+                                value={rule.targetKey || ''}
+                                onChange={(e) =>
+                                  updateStyleRule(rule.id, { targetKey: e.target.value })
+                                }
+                              />
                             </div>
                           )}
                         </div>
 
-                        <button onClick={() => removeStyleRule(rule.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-auto">
+                        <button
+                          onClick={() => removeStyleRule(rule.id)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-auto"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -252,7 +323,11 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-500">Gras:</span>
                           <button
-                            onClick={() => updateStyle(rule.id, { fontWeight: rule.style.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                            onClick={() =>
+                              updateStyle(rule.id, {
+                                fontWeight: rule.style.fontWeight === 'bold' ? 'normal' : 'bold'
+                              })
+                            }
                             className={`p-1.5 rounded border transition-all ${rule.style.fontWeight === 'bold' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
                           >
                             B
@@ -261,7 +336,11 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-500">Italique:</span>
                           <button
-                            onClick={() => updateStyle(rule.id, { fontStyle: rule.style.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                            onClick={() =>
+                              updateStyle(rule.id, {
+                                fontStyle: rule.style.fontStyle === 'italic' ? 'normal' : 'italic'
+                              })
+                            }
                             className={`p-1.5 rounded border transition-all ${rule.style.fontStyle === 'italic' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
                           >
                             I
@@ -271,10 +350,15 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-bold text-slate-500">Couleurs:</span>
                           <div className="flex gap-1 flex-wrap max-w-[200px]">
-                            {COLORS.map(c => (
+                            {COLORS.map((c) => (
                               <button
                                 key={c.value}
-                                onClick={() => updateStyle(rule.id, { backgroundColor: c.value, textColor: c.text })}
+                                onClick={() =>
+                                  updateStyle(rule.id, {
+                                    backgroundColor: c.value,
+                                    textColor: c.text
+                                  })
+                                }
                                 className="w-6 h-6 rounded-full border border-slate-200 shadow-sm relative overflow-hidden"
                                 style={{ backgroundColor: c.value }}
                                 title={c.name}
@@ -290,15 +374,20 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                         </div>
 
                         <div className="flex-1 flex justify-end items-center gap-4">
-                           <span className="text-xs font-bold text-slate-400 uppercase">Aperçu :</span>
-                           <div className="px-3 py-1 border rounded min-w-[100px] text-center text-sm" style={{
-                             backgroundColor: rule.style.backgroundColor || 'transparent',
-                             color: rule.style.textColor || 'inherit',
-                             fontWeight: rule.style.fontWeight || 'normal',
-                             fontStyle: rule.style.fontStyle || 'normal'
-                           }}>
-                             1 234,56 €
-                           </div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">
+                            Aperçu :
+                          </span>
+                          <div
+                            className="px-3 py-1 border rounded min-w-[100px] text-center text-sm"
+                            style={{
+                              backgroundColor: rule.style.backgroundColor || 'transparent',
+                              color: rule.style.textColor || 'inherit',
+                              fontWeight: rule.style.fontWeight || 'normal',
+                              fontStyle: rule.style.fontStyle || 'normal'
+                            }}
+                          >
+                            1 234,56 €
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -313,7 +402,11 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                   <AlertCircle className="w-4 h-4 text-amber-500" />
                   Règles basées sur les valeurs
                 </h4>
-                <Button onClick={addConditionalRule} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                <Button
+                  onClick={addConditionalRule}
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
                   <Plus className="w-4 h-4 mr-2" /> Ajouter une règle
                 </Button>
               </div>
@@ -321,22 +414,35 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
               {conditionalRules.length === 0 ? (
                 <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
                   <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm text-slate-500">Aucune règle de mise en forme conditionnelle</p>
+                  <p className="text-sm text-slate-500">
+                    Aucune règle de mise en forme conditionnelle
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {conditionalRules.map(rule => (
-                    <div key={rule.id} className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col gap-4">
+                  {conditionalRules.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col gap-4"
+                    >
                       <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-500">Si:</span>
                           <select
                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
                             value={rule.metricLabel || ''}
-                            onChange={(e) => updateConditionalRule(rule.id, { metricLabel: e.target.value || undefined })}
+                            onChange={(e) =>
+                              updateConditionalRule(rule.id, {
+                                metricLabel: e.target.value || undefined
+                              })
+                            }
                           >
                             <option value="">Toutes les métriques</option>
-                            {metricLabels.map(m => <option key={m} value={m}>{m}</option>)}
+                            {metricLabels.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
@@ -345,82 +451,114 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
                           <select
                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
                             value={rule.scope || 'all'}
-                            onChange={(e) => updateConditionalRule(rule.id, { scope: e.target.value as any })}
+                            onChange={(e) =>
+                              updateConditionalRule(rule.id, { scope: e.target.value as any })
+                            }
                           >
-                            {SCOPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            {SCOPE_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
                         <div className="flex items-center gap-2">
-                           <span className="text-xs font-bold text-slate-500">est:</span>
-                           <select
-                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
-                             value={rule.operator}
-                             onChange={(e) => updateConditionalRule(rule.id, { operator: e.target.value as any })}
-                           >
-                             <option value="gt">&gt;</option>
-                             <option value="lt">&lt;</option>
-                             <option value="eq">=</option>
-                             <option value="between">Entre</option>
-                             <option value="contains">Contient</option>
-                           </select>
+                          <span className="text-xs font-bold text-slate-500">est:</span>
+                          <select
+                            className="text-xs border border-slate-300 rounded px-2 py-1 bg-white"
+                            value={rule.operator}
+                            onChange={(e) =>
+                              updateConditionalRule(rule.id, { operator: e.target.value as any })
+                            }
+                          >
+                            <option value="gt">&gt;</option>
+                            <option value="lt">&lt;</option>
+                            <option value="eq">=</option>
+                            <option value="between">Entre</option>
+                            <option value="contains">Contient</option>
+                          </select>
                         </div>
 
                         <div className="flex items-center gap-2">
-                           <input
-                             type={rule.operator === 'contains' ? 'text' : 'number'}
-                             className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-20"
-                             value={rule.value}
-                             onChange={(e) => updateConditionalRule(rule.id, { value: rule.operator === 'contains' ? e.target.value : parseFloat(e.target.value) })}
-                           />
-                           {rule.operator === 'between' && (
-                             <>
-                               <span className="text-xs text-slate-500">et</span>
-                               <input
-                                 type="number"
-                                 className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-20"
-                                 value={rule.value2 || 0}
-                                 onChange={(e) => updateConditionalRule(rule.id, { value2: parseFloat(e.target.value) })}
-                               />
-                             </>
-                           )}
+                          <input
+                            type={rule.operator === 'contains' ? 'text' : 'number'}
+                            className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-20"
+                            value={rule.value}
+                            onChange={(e) =>
+                              updateConditionalRule(rule.id, {
+                                value:
+                                  rule.operator === 'contains'
+                                    ? e.target.value
+                                    : parseFloat(e.target.value)
+                              })
+                            }
+                          />
+                          {rule.operator === 'between' && (
+                            <>
+                              <span className="text-xs text-slate-500">et</span>
+                              <input
+                                type="number"
+                                className="text-xs border border-slate-300 rounded px-2 py-1 bg-white w-20"
+                                value={rule.value2 || 0}
+                                onChange={(e) =>
+                                  updateConditionalRule(rule.id, {
+                                    value2: parseFloat(e.target.value)
+                                  })
+                                }
+                              />
+                            </>
+                          )}
                         </div>
 
-                        <button onClick={() => removeConditionalRule(rule.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-auto">
+                        <button
+                          onClick={() => removeConditionalRule(rule.id)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-auto"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
 
                       <div className="flex items-center justify-between border-t border-slate-100 pt-4 flex-wrap gap-4">
                         <div className="flex items-center gap-3">
-                           <span className="text-xs font-bold text-slate-500">Alors appliquer:</span>
-                           <div className="flex gap-1">
-                             {COLORS.map(c => (
-                               <button
-                                 key={c.value}
-                                 onClick={() => updateConditionalStyle(rule.id, { backgroundColor: c.value, textColor: c.text })}
-                                 className="w-6 h-6 rounded border border-slate-200 shadow-sm relative overflow-hidden"
-                                 style={{ backgroundColor: c.value }}
-                                 title={c.name}
-                               >
-                                 {rule.style.backgroundColor === c.value && (
-                                   <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                                     <Check className="w-3 h-3 text-indigo-600" />
-                                   </div>
-                                 )}
-                               </button>
-                             ))}
-                           </div>
+                          <span className="text-xs font-bold text-slate-500">Alors appliquer:</span>
+                          <div className="flex gap-1">
+                            {COLORS.map((c) => (
+                              <button
+                                key={c.value}
+                                onClick={() =>
+                                  updateConditionalStyle(rule.id, {
+                                    backgroundColor: c.value,
+                                    textColor: c.text
+                                  })
+                                }
+                                className="w-6 h-6 rounded border border-slate-200 shadow-sm relative overflow-hidden"
+                                style={{ backgroundColor: c.value }}
+                                title={c.name}
+                              >
+                                {rule.style.backgroundColor === c.value && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                    <Check className="w-3 h-3 text-indigo-600" />
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-4">
-                           <span className="text-xs font-bold text-slate-400 uppercase">Aperçu :</span>
-                           <div className="px-3 py-1 border rounded min-w-[100px] text-center text-sm font-bold" style={{
-                             backgroundColor: rule.style.backgroundColor || 'transparent',
-                             color: rule.style.textColor || 'inherit',
-                           }}>
-                             1 234,56 €
-                           </div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">
+                            Aperçu :
+                          </span>
+                          <div
+                            className="px-3 py-1 border rounded min-w-[100px] text-center text-sm font-bold"
+                            style={{
+                              backgroundColor: rule.style.backgroundColor || 'transparent',
+                              color: rule.style.textColor || 'inherit'
+                            }}
+                          >
+                            1 234,56 €
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -433,8 +571,12 @@ export const FormattingModal: React.FC<FormattingModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
-          <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700">Enregistrer les règles</Button>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700">
+            Enregistrer les règles
+          </Button>
         </div>
       </div>
     </div>

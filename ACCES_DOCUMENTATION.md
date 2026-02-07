@@ -58,6 +58,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 ### 1️⃣ Toutes les fonctions
 
 **Contenu :**
+
 - **22 fonctions** organisées par catégories :
   - 🔵 **Logique & Math** : SI, SOMME, MOYENNE, ARRONDI, MIN, MAX, ABS
   - 🟢 **Transformation de texte** : CONCAT, MAJUSCULE, MINUSCULE, CAPITALISEPREMIER, CAPITALISEMOTS
@@ -65,11 +66,13 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
   - 🟡 **Extraction** : EXTRAIRE, GAUCHE, DROITE, LONGUEUR, SUPPRESPACE
 
 **Pour chaque fonction :**
+
 - ✅ Syntaxe complète
 - ✅ Description détaillée
 - ✅ Exemple concret d'utilisation
 
 **Exemple d'affichage :**
+
 ```
 ┌────────────────────────────────────────┐
 │  CONCAT                                 │
@@ -85,6 +88,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 ### 2️⃣ Regex & Remplacements
 
 **Contenu :**
+
 - **8 patterns regex** les plus utiles avec exemples :
   - `[0-9]+` : Supprimer tous les chiffres
   - `[^a-zA-Z0-9 ]` : Supprimer caractères spéciaux
@@ -105,6 +109,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
   - Exemples étape par étape
 
 **Exemple d'affichage :**
+
 ```
 ┌────────────────────────────────────────┐
 │  Pattern : [0-9]+                      │
@@ -120,6 +125,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 ### 3️⃣ Exemples pratiques
 
 **Contenu :**
+
 - **8 exemples concrets** prêts à copier :
   1. Formater un nom complet
   2. Nettoyer un numéro de téléphone
@@ -131,12 +137,14 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
   8. Formater un code postal
 
 **Pour chaque exemple :**
+
 - ✅ Formule complète
 - ✅ Données d'exemple
 - ✅ Résultat attendu
 - ✅ Explication détaillée
 
 **Exemple d'affichage :**
+
 ```
 ┌────────────────────────────────────────┐
 │  Formater un nom complet               │
@@ -161,6 +169,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 ### 4️⃣ Cas d'usage avancés
 
 **Contenu :**
+
 - **6 formules complexes** avec explications détaillées :
   1. Nettoyage complet de données
   2. Validation et formatage conditionnel
@@ -170,12 +179,14 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
   6. Normalisation multi-sources
 
 **Pour chaque cas :**
+
 - ✅ Formule complète
 - ✅ Explication du fonctionnement
 - ✅ Étapes détaillées numérotées
 - ✅ Bonnes pratiques
 
 **Exemple d'affichage :**
+
 ```
 ┌────────────────────────────────────────┐
 │  Nettoyage complet de données          │
@@ -236,16 +247,19 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 ## 🚀 Avantages de la documentation intégrée
 
 ### ✅ Accessible instantanément
+
 - Pas besoin de quitter l'application
 - Pas de fichiers à télécharger ou ouvrir
 - Documentation toujours à jour avec le code
 
 ### ✅ Interactive
+
 - Navigation par onglets pour trouver rapidement
 - Exemples copiables directement
 - Code coloré pour une meilleure compréhension
 
 ### ✅ Complète
+
 - 22 fonctions documentées
 - 8 patterns regex expliqués
 - 8 exemples pratiques
@@ -253,6 +267,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 - Bonnes pratiques incluses
 
 ### ✅ Contextuelle
+
 - S'ouvre depuis la modale de création
 - Reste accessible pendant que vous travaillez
 - Ferme automatiquement quand vous avez terminé
@@ -302,6 +317,7 @@ Quand vous cliquez sur "Voir la documentation complète", un modal s'ouvre avec 
 ### Accès rapide aux exemples
 
 Si vous savez déjà ce que vous voulez faire :
+
 1. Ouvrez la modale
 2. Scrollez jusqu'à "Exemples d'utilisation"
 3. Dépliez la section
@@ -310,6 +326,7 @@ Si vous savez déjà ce que vous voulez faire :
 ### Pour une référence rapide
 
 Si vous connaissez le nom de la fonction :
+
 1. Ouvrez la "Documentation complète"
 2. Allez dans "Toutes les fonctions"
 3. Trouvez votre fonction par catégorie
@@ -320,15 +337,19 @@ Si vous connaissez le nom de la fonction :
 ## 💡 Astuces
 
 ### ✅ Utilisez l'aperçu en temps réel
+
 La modale affiche toujours un aperçu du résultat calculé sur la première ligne. C'est le meilleur moyen de vérifier votre formule !
 
 ### ✅ Construisez progressivement
+
 Pour les formules complexes, testez chaque partie séparément avant de tout combiner.
 
 ### ✅ Consultez les exemples avancés
+
 L'onglet "Cas d'usage avancés" contient des techniques puissantes expliquées étape par étape.
 
 ### ✅ Gardez la documentation ouverte
+
 Vous pouvez garder le modal de documentation ouvert pendant que vous travaillez sur votre formule.
 
 ---

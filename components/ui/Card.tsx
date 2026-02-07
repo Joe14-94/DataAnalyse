@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface CardProps {
@@ -10,9 +9,18 @@ interface CardProps {
   noPadding?: boolean;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '', title, icon, action, noPadding = false }) => {
+export const Card: React.FC<CardProps> = ({
+  children,
+  className = '',
+  title,
+  icon,
+  action,
+  noPadding = false
+}) => {
   return (
-    <div className={`bg-surface rounded-[var(--card-radius)] border border-border-default shadow-[var(--card-shadow)] ${className}`}>
+    <div
+      className={`bg-surface rounded-[var(--card-radius)] border border-border-default shadow-[var(--card-shadow)] ${className}`}
+    >
       {(title || action || icon) && (
         <div className="px-6 py-4 border-b border-border-default flex justify-between items-center bg-canvas/30">
           <div className="flex items-center gap-2">
@@ -26,9 +34,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, ico
           {action && <div>{action}</div>}
         </div>
       )}
-      <div className={noPadding ? '' : 'p-6'}>
-        {children}
-      </div>
+      <div className={noPadding ? '' : 'p-6'}>{children}</div>
     </div>
   );
 };

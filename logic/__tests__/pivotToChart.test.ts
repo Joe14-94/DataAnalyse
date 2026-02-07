@@ -73,11 +73,46 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
   const hierarchicalPivotResult: PivotResult = {
     colHeaders: [],
     displayRows: [
-      { type: 'data', keys: ['Nord', 'Produit A'], level: 1, label: 'Produit A', metrics: {}, rowTotal: 50 },
-      { type: 'data', keys: ['Nord', 'Produit B'], level: 1, label: 'Produit B', metrics: {}, rowTotal: 50 },
-      { type: 'subtotal', keys: ['Nord'], level: 0, label: 'Nord Total', metrics: {}, rowTotal: 100 },
-      { type: 'data', keys: ['Sud', 'Produit A'], level: 1, label: 'Produit A', metrics: {}, rowTotal: 75 },
-      { type: 'data', keys: ['Sud', 'Produit B'], level: 1, label: 'Produit B', metrics: {}, rowTotal: 75 },
+      {
+        type: 'data',
+        keys: ['Nord', 'Produit A'],
+        level: 1,
+        label: 'Produit A',
+        metrics: {},
+        rowTotal: 50
+      },
+      {
+        type: 'data',
+        keys: ['Nord', 'Produit B'],
+        level: 1,
+        label: 'Produit B',
+        metrics: {},
+        rowTotal: 50
+      },
+      {
+        type: 'subtotal',
+        keys: ['Nord'],
+        level: 0,
+        label: 'Nord Total',
+        metrics: {},
+        rowTotal: 100
+      },
+      {
+        type: 'data',
+        keys: ['Sud', 'Produit A'],
+        level: 1,
+        label: 'Produit A',
+        metrics: {},
+        rowTotal: 75
+      },
+      {
+        type: 'data',
+        keys: ['Sud', 'Produit B'],
+        level: 1,
+        label: 'Produit B',
+        metrics: {},
+        rowTotal: 75
+      },
       { type: 'subtotal', keys: ['Sud'], level: 0, label: 'Sud Total', metrics: {}, rowTotal: 150 }
     ],
     colTotals: {},
@@ -214,15 +249,19 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
     });
 
     it('devrait exclure les sous-totaux par défaut', () => {
-      const chartData = transformPivotToChartData(hierarchicalPivotResult, hierarchicalPivotConfig, {
-        chartType: 'column',
-        excludeSubtotals: true,
-        sortBy: 'none',
-        sortOrder: 'desc'
-      });
+      const chartData = transformPivotToChartData(
+        hierarchicalPivotResult,
+        hierarchicalPivotConfig,
+        {
+          chartType: 'column',
+          excludeSubtotals: true,
+          sortBy: 'none',
+          sortOrder: 'desc'
+        }
+      );
 
       // Ne devrait inclure que les lignes de type 'data', pas les 'subtotal'
-      expect(chartData.every(d => !d.name.includes('Total'))).toBe(true);
+      expect(chartData.every((d) => !d.name.includes('Total'))).toBe(true);
       expect(chartData).toHaveLength(4);
     });
 
@@ -280,7 +319,10 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
 
   describe('Transformation vers Treemap', () => {
     it('devrait transformer correctement un TCD hiérarchique en Treemap', () => {
-      const treemapData = transformPivotToTreemapData(hierarchicalPivotResult, hierarchicalPivotConfig);
+      const treemapData = transformPivotToTreemapData(
+        hierarchicalPivotResult,
+        hierarchicalPivotConfig
+      );
 
       expect(treemapData).toBeDefined();
       expect(Array.isArray(treemapData)).toBe(true);
@@ -288,9 +330,12 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
     });
 
     it('devrait inclure les propriétés name et size pour chaque noeud', () => {
-      const treemapData = transformPivotToTreemapData(hierarchicalPivotResult, hierarchicalPivotConfig);
+      const treemapData = transformPivotToTreemapData(
+        hierarchicalPivotResult,
+        hierarchicalPivotConfig
+      );
 
-      treemapData.forEach(node => {
+      treemapData.forEach((node) => {
         expect(node).toHaveProperty('name');
         if (node.children) {
           node.children.forEach((child: any) => {
@@ -370,7 +415,7 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
       const colors = getChartColors(5);
       const hexPattern = /^#[0-9A-Fa-f]{6}$/;
 
-      colors.forEach(color => {
+      colors.forEach((color) => {
         expect(hexPattern.test(color)).toBe(true);
       });
     });
@@ -399,7 +444,7 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
       expect(formatted).toBe('123,46');
     });
 
-    it('devrait appliquer l\'échelle d\'affichage (milliers)', () => {
+    it("devrait appliquer l'échelle d'affichage (milliers)", () => {
       const config: PivotConfig = {
         ...simplePivotConfig,
         valFormatting: {
@@ -411,7 +456,7 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
       expect(formatted).toBe('123,5');
     });
 
-    it('devrait appliquer l\'échelle d\'affichage (millions)', () => {
+    it("devrait appliquer l'échelle d'affichage (millions)", () => {
       const config: PivotConfig = {
         ...simplePivotConfig,
         valFormatting: {
@@ -423,7 +468,7 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
       expect(formatted).toBe('12,35');
     });
 
-    it('devrait ajouter l\'unité configurée', () => {
+    it("devrait ajouter l'unité configurée", () => {
       const config: PivotConfig = {
         ...simplePivotConfig,
         valFormatting: {
@@ -445,11 +490,19 @@ describe('Transformation Pivot vers Graphiques - Tests de Fiabilité', () => {
   describe('Configuration des types de graphiques', () => {
     it('devrait retourner les configurations pour tous les types de graphiques', () => {
       const chartTypes: ChartType[] = [
-        'bar', 'column', 'line', 'area', 'pie', 'donut',
-        'stacked-bar', 'stacked-area', 'radar', 'treemap'
+        'bar',
+        'column',
+        'line',
+        'area',
+        'pie',
+        'donut',
+        'stacked-bar',
+        'stacked-area',
+        'radar',
+        'treemap'
       ];
 
-      chartTypes.forEach(type => {
+      chartTypes.forEach((type) => {
         const config = getChartTypeConfig(type);
         expect(config).toHaveProperty('label');
         expect(config).toHaveProperty('description');

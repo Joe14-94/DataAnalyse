@@ -17,14 +17,21 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "./*.ts", 
-    "./*.tsx", 
-    "./pages/**/*.tsx", 
-    "./components/**/*.tsx", 
-    "./context/**/*.tsx", 
+    "./*.ts",
+    "./*.tsx",
+    "./pages/**/*.tsx",
+    "./components/**/*.tsx",
+    "./context/**/*.tsx",
     "./logic/**/*.ts",
     "./hooks/**/*.ts",
     "./utils/**/*.ts"
   ],
-  "exclude": ["node_modules", "src", "vitest.config.ts", "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"]
+  "exclude": [
+    "node_modules",
+    "src",
+    "vitest.config.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**"
+  ]
 }

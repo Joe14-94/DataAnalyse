@@ -1,12 +1,31 @@
-
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign, TrendingUp, Workflow } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Upload,
+  History,
+  Settings,
+  Database,
+  PieChart,
+  ChevronDown,
+  Plus,
+  Table2,
+  HardDrive,
+  ArrowDownWideNarrow,
+  HelpCircle,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  Palette,
+  DollarSign,
+  TrendingUp,
+  Workflow
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
 import { Badge } from './ui/Badge';
 import { Text } from './ui/Typography';
-import { OnboardingTour } from './OnboardingTour';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,13 +47,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Données', icon: Table2, path: '/data', id: 'tour-nav-data' },
     { name: 'Importation', icon: Upload, path: '/import', id: 'tour-nav-import' },
     { name: "Studio d'Analyse", icon: PieChart, path: '/analytics', id: 'tour-nav-analytics' },
-    { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot' },
-    { name: 'Budgets', icon: DollarSign, path: '/budget' },
-    { name: 'Forecasts', icon: TrendingUp, path: '/forecast' },
-    { name: 'Pipeline ETL', icon: Workflow, path: '/etl' },
-    { name: 'Personnalisation', icon: Palette, path: '/customization' },
-    { name: 'Paramètres', icon: Settings, path: '/settings' },
-    { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
+    { name: 'TCD', icon: ArrowDownWideNarrow, path: '/pivot', id: 'tour-nav-pivot' },
+    { name: 'Budgets', icon: DollarSign, path: '/budget', id: 'tour-nav-budget' },
+    { name: 'Forecasts', icon: TrendingUp, path: '/forecast', id: 'tour-nav-forecast' },
+    { name: 'Pipeline ETL', icon: Workflow, path: '/etl', id: 'tour-nav-etl' },
+    { name: 'Personnalisation', icon: Palette, path: '/customization', id: 'tour-nav-custom' },
+    { name: 'Paramètres', icon: Settings, path: '/settings', id: 'tour-nav-settings' },
+    { name: 'Aide et informations', icon: HelpCircle, path: '/help', id: 'tour-nav-help' }
   ];
 
   // Calculate Storage Usage
@@ -50,7 +69,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             setStoragePercent(percent);
           }
         } catch (e) {
-          console.warn("Storage estimate failed", e);
+          console.warn('Storage estimate failed', e);
         }
       }
     };
@@ -78,8 +97,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="h-screen w-screen bg-canvas flex flex-col md:flex-row overflow-hidden text-txt-main font-sans">
-      <OnboardingTour />
-
       {/* Sidebar */}
       <aside
         style={{ width: isCollapsed ? undefined : 'var(--app-sidebar-width)' }}
@@ -100,7 +117,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="p-1.5 bg-brand-600 rounded-md text-white shrink-0">
                   <Database size={16} />
                 </div>
-                {!isCollapsed && <span className="whitespace-nowrap tracking-tight text-lg">DataScope</span>}
+                {!isCollapsed && (
+                  <span className="whitespace-nowrap tracking-tight text-lg">DataScope</span>
+                )}
               </>
             )}
           </div>
@@ -108,8 +127,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden md:flex absolute top-4 -right-3 bg-surface border border-border-default rounded-full p-0.5 shadow-sm text-txt-muted hover:text-brand-600 z-30"
-            aria-label={isCollapsed ? "Agrandir la barre latérale" : "Réduire la barre latérale"}
-            title={isCollapsed ? "Agrandir" : "Réduire"}
+            aria-label={isCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+            title={isCollapsed ? 'Agrandir' : 'Réduire'}
           >
             {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
           </button>
@@ -126,9 +145,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 to={item.path}
                 title={isCollapsed ? item.name : ''}
                 className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap
-                  ${isActive
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
+                  ${
+                    isActive
+                      ? 'bg-brand-50 text-brand-700'
+                      : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
                   }
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
@@ -140,7 +160,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
 
-        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
+        <div
+          className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}
+        >
           <button
             onClick={handleQuickSave}
             className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-1.5 rounded transition-colors
@@ -150,7 +172,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             aria-label="Sauvegarde rapide"
           >
             <Save className={`${isCollapsed ? 'w-3.5 h-3.5' : 'w-3 h-3'}`} />
-            {!isCollapsed && "Sauvegarde"}
+            {!isCollapsed && 'Sauvegarde'}
           </button>
 
           {!isCollapsed && (
@@ -160,7 +182,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <HardDrive size={10} />
                   <span>Disque : {storageUsed}</span>
                 </div>
-                {storagePercent > 0 && <span className={storagePercent > 90 ? "text-red-600 font-bold" : ""}>{Math.round(storagePercent)}%</span>}
+                {storagePercent > 0 && (
+                  <span className={storagePercent > 90 ? 'text-red-600 font-bold' : ''}>
+                    {Math.round(storagePercent)}%
+                  </span>
+                )}
               </div>
               {storagePercent > 0 && (
                 <div className="w-full bg-border-default rounded-full h-1 overflow-hidden">
@@ -172,14 +198,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               )}
             </div>
           )}
-
         </div>
       </aside>
 
       <main className="flex-1 h-full relative overflow-hidden bg-canvas">
         {children}
         <div className="absolute bottom-1 right-2 text-xs text-slate-400 pointer-events-none z-[60] font-medium bg-white/50 px-1 rounded shadow-sm">
-           v{APP_VERSION} | 01/02/2026
+          v{APP_VERSION} | 01/02/2026
         </div>
       </main>
     </div>

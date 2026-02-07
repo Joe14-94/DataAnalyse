@@ -1,4 +1,3 @@
-
 import { DataRow } from './common';
 
 export type TransformationType =

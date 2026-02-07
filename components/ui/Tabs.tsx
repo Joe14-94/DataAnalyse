@@ -7,7 +7,10 @@ interface TabsContextType {
 
 const TabsContext = createContext<TabsContextType | undefined>(undefined);
 
-export const Tabs: React.FC<{ defaultValue: string; children: React.ReactNode }> = ({ defaultValue, children }) => {
+export const Tabs: React.FC<{ defaultValue: string; children: React.ReactNode }> = ({
+  defaultValue,
+  children
+}) => {
   const [activeTab, setActiveTab] = useState(defaultValue);
   return (
     <TabsContext.Provider value={{ activeTab, setActiveTab }}>
@@ -16,16 +19,20 @@ export const Tabs: React.FC<{ defaultValue: string; children: React.ReactNode }>
   );
 };
 
-export const TabsList: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => {
+export const TabsList: React.FC<{ className?: string; children: React.ReactNode }> = ({
+  className = '',
+  children
+}) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const list = e.currentTarget;
     const triggers = Array.from(list.querySelectorAll('[role="tab"]')) as HTMLElement[];
-    const currentIndex = triggers.findIndex(t => t === document.activeElement);
+    const currentIndex = triggers.findIndex((t) => t === document.activeElement);
     if (currentIndex === -1) return;
 
     let nextIndex = -1;
     if (e.key === 'ArrowRight') nextIndex = (currentIndex + 1) % triggers.length;
-    else if (e.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + triggers.length) % triggers.length;
+    else if (e.key === 'ArrowLeft')
+      nextIndex = (currentIndex - 1 + triggers.length) % triggers.length;
     else if (e.key === 'Home') nextIndex = 0;
     else if (e.key === 'End') nextIndex = triggers.length - 1;
 
@@ -48,7 +55,11 @@ export const TabsList: React.FC<{ className?: string; children: React.ReactNode 
   );
 };
 
-export const TabsTrigger: React.FC<{ value: string; children: React.ReactNode; className?: string }> = ({ value, children, className = '' }) => {
+export const TabsTrigger: React.FC<{
+  value: string;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ value, children, className = '' }) => {
   const context = useContext(TabsContext);
   if (!context) throw new Error('TabsTrigger must be used within Tabs');
 
@@ -74,7 +85,11 @@ export const TabsTrigger: React.FC<{ value: string; children: React.ReactNode; c
   );
 };
 
-export const TabsContent: React.FC<{ value: string; children: React.ReactNode; className?: string }> = ({ value, children, className = '' }) => {
+export const TabsContent: React.FC<{
+  value: string;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ value, children, className = '' }) => {
   const context = useContext(TabsContext);
   if (!context) throw new Error('TabsContent must be used within Tabs');
 

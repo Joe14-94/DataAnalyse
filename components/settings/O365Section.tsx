@@ -20,7 +20,7 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  Info,
+  Info
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -34,10 +34,7 @@ interface O365SectionProps {
   onRestoreBackup: (data: Partial<AppState>) => void;
 }
 
-export const O365Section: React.FC<O365SectionProps> = ({
-  currentState,
-  onRestoreBackup,
-}) => {
+export const O365Section: React.FC<O365SectionProps> = ({ currentState, onRestoreBackup }) => {
   // État local
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<O365User | null>(null);
@@ -125,7 +122,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
         forecastModule: currentState.forecastModule,
         pipelineModule: currentState.pipelineModule,
         financeReferentials: currentState.financeReferentials,
-        uiPrefs: currentState.uiPrefs,
+        uiPrefs: currentState.uiPrefs
       };
 
       await o365Service.saveBackupToOneDrive(filename, dataToBackup);
@@ -221,7 +218,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -232,9 +229,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
         <div className="flex items-start gap-3">
           <Info className="w-6 h-6 text-brand-600 flex-shrink-0 mt-1" />
           <div>
-            <h3 className="text-lg font-bold mb-2">
-              Intégration Microsoft 365 (POC)
-            </h3>
+            <h3 className="text-lg font-bold mb-2">Intégration Microsoft 365 (POC)</h3>
             <p className="text-sm text-txt-secondary mb-4">
               Cette fonctionnalité nécessite une configuration Azure AD.
             </p>
@@ -259,9 +254,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
           <Cloud className="w-6 h-6 text-[#0078D4]" />
           <div>
             <h3 className="text-lg font-bold">Microsoft 365 - OneDrive</h3>
-            <p className="text-xs text-txt-muted">
-              Sauvegardez et partagez vos analyses (POC)
-            </p>
+            <p className="text-xs text-txt-muted">Sauvegardez et partagez vos analyses (POC)</p>
           </div>
         </div>
 
@@ -277,8 +270,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
         {!isAuthenticated && (
           <div>
             <p className="text-sm text-txt-secondary mb-4">
-              Connectez-vous avec votre compte Microsoft pour sauvegarder vos
-              données dans OneDrive et partager vos analyses avec votre équipe.
+              Connectez-vous avec votre compte Microsoft pour sauvegarder vos données dans OneDrive
+              et partager vos analyses avec votre équipe.
             </p>
             <Button
               onClick={handleLogin}
@@ -302,17 +295,10 @@ export const O365Section: React.FC<O365SectionProps> = ({
                   <div className="text-sm font-semibold text-green-900">
                     {currentUser.displayName}
                   </div>
-                  <div className="text-xs text-green-700">
-                    {currentUser.email}
-                  </div>
+                  <div className="text-xs text-green-700">{currentUser.email}</div>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                disabled={isLoading}
-              >
+              <Button variant="ghost" size="sm" onClick={handleLogout} disabled={isLoading}>
                 <CloudOff className="w-4 h-4 mr-1" />
                 Déconnecter
               </Button>
@@ -328,11 +314,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
                 <Upload className="w-4 h-4 mr-2" />
                 {isLoading ? 'Sauvegarde...' : 'Sauvegarder sur OneDrive'}
               </Button>
-              <Button
-                onClick={handleLoadBackupsList}
-                disabled={isLoading}
-                variant="secondary"
-              >
+              <Button onClick={handleLoadBackupsList} disabled={isLoading} variant="secondary">
                 <Download className="w-4 h-4 mr-2" />
                 {isLoading ? 'Chargement...' : 'Restaurer depuis OneDrive'}
               </Button>
@@ -341,9 +323,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
             {/* Info */}
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs text-blue-800">
-                💡 <strong>POC Actif :</strong> Vos données sont sauvegardées
-                dans le dossier "DataScope_Backups" de votre OneDrive personnel.
-                Limite de taille : 4MB par backup.
+                💡 <strong>POC Actif :</strong> Vos données sont sauvegardées dans le dossier
+                "DataScope_Backups" de votre OneDrive personnel. Limite de taille : 4MB par backup.
               </p>
             </div>
           </div>
@@ -379,9 +360,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm truncate">
-                      {backup.name}
-                    </div>
+                    <div className="font-semibold text-sm truncate">{backup.name}</div>
                     <div className="text-xs text-txt-muted mt-1 space-y-0.5">
                       <div>Modifié : {formatDate(backup.lastModifiedDateTime)}</div>
                       <div>Taille : {formatFileSize(backup.size)}</div>

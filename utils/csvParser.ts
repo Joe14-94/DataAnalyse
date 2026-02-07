@@ -7,7 +7,7 @@ import { generateId } from './common';
  */
 export const parseRawData = (text: string): RawImportData => {
   const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines = cleanText.split('\n').filter(line => line.trim().length > 0);
+  const lines = cleanText.split('\n').filter((line) => line.trim().length > 0);
 
   if (lines.length < 2) {
     return { headers: [], rows: [], totalRows: 0 };
@@ -21,18 +21,22 @@ export const parseRawData = (text: string): RawImportData => {
 
   let separator = '\t';
   if (semiCount > tabCount && semiCount > commaCount && semiCount > pipeCount) separator = ';';
-  else if (commaCount > tabCount && commaCount > semiCount && commaCount > pipeCount) separator = ',';
+  else if (commaCount > tabCount && commaCount > semiCount && commaCount > pipeCount)
+    separator = ',';
   else if (pipeCount > tabCount && pipeCount > semiCount && pipeCount > commaCount) separator = '|';
 
-  const headers = headerLine.split(separator).map(h => h.trim());
+  const headers = headerLine.split(separator).map((h) => h.trim());
 
-  const rows = lines.slice(1).map(line => {
-    const cells = line.split(separator).map(c => c.trim());
-    while (cells.length < headers.length) {
-      cells.push('');
-    }
-    return cells;
-  }).filter(row => row.some(cell => cell !== ''));
+  const rows = lines
+    .slice(1)
+    .map((line) => {
+      const cells = line.split(separator).map((c) => c.trim());
+      while (cells.length < headers.length) {
+        cells.push('');
+      }
+      return cells;
+    })
+    .filter((row) => row.some((cell) => cell !== ''));
 
   return {
     headers,
@@ -44,7 +48,10 @@ export const parseRawData = (text: string): RawImportData => {
 /**
  * Lit un fichier texte/CSV en gérant automatiquement l'encodage (UTF-8 ou Windows-1252)
  */
-export const readTextFile = (file: File, encoding: 'auto' | 'UTF-8' | 'windows-1252' = 'auto'): Promise<string> => {
+export const readTextFile = (
+  file: File,
+  encoding: 'auto' | 'UTF-8' | 'windows-1252' = 'auto'
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -57,7 +64,7 @@ export const readTextFile = (file: File, encoding: 'auto' | 'UTF-8' | 'windows-1
           const text = decoder.decode(buffer);
           resolve(text);
         } catch (err) {
-          console.warn("Détection Auto : Echec UTF-8, bascule vers Windows-1252.");
+          console.warn('Détection Auto : Echec UTF-8, bascule vers Windows-1252.');
           const decoder = new TextDecoder('windows-1252');
           resolve(decoder.decode(buffer));
         }
@@ -96,22 +103,24 @@ export const readExcelFile = async (file: File): Promise<RawImportData> => {
           return;
         }
 
-        const headers = (jsonData[0] as string[]).map(h => String(h).trim());
+        const headers = (jsonData[0] as string[]).map((h) => String(h).trim());
 
-        const rows = jsonData.slice(1).map(row => {
-          const fullRow = [...row];
-          while (fullRow.length < headers.length) fullRow.push('');
-          return fullRow.map(cell => cell !== undefined && cell !== null ? String(cell) : '');
-        }).filter(row => row.some(cell => cell.trim() !== ''));
+        const rows = jsonData
+          .slice(1)
+          .map((row) => {
+            const fullRow = [...row];
+            while (fullRow.length < headers.length) fullRow.push('');
+            return fullRow.map((cell) => (cell !== undefined && cell !== null ? String(cell) : ''));
+          })
+          .filter((row) => row.some((cell) => cell.trim() !== ''));
 
         resolve({
           headers,
           rows,
           totalRows: rows.length
         });
-
       } catch (err) {
-        console.error("Erreur parsing Excel", err);
+        console.error('Erreur parsing Excel', err);
         reject(err);
       }
     };
@@ -140,7 +149,7 @@ export const mapDataToSchema = (
 
   const numMappings = activeMappings.length;
 
-  return rawData.rows.map(rowCells => {
+  return rawData.rows.map((rowCells) => {
     const newRow: DataRow = {
       id: generateId()
     };

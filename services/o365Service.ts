@@ -24,7 +24,14 @@ import {
 } from '@azure/msal-browser';
 import { Client } from '@microsoft/microsoft-graph-client';
 import type { DriveItem } from '@microsoft/microsoft-graph-types';
-import type { AppState, SharePackage, ShareableContentType, ShareLinkScope, ShareMetadata, SharePermission } from '../types';
+import type {
+  AppState,
+  SharePackage,
+  ShareableContentType,
+  ShareLinkScope,
+  ShareMetadata,
+  SharePermission
+} from '../types';
 
 // Configuration MSAL
 // IMPORTANT: Ces valeurs doivent être configurées dans les variables d'environnement
@@ -40,18 +47,18 @@ const MSAL_CONFIG = {
     clientId: getClientId(),
     authority: 'https://login.microsoftonline.com/common',
     redirectUri: window.location.origin,
-    postLogoutRedirectUri: window.location.origin,
+    postLogoutRedirectUri: window.location.origin
   },
   cache: {
     cacheLocation: BrowserCacheLocation.LocalStorage,
-    storeAuthStateInCookie: false, // Set to true for IE11/Edge
-  },
+    storeAuthStateInCookie: false // Set to true for IE11/Edge
+  }
 };
 
 // Permissions Microsoft Graph nécessaires
 const LOGIN_SCOPES = [
-  'User.Read',           // Lire le profil utilisateur
-  'Files.ReadWrite',     // Accès OneDrive en lecture/écriture
+  'User.Read', // Lire le profil utilisateur
+  'Files.ReadWrite' // Accès OneDrive en lecture/écriture
 ];
 
 // Nom du dossier dans OneDrive pour stocker les backups
@@ -112,7 +119,7 @@ class O365Service {
         }
       } catch (error) {
         console.error('[O365Service] Initialization failed:', error);
-        throw new Error('Impossible d\'initialiser le service Microsoft 365');
+        throw new Error("Impossible d'initialiser le service Microsoft 365");
       }
     })();
 
@@ -135,7 +142,7 @@ class O365Service {
         } catch (error) {
           done(error as Error, null);
         }
-      },
+      }
     });
   }
 
@@ -151,14 +158,14 @@ class O365Service {
       // Essayer d'obtenir le token silencieusement (depuis le cache)
       const response = await this.msalInstance.acquireTokenSilent({
         scopes: LOGIN_SCOPES,
-        account: this.currentAccount,
+        account: this.currentAccount
       });
       return response.accessToken;
     } catch (error) {
       if (error instanceof InteractionRequiredAuthError) {
         // Si le token est expiré, demander une nouvelle authentification
         const response = await this.msalInstance.acquireTokenPopup({
-          scopes: LOGIN_SCOPES,
+          scopes: LOGIN_SCOPES
         });
         return response.accessToken;
       }
@@ -185,7 +192,7 @@ class O365Service {
     return {
       displayName: this.currentAccount.name || 'Utilisateur',
       email: this.currentAccount.username,
-      id: this.currentAccount.localAccountId,
+      id: this.currentAccount.localAccountId
     };
   }
 
@@ -202,7 +209,7 @@ class O365Service {
     try {
       const response: AuthenticationResult = await this.msalInstance.loginPopup({
         scopes: LOGIN_SCOPES,
-        prompt: 'select_account',
+        prompt: 'select_account'
       });
 
       this.currentAccount = response.account;
@@ -211,7 +218,7 @@ class O365Service {
       return {
         displayName: response.account.name || 'Utilisateur',
         email: response.account.username,
-        id: response.account.localAccountId,
+        id: response.account.localAccountId
       };
     } catch (error) {
       console.error('[O365Service] Login failed:', error);
@@ -229,7 +236,7 @@ class O365Service {
 
     try {
       await this.msalInstance.logoutPopup({
-        account: this.currentAccount,
+        account: this.currentAccount
       });
       this.currentAccount = null;
       this.graphClient = null;
@@ -249,19 +256,15 @@ class O365Service {
 
     try {
       // Vérifier si le dossier existe
-      await this.graphClient
-        .api(`/me/drive/root:/${BACKUP_FOLDER}`)
-        .get();
+      await this.graphClient.api(`/me/drive/root:/${BACKUP_FOLDER}`).get();
     } catch (error: any) {
       if (error.statusCode === 404) {
         // Le dossier n'existe pas, le créer
-        await this.graphClient
-          .api('/me/drive/root/children')
-          .post({
-            name: BACKUP_FOLDER,
-            folder: {},
-            '@microsoft.graph.conflictBehavior': 'rename',
-          });
+        await this.graphClient.api('/me/drive/root/children').post({
+          name: BACKUP_FOLDER,
+          folder: {},
+          '@microsoft.graph.conflictBehavior': 'rename'
+        });
       } else {
         throw error;
       }
@@ -271,10 +274,7 @@ class O365Service {
   /**
    * Sauvegarde un backup dans OneDrive
    */
-  async saveBackupToOneDrive(
-    filename: string,
-    data: Partial<AppState>
-  ): Promise<void> {
+  async saveBackupToOneDrive(filename: string, data: Partial<AppState>): Promise<void> {
     if (!this.graphClient) {
       throw new Error('Non authentifié');
     }
@@ -333,7 +333,7 @@ class O365Service {
         size: item.size!,
         createdDateTime: item.createdDateTime!,
         lastModifiedDateTime: item.lastModifiedDateTime!,
-        downloadUrl: (item as any)['@microsoft.graph.downloadUrl'],
+        downloadUrl: (item as any)['@microsoft.graph.downloadUrl']
       }));
     } catch (error) {
       console.error('[O365Service] List backups failed:', error);
@@ -351,9 +351,7 @@ class O365Service {
 
     try {
       // Obtenir le contenu du fichier
-      const response = await this.graphClient
-        .api(`/me/drive/items/${fileId}/content`)
-        .get();
+      const response = await this.graphClient.api(`/me/drive/items/${fileId}/content`).get();
 
       // Le contenu est retourné directement comme objet JSON
       return response as Partial<AppState>;
@@ -372,9 +370,7 @@ class O365Service {
     }
 
     try {
-      await this.graphClient
-        .api(`/me/drive/items/${fileId}`)
-        .delete();
+      await this.graphClient.api(`/me/drive/items/${fileId}`).delete();
     } catch (error) {
       console.error('[O365Service] Delete backup failed:', error);
       throw new Error('Échec de la suppression du backup');
@@ -384,18 +380,19 @@ class O365Service {
   /**
    * Crée un lien de partage pour un backup (lecture seule)
    */
-  async createShareLink(fileId: string, scope: 'anonymous' | 'organization' = 'organization'): Promise<string> {
+  async createShareLink(
+    fileId: string,
+    scope: 'anonymous' | 'organization' = 'organization'
+  ): Promise<string> {
     if (!this.graphClient) {
       throw new Error('Non authentifié');
     }
 
     try {
-      const response = await this.graphClient
-        .api(`/me/drive/items/${fileId}/createLink`)
-        .post({
-          type: 'view', // Lecture seule
-          scope: scope,
-        });
+      const response = await this.graphClient.api(`/me/drive/items/${fileId}/createLink`).post({
+        type: 'view', // Lecture seule
+        scope: scope
+      });
 
       return response.link.webUrl;
     } catch (error) {
@@ -439,7 +436,7 @@ class O365Service {
         version: '2026-01-31-01', // Version de l'app
         content,
         includeData: options.includeData ?? true,
-        isSnapshot: true, // Phase 1 : lecture seule
+        isSnapshot: true // Phase 1 : lecture seule
       };
 
       // 2. Générer le nom du fichier
@@ -460,10 +457,7 @@ class O365Service {
       const fileId = uploadResponse.id;
 
       // 4. Créer le lien de partage
-      const shareLink = await this.createShareLink(
-        fileId,
-        options.scope ?? 'organization'
-      );
+      const shareLink = await this.createShareLink(fileId, options.scope ?? 'organization');
 
       // 5. Retourner les métadonnées
       const shareMetadata: ShareMetadata = {
@@ -475,7 +469,7 @@ class O365Service {
         shareLink,
         scope: options.scope ?? 'organization',
         permission: options.permission ?? 'read',
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
       };
 
       return shareMetadata;
@@ -489,9 +483,7 @@ class O365Service {
    * Charge du contenu partagé depuis un fichier OneDrive
    * Supporte à la fois fileId et downloadUrl
    */
-  async loadSharedContent<T = any>(
-    fileIdOrUrl: string
-  ): Promise<SharePackage<T>> {
+  async loadSharedContent<T = any>(fileIdOrUrl: string): Promise<SharePackage<T>> {
     if (!this.graphClient) {
       throw new Error('Non authentifié');
     }
@@ -509,9 +501,7 @@ class O365Service {
         content = await response.text();
       } else {
         // Utiliser l'API Graph avec fileId
-        const response = await this.graphClient
-          .api(`/me/drive/items/${fileIdOrUrl}/content`)
-          .get();
+        const response = await this.graphClient.api(`/me/drive/items/${fileIdOrUrl}/content`).get();
         content = typeof response === 'string' ? response : JSON.stringify(response);
       }
 
@@ -552,8 +542,9 @@ class O365Service {
    * Vérifie si la configuration est valide
    */
   isConfigured(): boolean {
-    return MSAL_CONFIG.auth.clientId !== 'YOUR_CLIENT_ID_HERE' &&
-           MSAL_CONFIG.auth.clientId.length > 0;
+    return (
+      MSAL_CONFIG.auth.clientId !== 'YOUR_CLIENT_ID_HERE' && MSAL_CONFIG.auth.clientId.length > 0
+    );
   }
 }
 

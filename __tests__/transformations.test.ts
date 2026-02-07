@@ -6,48 +6,48 @@ describe('Transformation ETL - applyJoin', () => {
   const leftData: DataRow[] = [
     { id: 'l1', name: 'Alice', cityId: '1' },
     { id: 'l2', name: 'Bob', cityId: '2' },
-    { id: 'l3', name: 'Charlie', cityId: '4' }, // No match
+    { id: 'l3', name: 'Charlie', cityId: '4' } // No match
   ];
 
   const rightData: DataRow[] = [
     { id: 'r1', cityId: '1', cityName: 'Paris' },
     { id: 'r2', cityId: '2', cityName: 'Lyon' },
-    { id: 'r3', cityId: '3', cityName: 'Marseille' }, // No match
+    { id: 'r3', cityId: '3', cityName: 'Marseille' } // No match
   ];
 
   it('devrait effectuer un INNER JOIN correctement', () => {
     const result = applyJoin(leftData, rightData, 'cityId', 'cityId', 'inner');
     expect(result).toHaveLength(2);
-    expect(result.find(r => r.name === 'Alice')?.cityName).toBe('Paris');
-    expect(result.find(r => r.name === 'Bob')?.cityName).toBe('Lyon');
-    expect(result.find(r => r.name === 'Charlie')).toBeUndefined();
+    expect(result.find((r) => r.name === 'Alice')?.cityName).toBe('Paris');
+    expect(result.find((r) => r.name === 'Bob')?.cityName).toBe('Lyon');
+    expect(result.find((r) => r.name === 'Charlie')).toBeUndefined();
   });
 
   it('devrait effectuer un LEFT JOIN correctement', () => {
     const result = applyJoin(leftData, rightData, 'cityId', 'cityId', 'left');
     expect(result).toHaveLength(3);
-    expect(result.find(r => r.name === 'Alice')?.cityName).toBe('Paris');
-    expect(result.find(r => r.name === 'Bob')?.cityName).toBe('Lyon');
-    expect(result.find(r => r.name === 'Charlie')?.cityName).toBeUndefined();
+    expect(result.find((r) => r.name === 'Alice')?.cityName).toBe('Paris');
+    expect(result.find((r) => r.name === 'Bob')?.cityName).toBe('Lyon');
+    expect(result.find((r) => r.name === 'Charlie')?.cityName).toBeUndefined();
   });
 
   it('devrait effectuer un RIGHT JOIN correctement', () => {
     const result = applyJoin(leftData, rightData, 'cityId', 'cityId', 'right');
     // Alice (matched), Bob (matched), Marseille (unmatched right)
     expect(result).toHaveLength(3);
-    expect(result.find(r => r.name === 'Alice')?.cityName).toBe('Paris');
-    expect(result.find(r => r.name === 'Bob')?.cityName).toBe('Lyon');
-    expect(result.find(r => r.cityName === 'Marseille')?.name).toBeUndefined();
+    expect(result.find((r) => r.name === 'Alice')?.cityName).toBe('Paris');
+    expect(result.find((r) => r.name === 'Bob')?.cityName).toBe('Lyon');
+    expect(result.find((r) => r.cityName === 'Marseille')?.name).toBeUndefined();
   });
 
   it('devrait effectuer un FULL JOIN correctement', () => {
     const result = applyJoin(leftData, rightData, 'cityId', 'cityId', 'full');
     // Alice (matched), Bob (matched), Charlie (unmatched left), Marseille (unmatched right)
     expect(result).toHaveLength(4);
-    expect(result.find(r => r.name === 'Alice')?.cityName).toBe('Paris');
-    expect(result.find(r => r.name === 'Bob')?.cityName).toBe('Lyon');
-    expect(result.find(r => r.name === 'Charlie')?.cityName).toBeUndefined();
-    expect(result.find(r => r.cityName === 'Marseille')?.name).toBeUndefined();
+    expect(result.find((r) => r.name === 'Alice')?.cityName).toBe('Paris');
+    expect(result.find((r) => r.name === 'Bob')?.cityName).toBe('Lyon');
+    expect(result.find((r) => r.name === 'Charlie')?.cityName).toBeUndefined();
+    expect(result.find((r) => r.cityName === 'Marseille')?.name).toBeUndefined();
   });
 
   it('devrait gérer les clés en double (One-to-Many)', () => {
@@ -58,8 +58,8 @@ describe('Transformation ETL - applyJoin', () => {
     ];
     const result = applyJoin(left, right, 'key', 'key', 'inner');
     expect(result).toHaveLength(2);
-    expect(result.find(r => r.info === 'X')).toBeDefined();
-    expect(result.find(r => r.info === 'Y')).toBeDefined();
+    expect(result.find((r) => r.info === 'X')).toBeDefined();
+    expect(result.find((r) => r.info === 'Y')).toBeDefined();
   });
 
   it('devrait appliquer le suffixe en cas de conflit de colonnes', () => {

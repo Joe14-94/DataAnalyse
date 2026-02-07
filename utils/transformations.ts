@@ -11,11 +11,9 @@ export const applyFilter = (
 ): DataRow[] => {
   if (conditions.length === 0) return data;
 
-  return data.filter(row => {
-    const results = conditions.map(condition => evaluateCondition(row, condition));
-    return combineWith === 'AND'
-      ? results.every(r => r)
-      : results.some(r => r);
+  return data.filter((row) => {
+    const results = conditions.map((condition) => evaluateCondition(row, condition));
+    return combineWith === 'AND' ? results.every((r) => r) : results.some((r) => r);
   });
 };
 
@@ -103,7 +101,7 @@ export const applyJoin = (
         // Actually, 'right' join should include matched rows too.
 
         const merged = { ...leftRow };
-        Object.keys(rightRow).forEach(k => {
+        Object.keys(rightRow).forEach((k) => {
           if (k === 'id') return; // Preserve left ID
           const newKey = k in leftRow && k !== rightKey ? `${k}${suffix}` : k;
           merged[newKey] = rightRow[k];
@@ -123,7 +121,7 @@ export const applyJoin = (
     for (const rightRow of rightData) {
       if (!matchedRightRows.has(rightRow)) {
         const merged: DataRow = { id: generateId() };
-        Object.keys(rightRow).forEach(k => {
+        Object.keys(rightRow).forEach((k) => {
           merged[k] = rightRow[k];
         });
         result.push(merged);
@@ -152,9 +150,12 @@ export const applyAggregate = (
   if (groupBy.length === 0) {
     // Agrégation globale
     const result: DataRow = { id: generateId() };
-    aggregations.forEach(agg => {
-      const values = data.map(row => row[agg.field]).filter(v => v !== null && v !== undefined);
-      result[agg.alias || `${agg.operation}_${agg.field}`] = calculateAggregation(values, agg.operation);
+    aggregations.forEach((agg) => {
+      const values = data.map((row) => row[agg.field]).filter((v) => v !== null && v !== undefined);
+      result[agg.alias || `${agg.operation}_${agg.field}`] = calculateAggregation(
+        values,
+        agg.operation
+      );
     });
     return [result];
   }
@@ -162,8 +163,8 @@ export const applyAggregate = (
   // Group by
   const groups = new Map<string, DataRow[]>();
 
-  data.forEach(row => {
-    const key = groupBy.map(field => row[field]).join('|||');
+  data.forEach((row) => {
+    const key = groupBy.map((field) => row[field]).join('|||');
     if (!groups.has(key)) {
       groups.set(key, []);
     }
@@ -180,9 +181,12 @@ export const applyAggregate = (
     });
 
     // Calculer les agrégations
-    aggregations.forEach(agg => {
-      const values = rows.map(r => r[agg.field]).filter(v => v !== null && v !== undefined);
-      row[agg.alias || `${agg.operation}_${agg.field}`] = calculateAggregation(values, agg.operation);
+    aggregations.forEach((agg) => {
+      const values = rows.map((r) => r[agg.field]).filter((v) => v !== null && v !== undefined);
+      row[agg.alias || `${agg.operation}_${agg.field}`] = calculateAggregation(
+        values,
+        agg.operation
+      );
     });
 
     result.push(row);
@@ -197,7 +201,7 @@ export const applyAggregate = (
 const calculateAggregation = (values: any[], operation: ETLAggregationType): any => {
   if (values.length === 0) return null;
 
-  const numbers = values.map(v => Number(v)).filter(n => !isNaN(n));
+  const numbers = values.map((v) => Number(v)).filter((n) => !isNaN(n));
 
   switch (operation) {
     case 'sum':
@@ -234,15 +238,15 @@ export const applySelect = (
   columns: string[],
   exclude: boolean = false
 ): DataRow[] => {
-  return data.map(row => {
+  return data.map((row) => {
     const newRow: DataRow = { ...row };
     if (exclude) {
       // Exclure les colonnes
-      columns.forEach(col => delete newRow[col]);
+      columns.forEach((col) => delete newRow[col]);
     } else {
       // Garder seulement les colonnes spécifiées
       const filtered: DataRow = { id: newRow.id || generateId() };
-      columns.forEach(col => {
+      columns.forEach((col) => {
         if (col in newRow) {
           filtered[col] = newRow[col];
         }
@@ -260,7 +264,7 @@ export const applyRename = (
   data: DataRow[],
   mappings: { oldName: string; newName: string }[]
 ): DataRow[] => {
-  return data.map(row => {
+  return data.map((row) => {
     const newRow: DataRow = { ...row };
     mappings.forEach(({ oldName, newName }) => {
       if (oldName in newRow) {
@@ -305,7 +309,7 @@ export const applyDistinct = (data: DataRow[]): DataRow[] => {
   const seen = new Set<string>();
   const result: DataRow[] = [];
 
-  data.forEach(row => {
+  data.forEach((row) => {
     const key = JSON.stringify(row);
     if (!seen.has(key)) {
       seen.add(key);
@@ -326,7 +330,7 @@ export const applySplit = (
   newColumns: string[],
   limit?: number
 ): DataRow[] => {
-  return data.map(row => {
+  return data.map((row) => {
     const value = String(row[column] || '');
     const parts = limit ? value.split(separator, limit) : value.split(separator);
 
@@ -348,8 +352,8 @@ export const applyMerge = (
   newColumn: string,
   separator: string
 ): DataRow[] => {
-  return data.map(row => {
-    const values = columns.map(col => row[col] || '');
+  return data.map((row) => {
+    const values = columns.map((col) => row[col] || '');
     return {
       ...row,
       [newColumn]: values.join(separator)
@@ -360,19 +364,15 @@ export const applyMerge = (
 /**
  * Colonne calculée (formule simple)
  */
-export const applyCalculate = (
-  data: DataRow[],
-  newColumn: string,
-  formula: string
-): DataRow[] => {
-  return data.map(row => {
+export const applyCalculate = (data: DataRow[], newColumn: string, formula: string): DataRow[] => {
+  return data.map((row) => {
     try {
       // Remplacer les références de colonnes [Col] par leur valeur
       let expression = formula;
       const matches = formula.match(/\[([^\]]+)\]/g);
 
       if (matches) {
-        matches.forEach(match => {
+        matches.forEach((match) => {
           const colName = match.slice(1, -1);
           const value = row[colName] || 0;
           expression = expression.replace(match, String(value));

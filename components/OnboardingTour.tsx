@@ -1,187 +1,166 @@
+import React, { useEffect, useContext } from 'react';
+import { ShepherdTour, ShepherdTourContext } from 'react-shepherd';
+import 'shepherd.js/dist/css/shepherd.css';
+import { usePersistence } from '../context/PersistenceContext';
 
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useData } from '../context/DataContext';
-import { Button } from './ui/Button';
-import { ArrowRight, Check, Database, PieChart, Upload } from 'lucide-react';
+const tourOptions = {
+  defaultStepOptions: {
+    cancelIcon: {
+      enabled: true
+    },
+    scrollTo: { behavior: 'smooth', block: 'center' }
+  },
+  useModalOverlay: true
+};
 
-interface Step {
-  targetId?: string;
+interface ShepherdStep {
+  id: string;
+  attachTo?: { element: string; on: string };
+  buttons: { classes?: string; text: string; type: string }[];
   title: string;
-  content: string;
-  position?: 'right' | 'bottom' | 'top' | 'left' | 'center';
-  icon?: React.ReactNode;
+  text: string[];
 }
 
-const STEPS: Step[] = [
+const steps: ShepherdStep[] = [
   {
-    title: "Bienvenue sur DataScope !",
-    content: "Une solution 100% locale pour analyser et visualiser vos données Excel et CSV sans serveur.",
-    position: 'center',
-    icon: <Database className="w-8 h-8 text-brand-500" />
+    id: 'intro',
+    attachTo: { element: '#tour-nav-dashboard', on: 'right' },
+    buttons: [
+      {
+        classes: 'shepherd-button-secondary',
+        text: 'Passer',
+        type: 'cancel'
+      },
+      {
+        classes: 'shepherd-button-primary',
+        text: 'Suivant',
+        type: 'next'
+      }
+    ],
+    title: 'Bienvenue sur DataScope !',
+    text: ['Ceci est votre tableau de bord principal. Vous y retrouverez vos KPIs et graphiques favoris.']
   },
   {
-    targetId: 'tour-dataset-selector',
-    title: "Vos Typologies",
-    content: "Commencez ici ! Sélectionnez un tableau existant ou créez-en un nouveau (Ex: Ventes, RH).",
-    position: 'right'
+    id: 'data',
+    attachTo: { element: '#tour-nav-data', on: 'right' },
+    buttons: [
+      {
+        classes: 'shepherd-button-secondary',
+        text: 'Précédent',
+        type: 'back'
+      },
+      {
+        classes: 'shepherd-button-primary',
+        text: 'Suivant',
+        type: 'next'
+      }
+    ],
+    title: 'Explorateur de données',
+    text: ['Consultez et modifiez vos données brutes, ajoutez des colonnes calculées ou faites des recherches croisées.']
   },
   {
-    targetId: 'tour-nav-import',
-    title: "Importation",
-    content: "Alimentez vos tableaux en important vos fichiers Excel/CSV via glisser-déposer.",
-    position: 'right',
-    icon: <Upload className="w-5 h-5 text-brand-500" />
+    id: 'import',
+    attachTo: { element: '#tour-nav-import', on: 'right' },
+    buttons: [
+      {
+        classes: 'shepherd-button-secondary',
+        text: 'Précédent',
+        type: 'back'
+      },
+      {
+        classes: 'shepherd-button-primary',
+        text: 'Suivant',
+        type: 'next'
+      }
+    ],
+    title: 'Importation',
+    text: ['Importez vos fichiers Excel, CSV ou faites un copier-coller pour commencer votre analyse.']
   },
   {
-    targetId: 'tour-nav-dashboard',
-    title: "Tableau de Bord",
-    content: "Visualisez vos indicateurs clés. Vous pouvez créer, redimensionner et déplacer vos widgets.",
-    position: 'right'
+    id: 'pivot',
+    attachTo: { element: '#tour-nav-pivot', on: 'right' },
+    buttons: [
+      {
+        classes: 'shepherd-button-secondary',
+        text: 'Précédent',
+        type: 'back'
+      },
+      {
+        classes: 'shepherd-button-primary',
+        text: 'Suivant',
+        type: 'next'
+      }
+    ],
+    title: 'Tableaux Croisés Dynamiques',
+    text: ['Le cœur de DataScope. Créez des analyses multidimensionnelles et des comparaisons temporelles en quelques clics.']
   },
   {
-    targetId: 'tour-nav-analytics',
-    title: "Analyses Avancées",
-    content: "Créez des graphiques sur mesure et sauvegardez vos vues pour plus tard.",
-    position: 'right',
-    icon: <PieChart className="w-5 h-5 text-brand-500" />
+    id: 'analytics',
+    attachTo: { element: '#tour-nav-analytics', on: 'right' },
+    buttons: [
+      {
+        classes: 'shepherd-button-secondary',
+        text: 'Précédent',
+        type: 'back'
+      },
+      {
+        classes: 'shepherd-button-primary',
+        text: 'Suivant',
+        type: 'next'
+      }
+    ],
+    title: 'Studio d\'Analyse',
+    text: ['Visualisez vos tendances et snapshots avec des graphiques avancés et des détections automatiques.']
+  },
+  {
+    id: 'finish',
+    attachTo: { element: '#tour-nav-settings', on: 'right' },
+    buttons: [
+      {
+        classes: 'shepherd-button-primary',
+        text: 'Terminer',
+        type: 'next'
+      }
+    ],
+    title: 'C\'est parti !',
+    text: ['Configurez vos préférences dans les paramètres et commencez à explorer vos données.']
   }
 ];
 
-export const OnboardingTour: React.FC = () => {
-  const { hasSeenOnboarding, completeOnboarding, isLoading } = useData();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-
-  const stepData = STEPS[currentStep];
+const TourTrigger: React.FC = () => {
+  const tour = useContext(ShepherdTourContext);
+  const { hasSeenOnboarding, completeOnboarding } = usePersistence();
 
   useEffect(() => {
-    // Condition logic inside the effect
-    if (isLoading || hasSeenOnboarding) return;
+    if (!hasSeenOnboarding && tour) {
+      // @ts-ignore
+      tour.start();
 
-    const updatePosition = () => {
-      if (stepData.targetId) {
-        const el = document.getElementById(stepData.targetId);
-        if (el) {
-          setRect(el.getBoundingClientRect());
-        } else {
-          // If element not found, default to center fallback or skip
-          setRect(null); 
-        }
-      } else {
-        setRect(null);
-      }
-    };
+      const onComplete = () => {
+        completeOnboarding();
+      };
 
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    // Petit delai pour laisser le DOM se rendre
-    const timer = setTimeout(updatePosition, 100);
-    
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      clearTimeout(timer);
-    };
-  }, [currentStep, stepData?.targetId, isLoading, hasSeenOnboarding]);
+      // @ts-ignore
+      tour.on('complete', onComplete);
+      // @ts-ignore
+      tour.on('cancel', onComplete);
 
-  const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep(c => c + 1);
-    } else {
-      completeOnboarding();
+      return () => {
+        // @ts-ignore
+        tour.off('complete', onComplete);
+        // @ts-ignore
+        tour.off('cancel', onComplete);
+      };
     }
-  };
+  }, [hasSeenOnboarding, tour, completeOnboarding]);
 
-  const handleSkip = () => {
-    completeOnboarding();
-  };
+  return null;
+};
 
-  const popoverStyle: React.CSSProperties = {
-    position: 'absolute',
-    zIndex: 9999,
-    width: '320px',
-  };
-
-  // Safe early return ONLY after all hooks
-  if (isLoading || hasSeenOnboarding) return null;
-
-  if (rect && stepData.targetId) {
-    // Position logic
-    const padding = 12;
-    if (stepData.position === 'right') {
-        popoverStyle.left = rect.right + padding;
-        popoverStyle.top = rect.top;
-    } else if (stepData.position === 'bottom') {
-        popoverStyle.left = rect.left;
-        popoverStyle.top = rect.bottom + padding;
-    } else {
-        // Fallback centerish
-        popoverStyle.left = rect.right + padding;
-        popoverStyle.top = rect.top;
-    }
-  } else {
-    // Center modal style
-    popoverStyle.top = '50%';
-    popoverStyle.left = '50%';
-    popoverStyle.transform = 'translate(-50%, -50%)';
-  }
-
-  // --- RENDER ---
-  return createPortal(
-    <div className="fixed inset-0 z-[9998] overflow-hidden pointer-events-auto">
-      
-      {/* 1. BACKDROP WITH CUTOUT (SPOTLIGHT) */}
-      <div className="absolute inset-0 bg-slate-900/60 transition-colors duration-500">
-         {rect && (
-            <div 
-               className="absolute bg-transparent shadow-[0_0_0_9999px_rgba(15,23,42,0.6)] rounded transition-all duration-300 ease-in-out border-2 border-white/50"
-               style={{
-                  top: rect.top - 4,
-                  left: rect.left - 4,
-                  width: rect.width + 8,
-                  height: rect.height + 8
-               }}
-            />
-         )}
-      </div>
-
-      {/* 2. POPOVER CARD */}
-      <div 
-        className="bg-white rounded-xl shadow-2xl p-6 border border-slate-200 animate-in fade-in zoom-in-95 duration-300"
-        style={popoverStyle}
-      >
-         <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
-               {stepData.icon && <div className="p-2 bg-brand-50 rounded-full">{stepData.icon}</div>}
-               <h3 className="font-bold text-slate-800 text-lg">{stepData.title}</h3>
-            </div>
-            <div className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
-               {currentStep + 1} / {STEPS.length}
-            </div>
-         </div>
-         
-         <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-            {stepData.content}
-         </p>
-
-         <div className="flex justify-between items-center pt-2">
-            <button 
-               onClick={handleSkip}
-               className="text-xs text-slate-400 hover:text-slate-600 font-medium px-2 py-1 hover:bg-slate-50 rounded transition-colors"
-            >
-               Passer le tour
-            </button>
-            <Button onClick={handleNext} size="sm" className="shadow-lg">
-               {currentStep === STEPS.length - 1 ? (
-                  <>C'est parti ! <Check className="w-4 h-4 ml-2" /></>
-               ) : (
-                  <>Suivant <ArrowRight className="w-4 h-4 ml-2" /></>
-               )}
-            </Button>
-         </div>
-      </div>
-
-    </div>,
-    document.body
+export const OnboardingTour: React.FC = () => {
+  return (
+    <ShepherdTour steps={steps} tourOptions={tourOptions}>
+      <TourTrigger />
+    </ShepherdTour>
   );
 };

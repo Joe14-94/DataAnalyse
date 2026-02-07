@@ -1,6 +1,16 @@
+import { DataRow } from '../types';
 import { parseSmartNumber } from './common';
 
-type TokenType = 'NUMBER' | 'STRING' | 'FIELD' | 'IDENTIFIER' | 'OPERATOR' | 'LPAREN' | 'RPAREN' | 'COMMA' | 'EOF';
+type TokenType =
+  | 'NUMBER'
+  | 'STRING'
+  | 'FIELD'
+  | 'IDENTIFIER'
+  | 'OPERATOR'
+  | 'LPAREN'
+  | 'RPAREN'
+  | 'COMMA'
+  | 'EOF';
 
 interface Token {
   type: TokenType;
@@ -13,9 +23,9 @@ const FORMULA_CACHE = new Map<string, Token[]>();
 class FormulaParser {
   private pos = 0;
   private tokens: Token[];
-  private row: any;
+  private row: DataRow;
 
-  constructor(tokens: Token[], row: any) {
+  constructor(tokens: Token[], row: DataRow) {
     this.tokens = tokens;
     this.row = row;
   }
@@ -32,12 +42,19 @@ class FormulaParser {
       const char = input[cursor];
 
       // BOLT OPTIMIZATION: Faster whitespace check (including non-breaking space for FR format)
-      if (char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\u00A0') { cursor++; continue; }
+      if (char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\u00A0') {
+        cursor++;
+        continue;
+      }
 
       // BOLT OPTIMIZATION: Faster digit check
       if (char >= '0' && char <= '9') {
         let val = '';
-        while (cursor < input.length && ((input[cursor] >= '0' && input[cursor] <= '9') || input[cursor] === '.')) val += input[cursor++];
+        while (
+          cursor < input.length &&
+          ((input[cursor] >= '0' && input[cursor] <= '9') || input[cursor] === '.')
+        )
+          val += input[cursor++];
         tokens.push({ type: 'NUMBER', value: val });
         continue;
       }
@@ -81,7 +98,14 @@ class FormulaParser {
 
       if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')) {
         let val = '';
-        while (cursor < input.length && ((input[cursor] >= 'a' && input[cursor] <= 'z') || (input[cursor] >= 'A' && input[cursor] <= 'Z') || (input[cursor] >= '0' && input[cursor] <= '9') || input[cursor] === '_')) val += input[cursor++];
+        while (
+          cursor < input.length &&
+          ((input[cursor] >= 'a' && input[cursor] <= 'z') ||
+            (input[cursor] >= 'A' && input[cursor] <= 'Z') ||
+            (input[cursor] >= '0' && input[cursor] <= '9') ||
+            input[cursor] === '_')
+        )
+          val += input[cursor++];
         tokens.push({ type: 'IDENTIFIER', value: val.toUpperCase() });
         continue;
       }
@@ -90,7 +114,10 @@ class FormulaParser {
         const next = input[cursor + 1];
         const doubleChar = char + next;
         if (['>=', '<=', '<>', '==', '!='].includes(doubleChar)) {
-          tokens.push({ type: 'OPERATOR', value: doubleChar === '==' ? '=' : doubleChar === '!=' ? '<>' : doubleChar });
+          tokens.push({
+            type: 'OPERATOR',
+            value: doubleChar === '==' ? '=' : doubleChar === '!=' ? '<>' : doubleChar
+          });
           cursor += 2;
         } else {
           let type: TokenType = 'OPERATOR';
@@ -115,44 +142,47 @@ class FormulaParser {
     return this.tokens[this.pos++];
   }
 
-  public evaluate(): any {
+  public evaluate(): string | number | boolean | null {
     this.pos = 0;
     if (this.tokens.length === 0) return null;
     return this.parseExpression();
   }
 
-  private parseExpression(): any {
+  private parseExpression(): string | number | boolean | null {
     let left = this.parseTerm();
-    while (this.peek().type === 'OPERATOR' && ['+', '-', '>', '<', '>=', '<=', '=', '<>'].includes(this.peek().value)) {
+    while (
+      this.peek().type === 'OPERATOR' &&
+      ['+', '-', '>', '<', '>=', '<=', '=', '<>'].includes(this.peek().value)
+    ) {
       const op = this.consume().value;
       const right = this.parseTerm();
-      if (op === '+') left = parseSmartNumber(left) + parseSmartNumber(right);
-      else if (op === '-') left = parseSmartNumber(left) - parseSmartNumber(right);
-      else if (op === '>') left = left > right;
-      else if (op === '<') left = left < right;
-      else if (op === '>=') left = left >= right;
-      else if (op === '<=') left = left <= right;
-      else if (op === '=') left = left == right;
-      else if (op === '<>') left = left != right;
+      if (op === '+') left = parseSmartNumber(left as any) + parseSmartNumber(right as any);
+      else if (op === '-') left = parseSmartNumber(left as any) - parseSmartNumber(right as any);
+      else if (op === '>') left = (left as any) > (right as any);
+      else if (op === '<') left = (left as any) < (right as any);
+      else if (op === '>=') left = (left as any) >= (right as any);
+      else if (op === '<=') left = (left as any) <= (right as any);
+      else if (op === '=') left = (left as any) == (right as any);
+      else if (op === '<>') left = (left as any) != (right as any);
     }
     return left;
   }
 
-  private parseTerm(): any {
+  private parseTerm(): string | number | boolean | null {
     let left = this.parseFactor();
     while (this.peek().type === 'OPERATOR' && ['*', '/'].includes(this.peek().value)) {
       const op = this.consume().value;
       const right = this.parseFactor();
-      if (op === '*') left = parseSmartNumber(left) * parseSmartNumber(right);
+      if (op === '*') left = parseSmartNumber(left as any) * parseSmartNumber(right as any);
       else if (op === '/') {
-        const r = parseSmartNumber(right);
-        left = r !== 0 ? parseSmartNumber(left) / r : 0;
+        const r = parseSmartNumber(right as any);
+        left = r !== 0 ? parseSmartNumber(left as any) / r : 0;
       }
     }
     return left;
   }
 
-  private parseFactor(): any {
+  private parseFactor(): string | number | boolean | null {
     const token = this.peek();
 
     if (token.type === 'NUMBER') {
@@ -193,12 +223,12 @@ class FormulaParser {
     this.error(`Token inattendu: ${token.type} "${token.value}"`);
   }
 
-  private parseFunctionCall(): any {
+  private parseFunctionCall(): string | number | boolean | null {
     const funcName = this.consume().value;
     if (this.peek().type !== 'LPAREN') return 0;
     this.consume(); // (
 
-    const args: any[] = [];
+    const args: (string | number | boolean | null)[] = [];
     if (this.peek().type !== 'RPAREN') {
       args.push(this.parseExpression());
       while (this.peek().type === 'COMMA') {
@@ -210,36 +240,46 @@ class FormulaParser {
 
     // Dispatch Function
     switch (funcName) {
-      case 'SI': case 'IF':
+      case 'SI':
+      case 'IF':
         return args[0] ? args[1] : args[2];
-      case 'SOMME': case 'SUM':
+      case 'SOMME':
+      case 'SUM':
         return args.reduce((a, b) => a + parseSmartNumber(b), 0);
-      case 'MOYENNE': case 'AVG': case 'AVERAGE':
-        const nums = args.map(a => parseSmartNumber(a));
+      case 'MOYENNE':
+      case 'AVG':
+      case 'AVERAGE':
+        const nums = args.map((a) => parseSmartNumber(a));
         return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
       case 'MIN':
-        return Math.min(...args.map(n => parseSmartNumber(n)));
+        return Math.min(...args.map((n) => parseSmartNumber(n)));
       case 'MAX':
-        return Math.max(...args.map(n => parseSmartNumber(n)));
+        return Math.max(...args.map((n) => parseSmartNumber(n)));
       case 'ABS':
         return Math.abs(parseSmartNumber(args[0]));
-      case 'ARRONDI': case 'ROUND':
+      case 'ARRONDI':
+      case 'ROUND':
         const p = Math.pow(10, parseSmartNumber(args[1]));
         return Math.round(parseSmartNumber(args[0]) * p) / p;
 
       // --- STRING FUNCTIONS ---
-      case 'CONCAT': case 'CONCATENER':
+      case 'CONCAT':
+      case 'CONCATENER':
         // CONCAT(texte1, texte2, ..., séparateur_optionnel)
         if (args.length > 1) {
           const lastArg = String(args[args.length - 1] || '');
           if (lastArg.length <= 3 && args.length > 2) {
             const separator = lastArg;
-            return args.slice(0, -1).map(a => String(a || '')).join(separator);
+            return args
+              .slice(0, -1)
+              .map((a) => String(a || ''))
+              .join(separator);
           }
         }
-        return args.map(a => String(a || '')).join('');
+        return args.map((a) => String(a || '')).join('');
 
-      case 'REMPLACER': case 'REPLACE':
+      case 'REMPLACER':
+      case 'REPLACE':
         const text = String(args[0] || '');
         const search = String(args[1] || '');
         const replacement = String(args[2] || '');
@@ -250,61 +290,82 @@ class FormulaParser {
           return text;
         }
 
-      case 'SUBSTITUER': case 'SUBSTITUTE':
+      case 'SUBSTITUER':
+      case 'SUBSTITUTE':
         const textSub = String(args[0] || '');
         const oldText = String(args[1] || '');
         const newText = String(args[2] || '');
         return textSub.split(oldText).join(newText);
 
-      case 'EXTRAIRE': case 'SUBSTRING': case 'MID':
+      case 'EXTRAIRE':
+      case 'SUBSTRING':
+      case 'MID':
         const textExt = String(args[0] || '');
         const start = Number(args[1] || 0);
         const length = args[2] !== undefined ? Number(args[2]) : undefined;
-        return length !== undefined ? textExt.substring(start, start + length) : textExt.substring(start);
+        return length !== undefined
+          ? textExt.substring(start, start + length)
+          : textExt.substring(start);
 
-      case 'GAUCHE': case 'LEFT':
+      case 'GAUCHE':
+      case 'LEFT':
         const textLeft = String(args[0] || '');
         const leftLen = Number(args[1] || 0);
         return textLeft.substring(0, leftLen);
 
-      case 'DROITE': case 'RIGHT':
+      case 'DROITE':
+      case 'RIGHT':
         const textRight = String(args[0] || '');
         const rightLen = Number(args[1] || 0);
         return textRight.substring(textRight.length - rightLen);
 
-      case 'LONGUEUR': case 'LENGTH': case 'LEN':
+      case 'LONGUEUR':
+      case 'LENGTH':
+      case 'LEN':
         return String(args[0] || '').length;
 
-      case 'TROUVE': case 'FIND': case 'SEARCH':
+      case 'TROUVE':
+      case 'FIND':
+      case 'SEARCH':
         const searchText = String(args[0] || '');
         const textFind = String(args[1] || '');
         const startPos = args[2] !== undefined ? Number(args[2]) : 0;
         const index = textFind.indexOf(searchText, startPos);
         return index;
 
-      case 'CONTIENT': case 'CONTAINS': case 'INCLUS':
+      case 'CONTIENT':
+      case 'CONTAINS':
+      case 'INCLUS':
         const textContains = String(args[0] || '');
         const searchContains = String(args[1] || '');
         return textContains.includes(searchContains);
 
-      case 'SUPPRESPACE': case 'TRIM': case 'NETTOYER':
+      case 'SUPPRESPACE':
+      case 'TRIM':
+      case 'NETTOYER':
         return String(args[0] || '').trim();
 
-      case 'MAJUSCULE': case 'UPPER':
+      case 'MAJUSCULE':
+      case 'UPPER':
         return String(args[0] || '').toUpperCase();
 
-      case 'MINUSCULE': case 'LOWER':
+      case 'MINUSCULE':
+      case 'LOWER':
         return String(args[0] || '').toLowerCase();
 
-      case 'CAPITALISEPREMIER': case 'CAPITALIZE':
+      case 'CAPITALISEPREMIER':
+      case 'CAPITALIZE':
         const textCap = String(args[0] || '');
         return textCap.charAt(0).toUpperCase() + textCap.slice(1).toLowerCase();
 
-      case 'CAPITALISEMOTS': case 'PROPER': case 'TITLE':
+      case 'CAPITALISEMOTS':
+      case 'PROPER':
+      case 'TITLE':
         const textProper = String(args[0] || '');
-        return textProper.split(' ').map(word =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-        ).join(' ');
+        return textProper
+          .split(' ')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
 
       default:
         return 0;
@@ -315,7 +376,11 @@ class FormulaParser {
 /**
  * Évalue une formule de manière sécurisée sans utiliser eval() ni new Function()
  */
-export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean'): number | string | boolean | null => {
+export const evaluateFormula = (
+  row: DataRow,
+  formula: string,
+  outputType?: 'number' | 'text' | 'boolean'
+): number | string | boolean | null => {
   if (!formula || !formula.trim()) return null;
 
   try {

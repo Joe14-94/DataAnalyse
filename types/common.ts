@@ -1,4 +1,3 @@
-
 export interface DataRow {
   id: string;
   [key: string]: any;

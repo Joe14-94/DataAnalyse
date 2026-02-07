@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { parseDateValue, filterDataByPeriod, aggregateDataByGroup, calculateTemporalComparison, formatCurrency, formatPercentage } from '../utils/temporalComparison';
+import {
+  parseDateValue,
+  filterDataByPeriod,
+  aggregateDataByGroup,
+  calculateTemporalComparison,
+  formatCurrency,
+  formatPercentage
+} from '../utils/temporalComparison';
 import { DataRow } from '../types';
 
 describe('utils/temporalComparison.ts', () => {
@@ -50,7 +57,7 @@ describe('utils/temporalComparison.ts', () => {
     it('should filter data within a period', () => {
       const filtered = filterDataByPeriod(data, 'date', 1, 2);
       expect(filtered).toHaveLength(2);
-      expect(filtered.map(r => r.id)).toEqual(['1', '2']);
+      expect(filtered.map((r) => r.id)).toEqual(['1', '2']);
     });
 
     it('should handle periods crossing years', () => {
@@ -84,7 +91,11 @@ describe('utils/temporalComparison.ts', () => {
         { id: '1', region: 'North', city: 'Paris', sales: 100 },
         { id: '2', region: 'North', city: 'Lyon', sales: 200 }
       ];
-      const groups = aggregateDataByGroup(multiData, ['region', 'city'], [{ field: 'sales', aggType: 'sum' }]);
+      const groups = aggregateDataByGroup(
+        multiData,
+        ['region', 'city'],
+        [{ field: 'sales', aggType: 'sum' }]
+      );
       expect(groups.has('North|Paris')).toBe(true);
       expect(groups.get('North|Paris')?.label).toBe('North\x1FParis');
     });
@@ -93,12 +104,16 @@ describe('utils/temporalComparison.ts', () => {
   describe('Formatting functions', () => {
     it('should format currency correctly', () => {
       // Modern Node/Browsers use narrow non-breaking space (\u202f) for French locale
-      const result = formatCurrency(1234.56).replace(/\u202f/g, ' ').replace(/\u00a0/g, ' ');
+      const result = formatCurrency(1234.56)
+        .replace(/\u202f/g, ' ')
+        .replace(/\u00a0/g, ' ');
       expect(result).toContain('1 234,56');
     });
 
     it('should format percentage correctly', () => {
-      const result = formatPercentage(12.5).replace(/\u202f/g, ' ').replace(/\u00a0/g, ' ');
+      const result = formatPercentage(12.5)
+        .replace(/\u202f/g, ' ')
+        .replace(/\u00a0/g, ' ');
       expect(result).toContain('12,5 %');
     });
   });

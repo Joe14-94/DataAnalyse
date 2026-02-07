@@ -1,7 +1,7 @@
 import { ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from '../types';
 
 // Updated version
-export const APP_VERSION = "2026-02-04-03";
+export const APP_VERSION = '2026-02-04-03';
 
 export const generateId = (): string => {
   return crypto.randomUUID();
@@ -14,17 +14,17 @@ export const compressBatch = (batch: ImportBatch): any => {
   if (!batch.rows || batch.rows.length === 0) return batch;
 
   // On identifie tous les champs uniques
-  const fields = Array.from(new Set(batch.rows.flatMap(r => Object.keys(r))));
+  const fields = Array.from(new Set(batch.rows.flatMap((r) => Object.keys(r))));
 
   // On convertit les lignes en tableaux de valeurs
-  const data = batch.rows.map(row => fields.map(f => row[f]));
+  const data = batch.rows.map((row) => fields.map((f) => row[f]));
 
   const { rows, ...meta } = batch;
   return {
     ...meta,
     _c: true, // Flag compressé
     f: fields, // Fields (colonnes)
-    d: data    // Data (valeurs)
+    d: data // Data (valeurs)
   };
 };
 
@@ -57,8 +57,8 @@ export const areHeadersSimilar = (target: string[], candidate: string[]): boolea
   if (target.length === 0) return false;
 
   // Normalisation
-  const normTarget = target.map(t => t.toLowerCase().trim());
-  const normCandidate = candidate.map(c => c.toLowerCase().trim());
+  const normTarget = target.map((t) => t.toLowerCase().trim());
+  const normCandidate = candidate.map((c) => c.toLowerCase().trim());
 
   // Compter les correspondances
   let matches = 0;
@@ -69,7 +69,7 @@ export const areHeadersSimilar = (target: string[], candidate: string[]): boolea
   // Si plus de 75% des champs du target sont présents dans le candidat, c'est probablement le même dataset
   // OU si 100% des champs du candidat sont dans le target (sous-ensemble)
   const ratio = matches / normTarget.length;
-  const isSubset = normCandidate.every(c => normTarget.includes(c));
+  const isSubset = normCandidate.every((c) => normTarget.includes(c));
 
   return ratio > 0.75 || (isSubset && normCandidate.length > 1);
 };
@@ -87,7 +87,9 @@ export const getCachedNumberFormat = (options: Intl.NumberFormatOptions): Intl.N
   return f;
 };
 
-export const getCachedDateTimeFormat = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat => {
+export const getCachedDateTimeFormat = (
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat => {
   const key = `date:${JSON.stringify(options)}`;
   let f = FORMATTER_CACHE.get(key) as Intl.DateTimeFormat;
   if (!f) {
@@ -226,10 +228,12 @@ export const formatNumberValue = (value: number | string, config?: FieldConfig):
   const fullSuffix = unit ? `${suffix} ${unit}` : suffix;
 
   // Formater avec séparateur de milliers et décimales fixes
-  return getCachedNumberFormat({
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  }).format(numVal) + fullSuffix;
+  return (
+    getCachedNumberFormat({
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(numVal) + fullSuffix
+  );
 };
 
 // BOLT OPTIMIZATION: Global cache for grouped labels to avoid redundant date parsing
@@ -319,8 +323,20 @@ export const formatDateLabelForDisplay = (label: string): string => {
   // Format YYYY-MM (mois ISO) -> MM/YYYY (français)
   if (/^\d{4}-\d{2}$/.test(label)) {
     const [year, month] = label.split('-');
-    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthNames = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre'
+    ];
     const monthIndex = parseInt(month) - 1;
     return `${monthNames[monthIndex]} ${year}`;
   }
@@ -350,7 +366,7 @@ export const formatDateLabelForDisplay = (label: string): string => {
  */
 export const detectUnit = (values: string[]): string => {
   if (values.length === 0) return '';
-  const sample = values.filter(v => v && v.trim());
+  const sample = values.filter((v) => v && v.trim());
   if (sample.length === 0) return '';
 
   const getSuffix = (s: string) => {
@@ -358,14 +374,14 @@ export const detectUnit = (values: string[]): string => {
     return match ? match[0].trim() : '';
   };
 
-  const candidates = sample.map(getSuffix).filter(s => s !== '');
+  const candidates = sample.map(getSuffix).filter((s) => s !== '');
   if (candidates.length === 0) return '';
 
   const counts: Record<string, number> = {};
   let maxCount = 0;
   let bestCandidate = '';
 
-  candidates.forEach(c => {
+  candidates.forEach((c) => {
     counts[c] = (counts[c] || 0) + 1;
     if (counts[c] > maxCount) {
       maxCount = counts[c];
@@ -401,7 +417,7 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
 
   const dateRegex = /^(\d{4}-\d{2}-\d{2})|(\d{2}\/\d{2}\/\d{4})|(\d{2}-\d{2}-\d{4})$/;
 
-  sample.forEach(val => {
+  sample.forEach((val) => {
     const cleanVal = val.trim();
     const lower = cleanVal.toLowerCase();
 
@@ -424,7 +440,7 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
       // Supprimer les unités courantes à la fin ou au début
       const withoutUnit = cleanVal
         .replace(/[\s]?[a-zA-Z%€$£%°]+$/, '') // Unité à la fin (ex: 12.5 %)
-        .replace(/^[$€£][\s]?/, '');         // Symbole au début (ex: $ 100)
+        .replace(/^[$€£][\s]?/, ''); // Symbole au début (ex: $ 100)
 
       // On vérifie si la partie restante est purement numérique
       const isPurelyNumeric = /^[-+0-9.,\s]*$/.test(withoutUnit);
@@ -450,7 +466,7 @@ export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean
 
   // Booléens : SEULEMENT si on a des vrais mots booléens ET PAS d'autres nombres
   // Si on a seulement des 0 et 1 SANS vrais booléens, c'est probablement numérique
-  if (trueBoolCount > 0 && (trueBoolCount + zeroOneCount) >= threshold && otherNumericCount === 0) {
+  if (trueBoolCount > 0 && trueBoolCount + zeroOneCount >= threshold && otherNumericCount === 0) {
     return 'boolean';
   }
 
@@ -475,7 +491,7 @@ export const extractDomain = (email: string): string => {
  * Préparation des filtres pour optimisation (évite les calculs répétitifs dans les boucles)
  */
 export const prepareFilters = (filters: any[]) => {
-  return filters.map(f => {
+  return filters.map((f) => {
     let preparedValue = f.value;
     const isArrayIn = (f.operator === 'in' || !f.operator) && Array.isArray(f.value);
 
@@ -483,7 +499,7 @@ export const prepareFilters = (filters: any[]) => {
       preparedValue = parseSmartNumber(f.value);
     } else if (isArrayIn) {
       // BOLT OPTIMIZATION: Convert filter array to Set for O(1) lookups
-      preparedValue = new Set((f.value as any[]).map(v => String(v)));
+      preparedValue = new Set((f.value as any[]).map((v) => String(v)));
     } else if (typeof f.value === 'string' && f.operator !== 'in') {
       preparedValue = f.value.toLowerCase();
     }

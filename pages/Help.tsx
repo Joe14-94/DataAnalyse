@@ -34,7 +34,9 @@ export const Help: React.FC = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Aide & Informations</h1>
-            <p className="text-slate-500">Maîtrisez DataScope et exploitez tout le potentiel de vos données.</p>
+            <p className="text-slate-500">
+              Maîtrisez DataScope et exploitez tout le potentiel de vos données.
+            </p>
           </div>
         </div>
 
@@ -60,8 +62,13 @@ export const Help: React.FC = () => {
                           <Filter className="w-5 h-5" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-800 text-sm">TCD : Filtrage Avancé</h3>
-                          <p className="text-xs text-slate-600">Définissez des règles précises (égal, contient, supérieur à...) sur n'importe quel champ de filtre.</p>
+                          <h3 className="font-bold text-slate-800 text-sm">
+                            TCD : Filtrage Avancé
+                          </h3>
+                          <p className="text-xs text-slate-600">
+                            Définissez des règles précises (égal, contient, supérieur à...) sur
+                            n'importe quel champ de filtre.
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-4 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
@@ -69,8 +76,13 @@ export const Help: React.FC = () => {
                           <PencilLine className="w-5 h-5" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-800 text-sm">Mode Édition & Renommage</h3>
-                          <p className="text-xs text-slate-600">Renommez vos colonnes et lignes en un clic grâce au nouveau mode édition dédié dans le Studio.</p>
+                          <h3 className="font-bold text-slate-800 text-sm">
+                            Mode Édition & Renommage
+                          </h3>
+                          <p className="text-xs text-slate-600">
+                            Renommez vos colonnes et lignes en un clic grâce au nouveau mode édition
+                            dédié dans le Studio.
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-4 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
@@ -78,8 +90,13 @@ export const Help: React.FC = () => {
                           <FileBarChart className="w-5 h-5" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-800 text-sm">Rapports Personnalisés</h3>
-                          <p className="text-xs text-slate-600">Envoyez des sélections spécifiques du TCD vers votre dashboard sous forme de nouveaux widgets.</p>
+                          <h3 className="font-bold text-slate-800 text-sm">
+                            Rapports Personnalisés
+                          </h3>
+                          <p className="text-xs text-slate-600">
+                            Envoyez des sélections spécifiques du TCD vers votre dashboard sous
+                            forme de nouveaux widgets.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -92,8 +109,9 @@ export const Help: React.FC = () => {
                       <History className="w-5 h-5 text-indigo-500" /> Version 2026-01-29-01
                     </h2>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Cette mise à jour majeure consolide les capacités d'analyse multi-dimensionnelle et renforce
-                      la portabilité des configurations via le nouveau système de sauvegarde sélective.
+                      Cette mise à jour majeure consolide les capacités d'analyse
+                      multi-dimensionnelle et renforce la portabilité des configurations via le
+                      nouveau système de sauvegarde sélective.
                     </p>
                   </div>
                 </Card>
@@ -113,10 +131,13 @@ export const Help: React.FC = () => {
                       <div className="bg-emerald-400 h-1 rounded-full w-full"></div>
                     </div>
                     <p className="text-xs text-brand-200 leading-relaxed mt-4">
-                      Toutes vos analyses sont stockées dans le cache de votre navigateur. Aucune donnée n'est envoyée sur un serveur.
+                      Toutes vos analyses sont stockées dans le cache de votre navigateur. Aucune
+                      donnée n'est envoyée sur un serveur.
                     </p>
                     <div className="text-xs bg-white/10 p-3 rounded-lg border border-white/10 mt-4">
-                      <strong>Recommandation :</strong> Utilisez le menu <strong>Paramètres &gt; Sauvegarde</strong> pour exporter régulièrement votre fichier <code>.json</code>.
+                      <strong>Recommandation :</strong> Utilisez le menu{' '}
+                      <strong>Paramètres &gt; Sauvegarde</strong> pour exporter régulièrement votre
+                      fichier <code>.json</code>.
                     </div>
                   </div>
                 </div>
@@ -138,25 +159,38 @@ export const Help: React.FC = () => {
 
           <TabsContent value="guide">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card title="1. Importation & Mapping" icon={<Download className="w-5 h-5 text-brand-600" />}>
+              <Card
+                title="1. Importation & Mapping"
+                icon={<Download className="w-5 h-5 text-brand-600" />}
+              >
                 <div className="space-y-3">
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Glissez vos fichiers CSV ou Excel dans la zone d'import. Le système détecte automatiquement les colonnes.
+                    Glissez vos fichiers CSV ou Excel dans la zone d'import. Le système détecte
+                    automatiquement les colonnes.
                   </p>
                   <ul className="space-y-2">
                     <li className="flex items-start gap-2 text-xs text-slate-700">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
-                      <span><strong>Smart Mapping :</strong> Liez vos colonnes aux champs du système une seule fois, DataScope s'en souviendra.</span>
+                      <span>
+                        <strong>Smart Mapping :</strong> Liez vos colonnes aux champs du système une
+                        seule fois, DataScope s'en souviendra.
+                      </span>
                     </li>
                     <li className="flex items-start gap-2 text-xs text-slate-700">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
-                      <span><strong>Batches :</strong> Vos données sont organisées par lots d'importation pour une meilleure traçabilité.</span>
+                      <span>
+                        <strong>Batches :</strong> Vos données sont organisées par lots
+                        d'importation pour une meilleure traçabilité.
+                      </span>
                     </li>
                   </ul>
                 </div>
               </Card>
 
-              <Card title="2. Analyse Studio (TCD)" icon={<TableIcon className="w-5 h-5 text-purple-600" />}>
+              <Card
+                title="2. Analyse Studio (TCD)"
+                icon={<TableIcon className="w-5 h-5 text-purple-600" />}
+              >
                 <div className="space-y-3">
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Le coeur de DataScope. Faites glisser vos champs pour construire vos analyses.
@@ -175,17 +209,23 @@ export const Help: React.FC = () => {
                 </div>
               </Card>
 
-              <Card title="3. Tableau de Bord" icon={<LayoutDashboard className="w-5 h-5 text-brand-600" />}>
+              <Card
+                title="3. Tableau de Bord"
+                icon={<LayoutDashboard className="w-5 h-5 text-brand-600" />}
+              >
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Épinglez vos graphiques et tableaux pour créer un cockpit de pilotage en temps réel.
-                  Utilisez les filtres globaux pour explorer vos données sous tous les angles.
+                  Épinglez vos graphiques et tableaux pour créer un cockpit de pilotage en temps
+                  réel. Utilisez les filtres globaux pour explorer vos données sous tous les angles.
                 </p>
               </Card>
 
-              <Card title="4. Export & Partage" icon={<ArrowRightLeft className="w-5 h-5 text-indigo-600" />}>
+              <Card
+                title="4. Export & Partage"
+                icon={<ArrowRightLeft className="w-5 h-5 text-indigo-600" />}
+              >
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Exportez vos résultats vers Excel, PDF ou image. Partagez vos configurations avec vos
-                  collègues en exportant uniquement la structure de votre analyse.
+                  Exportez vos résultats vers Excel, PDF ou image. Partagez vos configurations avec
+                  vos collègues en exportant uniquement la structure de votre analyse.
                 </p>
               </Card>
             </div>
@@ -205,27 +245,33 @@ export const Help: React.FC = () => {
                     <div className="text-emerald-400 font-bold flex items-center gap-2">
                       <ChevronRight className="w-4 h-4" /> Extract
                     </div>
-                    <p className="text-xs text-slate-400">Lecture des sources brutes (Excel/CSV/Paste).</p>
+                    <p className="text-xs text-slate-400">
+                      Lecture des sources brutes (Excel/CSV/Paste).
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <div className="text-emerald-400 font-bold flex items-center gap-2">
                       <ChevronRight className="w-4 h-4" /> Transform
                     </div>
-                    <p className="text-xs text-slate-400">Renommage, filtres, nettoyage et calculs automatiques.</p>
+                    <p className="text-xs text-slate-400">
+                      Renommage, filtres, nettoyage et calculs automatiques.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <div className="text-emerald-400 font-bold flex items-center gap-2">
                       <ChevronRight className="w-4 h-4" /> Load
                     </div>
-                    <p className="text-xs text-slate-400">Intégration propre dans votre base de données locale.</p>
+                    <p className="text-xs text-slate-400">
+                      Intégration propre dans votre base de données locale.
+                    </p>
                   </div>
                 </div>
                 <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                   <h4 className="font-bold text-sm mb-2">Pourquoi utiliser les Pipelines ?</h4>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Si vous importez les mêmes fichiers chaque mois, les pipelines automatisent les tâches
-                    répétitives de mise en forme. Définissez vos règles une fois, et laissez DataScope
-                    faire le travail à chaque import.
+                    Si vous importez les mêmes fichiers chaque mois, les pipelines automatisent les
+                    tâches répétitives de mise en forme. Définissez vos règles une fois, et laissez
+                    DataScope faire le travail à chaque import.
                   </p>
                 </div>
               </div>
@@ -234,26 +280,43 @@ export const Help: React.FC = () => {
 
           <TabsContent value="functions">
             <div className="space-y-6">
-              <Card title="Assistant de Calculs" icon={<Calculator className="w-5 h-5 text-indigo-600" />}>
+              <Card
+                title="Assistant de Calculs"
+                icon={<Calculator className="w-5 h-5 text-indigo-600" />}
+              >
                 <p className="text-xs text-slate-600 leading-relaxed mb-4">
                   DataScope supporte un large éventail de fonctions pour enrichir vos données.
                   L'assistant de création vous aide à construire vos formules sans erreur.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <h4 className="font-bold text-xs text-slate-800 mb-2">Arithmétique & Logique</h4>
+                    <h4 className="font-bold text-xs text-slate-800 mb-2">
+                      Arithmétique & Logique
+                    </h4>
                     <ul className="text-xs text-slate-500 space-y-1">
-                      <li><code>+ , - , * , /</code> : Opérations de base</li>
-                      <li><code>SI(condition; vrai; faux)</code> : Test logique</li>
-                      <li><code>ET(c1; c2) , OU(c1; c2)</code> : Combinaisons</li>
+                      <li>
+                        <code>+ , - , * , /</code> : Opérations de base
+                      </li>
+                      <li>
+                        <code>SI(condition; vrai; faux)</code> : Test logique
+                      </li>
+                      <li>
+                        <code>ET(c1; c2) , OU(c1; c2)</code> : Combinaisons
+                      </li>
                     </ul>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <h4 className="font-bold text-xs text-slate-800 mb-2">Agrégations</h4>
                     <ul className="text-xs text-slate-500 space-y-1">
-                      <li><code>SOMME()</code> : Total d'un champ</li>
-                      <li><code>MOYENNE()</code> : Valeur moyenne</li>
-                      <li><code>NB()</code> : Nombre d'occurrences</li>
+                      <li>
+                        <code>SOMME()</code> : Total d'un champ
+                      </li>
+                      <li>
+                        <code>MOYENNE()</code> : Valeur moyenne
+                      </li>
+                      <li>
+                        <code>NB()</code> : Nombre d'occurrences
+                      </li>
                     </ul>
                   </div>
                 </div>

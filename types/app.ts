@@ -1,4 +1,3 @@
-
 import { Dataset, ImportBatch } from './dataset';
 import { DashboardWidget } from './dashboard';
 import { PivotState } from './pivot';
@@ -21,7 +20,16 @@ export interface UIPrefs {
   sidebarWidth: number;
   theme: 'light' | 'dark';
   style: 'classic' | 'material' | 'glass';
-  colorPalette: 'blue' | 'indigo' | 'emerald' | 'rose' | 'amber' | 'slate' | 'teal' | 'violet' | 'orange';
+  colorPalette:
+    | 'blue'
+    | 'indigo'
+    | 'emerald'
+    | 'rose'
+    | 'amber'
+    | 'slate'
+    | 'teal'
+    | 'violet'
+    | 'orange';
 }
 
 export interface DataExplorerState {

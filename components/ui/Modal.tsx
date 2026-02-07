@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -70,16 +69,21 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal Container */}
-      <div className={`relative bg-surface rounded-lg shadow-xl w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-border-default`}>
+      <div
+        className={`relative bg-surface rounded-lg shadow-xl w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-border-default`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border-default bg-canvas/30 shrink-0">
           <div className="flex items-center gap-3">
             {icon && <div className="text-brand-600">{icon}</div>}
-            {title && (
-              typeof title === 'string' ? (
-                <h3 id="modal-title" className="font-bold text-lg text-txt-main">{title}</h3>
-              ) : title
-            )}
+            {title &&
+              (typeof title === 'string' ? (
+                <h3 id="modal-title" className="font-bold text-lg text-txt-main">
+                  {title}
+                </h3>
+              ) : (
+                title
+              ))}
           </div>
           <button
             onClick={onClose}
@@ -92,9 +96,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6 custom-scrollbar text-txt-main">
-          {children}
-        </div>
+        <div className="flex-1 overflow-auto p-6 custom-scrollbar text-txt-main">{children}</div>
 
         {/* Footer */}
         {footer && (

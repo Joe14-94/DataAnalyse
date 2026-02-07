@@ -108,10 +108,12 @@ La section d'aide se trouve **EN BAS de la modale**, juste **APRÈS la section "
 ## 🔧 Comment la voir ?
 
 ### Étape 1 : Ouvrir la modale
+
 1. Allez dans le **Tableau Croisé Dynamique (TCD)**
 2. Cliquez sur **"+ Champ calculé"** en haut à gauche
 
 ### Étape 2 : Trouver la section d'aide
+
 1. **Scrollez vers le bas** dans la modale (si besoin)
 2. Cherchez la section avec le titre :
    ```
@@ -120,6 +122,7 @@ La section d'aide se trouve **EN BAS de la modale**, juste **APRÈS la section "
 3. Elle se trouve juste **APRÈS** la section "✨ Aperçu du résultat"
 
 ### Étape 3 : Déployer les exemples
+
 1. **Cliquez** sur la barre avec le titre
 2. Les exemples se déploient vers le bas
 3. Pour refermer, cliquez à nouveau
@@ -147,6 +150,7 @@ Il faut **vider le cache** du navigateur :
 ### Possibilité 3 : La modale est trop petite
 
 Si la fenêtre de votre navigateur est petite :
+
 - La section peut nécessiter un **scroll vertical**
 - Scrollez vers le bas dans la modale pour voir la section d'aide
 

@@ -13,7 +13,7 @@ export const exportView = async (
 ) => {
   const element = document.getElementById(elementId);
   if (!element) {
-    alert('Élément introuvable pour l\'export');
+    alert("Élément introuvable pour l'export");
     return;
   }
 
@@ -24,7 +24,7 @@ export const exportView = async (
     try {
       // Dynamic imports
       const [html2canvas, { jsPDF }] = await Promise.all([
-        import('html2canvas').then(m => m.default),
+        import('html2canvas').then((m) => m.default),
         import('jspdf')
       ]);
 
@@ -56,7 +56,7 @@ export const exportView = async (
 
       const pdfWidthMM = 297;
       const margin = 10;
-      const contentWidthMM = pdfWidthMM - (margin * 2);
+      const contentWidthMM = pdfWidthMM - margin * 2;
 
       const ratio = contentWidthMM / imgWidth;
       const scaledHeightMM = imgHeight * ratio;
@@ -82,10 +82,11 @@ export const exportView = async (
       let startY = 10;
       if (logo) {
         // Simple protocol validation
-        const safeLogo = (logo.startsWith('data:image/') || logo.startsWith('blob:')) ? logo : undefined;
+        const safeLogo =
+          logo.startsWith('data:image/') || logo.startsWith('blob:') ? logo : undefined;
         if (safeLogo) {
-            pdf.addImage(safeLogo, 'PNG', 10, 10, 25, 12);
-            startY = 25;
+          pdf.addImage(safeLogo, 'PNG', 10, 10, 25, 12);
+          startY = 25;
         }
       }
 
@@ -96,7 +97,7 @@ export const exportView = async (
       pdf.setFont('helvetica', 'normal');
       pdf.text(`Exporté le ${new Date().toLocaleDateString()}`, logo ? 40 : 10, 24);
 
-      const renderWidth = finalPdfWidth - (margin * 2);
+      const renderWidth = finalPdfWidth - margin * 2;
       const renderHeight = (imgHeight * renderWidth) / imgWidth;
 
       let finalRenderHeight = renderHeight;
@@ -122,14 +123,11 @@ export const exportView = async (
         link.click();
         document.body.removeChild(link);
       }
-
     } catch (err) {
       console.error('Export Error', err);
-      alert('Erreur lors de la génération de l\'export');
+      alert("Erreur lors de la génération de l'export");
     }
-  }
-
-  else if (format === 'html') {
+  } else if (format === 'html') {
     try {
       const clone = element.cloneNode(true) as HTMLElement;
 
@@ -138,12 +136,14 @@ export const exportView = async (
         el.style.height = 'auto';
         el.style.overflow = 'visible';
 
-        Array.from(el.children).forEach(child => {
+        Array.from(el.children).forEach((child) => {
           if (child instanceof HTMLElement) {
-            if (child.classList.contains('overflow-auto') ||
-                child.classList.contains('overflow-hidden') ||
-                child.classList.contains('overflow-y-auto') ||
-                child.classList.contains('overflow-x-auto')) {
+            if (
+              child.classList.contains('overflow-auto') ||
+              child.classList.contains('overflow-hidden') ||
+              child.classList.contains('overflow-y-auto') ||
+              child.classList.contains('overflow-x-auto')
+            ) {
               child.style.overflow = 'visible';
               child.style.maxHeight = 'none';
               child.style.height = 'auto';
@@ -155,7 +155,8 @@ export const exportView = async (
 
       fixElement(clone);
 
-      const safeLogo = (logo && (logo.startsWith('data:image/') || logo.startsWith('blob:'))) ? logo : '';
+      const safeLogo =
+        logo && (logo.startsWith('data:image/') || logo.startsWith('blob:')) ? logo : '';
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -198,14 +199,13 @@ export const exportView = async (
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = (`${filename}.html`);
+      link.download = `${filename}.html`;
       document.body.appendChild(link);
       link.click();
       setTimeout(() => document.body.removeChild(link), 100);
-
     } catch (err) {
       console.error('HTML Export Error', err);
-      alert('Erreur lors de l\'export HTML');
+      alert("Erreur lors de l'export HTML");
     }
   }
 };
@@ -217,18 +217,25 @@ export const exportPivotToHTML = (
   title: string,
   logo?: string,
   options: {
-    isTemporalMode?: boolean,
-    temporalConfig?: any,
-    temporalColTotals?: any,
-    metrics?: any[],
-    showVariations?: boolean,
-    formatOutput?: (val: any, metric?: any) => string
+    isTemporalMode?: boolean;
+    temporalConfig?: any;
+    temporalColTotals?: any;
+    metrics?: any[];
+    showVariations?: boolean;
+    formatOutput?: (val: any, metric?: any) => string;
   } = {}
 ) => {
   const timestamp = new Date().toISOString().split('T')[0];
   const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${timestamp}`;
 
-  const { isTemporalMode, temporalConfig, temporalColTotals, metrics, showVariations, formatOutput } = options;
+  const {
+    isTemporalMode,
+    temporalConfig,
+    temporalColTotals,
+    metrics,
+    showVariations,
+    formatOutput
+  } = options;
   const activeMetrics = metrics && metrics.length > 0 ? metrics : [];
 
   try {
@@ -236,27 +243,28 @@ export const exportPivotToHTML = (
     tableHTML += '<thead><tr>';
 
     if (isTemporalMode && temporalConfig) {
-      rowFields.forEach(field => {
+      rowFields.forEach((field) => {
         tableHTML += `<th class="row-header sortable">${field}</th>`;
       });
 
       temporalConfig.sources.forEach((s: any) => {
-        activeMetrics.forEach(m => {
+        activeMetrics.forEach((m) => {
           const mLabel = m.label || `${m.field} (${m.aggType})`;
           const displayLabel = activeMetrics.length > 1 ? `${s.label} - ${mLabel}` : s.label;
           tableHTML += `<th class="col-header sortable">${displayLabel}</th>`;
         });
         if (showVariations && s.id !== temporalConfig.referenceSourceId) {
-          activeMetrics.forEach(m => {
-             const mLabel = m.label || `${m.field} (${m.aggType})`;
-             const displayLabel = activeMetrics.length > 1 ? `Δ ${s.label} - ${mLabel}` : `Δ ${s.label}`;
-             tableHTML += `<th class="col-header sortable delta-header">${displayLabel}</th>`;
+          activeMetrics.forEach((m) => {
+            const mLabel = m.label || `${m.field} (${m.aggType})`;
+            const displayLabel =
+              activeMetrics.length > 1 ? `Δ ${s.label} - ${mLabel}` : `Δ ${s.label}`;
+            tableHTML += `<th class="col-header sortable delta-header">${displayLabel}</th>`;
           });
         }
       });
       tableHTML += '</tr></thead><tbody>';
 
-      (pivotData as any[]).forEach(result => {
+      (pivotData as any[]).forEach((result) => {
         const rowClass = result.isSubtotal ? 'subtotal-row' : 'data-row';
         tableHTML += `<tr class="${rowClass}">`;
 
@@ -274,7 +282,7 @@ export const exportPivotToHTML = (
         });
 
         temporalConfig.sources.forEach((s: any) => {
-          activeMetrics.forEach(m => {
+          activeMetrics.forEach((m) => {
             const mLabel = m.label || `${m.field} (${m.aggType})`;
             const val = result.values[s.id]?.[mLabel] ?? 0;
             const display = formatOutput ? formatOutput(val, m) : val.toLocaleString();
@@ -282,20 +290,28 @@ export const exportPivotToHTML = (
           });
 
           if (showVariations && s.id !== temporalConfig.referenceSourceId) {
-            activeMetrics.forEach(m => {
-               const mLabel = m.label || `${m.field} (${m.aggType})`;
-               const delta = result.deltas[s.id]?.[mLabel];
-               let display = '';
-               let cls = 'delta-neutral';
-               if (delta) {
-                 if (temporalConfig.deltaFormat === 'percentage') {
-                    display = delta.percentage !== 0 ? (delta.percentage > 0 ? '+' : '') + delta.percentage.toFixed(1) + '%' : '-';
-                 } else {
-                    display = delta.value !== 0 ? (delta.value > 0 ? '+' : '') + (formatOutput ? formatOutput(delta.value, m) : delta.value.toLocaleString()) : '-';
-                 }
-                 cls = delta.value > 0 ? 'delta-up' : delta.value < 0 ? 'delta-down' : 'delta-neutral';
-               }
-               tableHTML += `<td class="metric-cell ${cls}">${display}</td>`;
+            activeMetrics.forEach((m) => {
+              const mLabel = m.label || `${m.field} (${m.aggType})`;
+              const delta = result.deltas[s.id]?.[mLabel];
+              let display = '';
+              let cls = 'delta-neutral';
+              if (delta) {
+                if (temporalConfig.deltaFormat === 'percentage') {
+                  display =
+                    delta.percentage !== 0
+                      ? (delta.percentage > 0 ? '+' : '') + delta.percentage.toFixed(1) + '%'
+                      : '-';
+                } else {
+                  display =
+                    delta.value !== 0
+                      ? (delta.value > 0 ? '+' : '') +
+                        (formatOutput ? formatOutput(delta.value, m) : delta.value.toLocaleString())
+                      : '-';
+                }
+                cls =
+                  delta.value > 0 ? 'delta-up' : delta.value < 0 ? 'delta-down' : 'delta-neutral';
+              }
+              tableHTML += `<td class="metric-cell ${cls}">${display}</td>`;
             });
           }
         });
@@ -307,42 +323,65 @@ export const exportPivotToHTML = (
         for (let i = 1; i < rowFields.length; i++) tableHTML += '<td></td>';
 
         temporalConfig.sources.forEach((s: any) => {
-          activeMetrics.forEach(m => {
+          activeMetrics.forEach((m) => {
             const mLabel = m.label || `${m.field} (${m.aggType})`;
             const val = temporalColTotals[s.id]?.[mLabel] ?? 0;
             const display = formatOutput ? formatOutput(val, m) : val.toLocaleString();
             tableHTML += `<td class="total-cell">${display}</td>`;
           });
           if (showVariations && s.id !== temporalConfig.referenceSourceId) {
-            activeMetrics.forEach(() => tableHTML += '<td></td>');
+            activeMetrics.forEach(() => (tableHTML += '<td></td>'));
           }
         });
         tableHTML += '</tr>';
       }
-
     } else {
-      rowFields.forEach(field => { tableHTML += `<th class="row-header sortable">${field}</th>`; });
-      pivotData.colHeaders.forEach((header: string) => { tableHTML += `<th class="col-header sortable">${header}</th>`; });
+      rowFields.forEach((field) => {
+        tableHTML += `<th class="row-header sortable">${field}</th>`;
+      });
+      pivotData.colHeaders.forEach((header: string) => {
+        tableHTML += `<th class="col-header sortable">${header}</th>`;
+      });
       if (showTotalCol) tableHTML += '<th class="total-header sortable">Total</th>';
       tableHTML += '</tr></thead><tbody>';
 
       pivotData.displayRows.forEach((row: any) => {
-        const rowClass = row.type === 'subtotal' ? 'subtotal-row' : row.type === 'grandTotal' ? 'grand-total-row' : 'data-row';
+        const rowClass =
+          row.type === 'subtotal'
+            ? 'subtotal-row'
+            : row.type === 'grandTotal'
+              ? 'grand-total-row'
+              : 'data-row';
         tableHTML += `<tr class="${rowClass}">`;
         rowFields.forEach((field, index) => {
           if (index < row.keys.length) {
-            const indent = row.type === 'subtotal' && index === row.keys.length - 1 ? '&nbsp;&nbsp;'.repeat(row.level || 0) : '';
+            const indent =
+              row.type === 'subtotal' && index === row.keys.length - 1
+                ? '&nbsp;&nbsp;'.repeat(row.level || 0)
+                : '';
             tableHTML += `<td class="row-label">${indent}${row.keys[index]}</td>`;
-          } else { tableHTML += '<td class="row-label"></td>'; }
+          } else {
+            tableHTML += '<td class="row-label"></td>';
+          }
         });
         pivotData.colHeaders.forEach((colHeader: string) => {
           const value = row.metrics[colHeader];
-          const displayValue = value !== undefined && value !== null ? (formatOutput ? formatOutput(value) : value.toLocaleString()) : '';
+          const displayValue =
+            value !== undefined && value !== null
+              ? formatOutput
+                ? formatOutput(value)
+                : value.toLocaleString()
+              : '';
           tableHTML += `<td class="metric-cell">${displayValue}</td>`;
         });
         if (showTotalCol) {
           const total = row.rowTotal;
-          const displayTotal = total !== undefined && total !== null ? (formatOutput ? formatOutput(total) : total.toLocaleString()) : '';
+          const displayTotal =
+            total !== undefined && total !== null
+              ? formatOutput
+                ? formatOutput(total)
+                : total.toLocaleString()
+              : '';
           tableHTML += `<td class="total-cell">${displayTotal}</td>`;
         }
         tableHTML += '</tr>';
@@ -364,7 +403,8 @@ export const exportPivotToHTML = (
 
     tableHTML += '</tbody></table>';
 
-    const safeLogo = (logo && (logo.startsWith('data:image/') || logo.startsWith('blob:'))) ? logo : '';
+    const safeLogo =
+      logo && (logo.startsWith('data:image/') || logo.startsWith('blob:')) ? logo : '';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -417,7 +457,7 @@ export const exportPivotToHTML = (
             ${safeLogo ? `<img src="${safeLogo}" class="logo" alt="Logo" />` : ''}
             <div class="title">
               <h1>${title}</h1>
-              <p>Rapport interactif • Exporté le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</p>
+              <p>Rapport interactif • Exporté le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
           </div>
           <div style="overflow-x: auto; border-radius: 0.5rem;">
@@ -489,9 +529,8 @@ export const exportPivotToHTML = (
     document.body.appendChild(link);
     link.click();
     setTimeout(() => document.body.removeChild(link), 100);
-
   } catch (err) {
     console.error('Pivot HTML Export Error', err);
-    alert('Erreur lors de l\'export HTML du TCD');
+    alert("Erreur lors de l'export HTML du TCD");
   }
 };

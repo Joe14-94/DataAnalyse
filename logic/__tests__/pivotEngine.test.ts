@@ -8,7 +8,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
     { id: '2', Region: 'Nord', Produit: 'B', Ventes: '200', Date: '2024-01-20' },
     { id: '3', Region: 'Sud', Produit: 'A', Ventes: '150', Date: '2024-02-10' },
     { id: '4', Region: 'Sud', Produit: 'B', Ventes: '250', Date: '2024-02-15' },
-    { id: '5', Region: 'Nord', Produit: 'A', Ventes: '300', Date: '2024-03-05' },
+    { id: '5', Region: 'Nord', Produit: 'A', Ventes: '300', Date: '2024-03-05' }
   ];
 
   describe('Agrégations de Base', () => {
@@ -30,10 +30,10 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result!.grandTotal).toBe(5);
       expect(result!.displayRows).toHaveLength(2);
 
-      const nord = result!.displayRows.find(r => r.keys[0] === 'Nord');
+      const nord = result!.displayRows.find((r) => r.keys[0] === 'Nord');
       expect(nord!.rowTotal).toBe(3);
 
-      const sud = result!.displayRows.find(r => r.keys[0] === 'Sud');
+      const sud = result!.displayRows.find((r) => r.keys[0] === 'Sud');
       expect(sud!.rowTotal).toBe(2);
     });
 
@@ -54,10 +54,10 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result).not.toBeNull();
       expect(result!.grandTotal).toBe(1000);
 
-      const nord = result!.displayRows.find(r => r.keys[0] === 'Nord');
+      const nord = result!.displayRows.find((r) => r.keys[0] === 'Nord');
       expect(nord!.rowTotal).toBe(600);
 
-      const sud = result!.displayRows.find(r => r.keys[0] === 'Sud');
+      const sud = result!.displayRows.find((r) => r.keys[0] === 'Sud');
       expect(sud!.rowTotal).toBe(400);
     });
 
@@ -78,7 +78,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result).not.toBeNull();
       expect(result!.grandTotal).toBe(200);
 
-      const nord = result!.displayRows.find(r => r.keys[0] === 'Nord');
+      const nord = result!.displayRows.find((r) => r.keys[0] === 'Nord');
       expect(nord!.rowTotal).toBe(200);
     });
 
@@ -132,7 +132,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result).not.toBeNull();
       expect(result!.colHeaders).toEqual(['A', 'B']);
 
-      const nord = result!.displayRows.find(r => r.keys[0] === 'Nord');
+      const nord = result!.displayRows.find((r) => r.keys[0] === 'Nord');
       expect(nord!.metrics['A']).toBe(400);
       expect(nord!.metrics['B']).toBe(200);
     });
@@ -287,7 +287,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
         showSubtotals: false
       });
 
-      const vide = result!.displayRows.find(r => r.keys[0] === '(Vide)');
+      const vide = result!.displayRows.find((r) => r.keys[0] === '(Vide)');
       expect(vide).toBeDefined();
       expect(vide!.rowTotal).toBe(0);
     });
@@ -365,7 +365,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       { id: '4', Compte: '411000', Montant: '200', Date: '05/03/2025' },
       { id: '5', Compte: '512000', Montant: '2000', Date: '15/01/2025' },
       { id: '6', Compte: '512000', Montant: '1500', Date: '10/02/2025' },
-      { id: '7', Compte: '512000', Montant: '1800', Date: '15/03/2025' },
+      { id: '7', Compte: '512000', Montant: '1800', Date: '15/03/2025' }
     ];
 
     it('devrait regrouper correctement par MOIS avec dates françaises', () => {
@@ -386,7 +386,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result!.colHeaders).toEqual(['2025-01', '2025-02', '2025-03']);
       expect(result!.grandTotal).toBe(7300);
 
-      const compte411 = result!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411 = result!.displayRows.find((r) => r.keys[0] === '411000');
       expect(compte411!.metrics['2025-01']).toBe(1500);
       expect(compte411!.metrics['2025-02']).toBe(300);
       expect(compte411!.metrics['2025-03']).toBe(200);
@@ -410,7 +410,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result!.colHeaders).toEqual(['2025-T1']);
       expect(result!.grandTotal).toBe(7300);
 
-      const compte411 = result!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411 = result!.displayRows.find((r) => r.keys[0] === '411000');
       expect(compte411!.metrics['2025-T1']).toBe(2000);
     });
 
@@ -432,7 +432,7 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(result!.colHeaders).toEqual(['2025']);
       expect(result!.grandTotal).toBe(7300);
 
-      const compte411 = result!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411 = result!.displayRows.find((r) => r.keys[0] === '411000');
       expect(compte411!.metrics['2025']).toBe(2000);
     });
 
@@ -496,10 +496,10 @@ describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
       expect(resultYear!.grandTotal).toBe(7300);
 
       // Les totaux de ligne doivent aussi être identiques
-      const compte411Exact = resultExact!.displayRows.find(r => r.keys[0] === '411000');
-      const compte411Month = resultMonth!.displayRows.find(r => r.keys[0] === '411000');
-      const compte411Quarter = resultQuarter!.displayRows.find(r => r.keys[0] === '411000');
-      const compte411Year = resultYear!.displayRows.find(r => r.keys[0] === '411000');
+      const compte411Exact = resultExact!.displayRows.find((r) => r.keys[0] === '411000');
+      const compte411Month = resultMonth!.displayRows.find((r) => r.keys[0] === '411000');
+      const compte411Quarter = resultQuarter!.displayRows.find((r) => r.keys[0] === '411000');
+      const compte411Year = resultYear!.displayRows.find((r) => r.keys[0] === '411000');
 
       expect(compte411Exact!.rowTotal).toBe(2000);
       expect(compte411Month!.rowTotal).toBe(2000);

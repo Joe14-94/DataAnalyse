@@ -9,7 +9,17 @@
  */
 
 import React, { useState } from 'react';
-import { Share2, Copy, Check, AlertCircle, Info, Database, Layout, Users, Globe } from 'lucide-react';
+import {
+  Share2,
+  Copy,
+  Check,
+  AlertCircle,
+  Info,
+  Database,
+  Layout,
+  Users,
+  Globe
+} from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { o365Service } from '../../services/o365Service';
@@ -33,7 +43,7 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
   widgets,
   datasets,
   batches,
-  uiPrefs,
+  uiPrefs
 }) => {
   // État local
   const [includeData, setIncludeData] = useState(true);
@@ -50,7 +60,7 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
       dashboardWidgets: widgets,
       datasets: includeData ? datasets : undefined,
       batches: includeData ? batches : undefined,
-      uiPrefs,
+      uiPrefs
     };
     const jsonSize = JSON.stringify(content).length;
     if (jsonSize < 1024) return `${jsonSize} B`;
@@ -75,21 +85,16 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
         dashboardWidgets: widgets,
         datasets: includeData ? datasets : undefined,
         batches: includeData ? batches : undefined,
-        uiPrefs,
+        uiPrefs
       };
 
       // Partager via O365 Service
-      const metadata = await o365Service.shareContent(
-        'dashboard',
-        dashboardName,
-        content,
-        {
-          includeData,
-          scope,
-          description: description || undefined,
-          permission: 'read', // Phase 1 : lecture seule
-        }
-      );
+      const metadata = await o365Service.shareContent('dashboard', dashboardName, content, {
+        includeData,
+        scope,
+        description: description || undefined,
+        permission: 'read' // Phase 1 : lecture seule
+      });
 
       setShareMetadata(metadata);
     } catch (err: any) {
@@ -133,9 +138,7 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
         title={
           <div>
             <h3 className="text-xl font-bold">Dashboard partagé avec succès !</h3>
-            <p className="text-txt-muted text-xs font-normal">
-              Le lien de partage a été créé
-            </p>
+            <p className="text-txt-muted text-xs font-normal">Le lien de partage a été créé</p>
           </div>
         }
       >
@@ -201,9 +204,7 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
-            <Button onClick={handleClose}>
-              Fermer
-            </Button>
+            <Button onClick={handleClose}>Fermer</Button>
           </div>
         </div>
       </Modal>
@@ -220,9 +221,7 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
       title={
         <div>
           <h3 className="text-xl font-bold">Partager "{dashboardName}"</h3>
-          <p className="text-txt-muted text-xs font-normal">
-            Créer un lien de partage OneDrive
-          </p>
+          <p className="text-txt-muted text-xs font-normal">Créer un lien de partage OneDrive</p>
         </div>
       }
       footer={
@@ -292,11 +291,10 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
                 <Database className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-sm text-txt-main">
-                  Données sources (datasets)
-                </div>
+                <div className="font-medium text-sm text-txt-main">Données sources (datasets)</div>
                 <div className="text-xs text-txt-muted mt-0.5">
-                  {includeData ? '✓ Inclus' : '✗ Non inclus'} - Les données brutes utilisées par les widgets
+                  {includeData ? '✓ Inclus' : '✗ Non inclus'} - Les données brutes utilisées par les
+                  widgets
                 </div>
               </div>
             </label>
@@ -328,9 +326,7 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
 
         {/* Portée du partage */}
         <div>
-          <label className="block text-sm font-medium text-txt-main mb-3">
-            Partager avec
-          </label>
+          <label className="block text-sm font-medium text-txt-main mb-3">Partager avec</label>
           <div className="space-y-2">
             <label className="flex items-start gap-3 p-3 bg-surface rounded-lg border-2 border-border-default hover:border-brand-400 cursor-pointer transition-colors">
               <input
@@ -383,7 +379,9 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
             <div className="text-xs text-purple-900">
               <p className="font-medium mb-1">Phase 1 - Partage en lecture seule :</p>
               <ul className="list-disc list-inside space-y-0.5">
-                <li>Le dashboard est partagé en tant que <strong>snapshot</strong> (lecture seule)</li>
+                <li>
+                  Le dashboard est partagé en tant que <strong>snapshot</strong> (lecture seule)
+                </li>
                 <li>Les destinataires peuvent consulter et dupliquer le dashboard</li>
                 <li>Aucune synchronisation automatique (modifications futures non reflétées)</li>
               </ul>

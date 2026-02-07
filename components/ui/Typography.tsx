@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // --- TITRES ---
@@ -10,10 +9,10 @@ interface HeadingProps {
 
 export const Heading: React.FC<HeadingProps> = ({ level = 1, children, className = '' }) => {
   const styles = {
-    1: "text-[1.8em] font-bold text-txt-main tracking-tight",
-    2: "text-[1.5em] font-bold text-txt-main",
-    3: "text-[1.2em] font-semibold text-txt-main",
-    4: "text-base font-bold text-txt-secondary uppercase tracking-wider"
+    1: 'text-[1.8em] font-bold text-txt-main tracking-tight',
+    2: 'text-[1.5em] font-bold text-txt-main',
+    3: 'text-[1.2em] font-semibold text-txt-main',
+    4: 'text-base font-bold text-txt-secondary uppercase tracking-wider'
   };
 
   const Tag = `h${level}` as React.ElementType;
@@ -40,25 +39,25 @@ export const Text: React.FC<TextProps> = ({
   as = 'p'
 }) => {
   const sizes = {
-    xs: "text-xs",
-    sm: "text-sm",
-    base: "text-base",
-    lg: "text-lg"
+    xs: 'text-xs',
+    sm: 'text-sm',
+    base: 'text-base',
+    lg: 'text-lg'
   };
 
   const variants = {
-    main: "text-txt-main",
-    secondary: "text-txt-secondary",
-    muted: "text-txt-muted",
-    brand: "text-brand-600",
-    danger: "text-danger-text",
-    success: "text-success-text"
+    main: 'text-txt-main',
+    secondary: 'text-txt-secondary',
+    muted: 'text-txt-muted',
+    brand: 'text-brand-600',
+    danger: 'text-danger-text',
+    success: 'text-success-text'
   };
 
   const weights = {
-    normal: "font-normal",
-    medium: "font-medium",
-    bold: "font-bold"
+    normal: 'font-normal',
+    medium: 'font-medium',
+    bold: 'font-bold'
   };
 
   const Tag = as as React.ElementType;

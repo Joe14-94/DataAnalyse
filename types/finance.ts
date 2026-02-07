@@ -1,6 +1,12 @@
-
 export type AccountNature = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
-export type PLCategory = 'revenue' | 'cogs' | 'opex' | 'depreciation' | 'financial' | 'exceptional' | 'tax';
+export type PLCategory =
+  | 'revenue'
+  | 'cogs'
+  | 'opex'
+  | 'depreciation'
+  | 'financial'
+  | 'exceptional'
+  | 'tax';
 
 export interface Account {
   id: string;
@@ -246,7 +252,13 @@ export interface BudgetModule {
 }
 
 export type ForecastType = 'monthly' | 'quarterly' | 'yearly';
-export type ForecastMethod = 'manual' | 'copy_actual' | 'driver_based' | 'ml_prediction' | 'trend' | 'seasonal';
+export type ForecastMethod =
+  | 'manual'
+  | 'copy_actual'
+  | 'driver_based'
+  | 'ml_prediction'
+  | 'trend'
+  | 'seasonal';
 export type ForecastStatus = 'draft' | 'submitted' | 'validated' | 'locked';
 
 export interface ForecastDriver {

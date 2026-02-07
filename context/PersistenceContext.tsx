@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { AppState } from '../types';
 
@@ -20,6 +19,6 @@ export const PersistenceContext = createContext<PersistenceContextType | undefin
 
 export const usePersistence = () => {
   const context = useContext(PersistenceContext);
-  if (!context) throw new Error("usePersistence must be used within a PersistenceProvider");
+  if (!context) throw new Error('usePersistence must be used within a PersistenceProvider');
   return context;
 };

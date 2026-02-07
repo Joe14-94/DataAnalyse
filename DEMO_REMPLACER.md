@@ -1,7 +1,9 @@
 # 🎯 Démonstration : Remplacer "AZERTY" par "QSDFGH" dans la colonne "Test"
 
 ## Scénario
+
 Vous avez une colonne nommée **"Test"** qui contient des valeurs comme :
+
 - "Code AZERTY 123"
 - "AZERTY-456"
 - "Test AZERTY final"
@@ -13,6 +15,7 @@ Vous voulez créer une nouvelle colonne où toutes les occurrences de "AZERTY" s
 ## 📋 Étape par étape dans la modale
 
 ### Étape 1 : Ouvrir la modale
+
 Dans le **Tableau Croisé Dynamique (TCD)**, cliquez sur le bouton **"+ Champ calculé"** en haut à gauche.
 
 ```
@@ -74,6 +77,7 @@ Dans le **Tableau Croisé Dynamique (TCD)**, cliquez sur le bouton **"+ Champ ca
 ### Étape 2 : Remplir le nom du champ
 
 Dans le champ **"Nom du champ"**, saisissez :
+
 ```
 Test modifié
 ```
@@ -91,11 +95,13 @@ Test modifié
 
 **Option A : Saisie manuelle**
 Dans le champ **"Formule"**, tapez directement :
+
 ```
 REMPLACER([Test], "AZERTY", "QSDFGH")
 ```
 
 **Option B : Avec les clics (recommandé)**
+
 1. Cliquez sur **"REMPLACER"** dans la colonne de droite (section Texte)
    → La formule affiche : `REMPLACER(`
 
@@ -105,6 +111,7 @@ REMPLACER([Test], "AZERTY", "QSDFGH")
 3. Tapez manuellement : `, "AZERTY", "QSDFGH")`
 
 **Résultat final dans le champ Formule :**
+
 ```
   Formule
   ┌────────────────────────────────────────────────┐
@@ -133,6 +140,7 @@ Dans le champ **"Type de résultat"**, sélectionnez **"Texte"** (et non "Nombre
 ```
 
 **Pourquoi ?**
+
 - Si vous choisissez "Texte" → Le champ ira dans **"Lignes"** (dimensions)
 - Si vous choisissez "Nombre" → Le champ ira dans **"Valeurs"** (métriques) ← Pas adapté pour du texte !
 
@@ -155,6 +163,7 @@ Si votre première ligne a `Test = "Code AZERTY 123"`, vous verrez :
 ```
 
 **Si l'aperçu affiche une erreur :**
+
 ```
   ┌─ Aperçu ──────────────────────────────────────┐
   │  ❌ Erreur dans la formule                     │
@@ -164,6 +173,7 @@ Si votre première ligne a `Test = "Code AZERTY 123"`, vous verrez :
 ```
 
 Vérifiez :
+
 - Les crochets autour de `[Test]`
 - Les guillemets autour de `"AZERTY"` et `"QSDFGH"`
 - Les virgules entre les arguments
@@ -223,21 +233,21 @@ Votre nouveau champ **"Test modifié"** apparaît automatiquement dans la sectio
 
 Si vous aviez ces données dans la colonne "Test" :
 
-| ID  | Test               |
-|-----|--------------------|
-| 1   | Code AZERTY 123    |
-| 2   | AZERTY-456         |
-| 3   | Test AZERTY final  |
-| 4   | Autre donnée       |
+| ID  | Test              |
+| --- | ----------------- |
+| 1   | Code AZERTY 123   |
+| 2   | AZERTY-456        |
+| 3   | Test AZERTY final |
+| 4   | Autre donnée      |
 
 Vous obtenez maintenant une nouvelle colonne "Test modifié" :
 
-| ID  | Test               | Test modifié        |
-|-----|--------------------|---------------------|
-| 1   | Code AZERTY 123    | Code QSDFGH 123     |
-| 2   | AZERTY-456         | QSDFGH-456          |
-| 3   | Test AZERTY final  | Test QSDFGH final   |
-| 4   | Autre donnée       | Autre donnée        |
+| ID  | Test              | Test modifié      |
+| --- | ----------------- | ----------------- |
+| 1   | Code AZERTY 123   | Code QSDFGH 123   |
+| 2   | AZERTY-456        | QSDFGH-456        |
+| 3   | Test AZERTY final | Test QSDFGH final |
+| 4   | Autre donnée      | Autre donnée      |
 
 ---
 
@@ -248,11 +258,13 @@ Vous obtenez maintenant une nouvelle colonne "Test modifié" :
 Si vous voulez remplacer plusieurs chaînes différentes :
 
 **Formule :**
+
 ```
 REMPLACER(REMPLACER([Test], "AZERTY", "QSDFGH"), "123", "789")
 ```
 
 **Résultat :**
+
 - "Code AZERTY 123" → "Code QSDFGH 789"
 
 ---
@@ -262,12 +274,14 @@ REMPLACER(REMPLACER([Test], "AZERTY", "QSDFGH"), "123", "789")
 Pour supprimer une chaîne (= remplacer par rien) :
 
 **Formule :**
+
 ```
 REMPLACER([Test], "AZERTY", "")
 ```
 
 **Résultat :**
-- "Code AZERTY 123" → "Code  123" (AZERTY enlevé)
+
+- "Code AZERTY 123" → "Code 123" (AZERTY enlevé)
 
 ---
 
@@ -276,11 +290,13 @@ REMPLACER([Test], "AZERTY", "")
 Si vous voulez utiliser les regex (par exemple, remplacer tous les chiffres) :
 
 **Formule :**
+
 ```
 REMPLACER([Test], "[0-9]+", "XXX")
 ```
 
 **Résultat :**
+
 - "Code AZERTY 123" → "Code AZERTY XXX"
 
 ---
@@ -288,24 +304,28 @@ REMPLACER([Test], "[0-9]+", "XXX")
 ## ⚠️ Erreurs courantes
 
 ### Erreur 1 : Oublier les crochets
+
 ```
 ❌ REMPLACER(Test, "AZERTY", "QSDFGH")
 ✅ REMPLACER([Test], "AZERTY", "QSDFGH")
 ```
 
 ### Erreur 2 : Oublier les guillemets
+
 ```
 ❌ REMPLACER([Test], AZERTY, QSDFGH)
 ✅ REMPLACER([Test], "AZERTY", "QSDFGH")
 ```
 
 ### Erreur 3 : Mauvais type de champ
+
 ```
 ❌ Type de résultat : Nombre  → Le champ ira dans "Valeurs" (pas adapté pour du texte)
 ✅ Type de résultat : Texte   → Le champ ira dans "Lignes" (correct)
 ```
 
 ### Erreur 4 : Virgules manquantes
+
 ```
 ❌ REMPLACER([Test] "AZERTY" "QSDFGH")
 ✅ REMPLACER([Test], "AZERTY", "QSDFGH")
@@ -320,21 +340,27 @@ REMPLACER([Test], "[0-9]+", "XXX")
 ### Combiner avec d'autres fonctions
 
 **Nettoyer et remplacer :**
+
 ```
 REMPLACER(SUPPRESPACE([Test]), "AZERTY", "QSDFGH")
 ```
+
 → Supprime les espaces avant/après, puis remplace
 
 **Remplacer et mettre en majuscules :**
+
 ```
 MAJUSCULE(REMPLACER([Test], "azerty", "qsdfgh"))
 ```
+
 → Remplace puis convertit tout en majuscules
 
 **Remplacer uniquement si présent :**
+
 ```
 SI(CONTIENT([Test], "AZERTY"), REMPLACER([Test], "AZERTY", "QSDFGH"), [Test])
 ```
+
 → Remplace seulement si "AZERTY" est présent, sinon garde l'original
 
 ---

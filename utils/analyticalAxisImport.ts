@@ -19,7 +19,9 @@ export interface AnalyticalAxisImportData {
 /**
  * Parse un fichier Excel pour l'import d'axes analytiques
  */
-export const readAnalyticalAxisExcelFile = async (file: File): Promise<AnalyticalAxisImportData> => {
+export const readAnalyticalAxisExcelFile = async (
+  file: File
+): Promise<AnalyticalAxisImportData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -36,12 +38,16 @@ export const readAnalyticalAxisExcelFile = async (file: File): Promise<Analytica
         const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
 
         if (jsonData.length < 2) {
-          reject(new Error('Le fichier doit contenir au moins une ligne d\'en-tête et une ligne de données'));
+          reject(
+            new Error(
+              "Le fichier doit contenir au moins une ligne d'en-tête et une ligne de données"
+            )
+          );
           return;
         }
 
         const headers = jsonData[0].map((h: any) => String(h).trim());
-        const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== ''));
+        const rows = jsonData.slice(1).filter((row) => row.some((cell) => cell !== ''));
 
         // Détection des colonnes
         const result = detectAnalyticalAxisColumns(headers);
@@ -64,27 +70,37 @@ export const readAnalyticalAxisExcelFile = async (file: File): Promise<Analytica
 /**
  * Parse un fichier CSV pour l'import d'axes analytiques
  */
-export const readAnalyticalAxisCSVFile = async (file: File, encoding: string = 'UTF-8'): Promise<AnalyticalAxisImportData> => {
+export const readAnalyticalAxisCSVFile = async (
+  file: File,
+  encoding: string = 'UTF-8'
+): Promise<AnalyticalAxisImportData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(line => line.trim());
+        const lines = text.split(/\r?\n/).filter((line) => line.trim());
 
         if (lines.length < 2) {
-          reject(new Error('Le fichier doit contenir au moins une ligne d\'en-tête et une ligne de données'));
+          reject(
+            new Error(
+              "Le fichier doit contenir au moins une ligne d'en-tête et une ligne de données"
+            )
+          );
           return;
         }
 
         // Détection du délimiteur
         const delimiter = detectDelimiter(lines[0]);
 
-        const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-        const rows = lines.slice(1).map(line => {
-          return line.split(delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''));
-        }).filter(row => row.some(cell => cell !== ''));
+        const headers = lines[0].split(delimiter).map((h) => h.trim().replace(/^"|"$/g, ''));
+        const rows = lines
+          .slice(1)
+          .map((line) => {
+            return line.split(delimiter).map((cell) => cell.trim().replace(/^"|"$/g, ''));
+          })
+          .filter((row) => row.some((cell) => cell !== ''));
 
         // Détection des colonnes
         const result = detectAnalyticalAxisColumns(headers);
@@ -107,7 +123,9 @@ export const readAnalyticalAxisCSVFile = async (file: File, encoding: string = '
 /**
  * Détection automatique des colonnes dans le fichier d'import
  */
-const detectAnalyticalAxisColumns = (headers: string[]): {
+const detectAnalyticalAxisColumns = (
+  headers: string[]
+): {
   categoryColumn?: number;
   subCategoryColumn?: number;
   valueCodeColumn: number;
@@ -116,47 +134,58 @@ const detectAnalyticalAxisColumns = (headers: string[]): {
   responsibleNameColumn?: number;
   responsibleEmailColumn?: number;
 } => {
-  const lowerHeaders = headers.map(h => h.toLowerCase());
+  const lowerHeaders = headers.map((h) => h.toLowerCase());
 
   // Détection de la colonne "Catégorie"
-  const categoryColumn = lowerHeaders.findIndex(h =>
-    (h.includes('catégorie') || h.includes('categorie') || h.includes('category')) &&
-    !h.includes('sous')
+  const categoryColumn = lowerHeaders.findIndex(
+    (h) =>
+      (h.includes('catégorie') || h.includes('categorie') || h.includes('category')) &&
+      !h.includes('sous')
   );
 
   // Détection de la colonne "Sous-catégorie"
-  const subCategoryColumn = lowerHeaders.findIndex(h =>
-    (h.includes('sous-catégorie') || h.includes('sous-categorie') ||
-     h.includes('sous catégorie') || h.includes('sous categorie') ||
-     h.includes('subcategory') || h.includes('sub-category'))
+  const subCategoryColumn = lowerHeaders.findIndex(
+    (h) =>
+      h.includes('sous-catégorie') ||
+      h.includes('sous-categorie') ||
+      h.includes('sous catégorie') ||
+      h.includes('sous categorie') ||
+      h.includes('subcategory') ||
+      h.includes('sub-category')
   );
 
   // Détection de la colonne "Code"
-  let valueCodeColumn = lowerHeaders.findIndex(h =>
-    h.includes('code') && !h.includes('parent')
-  );
+  let valueCodeColumn = lowerHeaders.findIndex((h) => h.includes('code') && !h.includes('parent'));
   if (valueCodeColumn === -1) valueCodeColumn = 0; // Par défaut première colonne
 
   // Détection de la colonne "Libellé/Label/Nom"
-  let valueLabelColumn = lowerHeaders.findIndex(h =>
-    h.includes('libellé') || h.includes('libelle') || h.includes('label') ||
-    h.includes('nom') || h.includes('name') || h.includes('intitulé') || h.includes('intitule')
+  let valueLabelColumn = lowerHeaders.findIndex(
+    (h) =>
+      h.includes('libellé') ||
+      h.includes('libelle') ||
+      h.includes('label') ||
+      h.includes('nom') ||
+      h.includes('name') ||
+      h.includes('intitulé') ||
+      h.includes('intitule')
   );
   if (valueLabelColumn === -1 && headers.length > 1) valueLabelColumn = 1; // Par défaut deuxième colonne
 
   // Détection de la colonne "Code Parent" (optionnel)
-  const parentCodeColumn = lowerHeaders.findIndex(h =>
-    h.includes('parent') && h.includes('code')
+  const parentCodeColumn = lowerHeaders.findIndex(
+    (h) => h.includes('parent') && h.includes('code')
   );
 
   // Détection de la colonne "Responsable"
-  const responsibleNameColumn = lowerHeaders.findIndex(h =>
-    h.includes('responsable') && !h.includes('email') && !h.includes('mail')
+  const responsibleNameColumn = lowerHeaders.findIndex(
+    (h) => h.includes('responsable') && !h.includes('email') && !h.includes('mail')
   );
 
   // Détection de la colonne "Email Responsable"
-  const responsibleEmailColumn = lowerHeaders.findIndex(h =>
-    (h.includes('email') || h.includes('mail')) && (h.includes('responsable') || h.includes('contact'))
+  const responsibleEmailColumn = lowerHeaders.findIndex(
+    (h) =>
+      (h.includes('email') || h.includes('mail')) &&
+      (h.includes('responsable') || h.includes('contact'))
   );
 
   return {
@@ -207,7 +236,7 @@ export const convertImportToAxisValues = (
     responsibleEmailColumn
   } = importData;
 
-  return rows.map(row => {
+  return rows.map((row) => {
     const code = String(row[valueCodeColumn] || '').trim();
     const label = String(row[valueLabelColumn] || '').trim();
 
@@ -254,20 +283,17 @@ export const convertImportToAxisValues = (
 /**
  * Export des valeurs d'axe vers Excel
  */
-export const exportAxisValuesToExcel = (
-  axisValues: AxisValue[],
-  axisName: string
-) => {
+export const exportAxisValuesToExcel = (axisValues: AxisValue[], axisName: string) => {
   // Préparation des données
-  const data = axisValues.map(value => ({
-    'Catégorie': value.category || '',
+  const data = axisValues.map((value) => ({
+    Catégorie: value.category || '',
     'Sous-catégorie': value.subCategory || '',
-    'Code': value.code,
-    'Libellé': value.label,
+    Code: value.code,
+    Libellé: value.label,
     'Code Parent': value.parentId || '',
-    'Responsable': value.responsibleName || '',
+    Responsable: value.responsibleName || '',
     'Email Responsable': value.responsibleEmail || '',
-    'Actif': value.isActive ? 'Oui' : 'Non'
+    Actif: value.isActive ? 'Oui' : 'Non'
   }));
 
   // Création du workbook
@@ -286,57 +312,57 @@ export const exportAxisValuesToExcel = (
 export const downloadAnalyticalAxisTemplate = () => {
   const templateData = [
     {
-      'Catégorie': 'Direction',
+      Catégorie: 'Direction',
       'Sous-catégorie': 'Direction Générale',
-      'Code': 'DG-001',
-      'Libellé': 'Direction Générale',
+      Code: 'DG-001',
+      Libellé: 'Direction Générale',
       'Code Parent': '',
-      'Responsable': 'John Doe',
+      Responsable: 'John Doe',
       'Email Responsable': 'john.doe@example.com'
     },
     {
-      'Catégorie': 'Direction',
+      Catégorie: 'Direction',
       'Sous-catégorie': 'Marketing',
-      'Code': 'MKT-001',
-      'Libellé': 'Marketing Digital',
+      Code: 'MKT-001',
+      Libellé: 'Marketing Digital',
       'Code Parent': '',
-      'Responsable': 'Jane Smith',
+      Responsable: 'Jane Smith',
       'Email Responsable': 'jane.smith@example.com'
     },
     {
-      'Catégorie': 'Direction',
+      Catégorie: 'Direction',
       'Sous-catégorie': 'Marketing',
-      'Code': 'MKT-002',
-      'Libellé': 'Marketing Traditionnel',
+      Code: 'MKT-002',
+      Libellé: 'Marketing Traditionnel',
       'Code Parent': '',
-      'Responsable': 'Jane Smith',
+      Responsable: 'Jane Smith',
       'Email Responsable': 'jane.smith@example.com'
     },
     {
-      'Catégorie': 'Support',
+      Catégorie: 'Support',
       'Sous-catégorie': 'IT',
-      'Code': 'IT-001',
-      'Libellé': 'Infrastructure',
+      Code: 'IT-001',
+      Libellé: 'Infrastructure',
       'Code Parent': '',
-      'Responsable': 'Bob Wilson',
+      Responsable: 'Bob Wilson',
       'Email Responsable': 'bob.wilson@example.com'
     },
     {
-      'Catégorie': 'Support',
+      Catégorie: 'Support',
       'Sous-catégorie': 'IT',
-      'Code': 'IT-002',
-      'Libellé': 'Support Utilisateurs',
+      Code: 'IT-002',
+      Libellé: 'Support Utilisateurs',
       'Code Parent': '',
-      'Responsable': 'Bob Wilson',
+      Responsable: 'Bob Wilson',
       'Email Responsable': 'bob.wilson@example.com'
     },
     {
-      'Catégorie': 'Support',
+      Catégorie: 'Support',
       'Sous-catégorie': 'RH',
-      'Code': 'RH-001',
-      'Libellé': 'Recrutement',
+      Code: 'RH-001',
+      Libellé: 'Recrutement',
       'Code Parent': '',
-      'Responsable': 'Alice Brown',
+      Responsable: 'Alice Brown',
       'Email Responsable': 'alice.brown@example.com'
     }
   ];
