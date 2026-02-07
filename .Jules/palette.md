@@ -13,3 +13,7 @@
 ## 2026-02-04 - [Design System Font Size Minimums]
 **Learning:** Legacy components often use very small custom font sizes (8px-10px) for density. However, this violates modern accessibility standards and the project's design system.
 **Action:** Standardize secondary text to text-xs (12px) globally to ensure readability while maintaining information density.
+
+## 2026-02-06 - [Standardizing Interactive Elements]
+**Learning:** Standardizing interactive elements like toolbar buttons using a base `Button` component not only ensures visual consistency but also provides automatic accessibility fallbacks (like title to aria-label) and standardized focus states across the application.
+**Action:** Replace raw `<button>` tags for key actions with the project's `Button` component and ensure all icon-only buttons have descriptive `aria-label` or `title` attributes.

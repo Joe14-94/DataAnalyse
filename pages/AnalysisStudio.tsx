@@ -18,6 +18,7 @@ import {
 import { FieldConfig, ChartType as WidgetChartType, FilterRule, ColorMode, ColorPalette } from '../types';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getChartColors, generateGradient, formatChartValue } from '../logic/pivotToChart';
+import { Button } from '../components/ui/Button';
 
 type ChartType = 'bar' | 'column' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'pie' | 'donut' | 'area' | 'stacked-area' | 'radar' | 'treemap' | 'kpi' | 'line' | 'sunburst' | 'radial' | 'funnel';
 type AnalysisMode = 'snapshot' | 'trend';
@@ -864,7 +865,7 @@ export const AnalysisStudio: React.FC = () => {
                          {metric2 !== 'none' && <th className="px-4 py-2 text-right text-xs font-bold text-indigo-500 uppercase">Valeur 2</th>}
                          {isCumulative && <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">Cumul</th>}
                          {snapshotData.series.map(s => (
-                            <th key={s} className="px-4 py-2 text-right text-[10px] font-bold text-slate-400 uppercase">{s}</th>
+                            <th key={s} className="px-4 py-2 text-right text-xs font-bold text-slate-400 uppercase">{s}</th>
                          ))}
                       </tr>
                    </thead>
@@ -1278,14 +1279,18 @@ export const AnalysisStudio: React.FC = () => {
 
              {/* Save View Button */}
              {!isSaving ? (
-                 <button onClick={() => setIsSaving(true)} className="p-2 text-slate-500 hover:text-brand-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50" title="Enregistrer cette vue">
-                    <Save className="w-5 h-5" />
-                 </button>
+                 <Button
+                    onClick={() => setIsSaving(true)}
+                    variant="secondary"
+                    size="sm"
+                    icon={<Save className="w-5 h-5" />}
+                    title="Enregistrer cette vue"
+                 />
              ) : (
                  <div className="flex items-center gap-1 animate-in fade-in bg-white border border-brand-300 rounded-md p-0.5">
                     <input type="text" className="p-1.5 text-xs border-none focus:ring-0 w-32 bg-transparent text-slate-900" placeholder="Nom..." value={analysisName} onChange={e => setAnalysisName(e.target.value)} autoFocus />
-                    <button onClick={handleSaveAnalysis} className="p-1 bg-brand-600 text-white rounded hover:bg-brand-700"><Check className="w-3 h-3" /></button>
-                    <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300"><X className="w-3 h-3" /></button>
+                    <button onClick={handleSaveAnalysis} className="p-1 bg-brand-600 text-white rounded hover:bg-brand-700" aria-label="Confirmer l'enregistrement"><Check className="w-3 h-3" /></button>
+                    <button onClick={() => setIsSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300" aria-label="Annuler"><X className="w-3 h-3" /></button>
                  </div>
              )}
 
@@ -1293,13 +1298,13 @@ export const AnalysisStudio: React.FC = () => {
 
              {/* EXPORT BUTTON */}
              <div className="relative">
-                <button
+                <Button
                    onClick={() => setShowExportMenu(!showExportMenu)}
-                   className="p-2 text-slate-500 hover:text-brand-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50 flex items-center gap-1"
+                   variant="secondary"
+                   size="sm"
+                   icon={<FileDown className="w-5 h-5" />}
                    title="Exporter"
-                >
-                   <FileDown className="w-5 h-5" />
-                </button>
+                />
                 {showExportMenu && (
                    <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
                       <div className="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Format PDF</div>
@@ -1343,13 +1348,13 @@ export const AnalysisStudio: React.FC = () => {
                 )}
              </div>
 
-             <button
+             <Button
                 onClick={handleExportToDashboard}
-                className="p-2 text-slate-500 hover:text-brand-600 border border-slate-300 rounded-md bg-white hover:bg-slate-50"
+                variant="secondary"
+                size="sm"
+                icon={<LayoutDashboard className="w-5 h-5" />}
                 title="Ajouter au tableau de bord"
-            >
-                <LayoutDashboard className="w-5 h-5" />
-            </button>
+            />
 
            {mode === 'snapshot' ? (
               <div className="flex items-center gap-2 w-full xl:w-auto ml-2">
@@ -1393,7 +1398,7 @@ export const AnalysisStudio: React.FC = () => {
                 className="text-xs text-brand-600 hover:underline disabled:text-slate-400"
                 disabled={filters.length === 0}
               >
-                Reset Filtres
+                Réinitialiser les filtres
               </button>
            </div>
            
@@ -1407,7 +1412,7 @@ export const AnalysisStudio: React.FC = () => {
                  </div>
 
                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">
                        {mode === 'snapshot' ? 'Axe Analyse (X)' : 'Champ de données à suivre'}
                     </label>
                     <select
@@ -1421,23 +1426,23 @@ export const AnalysisStudio: React.FC = () => {
 
                  <div className="space-y-3">
                     <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
-                        <label className="block text-[10px] font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
+                        <label className="block text-xs font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
                         <div className="grid grid-cols-3 gap-1">
                            <button
                               onClick={() => setMetric('count')}
-                              className={`py-1.5 text-[10px] font-bold rounded border transition-all ${metric === 'count' ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                              className={`py-1.5 text-xs font-bold rounded border transition-all ${metric === 'count' ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                            >
                               Compte
                            </button>
                            <button
                               onClick={() => setMetric('distinct')}
-                              className={`py-1.5 text-[10px] font-bold rounded border transition-all ${metric === 'distinct' ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                              className={`py-1.5 text-xs font-bold rounded border transition-all ${metric === 'distinct' ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                            >
                               Distinct
                            </button>
                            <button
                               onClick={() => setMetric('sum')}
-                              className={`py-1.5 text-[10px] font-bold rounded border transition-all ${metric === 'sum' ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                              className={`py-1.5 text-xs font-bold rounded border transition-all ${metric === 'sum' ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                            >
                               Somme
                            </button>
@@ -1445,7 +1450,7 @@ export const AnalysisStudio: React.FC = () => {
 
                         {metric === 'sum' && (
                            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                              <label className="block text-[9px] font-black text-slate-500 mb-1 uppercase">Champ de données à afficher (Y1) :</label>
+                              <label className="block text-xs font-black text-slate-500 mb-1 uppercase">Champ de données à afficher (Y1) :</label>
                               {numericFields.length > 0 ? (
                                  <select
                                     className="w-full p-1.5 bg-white border border-slate-300 text-slate-800 text-xs rounded focus:ring-brand-500 shadow-sm"
@@ -1458,7 +1463,7 @@ export const AnalysisStudio: React.FC = () => {
                                     })}
                                  </select>
                               ) : (
-                                 <p className="text-[10px] text-red-500 italic">Aucun champ numérique.</p>
+                                 <p className="text-xs text-red-500 italic">Aucun champ numérique.</p>
                               )}
                            </div>
                         )}
@@ -1466,9 +1471,9 @@ export const AnalysisStudio: React.FC = () => {
 
                     <div className="p-3 bg-brand-50/30 rounded-lg border border-brand-100 space-y-3">
                         <div className="flex justify-between items-center">
-                           <label className="block text-[10px] font-black text-brand-700 uppercase">Métrique Secondaire (Y2)</label>
+                           <label className="block text-xs font-black text-brand-700 uppercase">Métrique Secondaire (Y2)</label>
                            {metric2 !== 'none' && (
-                              <button onClick={() => setMetric2('none')} className="text-[9px] font-bold text-brand-600 hover:underline uppercase">Masquer</button>
+                              <button onClick={() => setMetric2('none')} className="text-xs font-bold text-brand-600 hover:underline uppercase">Masquer</button>
                            )}
                         </div>
                         <div className="grid grid-cols-4 gap-1">
@@ -1481,7 +1486,7 @@ export const AnalysisStudio: React.FC = () => {
                               <button
                                  key={m.id}
                                  onClick={() => setMetric2(m.id as any)}
-                                 className={`py-1 text-[10px] font-black rounded border transition-all ${metric2 === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                 className={`py-1 text-xs font-black rounded border transition-all ${metric2 === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                               >
                                  {m.label}
                               </button>
@@ -1490,7 +1495,7 @@ export const AnalysisStudio: React.FC = () => {
 
                         {metric2 === 'sum' && (
                            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                              <label className="block text-[9px] font-black text-brand-600 mb-1 uppercase">Champ de données à afficher (Y2) :</label>
+                              <label className="block text-xs font-black text-brand-600 mb-1 uppercase">Champ de données à afficher (Y2) :</label>
                               {numericFields.length > 0 ? (
                                  <select
                                     className="w-full p-1.5 bg-white border border-brand-200 text-slate-800 text-xs rounded focus:ring-brand-500 shadow-sm"
@@ -1503,7 +1508,7 @@ export const AnalysisStudio: React.FC = () => {
                                     })}
                                  </select>
                               ) : (
-                                 <p className="text-[10px] text-red-500 italic">Aucun champ numérique.</p>
+                                 <p className="text-xs text-red-500 italic">Aucun champ numérique.</p>
                               )}
                            </div>
                         )}
@@ -1521,7 +1526,7 @@ export const AnalysisStudio: React.FC = () => {
                  <div className="space-y-3 mb-3">
                     {filters.map((filter, idx) => (
                        <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 text-xs space-y-2 relative group">
-                          <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500">
+                          <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500" aria-label="Supprimer le filtre">
                              <X className="w-3 h-3" />
                           </button>
                           
@@ -1584,7 +1589,7 @@ export const AnalysisStudio: React.FC = () => {
                  <div className="space-y-3">
                     <div className="flex flex-col gap-2">
                        <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">Limiter au Top N :</label>
+                          <label className="text-xs font-bold text-slate-500 uppercase">Limiter au Top N :</label>
                           <input
                              type="number"
                              className="w-16 text-xs border border-slate-200 rounded p-1 bg-slate-50 text-right font-bold"
@@ -1595,7 +1600,7 @@ export const AnalysisStudio: React.FC = () => {
 
                        {mode === 'snapshot' && (
                           <div className="flex items-center justify-between">
-                             <label className="text-[10px] font-bold text-slate-500 uppercase">Tri :</label>
+                             <label className="text-xs font-bold text-slate-500 uppercase">Tri :</label>
                              <select
                                 className="text-xs border border-slate-200 rounded p-1 bg-slate-50 font-medium"
                                 value={sortOrder}
@@ -1644,7 +1649,7 @@ export const AnalysisStudio: React.FC = () => {
                  {/* Segment (Snapshot only) */}
                  {mode === 'snapshot' && (
                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                       <label className="text-xs font-bold text-slate-500 uppercase block mb-1">
                           Sous-Groupement (Séries)
                        </label>
                        <select 
@@ -1695,7 +1700,7 @@ export const AnalysisStudio: React.FC = () => {
                                    title={type.label}
                                 >
                                    <Icon className={`w-4 h-4 ${type.rotate ? 'transform rotate-90' : ''}`} />
-                                   <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{type.label}</span>
+                                   <span className="text-xs font-bold uppercase mt-1 truncate w-full text-center">{type.label}</span>
                                 </button>
                              )
                           })}
@@ -1719,7 +1724,7 @@ export const AnalysisStudio: React.FC = () => {
                                     title={type.label}
                                  >
                                     <Icon className="w-4 h-4" />
-                                    <span className="text-[8px] font-bold uppercase mt-1 truncate w-full text-center">{type.label}</span>
+                                    <span className="text-xs font-bold uppercase mt-1 truncate w-full text-center">{type.label}</span>
                                  </button>
                               )
                            })}
@@ -1729,14 +1734,14 @@ export const AnalysisStudio: React.FC = () => {
 
                  {/* COLORS */}
                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
-                    <label className="text-[10px] font-black text-slate-600 uppercase block">Schéma de Couleurs</label>
+                    <label className="text-xs font-black text-slate-600 uppercase block">Schéma de Couleurs</label>
 
                     <div className="grid grid-cols-3 gap-1">
                         {['multi', 'single', 'gradient'].map(m => (
                            <button
                               key={m}
                               onClick={() => setColorMode(m as ColorMode)}
-                              className={`py-1 text-[9px] font-bold rounded border uppercase ${colorMode === m ? 'bg-white border-slate-400 text-slate-900 shadow-sm' : 'bg-transparent border-slate-200 text-slate-400'}`}
+                              className={`py-1 text-xs font-bold rounded border uppercase ${colorMode === m ? 'bg-white border-slate-400 text-slate-900 shadow-sm' : 'bg-transparent border-slate-200 text-slate-400'}`}
                            >
                               {m === 'multi' ? 'Multi' : m === 'single' ? 'Unique' : 'Dégradé'}
                            </button>
@@ -1776,7 +1781,7 @@ export const AnalysisStudio: React.FC = () => {
                                 onChange={(e) => setGradientStart(e.target.value)}
                                 className="w-6 h-6 rounded cursor-pointer border-0 p-0"
                              />
-                             <span className="text-[9px] font-bold text-slate-500 uppercase">{gradientStart}</span>
+                             <span className="text-xs font-bold text-slate-500 uppercase">{gradientStart}</span>
                           </div>
                           <div className="flex items-center gap-2 bg-white p-1 rounded border border-slate-200">
                              <input
@@ -1785,7 +1790,7 @@ export const AnalysisStudio: React.FC = () => {
                                 onChange={(e) => setGradientEnd(e.target.value)}
                                 className="w-6 h-6 rounded cursor-pointer border-0 p-0"
                              />
-                             <span className="text-[9px] font-bold text-slate-500 uppercase">{gradientEnd}</span>
+                             <span className="text-xs font-bold text-slate-500 uppercase">{gradientEnd}</span>
                           </div>
                        </div>
                     )}
@@ -1800,7 +1805,7 @@ export const AnalysisStudio: React.FC = () => {
                  </div>
                  <div className="space-y-3">
                     <div>
-                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Titre du graphique</label>
+                       <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Titre du graphique</label>
                        <input
                           type="text"
                           className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
@@ -1810,7 +1815,7 @@ export const AnalysisStudio: React.FC = () => {
                        />
                     </div>
                     <div>
-                       <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Unité des valeurs</label>
+                       <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Unité des valeurs</label>
                        <input
                           type="text"
                           className="w-full p-2 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded focus:ring-2 focus:ring-brand-500 shadow-sm"
