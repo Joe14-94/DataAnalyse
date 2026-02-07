@@ -21,3 +21,7 @@
 ## 2026-02-15 - [Optimize Data Mapping for Ingestion]
 **Learning:** Data mapping in `mapDataToSchema` was an O(N*M) bottleneck where N is rows and M is columns. Repeating `Object.entries(mapping)` and `parseInt` inside the row loop added massive overhead. Also, using array `includes()` for boolean detection created millions of short-lived arrays. Pre-calculating a flat `activeMappings` array and using static `Set` constants reduced overhead by ~50-70% for large imports.
 **Action:** Hoist all metadata preparation (Object manipulation, parsing, filtering) outside of loops processing large datasets. Use `Set` for value lookups instead of temporary arrays.
+
+## 2026-02-22 - [Optimize Temporal Comparison Pipeline]
+**Learning:** Temporal comparison was performing three separate passes over data for each source (two filters and one aggregation), creating multiple large intermediate arrays. Merging them into a single-pass loop with an integrated `filterFn` reduces complexity from O(3N) to O(N) and eliminates memory pressure from allocations. Standard `for` loops and hoisting metric metadata further reduced CPU time.
+**Action:** Consolidate multiple filter/map/reduce operations into a single loop for performance-critical data pipelines.

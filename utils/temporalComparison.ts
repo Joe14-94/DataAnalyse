@@ -104,20 +104,34 @@ export const filterDataByPeriod = (
 
 /**
  * Agrège les données par clé de regroupement pour plusieurs métriques
+ * BOLT OPTIMIZATION: Added filterFn for single-pass processing and optimized inner loop.
  */
 export const aggregateDataByGroup = (
   data: DataRow[],
   groupByFields: string[],
-  metrics: { field: string; aggType: string; label?: string }[]
+  metrics: { field: string; aggType: string; label?: string }[],
+  filterFn?: (row: DataRow) => boolean
 ): Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }> => {
   const groups = new Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }>();
+
+  // BOLT OPTIMIZATION: Hoist metric labels and aggregation logic out of the loop
+  const metricConfigs = metrics.map(m => ({
+    field: m.field,
+    aggType: m.aggType,
+    label: m.label || `${m.field} (${m.aggType})`
+  }));
+  const numMetrics = metricConfigs.length;
+  const numFields = groupByFields.length;
 
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
 
+    // BOLT OPTIMIZATION: Single-pass filtering
+    if (filterFn && !filterFn(row)) continue;
+
     let groupKey = "";
     let groupLabel = "";
-    for (let j = 0; j < groupByFields.length; j++) {
+    for (let j = 0; j < numFields; j++) {
       const field = groupByFields[j];
       const val = row[field];
       const sVal = val !== undefined && val !== null ? String(val) : '';
@@ -125,63 +139,63 @@ export const aggregateDataByGroup = (
       groupLabel += (j === 0 ? "" : "\x1F") + (sVal || '(vide)');
     }
 
-    if (!groups.has(groupKey)) {
+    let group = groups.get(groupKey);
+    if (!group) {
       const initialMetrics: Record<string, number> = {};
-      metrics.forEach(m => {
-         const mLabel = m.label || `${m.field} (${m.aggType})`;
-         initialMetrics[mLabel] = 0;
-      });
+      for (let j = 0; j < numMetrics; j++) {
+        initialMetrics[metricConfigs[j].label] = 0;
+      }
 
-      groups.set(groupKey, {
+      group = {
         label: groupLabel,
         metrics: initialMetrics,
         details: []
-      });
+      };
+      groups.set(groupKey, group);
     }
 
-    const group = groups.get(groupKey)!;
     group.details.push(row);
+    const detailsLen = group.details.length;
 
-    metrics.forEach(m => {
-       const mLabel = m.label || `${m.field} (${m.aggType})`;
+    // BOLT OPTIMIZATION: Use standard for loop and avoid redundant string conversions
+    for (let j = 0; j < numMetrics; j++) {
+       const m = metricConfigs[j];
+       const mLabel = m.label;
        const rawValue = row[m.field];
-       let value = 0;
 
+       let value = 0;
        if (typeof rawValue === 'number') {
          value = rawValue;
        } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
-         value = parseSmartNumber(String(rawValue));
+         // parseSmartNumber already handles non-strings by doing String(val) internally if needed
+         value = parseSmartNumber(rawValue);
        }
 
-       switch (m.aggType) {
-         case 'sum':
-           group.metrics[mLabel] += value;
-           break;
-         case 'count':
-           group.metrics[mLabel] += 1;
-           break;
-         case 'min':
-           group.metrics[mLabel] = group.details.length === 1 ? value : Math.min(group.metrics[mLabel], value);
-           break;
-         case 'max':
-           group.metrics[mLabel] = group.details.length === 1 ? value : Math.max(group.metrics[mLabel], value);
-           break;
-         case 'avg':
-           group.metrics[mLabel] += value;
-           break;
+       const aggType = m.aggType;
+       if (aggType === 'sum' || aggType === 'avg') {
+         group.metrics[mLabel] += value;
+       } else if (aggType === 'count') {
+         group.metrics[mLabel] += 1;
+       } else if (aggType === 'min') {
+         group.metrics[mLabel] = detailsLen === 1 ? value : Math.min(group.metrics[mLabel], value);
+       } else if (aggType === 'max') {
+         group.metrics[mLabel] = detailsLen === 1 ? value : Math.max(group.metrics[mLabel], value);
        }
-    });
+    }
   }
 
   // Finalize averages
-  groups.forEach(group => {
-     metrics.forEach(m => {
-        if (m.aggType === 'avg') {
-           const mLabel = m.label || `${m.field} (${m.aggType})`;
-           group.metrics[mLabel] = group.metrics[mLabel] / group.details.length;
-        }
-     });
-  });
+  if (groups.size > 0) {
+    groups.forEach(group => {
+       const detailsLen = group.details.length;
+       for (let j = 0; j < numMetrics; j++) {
+          const m = metricConfigs[j];
+          if (m.aggType === 'avg' && detailsLen > 0) {
+             group.metrics[m.label] /= detailsLen;
+          }
+       }
+    });
+  }
 
   return groups;
 };
@@ -216,14 +230,29 @@ export const calculateTemporalComparison = (
       return;
     }
 
-    const filteredData = filterDataByPeriod(
-      sourceData,
-      dateColumn,
-      periodFilter.startMonth,
-      periodFilter.endMonth
-    ).filter(row => applyPreparedFilters(row, preparedFilters));
+    // BOLT OPTIMIZATION: Combine period filter and prepared filters into a single-pass predicate
+    const startMonth = periodFilter.startMonth;
+    const endMonth = periodFilter.endMonth;
 
-    const aggregated = aggregateDataByGroup(filteredData, groupByFields, metrics);
+    const combinedFilter = (row: DataRow) => {
+      // 1. Period Filter
+      const dateValue = row[dateColumn];
+      const date = parseDateValue(dateValue);
+      if (!date) return false;
+
+      const month = date.getMonth() + 1;
+      const inPeriod = startMonth <= endMonth
+        ? (month >= startMonth && month <= endMonth)
+        : (month >= startMonth || month <= endMonth);
+
+      if (!inPeriod) return false;
+
+      // 2. Prepared Filters
+      return applyPreparedFilters(row, preparedFilters);
+    };
+
+    // BOLT OPTIMIZATION: Use single-pass aggregation with integrated filtering
+    const aggregated = aggregateDataByGroup(sourceData, groupByFields, metrics, combinedFilter);
     aggregatedSources.set(source.id, aggregated);
   });
 
