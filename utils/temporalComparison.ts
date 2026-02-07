@@ -1,4 +1,4 @@
-import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource } from '../types';
+import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource, AggregationType } from '../types';
 import { parseSmartNumber, prepareFilters, applyPreparedFilters, getCachedNumberFormat } from '../utils';
 
 // BOLT OPTIMIZATION: Global cache for date parsing to avoid redundant parsing in tight loops
@@ -109,7 +109,7 @@ export const filterDataByPeriod = (
 export const aggregateDataByGroup = (
   data: DataRow[],
   groupByFields: string[],
-  metrics: { field: string; aggType: string; label?: string }[],
+  metrics: { field: string; aggType: AggregationType | string; label?: string }[],
   filterFn?: (row: DataRow) => boolean
 ): Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }> => {
   const groups = new Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }>();
@@ -341,8 +341,8 @@ export const calculateTemporalComparison = (
   });
 
   // Trier les résultats
-  const sortBy = (config as any).sortBy || 'label';
-  const sortOrder = (config as any).sortOrder || 'asc';
+  const sortBy = config.sortBy || 'label';
+  const sortOrder = config.sortOrder || 'asc';
 
   results.sort((a, b) => {
     if (sortBy === 'label') {
