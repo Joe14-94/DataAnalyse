@@ -19,6 +19,7 @@ import { FieldConfig, ChartType as WidgetChartType, FilterRule, ColorMode, Color
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getChartColors, generateGradient, formatChartValue } from '../logic/pivotToChart';
 import { Button } from '../components/ui/Button';
+import { Toast } from '../components/ui/Toast';
 
 type ChartType = 'bar' | 'column' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'pie' | 'donut' | 'area' | 'stacked-area' | 'radar' | 'treemap' | 'kpi' | 'line' | 'sunburst' | 'radial' | 'funnel';
 type AnalysisMode = 'snapshot' | 'trend';
@@ -1217,6 +1218,12 @@ export const AnalysisStudio: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] gap-4 relative">
+      {successMessage && (
+        <Toast
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
       
       {/* HEADER & MODE SELECTOR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0 gap-4">
