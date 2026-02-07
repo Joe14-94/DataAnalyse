@@ -7,6 +7,7 @@ import { APP_VERSION } from '../utils';
 import { Badge } from './ui/Badge';
 import { Text } from './ui/Typography';
 import { OnboardingTour } from './OnboardingTour';
+import { Toast } from './ui/Toast';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Sidebar State
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const navItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/', id: 'tour-nav-dashboard' },
@@ -67,6 +69,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     link.href = url;
     link.download = `datascope_backup_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
+    setToastMessage("Sauvegarde effectuée avec succès !");
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
@@ -79,6 +82,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="h-screen w-screen bg-canvas flex flex-col md:flex-row overflow-hidden text-txt-main font-sans">
       <OnboardingTour />
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
 
       {/* Sidebar */}
       <aside
