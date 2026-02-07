@@ -216,7 +216,10 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                            stroke="#fff"
                            strokeWidth={2}
                            labelLine={true}
-                           label={({ name, percent }) => `${name.length > 15 ? name.substring(0, 15) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
+                           label={({ name, percent }) => {
+                              const n = name || '';
+                              return `${n.length > 15 ? n.substring(0, 15) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
+                           }}
                         >
                            {chartData.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
@@ -384,7 +387,10 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                            stroke="#fff"
                            strokeWidth={2}
                            labelLine={true}
-                           label={({ name, percent }) => `${name.length > 12 ? name.substring(0, 12) + '...' : name} (${(percent * 100).toFixed(0)}%)`}
+                           label={({ name, percent }) => {
+                              const n = name || '';
+                              return `${n.length > 12 ? n.substring(0, 12) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
+                           }}
                         >
                            {chartData.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
