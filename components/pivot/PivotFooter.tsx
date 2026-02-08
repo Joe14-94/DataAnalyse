@@ -29,11 +29,18 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
 }) => {
    if (!pivotData && !temporalColTotals) return null;
 
+   // BOLT OPTIMIZATION: Persistent cache for metric info across renders (reset if metrics change)
+   const metricInfoCache = React.useMemo(() => new Map<string, any>(), [metrics]);
+
    const getColWidth = (id: string, isRowField: boolean = false) => {
       return columnWidths[id] || (isRowField ? 150 : 120);
    };
 
    const getMetricInfoFromCol = (col: string) => {
+      const cached = metricInfoCache.get(col);
+      if (cached) return cached;
+
+      let res;
       if (col.includes('\x1F')) {
          const parts = col.split('\x1F');
          let metricLabel = parts[1].trim();
@@ -44,19 +51,24 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
          const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
-         return { metric, isDiff, isPct };
+         res = { metric, isDiff, isPct };
+      } else {
+         const isDiff = col.endsWith('_DIFF');
+         const isPct = col.endsWith('_PCT');
+         let baseCol = col;
+         if (isDiff) baseCol = col.replace('_DIFF', '');
+         if (isPct) baseCol = col.replace('_PCT', '');
+
+         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         if (directMetric) {
+            res = { metric: directMetric, isDiff, isPct };
+         } else {
+            res = { metric: metrics[0], isDiff, isPct };
+         }
       }
 
-      const isDiff = col.endsWith('_DIFF');
-      const isPct = col.endsWith('_PCT');
-      let baseCol = col;
-      if (isDiff) baseCol = col.replace('_DIFF', '');
-      if (isPct) baseCol = col.replace('_PCT', '');
-
-      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
-      if (directMetric) return { metric: directMetric, isDiff, isPct };
-
-      return { metric: metrics[0], isDiff, isPct };
+      metricInfoCache.set(col, res);
+      return res;
    };
 
    const getCellFormatting = (col: string, value: any, metricLabel: string) => {
