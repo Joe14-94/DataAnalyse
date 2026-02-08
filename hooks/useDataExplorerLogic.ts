@@ -1,0 +1,791 @@
+import { useState, useMemo, useEffect, useRef, useReducer } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useData } from '../context/DataContext';
+import {
+    formatDateFr,
+    evaluateFormula,
+    generateId,
+    parseSmartNumber,
+    formatNumberValue,
+    getGroupedLabel
+} from '../utils';
+import { CalculatedField, ConditionalRule, FieldConfig } from '../types';
+
+type DataExplorerAction =
+    | { type: 'SET_SEARCH_TERM'; payload: string }
+    | { type: 'SET_SORT_CONFIG'; payload: { key: string; direction: 'asc' | 'desc' } | null }
+    | { type: 'SET_SHOW_FILTERS'; payload: boolean }
+    | { type: 'SET_COLUMN_FILTERS'; payload: Record<string, string> }
+    | { type: 'UPDATE_COLUMN_FILTER'; payload: { key: string; value: string } }
+    | { type: 'SET_SELECTED_COL'; payload: string | null }
+    | { type: 'SET_RENAMING_VALUE'; payload: string }
+    | { type: 'SET_SELECTED_ROW'; payload: any | null }
+    | { type: 'SET_DRAWER_OPEN'; payload: boolean }
+    | { type: 'SET_TRACKING_KEY'; payload: string }
+    | { type: 'SET_CALC_MODAL_OPEN'; payload: boolean }
+    | { type: 'SET_EDITING_CALC_FIELD'; payload: CalculatedField | null }
+    | { type: 'SET_FORMAT_DRAWER_OPEN'; payload: boolean }
+    | { type: 'SET_SELECTED_FORMAT_COL'; payload: string }
+    | { type: 'SET_NEW_RULE'; payload: Partial<ConditionalRule> }
+    | { type: 'SET_DELETE_CONFIRM_ROW'; payload: any | null }
+    | { type: 'SET_BLENDING_CONFIG'; payload: any }
+    | { type: 'SET_COLUMN_DRAWER_OPEN'; payload: boolean }
+    | { type: 'SET_COLUMN_WIDTHS'; payload: Record<string, number> }
+    | { type: 'UPDATE_COLUMN_WIDTH'; payload: { key: string; width: number } }
+    | { type: 'SET_RESIZING_COLUMN'; payload: string | null }
+    | { type: 'SET_RESIZE_START'; payload: { x: number; width: number } }
+    | { type: 'SET_SHOW_BORDERS'; payload: boolean }
+    | { type: 'SET_EDIT_MODE'; payload: boolean }
+    | { type: 'SET_PENDING_CHANGES'; payload: Record<string, Record<string, any>> }
+    | { type: 'UPDATE_PENDING_CHANGE'; payload: { batchId: string; rowId: string; field: string; value: any } }
+    | { type: 'SET_VLOOKUP_DRAWER_OPEN'; payload: boolean }
+    | { type: 'SET_VLOOKUP_CONFIG'; payload: any }
+    | { type: 'RESTORE_STATE'; payload: any };
+
+interface DataExplorerState {
+    searchTerm: string;
+    sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
+    showFilters: boolean;
+    columnFilters: Record<string, string>;
+    selectedCol: string | null;
+    renamingValue: string;
+    selectedRow: any | null;
+    isDrawerOpen: boolean;
+    trackingKey: string;
+    isCalcModalOpen: boolean;
+    editingCalcField: CalculatedField | null;
+    isFormatDrawerOpen: boolean;
+    selectedFormatCol: string;
+    newRule: Partial<ConditionalRule>;
+    deleteConfirmRow: any | null;
+    blendingConfig: any;
+    isColumnDrawerOpen: boolean;
+    columnWidths: Record<string, number>;
+    resizingColumn: string | null;
+    resizeStartX: number;
+    resizeStartWidth: number;
+    showColumnBorders: boolean;
+    isEditMode: boolean;
+    pendingChanges: Record<string, Record<string, any>>;
+    isVlookupDrawerOpen: boolean;
+    vlookupConfig: {
+        targetDatasetId: string;
+        primaryKey: string;
+        secondaryKey: string;
+        columnsToAdd: string[];
+        newColumnName: string;
+    };
+}
+
+const initialState: DataExplorerState = {
+    searchTerm: '',
+    sortConfig: null,
+    showFilters: false,
+    columnFilters: {},
+    selectedCol: null,
+    renamingValue: '',
+    selectedRow: null,
+    isDrawerOpen: false,
+    trackingKey: '',
+    isCalcModalOpen: false,
+    editingCalcField: null,
+    isFormatDrawerOpen: false,
+    selectedFormatCol: '',
+    newRule: { operator: 'lt', value: 0, style: { color: 'text-red-600', fontWeight: 'font-bold' } },
+    deleteConfirmRow: null,
+    blendingConfig: null,
+    isColumnDrawerOpen: false,
+    columnWidths: {},
+    resizingColumn: null,
+    resizeStartX: 0,
+    resizeStartWidth: 0,
+    showColumnBorders: true,
+    isEditMode: false,
+    pendingChanges: {},
+    isVlookupDrawerOpen: false,
+    vlookupConfig: {
+        targetDatasetId: '',
+        primaryKey: '',
+        secondaryKey: '',
+        columnsToAdd: [],
+        newColumnName: ''
+    }
+};
+
+function dataExplorerReducer(state: DataExplorerState, action: DataExplorerAction): DataExplorerState {
+    switch (action.type) {
+        case 'SET_SEARCH_TERM': return { ...state, searchTerm: action.payload };
+        case 'SET_SORT_CONFIG': return { ...state, sortConfig: action.payload };
+        case 'SET_SHOW_FILTERS': return { ...state, showFilters: action.payload };
+        case 'SET_COLUMN_FILTERS': return { ...state, columnFilters: action.payload };
+        case 'UPDATE_COLUMN_FILTER': return { ...state, columnFilters: { ...state.columnFilters, [action.payload.key]: action.payload.value } };
+        case 'SET_SELECTED_COL': return { ...state, selectedCol: action.payload };
+        case 'SET_RENAMING_VALUE': return { ...state, renamingValue: action.payload };
+        case 'SET_SELECTED_ROW': return { ...state, selectedRow: action.payload };
+        case 'SET_DRAWER_OPEN': return { ...state, isDrawerOpen: action.payload };
+        case 'SET_TRACKING_KEY': return { ...state, trackingKey: action.payload };
+        case 'SET_CALC_MODAL_OPEN': return { ...state, isCalcModalOpen: action.payload };
+        case 'SET_EDITING_CALC_FIELD': return { ...state, editingCalcField: action.payload };
+        case 'SET_FORMAT_DRAWER_OPEN': return { ...state, isFormatDrawerOpen: action.payload };
+        case 'SET_SELECTED_FORMAT_COL': return { ...state, selectedFormatCol: action.payload };
+        case 'SET_NEW_RULE': return { ...state, newRule: action.payload };
+        case 'SET_DELETE_CONFIRM_ROW': return { ...state, deleteConfirmRow: action.payload };
+        case 'SET_BLENDING_CONFIG': return { ...state, blendingConfig: action.payload };
+        case 'SET_COLUMN_DRAWER_OPEN': return { ...state, isColumnDrawerOpen: action.payload };
+        case 'SET_COLUMN_WIDTHS': return { ...state, columnWidths: action.payload };
+        case 'UPDATE_COLUMN_WIDTH': return { ...state, columnWidths: { ...state.columnWidths, [action.payload.key]: action.payload.width } };
+        case 'SET_RESIZING_COLUMN': return { ...state, resizingColumn: action.payload };
+        case 'SET_RESIZE_START': return { ...state, resizeStartX: action.payload.x, resizeStartWidth: action.payload.width };
+        case 'SET_SHOW_BORDERS': return { ...state, showColumnBorders: action.payload };
+        case 'SET_EDIT_MODE': return { ...state, isEditMode: action.payload };
+        case 'SET_PENDING_CHANGES': return { ...state, pendingChanges: action.payload };
+        case 'UPDATE_PENDING_CHANGE': {
+            const { batchId, rowId, field, value } = action.payload;
+            const batchChanges = state.pendingChanges[batchId] || {};
+            const rowChanges = batchChanges[rowId] || {};
+            return {
+                ...state,
+                pendingChanges: {
+                    ...state.pendingChanges,
+                    [batchId]: {
+                        ...batchChanges,
+                        [rowId]: {
+                            ...rowChanges,
+                            [field]: value
+                        }
+                    }
+                }
+            };
+        }
+        case 'SET_VLOOKUP_DRAWER_OPEN': return { ...state, isVlookupDrawerOpen: action.payload };
+        case 'SET_VLOOKUP_CONFIG': return { ...state, vlookupConfig: action.payload };
+        case 'RESTORE_STATE': return { ...state, ...action.payload };
+        default: return state;
+    }
+}
+
+export function useDataExplorerLogic() {
+    const {
+        currentDataset,
+        batches,
+        datasets,
+        currentDatasetId,
+        switchDataset,
+        addCalculatedField,
+        removeCalculatedField,
+        updateCalculatedField,
+        updateDatasetConfigs,
+        deleteBatch,
+        deleteDatasetField,
+        deleteBatchRow,
+        updateRows,
+        renameDatasetField,
+        addFieldToDataset,
+        enrichBatchesWithLookup,
+        reorderDatasetFields,
+        lastDataExplorerState,
+        saveDataExplorerState
+    } = useData();
+
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [state, dispatch] = useReducer(dataExplorerReducer, initialState);
+
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    // --- EFFECT: Handle Drilldown from Navigation ---
+    useEffect(() => {
+        if (location.state) {
+            if (location.state.prefilledFilters) {
+                dispatch({ type: 'SET_COLUMN_FILTERS', payload: location.state.prefilledFilters });
+                dispatch({ type: 'SET_SEARCH_TERM', payload: '' });
+                dispatch({ type: 'SET_SORT_CONFIG', payload: null });
+                dispatch({ type: 'SET_SHOW_FILTERS', payload: true });
+            }
+            if (location.state.blendingConfig) {
+                dispatch({ type: 'SET_BLENDING_CONFIG', payload: location.state.blendingConfig });
+            } else {
+                dispatch({ type: 'SET_BLENDING_CONFIG', payload: null });
+            }
+        }
+    }, [location.state]);
+
+    // Initialize tracking key
+    useEffect(() => {
+        if (currentDataset && (currentDataset?.fields?.length || 0) > 0 && !state.trackingKey) {
+            const candidates = ['email', 'id', 'reference', 'ref', 'code', 'matricule', 'nom'];
+            const found = currentDataset.fields.find(f => candidates.includes(f.toLowerCase()));
+            dispatch({ type: 'SET_TRACKING_KEY', payload: found || currentDataset.fields[0] });
+        }
+    }, [currentDataset, state.trackingKey]);
+
+    useEffect(() => {
+        if (currentDataset && !state.selectedFormatCol && currentDataset?.fields?.length > 0) {
+            dispatch({ type: 'SET_SELECTED_FORMAT_COL', payload: currentDataset.fields[0] });
+        }
+    }, [currentDataset, state.selectedFormatCol]);
+
+    useEffect(() => {
+        if (state.selectedCol) {
+            dispatch({ type: 'SET_RENAMING_VALUE', payload: state.selectedCol });
+        }
+    }, [state.selectedCol]);
+
+    // --- Initialization (Restore State) ---
+    useEffect(() => {
+        if (lastDataExplorerState && currentDataset && lastDataExplorerState.datasetId === currentDataset.id) {
+            dispatch({ type: 'RESTORE_STATE', payload: {
+                searchTerm: lastDataExplorerState.searchTerm || '',
+                sortConfig: lastDataExplorerState.sortConfig || null,
+                showFilters: lastDataExplorerState.showFilters || false,
+                columnFilters: lastDataExplorerState.columnFilters || {},
+                columnWidths: lastDataExplorerState.columnWidths || {},
+                showColumnBorders: lastDataExplorerState.showColumnBorders !== undefined ? lastDataExplorerState.showColumnBorders : true,
+                trackingKey: lastDataExplorerState.trackingKey || state.trackingKey,
+                blendingConfig: lastDataExplorerState.blendingConfig || null
+            }});
+        }
+    }, [currentDataset]);
+
+    // --- Save State ---
+    useEffect(() => {
+        if (!currentDataset) return;
+        saveDataExplorerState({
+            datasetId: currentDataset.id,
+            searchTerm: state.searchTerm,
+            sortConfig: state.sortConfig,
+            columnFilters: state.columnFilters,
+            showFilters: state.showFilters,
+            columnWidths: state.columnWidths,
+            showColumnBorders: state.showColumnBorders,
+            trackingKey: state.trackingKey,
+            blendingConfig: state.blendingConfig
+        });
+    }, [currentDataset, state.searchTerm, state.sortConfig, state.columnFilters, state.showFilters, state.columnWidths, state.showColumnBorders, state.trackingKey, state.blendingConfig]);
+
+    // --- Handlers ---
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (state.sortConfig && state.sortConfig.key === key && state.sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        dispatch({ type: 'SET_SORT_CONFIG', payload: { key, direction } });
+    };
+
+    const handleHeaderClick = (field: string) => {
+        dispatch({ type: 'SET_SELECTED_COL', payload: state.selectedCol === field ? null : field });
+        handleSort(field);
+    };
+
+    const handleColumnFilterChange = (key: string, value: string) => {
+        dispatch({ type: 'UPDATE_COLUMN_FILTER', payload: { key, value } });
+    };
+
+    const clearFilters = () => {
+        dispatch({ type: 'SET_COLUMN_FILTERS', payload: {} });
+        dispatch({ type: 'SET_SEARCH_TERM', payload: '' });
+        dispatch({ type: 'SET_SORT_CONFIG', payload: null });
+    };
+
+    const handleResizeStart = (e: React.MouseEvent, columnKey: string, currentWidth: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dispatch({ type: 'SET_RESIZING_COLUMN', payload: columnKey });
+        dispatch({ type: 'SET_RESIZE_START', payload: { x: e.clientX, width: currentWidth } });
+    };
+
+    useEffect(() => {
+        if (!state.resizingColumn) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const diff = e.clientX - state.resizeStartX;
+            const newWidth = Math.max(80, state.resizeStartWidth + diff);
+            dispatch({ type: 'UPDATE_COLUMN_WIDTH', payload: { key: state.resizingColumn!, width: newWidth } });
+        };
+
+        const handleMouseUp = () => {
+            dispatch({ type: 'SET_RESIZING_COLUMN', payload: null });
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [state.resizingColumn, state.resizeStartX, state.resizeStartWidth]);
+
+    const handleRowClick = (row: any) => {
+        if (state.isEditMode) return;
+        dispatch({ type: 'SET_SELECTED_ROW', payload: row });
+        dispatch({ type: 'SET_DRAWER_OPEN', payload: true });
+    };
+
+    const handleCellEdit = (batchId: string, rowId: string, field: string, value: any) => {
+        dispatch({ type: 'UPDATE_PENDING_CHANGE', payload: { batchId, rowId, field, value } });
+    };
+
+    const handleSaveEdits = () => {
+        if (Object.keys(state.pendingChanges).length === 0) {
+            dispatch({ type: 'SET_EDIT_MODE', payload: false });
+            return;
+        }
+        updateRows(state.pendingChanges);
+        dispatch({ type: 'SET_EDIT_MODE', payload: false });
+        dispatch({ type: 'SET_PENDING_CHANGES', payload: {} });
+    };
+
+    const handleCancelEdits = () => {
+        dispatch({ type: 'SET_EDIT_MODE', payload: false });
+        dispatch({ type: 'SET_PENDING_CHANGES', payload: {} });
+    };
+
+    const handleSaveCalculatedField = (field: Partial<CalculatedField>) => {
+        if (!currentDataset) return;
+
+        if (state.editingCalcField) {
+            const oldName = state.editingCalcField.name;
+            const newName = field.name || oldName;
+
+            updateCalculatedField(currentDataset.id, state.editingCalcField.id, field);
+
+            if (newName !== oldName) {
+                if (state.sortConfig?.key === oldName) dispatch({ type: 'SET_SORT_CONFIG', payload: { ...state.sortConfig, key: newName } });
+                if (state.columnFilters[oldName]) {
+                    const newFilters = { ...state.columnFilters };
+                    newFilters[newName] = newFilters[oldName];
+                    delete newFilters[oldName];
+                    dispatch({ type: 'SET_COLUMN_FILTERS', payload: newFilters });
+                }
+                if (state.selectedCol === oldName) dispatch({ type: 'SET_SELECTED_COL', payload: newName });
+            }
+        } else {
+            const id = generateId();
+            addCalculatedField(currentDataset.id, {
+                ...field,
+                id,
+                name: field.name!,
+                formula: field.formula!,
+                outputType: field.outputType || 'number',
+                unit: field.unit
+            } as CalculatedField);
+        }
+        dispatch({ type: 'SET_EDITING_CALC_FIELD', payload: null });
+    };
+
+    const handleEditCalculatedField = (field: CalculatedField) => {
+        dispatch({ type: 'SET_EDITING_CALC_FIELD', payload: field });
+        dispatch({ type: 'SET_CALC_MODAL_OPEN', payload: true });
+    };
+
+    const handleAddConditionalRule = () => {
+        if (!currentDataset || !state.selectedFormatCol) return;
+        const rule: ConditionalRule = {
+            id: generateId(),
+            operator: state.newRule.operator as any,
+            value: state.newRule.value as any,
+            style: state.newRule.style as any
+        };
+        const currentConfig = currentDataset.fieldConfigs?.[state.selectedFormatCol] || { type: 'text' };
+        const currentRules = currentConfig.conditionalFormatting || [];
+        updateDatasetConfigs(currentDataset.id, {
+            [state.selectedFormatCol]: { ...currentConfig, conditionalFormatting: [...currentRules, rule] }
+        });
+    };
+
+    const handleRemoveConditionalRule = (colName: string, ruleId: string) => {
+        if (!currentDataset) return;
+        const currentConfig = currentDataset.fieldConfigs?.[colName];
+        if (!currentConfig) return;
+        updateDatasetConfigs(currentDataset.id, {
+            [colName]: { ...currentConfig, conditionalFormatting: (currentConfig.conditionalFormatting || []).filter(r => r.id !== ruleId) }
+        });
+    };
+
+    const handleFormatChange = (key: keyof FieldConfig, value: any) => {
+        if (!currentDataset || !state.selectedCol) return;
+        const currentConfig = currentDataset.fieldConfigs?.[state.selectedCol] || { type: 'number' };
+        updateDatasetConfigs(currentDataset.id, {
+            [state.selectedCol]: { ...currentConfig, [key]: value }
+        });
+    };
+
+    const handleRenameColumn = () => {
+        if (!currentDataset || !state.selectedCol || !state.renamingValue.trim() || state.selectedCol === state.renamingValue) return;
+
+        const calcField = currentDataset.calculatedFields?.find(f => f.name === state.selectedCol);
+        if (calcField) {
+            updateCalculatedField(currentDataset.id, calcField.id, { name: state.renamingValue });
+
+            if (state.sortConfig?.key === state.selectedCol) dispatch({ type: 'SET_SORT_CONFIG', payload: { ...state.sortConfig, key: state.renamingValue } });
+            if (state.columnFilters[state.selectedCol]) {
+                const newFilters = { ...state.columnFilters };
+                newFilters[state.renamingValue] = newFilters[state.selectedCol];
+                delete newFilters[state.selectedCol];
+                dispatch({ type: 'SET_COLUMN_FILTERS', payload: newFilters });
+            }
+        } else {
+            renameDatasetField(currentDataset.id, state.selectedCol, state.renamingValue);
+        }
+        dispatch({ type: 'SET_SELECTED_COL', payload: state.renamingValue });
+    };
+
+    const handleDeleteColumn = () => {
+        if (!currentDataset || !state.selectedCol) return;
+        const isCalculated = currentDataset.calculatedFields?.find(f => f.name === state.selectedCol);
+        if (isCalculated) {
+            if (window.confirm(`Supprimer le champ calculé "${state.selectedCol}" ?`)) {
+                removeCalculatedField(currentDataset.id, isCalculated.id);
+                dispatch({ type: 'SET_SELECTED_COL', payload: null });
+            }
+        } else {
+            if (window.confirm(`ATTENTION : Supprimer la colonne "${state.selectedCol}" effacera définitivement cette donnée. Continuer ?`)) {
+                deleteDatasetField(currentDataset.id, state.selectedCol);
+                dispatch({ type: 'SET_SELECTED_COL', payload: null });
+            }
+        }
+    };
+
+    const handleApplyVlookup = () => {
+        const { vlookupConfig } = state;
+        if (!currentDataset || !vlookupConfig.targetDatasetId || !vlookupConfig.primaryKey || !vlookupConfig.secondaryKey || vlookupConfig.columnsToAdd.length === 0 || !vlookupConfig.newColumnName.trim()) {
+            alert("Veuillez remplir tous les champs requis");
+            return;
+        }
+
+        const success = enrichBatchesWithLookup(
+            currentDataset.id,
+            vlookupConfig.targetDatasetId,
+            vlookupConfig.primaryKey,
+            vlookupConfig.secondaryKey,
+            vlookupConfig.columnsToAdd,
+            vlookupConfig.newColumnName
+        );
+
+        if (!success) {
+            alert("Le dataset cible n'a pas de données");
+            return;
+        }
+
+        addFieldToDataset(currentDataset.id, vlookupConfig.newColumnName, { type: 'text' });
+
+        dispatch({ type: 'SET_VLOOKUP_CONFIG', payload: initialState.vlookupConfig });
+        dispatch({ type: 'SET_VLOOKUP_DRAWER_OPEN', payload: false });
+
+        alert(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
+    };
+
+    const handleDeleteRow = (row: any, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dispatch({ type: 'SET_DELETE_CONFIRM_ROW', payload: row });
+    };
+
+    const confirmDeleteRow = () => {
+        if (state.deleteConfirmRow && state.deleteConfirmRow._batchId && state.deleteConfirmRow.id) {
+            deleteBatchRow(state.deleteConfirmRow._batchId, state.deleteConfirmRow.id);
+            dispatch({ type: 'SET_DELETE_CONFIRM_ROW', payload: null });
+        }
+    };
+
+    // --- Data Processing ---
+    const allRows = useMemo(() => {
+        if (!currentDataset) return [];
+        const calcFields = currentDataset?.calculatedFields || [];
+
+        let rows = (batches || [])
+            .filter(b => b.datasetId === currentDataset.id)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .flatMap(batch => (batch.rows || []).map(r => {
+                const extendedRow: any = { ...r, _importDate: batch.date, _batchId: batch.id };
+                calcFields.forEach(cf => {
+                    const val = evaluateFormula(r, cf.formula, cf.outputType);
+                    extendedRow[cf.name] = val;
+                });
+                return extendedRow;
+            }));
+
+        if (state.blendingConfig && state.blendingConfig.secondaryDatasetId && state.blendingConfig.joinKeyPrimary && state.blendingConfig.joinKeySecondary) {
+            const secDS = datasets.find(d => d.id === state.blendingConfig.secondaryDatasetId);
+            if (secDS) {
+                const secBatches = batches.filter(b => b.datasetId === state.blendingConfig.secondaryDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                if (secBatches.length > 0) {
+                    const secBatch = secBatches[secBatches.length - 1];
+                    const lookup = new Map<string, any>();
+                    secBatch.rows.forEach(r => {
+                        const k = String(r[state.blendingConfig.joinKeySecondary]).trim();
+                        if (k) lookup.set(k, r);
+                    });
+                    rows = (rows || []).map(row => {
+                        const k = String(row[state.blendingConfig.joinKeyPrimary]).trim();
+                        const match = lookup.get(k);
+                        if (match) {
+                           const prefixedMatch: any = {};
+                           Object.keys(match || {}).forEach(key => {
+                              if (key !== 'id') prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
+                           });
+                           return { ...row, ...prefixedMatch };
+                        }
+                        return row;
+                    });
+                }
+            }
+        }
+
+        const searchableKeys = rows.length > 0 ? Object.keys(rows[0]).filter(k => !k.startsWith('_') || k === '_importDate') : [];
+
+        return rows.map(row => {
+            const vals: string[] = [];
+            for (let i = 0; i < searchableKeys.length; i++) {
+                const v = row[searchableKeys[i]];
+                if (v !== null && v !== undefined && v !== '') {
+                    vals.push(String(v));
+                }
+            }
+            return { ...row, _searchIndex: vals.join(' ').toLowerCase() };
+        });
+    }, [currentDataset, batches, state.blendingConfig, datasets]);
+
+    const displayFields = useMemo(() => {
+        if (!currentDataset) return [];
+        const primFields = [...(currentDataset.fields || [])];
+        if (state.blendingConfig && state.blendingConfig.secondaryDatasetId) {
+            const secDS = (datasets || []).find(d => d.id === state.blendingConfig.secondaryDatasetId);
+            if (secDS) {
+                const secFields = (secDS.fields || []).map(f => `[${secDS.name}] ${f}`);
+                const secCalcFields = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);
+                return [...primFields, ...secFields, ...secCalcFields];
+            }
+        }
+        return primFields;
+    }, [currentDataset, state.blendingConfig, datasets]);
+
+    const processedRows = useMemo(() => {
+        if (!currentDataset) return [];
+        let data = allRows;
+
+        const activeFilters = Object.entries(state.columnFilters)
+            .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+            .map(([key, value]) => {
+                let targetVal = String(value);
+                let isExact = false;
+                if (targetVal.startsWith('=')) {
+                    isExact = true;
+                    targetVal = targetVal.substring(1);
+                }
+                return {
+                    key,
+                    targetVal,
+                    lowerFilter: targetVal.toLowerCase(),
+                    isExact,
+                    isEmpty: value === '__EMPTY__'
+                };
+            });
+
+        const lowerSearchTerm = state.searchTerm.trim().toLowerCase();
+
+        if (lowerSearchTerm || activeFilters.length > 0) {
+            data = data.filter(row => {
+                if (lowerSearchTerm && !row._searchIndex.includes(lowerSearchTerm)) return false;
+
+                for (let i = 0; i < activeFilters.length; i++) {
+                    const f = activeFilters[i];
+                    const val = row[f.key];
+
+                    if (f.isEmpty) {
+                        if (val !== undefined && val !== null && val !== '') return false;
+                        continue;
+                    }
+
+                    if (f.key === '_batchId') {
+                        if (String(val) !== f.targetVal) return false;
+                        continue;
+                    }
+
+                    const valStr = String(val ?? '').toLowerCase();
+                    const config = currentDataset?.fieldConfigs?.[f.key];
+
+                    if (f.isExact) {
+                        let matched = (valStr === f.lowerFilter);
+
+                        if (!matched && (config?.type === 'date' || f.key.toLowerCase().includes('date'))) {
+                            if (getGroupedLabel(valStr, 'month').toLowerCase() === f.lowerFilter) matched = true;
+                            else if (getGroupedLabel(valStr, 'year').toLowerCase() === f.lowerFilter) matched = true;
+                            else if (getGroupedLabel(valStr, 'quarter').toLowerCase() === f.lowerFilter) matched = true;
+                        }
+
+                        if (!matched && f.key === '_importDate') {
+                            const dateStr = val as string;
+                            if (dateStr === f.targetVal || formatDateFr(dateStr) === f.targetVal) matched = true;
+                        }
+
+                        if (!matched) return false;
+                        continue;
+                    }
+
+                    if (f.key === '_importDate') {
+                        const dateStr = val as string;
+                        if (!formatDateFr(dateStr).toLowerCase().includes(f.lowerFilter) && !dateStr.includes(f.lowerFilter)) return false;
+                        continue;
+                    }
+
+                    if (!valStr.includes(f.lowerFilter)) return false;
+                }
+                return true;
+            });
+        }
+
+        if (state.sortConfig) {
+            data.sort((a, b) => {
+                const valA = a[state.sortConfig!.key];
+                const valB = b[state.sortConfig!.key];
+                if (valA == null) return 1;
+                if (valB == null) return -1;
+                if (valA < valB) return state.sortConfig!.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return state.sortConfig!.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return data;
+    }, [allRows, state.searchTerm, state.columnFilters, state.sortConfig, currentDataset]);
+
+    const distributionData = useMemo(() => {
+        if (!currentDataset || !state.selectedCol || processedRows.length === 0) return [];
+
+        const counts: Record<string, number> = {};
+        processedRows.forEach(row => {
+            let val = row[state.selectedCol!];
+            if (val === undefined || val === null || val === '') val = '(Vide)';
+            else val = String(val);
+            counts[val] = (counts[val] || 0) + 1;
+        });
+
+        return Object.entries(counts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 15);
+    }, [state.selectedCol, processedRows, currentDataset]);
+
+    const rowVirtualizer = useVirtualizer({
+        count: processedRows.length,
+        getScrollElement: () => tableContainerRef.current,
+        estimateSize: () => 40,
+        overscan: 10,
+    });
+
+    const historyData = useMemo(() => {
+        if (!currentDataset || !state.selectedRow || !state.trackingKey) return [];
+        const trackValue = state.selectedRow[state.trackingKey];
+        if (trackValue === undefined || trackValue === '') return [state.selectedRow];
+        const relevantBatches = batches.filter(b => b.datasetId === currentDataset?.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const history: any[] = [];
+        relevantBatches.forEach(batch => {
+            const match = batch.rows.find(r => String(r[state.trackingKey]) === String(trackValue));
+            if (match) history.push({ ...match, _importDate: batch.date, _batchId: batch.id });
+        });
+        return history;
+    }, [state.selectedRow, state.trackingKey, batches, currentDataset]);
+
+    const getCellStyle = (fieldName: string, value: any) => {
+        if (!currentDataset?.fieldConfigs) return '';
+        const rules = currentDataset.fieldConfigs[fieldName]?.conditionalFormatting;
+        if (!rules || rules.length === 0) return '';
+
+        for (const rule of rules) {
+            const targetValue = Number(rule.value);
+            let match = false;
+            if (rule.operator === 'gt' || rule.operator === 'lt') {
+                const numValue = parseSmartNumber(value);
+                if (rule.operator === 'gt') match = numValue > targetValue;
+                if (rule.operator === 'lt') match = numValue < targetValue;
+            }
+            if (rule.operator === 'eq') match = String(value) == String(rule.value);
+            if (rule.operator === 'contains') match = String(value).toLowerCase().includes(String(rule.value).toLowerCase());
+            if (rule.operator === 'empty') match = !value || value === '';
+            if (match) return `${rule.style.color || ''} ${rule.style.backgroundColor || ''} ${rule.style.fontWeight || ''}`;
+        }
+        return '';
+    };
+
+    const handleExportFullCSV = () => {
+        if (!currentDataset || processedRows.length === 0) return;
+        const headers = ['Date import', 'Id', ...displayFields, ...(currentDataset.calculatedFields || []).map(f => f.name)];
+        const csvContent = [
+            headers.join(';'),
+            ...processedRows.map(row => {
+                const cols = [
+                    row._importDate, row.id,
+                    ...displayFields.map(f => {
+                        let val = row[f];
+                        let stringVal = val !== undefined ? String(val) : '';
+                        if (stringVal.includes(';') || stringVal.includes('\n') || stringVal.includes('"')) stringVal = `"${stringVal.replace(/"/g, '""')}"`;
+                        return stringVal;
+                    }),
+                    ...(currentDataset.calculatedFields || []).map(f => {
+                        let val = row[f.name];
+                        return val !== undefined ? String(val) : '';
+                    })
+                ];
+                return cols.join(';');
+            })
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Export_${currentDataset.name}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    return {
+        // Data & Meta
+        currentDataset,
+        datasets,
+        batches,
+        currentDatasetId,
+        allRows,
+        processedRows,
+        displayFields,
+        distributionData,
+        historyData,
+        rowVirtualizer,
+        tableContainerRef,
+
+        // State
+        state,
+        dispatch,
+
+        // Handlers
+        switchDataset,
+        handleSort,
+        handleHeaderClick,
+        handleColumnFilterChange,
+        clearFilters,
+        handleResizeStart,
+        handleRowClick,
+        handleCellEdit,
+        handleSaveEdits,
+        handleCancelEdits,
+        handleSaveCalculatedField,
+        handleEditCalculatedField,
+        handleAddConditionalRule,
+        handleRemoveConditionalRule,
+        handleFormatChange,
+        handleRenameColumn,
+        handleDeleteColumn,
+        handleApplyVlookup,
+        handleDeleteRow,
+        confirmDeleteRow,
+        handleExportFullCSV,
+
+        // Context actions needed by components
+        deleteBatch,
+        reorderDatasetFields,
+        navigate,
+        getCellStyle
+    };
+}
