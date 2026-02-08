@@ -25,3 +25,7 @@
 ## 2026-02-22 - [Optimize Temporal Comparison Pipeline]
 **Learning:** Temporal comparison was performing three separate passes over data for each source (two filters and one aggregation), creating multiple large intermediate arrays. Merging them into a single-pass loop with an integrated `filterFn` reduces complexity from O(3N) to O(N) and eliminates memory pressure from allocations. Standard `for` loops and hoisting metric metadata further reduced CPU time.
 **Action:** Consolidate multiple filter/map/reduce operations into a single loop for performance-critical data pipelines.
+
+## 2026-02-08 - [Optimize Pivot Grid Rendering]
+**Learning:** Identified a major bottleneck in Pivot Grid rendering where `split('\x1F')` and `metrics.find()` were called for every single cell (potentially thousands of times per render). Hoisting row splitting to once per row and implementing a local Map-based cache for column metadata (`getMetricInfoFromCol`) significantly reduces rendering overhead. Also, optimized `getCellStyle` to avoid redundant `join()` and concatenation within the rule evaluation loop.
+**Action:** Always memoize metadata lookups and hoist string operations (split/join) outside of the innermost loops in grid-based UI components.
