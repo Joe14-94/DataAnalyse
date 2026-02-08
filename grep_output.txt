@@ -1,0 +1,1 @@
+384:      const result = Function('"use strict"; return (' + expression + ')')();

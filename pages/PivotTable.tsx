@@ -177,7 +177,7 @@ export const PivotTable: React.FC = () => {
         setIsSaving={setIsSaving}
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
-        analysisName={analysisName}
+        analysisName={analysisName || ''}
         setAnalysisName={setAnalysisName}
         handleSaveAnalysis={handleSaveAnalysis}
         openCalcModal={() => {
@@ -200,12 +200,12 @@ export const PivotTable: React.FC = () => {
         <PivotSidePanel
           {...{
             sources: sources || [],
-            datasets: datasets || [],
-            datasetBatches: datasetBatches || [],
+            datasets,
+            datasetBatches,
             selectedBatchId: selectedBatchId || '',
             setSelectedBatchId,
             startAddSource: () => setIsSourceModalOpen(true),
-            removeSource: (id: string) => setSources((s: any) => s.filter((x: any) => x.id !== id)),
+            removeSource: (id) => setSources((s: any[]) => s.filter((x: any) => x.id !== id)),
             isDataSourcesPanelCollapsed,
             setIsDataSourcesPanelCollapsed,
             isTemporalMode: !!isTemporalMode,
@@ -214,9 +214,9 @@ export const PivotTable: React.FC = () => {
             setIsTemporalSourceModalOpen,
             temporalConfig,
             setTemporalConfig,
-            rowFields,
+            rowFields: rowFields || [],
             setRowFields,
-            colFields,
+            colFields: colFields || [],
             setColFields,
             valField: valField || '',
             handleValFieldChange,
@@ -293,10 +293,10 @@ export const PivotTable: React.FC = () => {
               isCalculating,
               isTemporalMode: !!isTemporalMode,
               pivotData,
-              temporalResults: temporalResults || [],
-              temporalConfig: temporalConfig || null,
-            rowFields: rowFields || [],
-            colFields: colFields || [],
+              temporalResults,
+              temporalConfig,
+              rowFields,
+              colFields,
               columnLabels: columnLabels || {},
               editingColumn,
               setEditingColumn,
@@ -307,8 +307,8 @@ export const PivotTable: React.FC = () => {
               handleTemporalDrilldown,
               primaryDataset,
               datasets,
-              aggType: aggType || 'count',
-              valField: valField || '',
+              aggType,
+              valField,
               metrics: metrics || [],
               valFormatting: valFormatting || {},
               virtualItems: rowVirtualizer.getVirtualItems(),
@@ -324,8 +324,8 @@ export const PivotTable: React.FC = () => {
               setSortOrder,
               columnWidths: columnWidths || {},
               setColumnWidths,
-              styleRules: (styleRules || []) as any,
-              conditionalRules: (conditionalRules || []) as any,
+              styleRules: styleRules || [],
+              conditionalRules: conditionalRules || [],
               onRemoveField: removeField,
               totalColumns:
                 rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
@@ -352,7 +352,7 @@ export const PivotTable: React.FC = () => {
               valField: valField || '',
               aggType: aggType || 'count',
               metrics: metrics || [],
-              primaryDataset: primaryDataset || null,
+              primaryDataset,
               datasets,
               valFormatting: valFormatting || {},
               showTotalCol: !!showTotalCol,
@@ -386,18 +386,18 @@ export const PivotTable: React.FC = () => {
           onClose={() => setIsChartModalOpen(false)}
           pivotData={chartPivotData as any}
           pivotConfig={{
-            rowFields: isTemporalMode ? temporalConfig?.groupByFields || [] : rowFields,
-            colFields: isTemporalMode ? [] : colFields,
-            colGrouping,
-            valField,
+            rowFields: (isTemporalMode ? temporalConfig?.groupByFields : rowFields) || [],
+            colFields: isTemporalMode ? [] : (colFields || []),
+            colGrouping: colGrouping || 'none',
+            valField: valField || '',
             aggType: aggType as any,
-            metrics,
-            filters,
-            sortBy,
-            sortOrder,
+            metrics: metrics || [],
+            filters: filters || [],
+            sortBy: sortBy || 'label',
+            sortOrder: sortOrder || 'asc',
             showSubtotals: !!showSubtotals,
-            showVariations,
-            valFormatting
+            showVariations: !!showVariations,
+            valFormatting: valFormatting || {}
           } as any}
           isTemporalMode={isTemporalMode}
           temporalComparison={temporalConfig}

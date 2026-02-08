@@ -51,7 +51,6 @@ export const DataExplorer: React.FC = () => {
     setIsColumnDrawerOpen,
     showColumnBorders,
     setShowColumnBorders,
-    columnWidths,
     activeBatchFilter,
     deleteBatch,
     handleExportFullCSV,
@@ -67,6 +66,7 @@ export const DataExplorer: React.FC = () => {
     setRenamingValue,
     handleRenameColumn,
     handleFormatChange,
+    currentDataset: ds,
     handleEditCalculatedField,
     handleDeleteColumn,
     distributionData,
@@ -100,6 +100,7 @@ export const DataExplorer: React.FC = () => {
     setTrackingKey,
     historyData,
     reorderDatasetFields,
+    columnWidths,
     undo,
     redo,
     canUndo,
@@ -354,13 +355,14 @@ export const DataExplorer: React.FC = () => {
             </div>
           </div>
           <div className="w-64 h-32 bg-white rounded border border-slate-100 p-2 flex flex-col">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+            {/* BOLT UX FIX: Standardize font size to text-xs (12px) */}
+            <div className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase mb-1">
               <BarChart2 className="w-3 h-3" /> Distribution
             </div>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
                 <ReBarChart data={distributionData}>
-                  <ReTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ fontSize: '10px' }} />
+                  <ReTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="value" fill="#0d9488" radius={[2, 2, 0, 0]} />
                 </ReBarChart>
               </ResponsiveContainer>

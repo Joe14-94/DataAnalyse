@@ -217,7 +217,7 @@ class FormulaParser {
     if (token.type === 'OPERATOR' && token.value === '-') {
       this.consume();
       const val = this.parseFactor();
-      return typeof val === 'number' ? -val : 0;
+      return val !== null ? -Number(val) : null;
     }
 
     // Token invalide : lever une exception au lieu de retourner 0

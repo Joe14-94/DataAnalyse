@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { detectColumnType, generateId, exportView, exportPivotToHTML } from '../utils';
 import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 import {
   CalculatedField,
   PivotStyleRule,
@@ -366,7 +367,7 @@ export const usePivotLogic = () => {
           newConfig.aggType = agg;
         }
       } else {
-        alert('Limite de 15 métriques atteinte');
+        toast.error('Limite de 15 métriques atteinte');
       }
     } else if (targetZone === 'filter' && !newConfig.filters.some((f) => f.field === field))
       newConfig.filters = [...newConfig.filters, { field, operator: 'in', value: [] }];
@@ -438,7 +439,7 @@ export const usePivotLogic = () => {
                 : []
         });
       } else {
-        alert('Aucune donnée à exporter');
+        toast.error('Aucune donnée à exporter');
       }
     } else {
       exportView(
@@ -455,17 +456,17 @@ export const usePivotLogic = () => {
     setShowExportMenu(false);
 
     if (!primaryDataset) {
-      alert('Veuillez sélectionner un dataset');
+      toast.error('Veuillez sélectionner un dataset');
       return;
     }
 
     if (!isTemporalMode && !pivotData) {
-      alert('Aucune donnée à exporter');
+      toast.error('Aucune donnée à exporter');
       return;
     }
 
     if (isTemporalMode && (!temporalResults || temporalResults.length === 0)) {
-      alert('Aucune donnée à exporter');
+      toast.error('Aucune donnée à exporter');
       return;
     }
 
@@ -912,7 +913,7 @@ export const usePivotLogic = () => {
     });
     setIsSpecificDashboardModalOpen(false);
     setSpecificDashboardItems([]);
-    alert('Rapport ajouté à votre tableau de bord !');
+    toast.success('Rapport ajouté à votre tableau de bord !');
     navigate('/dashboard');
   };
 
@@ -987,7 +988,7 @@ export const usePivotLogic = () => {
       createDerivedDataset(name, false, configForDataset, fields, rows);
     }
 
-    alert(`Le Dataset "${name}" a été créé avec succès.`);
+    toast.success(`Le Dataset "${name}" a été créé avec succès.`);
     navigate('/data');
   };
 

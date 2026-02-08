@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build output
+grep_output.txt
+ls_R.txt
+test_output.txt
+grep_output_wc.txt

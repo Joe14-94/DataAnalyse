@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OnboardingTour } from './components/OnboardingTour';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 const Dashboard = React.lazy(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.Dashboard }))
@@ -44,6 +45,7 @@ const LoadingPage = () => (
 const App: React.FC = () => {
   return (
     <DataProvider>
+      <Toaster position="top-right" richColors closeButton />
       <OnboardingTour />
       <HashRouter>
         <a

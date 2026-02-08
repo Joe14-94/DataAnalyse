@@ -24,6 +24,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useData, usePipeline } from '../context/DataContext';
+import { toast } from 'sonner';
 import {
   DataRow,
   TransformationType,
@@ -403,7 +404,7 @@ export const ETLPipeline: React.FC = () => {
 
     if (activePipelineId) {
       updatePipeline(activePipelineId, { name: pipelineName, nodes, connections: [] });
-      alert('Pipeline mis à jour !');
+      toast.success('Pipeline mis à jour !');
     } else {
       const id = addPipeline({
         name: pipelineName,
@@ -411,7 +412,7 @@ export const ETLPipeline: React.FC = () => {
         connections: []
       });
       setActivePipelineId(id);
-      alert('Pipeline sauvegardé !');
+      toast.success('Pipeline sauvegardé !');
     }
   };
 

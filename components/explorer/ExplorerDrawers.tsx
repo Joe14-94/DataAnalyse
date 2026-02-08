@@ -33,7 +33,13 @@ interface ExplorerDrawersProps {
   isVlookupDrawerOpen: boolean;
   setIsVlookupDrawerOpen: (v: boolean) => void;
   datasets: Dataset[];
-  vlookupConfig: any;
+  vlookupConfig: {
+    targetDatasetId: string;
+    primaryKey: string;
+    secondaryKey: string;
+    columnsToAdd: string[];
+    newColumnName: string;
+  };
   setVlookupConfig: (v: any) => void;
   handleApplyVlookup: () => void;
 
@@ -373,7 +379,7 @@ export const ExplorerDrawers: React.FC<ExplorerDrawersProps> = ({
                                   ...vlookupConfig,
                                   columnsToAdd: e.target.checked
                                     ? [...vlookupConfig.columnsToAdd, f]
-                                    : vlookupConfig.columnsToAdd.filter((c: string) => c !== f)
+                                    : vlookupConfig.columnsToAdd.filter((c) => c !== f)
                                 })
                               }
                               className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"

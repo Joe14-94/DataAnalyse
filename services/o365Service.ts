@@ -50,7 +50,8 @@ const MSAL_CONFIG = {
     postLogoutRedirectUri: window.location.origin
   },
   cache: {
-    cacheLocation: BrowserCacheLocation.LocalStorage,
+    // BOLT SECURITY FIX: Use SessionStorage instead of LocalStorage to limit token persistence
+    cacheLocation: BrowserCacheLocation.SessionStorage,
     storeAuthStateInCookie: false // Set to true for IE11/Edge
   }
 };

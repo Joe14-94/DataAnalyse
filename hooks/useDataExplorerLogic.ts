@@ -12,6 +12,7 @@ import {
   getGroupedLabel
 } from '../utils';
 import { CalculatedField, ConditionalRule, FieldConfig, DataRow } from '../types';
+import { toast } from 'sonner';
 
 export interface ExplorerRow extends DataRow {
   _importDate: string;
@@ -422,7 +423,7 @@ export const useDataExplorerLogic = () => {
       vlookupConfig.columnsToAdd.length === 0 ||
       !vlookupConfig.newColumnName.trim()
     ) {
-      alert('Veuillez remplir tous les champs requis');
+      toast.error('Veuillez remplir tous les champs requis');
       return;
     }
     const success = enrichBatchesWithLookup(
@@ -434,7 +435,7 @@ export const useDataExplorerLogic = () => {
       vlookupConfig.newColumnName
     );
     if (!success) {
-      alert("Le dataset cible n'a pas de données");
+      toast.error("Le dataset cible n'a pas de données");
       return;
     }
     addFieldToDataset(currentDataset.id, vlookupConfig.newColumnName, { type: 'text' });
@@ -446,7 +447,7 @@ export const useDataExplorerLogic = () => {
       newColumnName: ''
     });
     setIsVlookupDrawerOpen(false);
-    alert(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
+    toast.success(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
   };
 
   // --- Data Processing ---

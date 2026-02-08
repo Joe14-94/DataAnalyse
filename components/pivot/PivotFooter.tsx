@@ -1,5 +1,13 @@
 import React from 'react';
-import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule, PivotMetric } from '../../types';
+import {
+  PivotResult,
+  Dataset,
+  AggregationType,
+  PivotMetric,
+  TemporalComparisonConfig,
+  PivotStyleRule,
+  ConditionalFormattingRule
+} from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
@@ -7,13 +15,13 @@ import { formatCurrency, formatPercentage } from '../../utils/temporalComparison
 interface PivotFooterProps {
   pivotData: PivotResult | null;
   temporalColTotals?: { [sourceId: string]: { [metricLabel: string]: number } };
-  temporalConfig?: any;
+  temporalConfig: TemporalComparisonConfig | null | undefined;
   rowFields: string[];
   columnWidths: Record<string, number>;
   footerRef: React.RefObject<HTMLDivElement>;
   valField: string;
   aggType: string;
-  metrics: PivotMetric[];
+  metrics: any[];
   primaryDataset: Dataset | null;
   datasets: Dataset[];
   valFormatting: any;

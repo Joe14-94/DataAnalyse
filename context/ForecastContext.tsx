@@ -651,8 +651,7 @@ export const ForecastProvider: React.FC<ForecastProviderProps> = ({
 
     const report: ForecastReconciliationReport = {
       id: generateId(),
-      name: `Rapport ${version.name} - ${new Date().toLocaleDateString()}`,
-      accuracyScore: Math.max(0, 100 - mape),
+      name: `Rapport ${forecast.name} - ${version.name}`,
       forecastId: forecast.id,
       forecastVersionId: versionId,
       periodStart: version.referenceDate,
@@ -669,6 +668,7 @@ export const ForecastProvider: React.FC<ForecastProviderProps> = ({
         totalForecast !== 0 ? ((totalActual - totalForecast) / totalForecast) * 100 : 0,
       mape,
       rmse,
+      accuracyScore: Math.max(0, 100 - (mape || 0)),
       recommendations,
       createdAt: Date.now()
     };

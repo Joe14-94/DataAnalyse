@@ -1049,7 +1049,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLastAnalyticsState(parsed.lastAnalyticsState);
       if (shouldImport('lastDataExplorerState') && parsed.lastDataExplorerState)
         setLastDataExplorerState(parsed.lastDataExplorerState);
-      if (shouldImport('companyLogo') && parsed.companyLogo) setCompanyLogo(parsed.companyLogo);
+      if (shouldImport('companyLogo') && parsed.companyLogo) {
+        // BOLT SECURITY FIX: Validate logo protocol during import
+        const logo = parsed.companyLogo;
+        if (!logo || logo.startsWith('data:image/') || logo.startsWith('blob:')) {
+          setCompanyLogo(logo);
+        } else {
+          console.warn("Import de logo invalide bloqué par sécurité");
+        }
+      }
       if (shouldImport('hasSeenOnboarding') && parsed.hasSeenOnboarding !== undefined)
         setHasSeenOnboarding(!!parsed.hasSeenOnboarding);
       if (shouldImport('financeReferentials') && parsed.financeReferentials)

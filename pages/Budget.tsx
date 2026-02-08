@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { useBudgetLogic, BudgetTab } from '../hooks/useBudgetLogic';
+import { toast } from 'sonner';
 import { BudgetList } from '../components/budget/BudgetList';
 import { BudgetEditor } from '../components/budget/BudgetEditor';
 import { BudgetComparison } from '../components/budget/BudgetComparison';
@@ -78,7 +79,7 @@ export const Budget: React.FC = () => {
               const year = new Date().getFullYear();
               const defaultChart = chartsOfAccounts[0];
               if (!defaultChart) {
-                alert("Veuillez d'abord créer un plan comptable dans les paramètres.");
+                toast.error("Veuillez d'abord créer un plan comptable dans les paramètres.");
                 return;
               }
               const budgetName = prompt('Nom du budget:', `Budget ${year}`);

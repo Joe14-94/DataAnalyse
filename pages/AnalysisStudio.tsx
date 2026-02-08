@@ -211,7 +211,7 @@ export const AnalysisStudio: React.FC = () => {
           >
             <Download className="w-8 h-8 text-slate-400 group-hover:text-brand-600 mb-3" />
             <span className="font-bold text-slate-700">Image PNG</span>
-            <span className="text-[10px] text-slate-500 uppercase mt-1">Snapshot Haute Résol.</span>
+            <span className="text-xs text-slate-500 uppercase mt-1">Snapshot Haute Résol.</span>
           </button>
           <button
             onClick={() => handleExport('xlsx')}
@@ -219,7 +219,7 @@ export const AnalysisStudio: React.FC = () => {
           >
             <FileText className="w-8 h-8 text-slate-400 group-hover:text-green-600 mb-3" />
             <span className="font-bold text-slate-700">Excel (XLSX)</span>
-            <span className="text-[10px] text-slate-500 uppercase mt-1">
+            <span className="text-xs text-slate-500 uppercase mt-1">
               Données Brutes & Totaux
             </span>
           </button>
@@ -229,7 +229,7 @@ export const AnalysisStudio: React.FC = () => {
           >
             <Globe className="w-8 h-8 text-slate-400 group-hover:text-purple-600 mb-3" />
             <span className="font-bold text-slate-700">HTML Interactif</span>
-            <span className="text-[10px] text-slate-500 uppercase mt-1">Rapport Standalone</span>
+            <span className="text-xs text-slate-500 uppercase mt-1">Rapport Standalone</span>
           </button>
         </div>
       </Modal>

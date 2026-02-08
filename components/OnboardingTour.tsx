@@ -159,7 +159,7 @@ const TourTrigger: React.FC = () => {
 
 export const OnboardingTour: React.FC = () => {
   return (
-    <ShepherdJourneyProvider {...({ steps, tourOptions } as any)}>
+    <ShepherdJourneyProvider steps={steps} tourOptions={tourOptions}>
       <TourTrigger />
     </ShepherdJourneyProvider>
   );

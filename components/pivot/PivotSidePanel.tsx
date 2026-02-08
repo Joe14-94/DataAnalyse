@@ -32,7 +32,7 @@ import { formatDateFr } from '../../utils';
 import { Checkbox } from '../ui/Checkbox';
 
 interface PivotSidePanelProps {
-  sources: PivotSourceConfig[];
+  sources: PivotSourceConfig[] | undefined;
   datasets: Dataset[];
   datasetBatches: ImportBatch[];
   selectedBatchId: string;
@@ -56,7 +56,7 @@ interface PivotSidePanelProps {
   setValField: (f: string) => void;
   aggType: AggregationType;
   setAggType: (t: AggregationType) => void;
-  metrics: PivotMetric[];
+  metrics: PivotMetric[] | undefined;
   setMetrics: (m: PivotMetric[]) => void;
   valFormatting: Partial<FieldConfig>;
   setValFormatting: (f: Partial<FieldConfig>) => void;
@@ -320,7 +320,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
         {!isDataSourcesPanelCollapsed && (
           <div className="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
-            {sources.length === 0 ? (
+            {!sources || sources.length === 0 ? (
               <div className="text-center p-6 border-2 border-dashed border-brand-300 rounded-lg bg-gradient-to-br from-brand-50 to-indigo-50">
                 <Database className="w-10 h-10 mx-auto text-brand-400 mb-2" />
                 <p className="text-xs text-slate-500 mb-2">Sélectionnez une source de données</p>
@@ -333,7 +333,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
               </div>
             ) : (
               <div className="space-y-2">
-                {sources.map((src) => {
+                {(sources || []).map((src) => {
                   const ds = datasets.find((d) => d.id === src.datasetId);
                   if (!ds) return null;
                   const srcColorClasses =
@@ -423,7 +423,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
               type="text"
               placeholder="Rechercher..."
               className="w-full text-xs border border-slate-300 rounded px-1 py-0.5 bg-white"
-              disabled={sources.length === 0}
+              disabled={!sources || sources.length === 0}
               value={fieldSearchTerm}
               onChange={(e) => setFieldSearchTerm(e.target.value)}
             />
@@ -508,7 +508,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       </div>
 
       {/* RESIZER SEPARATOR */}
-      {!isFieldsPanelCollapsed && sources.length > 0 && (
+      {!isFieldsPanelCollapsed && sources && sources.length > 0 && (
         <div
           onMouseDown={handleMouseDown}
           className="h-1.5 hover:h-2 bg-slate-200 hover:bg-indigo-400 cursor-row-resize transition-all rounded-full mx-12 -my-1 z-10 flex items-center justify-center group"
@@ -521,7 +521,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       {/* 4. DROP ZONES */}
       <div
         ref={dropZonesRef}
-        className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${sources.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
+        className={`flex flex-col gap-2 transition-opacity flex-1 min-h-0 ${!sources || (sources as any).length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
       >
         {isTemporalMode && (
           <button
@@ -701,7 +701,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
           >
             <div className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10">
               <div className="flex items-center gap-1">
-                <Calculator className="w-2 h-2" /> Valeurs ({metrics.length}/15)
+                <Calculator className="w-2 h-2" /> Valeurs ({metrics ? metrics.length : 0}/15)
               </div>
               {openCalcModal && (
                 <button
@@ -714,7 +714,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
               )}
             </div>
             <div className="space-y-2">
-              {metrics.map((m, idx) => {
+              {(metrics || []).map((m, idx) => {
                 const calcField = primaryDataset?.calculatedFields?.find(
                   (cf) => cf.name === m.field
                 );
@@ -740,6 +740,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                         <button
                           key={t}
                           onClick={() => {
+                            if (!metrics) return;
                             const n = [...metrics];
                             n[idx] = { ...n[idx], aggType: t as any };
                             setMetrics(n);
@@ -753,7 +754,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                   </div>
                 );
               })}
-              {metrics.length === 0 && valField && (
+              {(!metrics || metrics.length === 0) && valField && (
                 <div>
                   <FieldChip
                     field={valField}

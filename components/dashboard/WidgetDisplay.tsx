@@ -28,14 +28,13 @@ import {
   LabelList
 } from 'recharts';
 import { TrendingUp, Link as LinkIcon } from 'lucide-react';
-import { DashboardWidget, PivotRow, SunburstData } from '../../types';
+import { DashboardWidget, PivotRow, SunburstData, HierarchicalNode } from '../../types';
 import { useWidgets } from '../../context/DataContext';
 import { CHART_COLORS } from '../../utils/constants';
 import {
   getChartColors,
   generateGradient,
-  sunburstDataToD3Hierarchy,
-  HierarchicalNode
+  sunburstDataToD3Hierarchy
 } from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
 import { SunburstD3 } from '../charts/SunburstD3';

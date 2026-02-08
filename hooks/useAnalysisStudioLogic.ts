@@ -11,6 +11,7 @@ import {
 import { FilterRule, ColorMode, ColorPalette } from '../types';
 import { getChartColors as getPivotChartColors, generateGradient } from '../logic/pivotToChart';
 import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 export type ChartType =
   | 'bar'

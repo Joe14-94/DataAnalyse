@@ -5,8 +5,6 @@ import {
   ChartType,
   ColorPalette,
   ColorMode,
-  SunburstData,
-  HierarchicalNode,
   transformPivotToChartData,
   transformPivotToTreemapData,
   transformPivotToSunburstData,
@@ -16,7 +14,14 @@ import {
   generateGradient,
   sunburstDataToD3Hierarchy
 } from '../logic/pivotToChart';
-import { PivotResult, PivotConfig, TemporalComparisonConfig, PivotRow } from '../types';
+import {
+  PivotResult,
+  PivotConfig,
+  TemporalComparisonConfig,
+  PivotRow,
+  SunburstData,
+  HierarchicalNode
+} from '../types';
 import { useWidgets, useDatasets } from '../context/DataContext';
 import { getSafeLogo } from '../utils/common';
 
