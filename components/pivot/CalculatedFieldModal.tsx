@@ -27,6 +27,16 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
     const [showExamples, setShowExamples] = useState(false);
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleEscape);
+        }
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [isOpen, onClose]);
     const [showHelpModal, setShowHelpModal] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -188,7 +198,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Assistant de création</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-white rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-white rounded-full transition-colors" aria-label="Fermer" title="Fermer"><X className="w-5 h-5" /></button>
                 </div>
 
                 <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
@@ -307,9 +317,9 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {action.type !== 'source' && (
                                                                 <>
-                                                                    <button onClick={() => moveAction(idx, 'up')} disabled={idx <= 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowUp className="w-3 h-3" /></button>
-                                                                    <button onClick={() => moveAction(idx, 'down')} disabled={idx === actions.length - 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20"><ArrowDown className="w-3 h-3" /></button>
-                                                                    <button onClick={() => removeAction(action.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                                                                    <button onClick={() => moveAction(idx, 'up')} disabled={idx <= 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20" aria-label="Déplacer vers le haut" title="Déplacer vers le haut"><ArrowUp className="w-3 h-3" /></button>
+                                                                    <button onClick={() => moveAction(idx, 'down')} disabled={idx === actions.length - 1} className="p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-20" aria-label="Déplacer vers le bas" title="Déplacer vers le bas"><ArrowDown className="w-3 h-3" /></button>
+                                                                    <button onClick={() => removeAction(action.id)} className="p-1 text-slate-400 hover:text-red-600" aria-label="Supprimer l'action" title="Supprimer l'action"><Trash2 className="w-3 h-3" /></button>
                                                                 </>
                                                             )}
                                                         </div>
@@ -457,7 +467,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             key={f}
                                             title={f}
                                             onClick={() => insertIntoFormula(`[${f}]`)}
-                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
+                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
                                         >
                                             <span className="truncate flex-1 font-medium">{f}</span>
                                             <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
@@ -489,7 +499,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                             className="w-full text-left px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
                                                         >
                                                             <div className="flex justify-between items-center mb-0.5">
-                                                                <span className="text-[11px] font-bold text-indigo-700 font-mono">{fn.name}</span>
+                                                                <span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span>
                                                                 <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
                                                             </div>
                                                             <div className="text-xs text-slate-400 font-mono mb-1">{fn.syntax}</div>
