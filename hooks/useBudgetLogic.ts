@@ -132,17 +132,20 @@ export const useBudgetLogic = () => {
   const [newAxisMandatory, setNewAxisMandatory] = useState(false);
 
   // Get selected budget and version
-  const selectedBudget = selectedBudgetId ? budgets.find((b) => b.id === selectedBudgetId) : null;
+  const selectedBudget =
+    (selectedBudgetId ? budgets.find((b) => b.id === selectedBudgetId) : null) || null;
   const selectedVersion =
-    selectedBudget && selectedVersionId
+    (selectedBudget && selectedVersionId
       ? selectedBudget.versions.find((v) => v.id === selectedVersionId)
-      : null;
-  const selectedChart = selectedBudget
-    ? chartsOfAccounts.find((c) => c.id === selectedBudget.chartOfAccountsId)
-    : null;
-  const selectedCalendar = selectedBudget?.fiscalCalendarId
-    ? fiscalCalendars.find((c) => c.id === selectedBudget.fiscalCalendarId)
-    : null;
+      : null) || null;
+  const selectedChart =
+    (selectedBudget
+      ? chartsOfAccounts.find((c) => c.id === selectedBudget.chartOfAccountsId)
+      : null) || null;
+  const selectedCalendar =
+    (selectedBudget?.fiscalCalendarId
+      ? fiscalCalendars.find((c) => c.id === selectedBudget.fiscalCalendarId)
+      : null) || null;
 
   // Handler functions
   const handleCreateBudget = useCallback(
@@ -678,6 +681,7 @@ export const useBudgetLogic = () => {
     handleAxisFileSelect,
     handleExportAxisValues,
     handleDeleteAxisValue,
+    downloadAnalyticalAxisTemplate,
     // Context methods
     deleteBudget,
     submitVersion,

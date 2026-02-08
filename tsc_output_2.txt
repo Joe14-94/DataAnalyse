@@ -1,0 +1,31 @@
+components/forecast/ForecastReconciliation.tsx(44,61): error TS18048: 'report.mape' is possibly 'undefined'.
+components/forecast/ForecastReconciliation.tsx(46,20): error TS18048: 'report.rmse' is possibly 'undefined'.
+components/pivot/ChartModal.tsx(127,15): error TS2322: Type 'boolean | null' is not assignable to type 'boolean'.
+  Type 'null' is not assignable to type 'boolean'.
+components/pivot/ChartModal.tsx(137,15): error TS2322: Type 'any[] | null' is not assignable to type 'any[]'.
+  Type 'null' is not assignable to type 'any[]'.
+components/pivot/PivotFooter.tsx(16,12): error TS2304: Cannot find name 'PivotMetric'.
+components/pivot/PivotSidePanel.tsx(58,12): error TS2304: Cannot find name 'PivotMetric'.
+components/pivot/PivotSidePanel.tsx(59,19): error TS2304: Cannot find name 'PivotMetric'.
+pages/AnalysisStudio.tsx(131,11): error TS2322: Type 'Dispatch<SetStateAction<"asc" | "desc" | "alpha">>' is not assignable to type '(o: "none" | "asc" | "desc" | "alpha") => void'.
+  Types of parameters 'value' and 'o' are incompatible.
+    Type '"none" | "asc" | "desc" | "alpha"' is not assignable to type 'SetStateAction<"asc" | "desc" | "alpha">'.
+      Type '"none"' is not assignable to type 'SetStateAction<"asc" | "desc" | "alpha">'.
+pages/PivotTable.tsx(200,10): error TS2322: Type '{ sources: PivotSourceConfig[]; datasets: Dataset[]; datasetBatches: ImportBatch[]; selectedBatchId: string; setSelectedBatchId: (v: any) => void; ... 50 more ...; openFormattingModal: () => void; }' is not assignable to type 'PivotSidePanelProps'.
+  Types of property 'showTotalCol' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+pages/PivotTable.tsx(291,12): error TS2322: Type '{ isCalculating: boolean; isTemporalMode: boolean; pivotData: PivotResult | null; temporalResults: TemporalComparisonResult[]; temporalConfig: TemporalComparisonConfig | undefined; ... 34 more ...; paddingBottom: number; }' is not assignable to type 'PivotGridProps'.
+  Types of property 'showVariations' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+pages/PivotTable.tsx(370,9): error TS2322: Type 'PivotSourceConfig[] | undefined' is not assignable to type 'PivotSourceConfig[]'.
+  Type 'undefined' is not assignable to type 'PivotSourceConfig[]'.
+pages/PivotTable.tsx(380,9): error TS2322: Type 'Record<string, string | number | boolean>[]' is not assignable to type 'DataRow[]'.
+  Property 'id' is missing in type 'Record<string, string | number | boolean>' but required in type 'DataRow'.
+pages/PivotTable.tsx(443,9): error TS2322: Type 'PivotStyleRule[] | undefined' is not assignable to type 'PivotStyleRule[]'.
+  Type 'undefined' is not assignable to type 'PivotStyleRule[]'.
+pages/PivotTable.tsx(445,9): error TS2322: Type 'ConditionalFormattingRule[] | undefined' is not assignable to type 'ConditionalFormattingRule[]'.
+  Type 'undefined' is not assignable to type 'ConditionalFormattingRule[]'.
+pages/PivotTable.tsx(447,9): error TS2322: Type 'PivotMetric[] | undefined' is not assignable to type 'PivotMetric[]'.
+  Type 'undefined' is not assignable to type 'PivotMetric[]'.

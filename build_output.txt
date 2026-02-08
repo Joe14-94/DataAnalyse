@@ -1,0 +1,40 @@
+
+> datascope-dashboard@1.0.0 build /app
+> tsc && vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 3288 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                 1.42 kB │ gzip:   0.65 kB
+dist/assets/index-DmKutFTR.css                 72.78 kB │ gzip:  12.51 kB
+dist/assets/mathUtils-DbDkN7B8.js               0.36 kB │ gzip:   0.23 kB
+dist/assets/Card-DvdJSxqQ.js                    0.69 kB │ gzip:   0.38 kB
+dist/assets/useHistory-CSPMEKKL.js              1.07 kB │ gzip:   0.53 kB
+dist/assets/Modal-CxZkHZ_H.js                   2.04 kB │ gzip:   0.93 kB
+dist/assets/pivotToChart-9C-efnvY.js           10.51 kB │ gzip:   4.16 kB
+dist/assets/Customization-C2M9rcJp.js          11.44 kB │ gzip:   3.26 kB
+dist/assets/Help-BvnqwkF9.js                   13.11 kB │ gzip:   3.80 kB
+dist/assets/exportUtils-CORDyL97.js            14.76 kB │ gzip:   4.77 kB
+dist/assets/ETLPipeline-DO90kxBJ.js            19.63 kB │ gzip:   5.78 kB
+dist/assets/Forecast-BcWhAWRX.js               21.27 kB │ gzip:   5.83 kB
+dist/assets/purify.es-C_uT9hQ1.js              21.98 kB │ gzip:   8.74 kB
+dist/assets/Import-hXbb3bd5.js                 26.12 kB │ gzip:   7.86 kB
+dist/assets/SunburstD3-Co1ti8IQ.js             36.02 kB │ gzip:  11.74 kB
+dist/assets/Settings-D5Iz6nau.js               42.06 kB │ gzip:  12.00 kB
+dist/assets/AnalysisStudio-DQiyrFGV.js         51.66 kB │ gzip:  13.46 kB
+dist/assets/DataExplorer-BAhJ6MbL.js           56.37 kB │ gzip:  13.85 kB
+dist/assets/Dashboard-C41b5OjR.js              63.12 kB │ gzip:  17.44 kB
+dist/assets/CalculatedFieldModal-D6xNoMkG.js   69.11 kB │ gzip:  16.51 kB
+dist/assets/Budget-g8RFCxkL.js                 77.72 kB │ gzip:  17.87 kB
+dist/assets/index.es-xTBIzWJx.js              150.58 kB │ gzip:  51.51 kB
+dist/assets/PivotTable-xAo6Y2jD.js            156.37 kB │ gzip:  37.94 kB
+dist/assets/vendor-react-Me3XV9Sg.js          162.75 kB │ gzip:  53.15 kB
+dist/assets/index-XRO2eqdU.js                 166.95 kB │ gzip:  52.12 kB
+dist/assets/html2canvas.esm-CBrSDip1.js       201.42 kB │ gzip:  48.03 kB
+dist/assets/o365Service-DCRC64aB.js           295.25 kB │ gzip:  73.43 kB
+dist/assets/jspdf.es.min-DWt06nhV.js          357.78 kB │ gzip: 118.04 kB
+dist/assets/vendor-utils-CdCkJBnC.js          473.02 kB │ gzip: 150.84 kB
+dist/assets/vendor-charts-BkOxcCZI.js         490.74 kB │ gzip: 129.38 kB
+✓ built in 17.87s

@@ -1,5 +1,5 @@
 import React, { useEffect, useContext } from 'react';
-import { ShepherdTour, ShepherdTourContext } from 'react-shepherd';
+import { ShepherdJourneyProvider, ShepherdJourneyContext } from 'react-shepherd';
 import 'shepherd.js/dist/css/shepherd.css';
 import { usePersistence } from '../context/PersistenceContext';
 
@@ -128,7 +128,7 @@ const steps: ShepherdStep[] = [
 ];
 
 const TourTrigger: React.FC = () => {
-  const tour = useContext(ShepherdTourContext);
+  const tour = useContext(ShepherdJourneyContext);
   const { hasSeenOnboarding, completeOnboarding } = usePersistence();
 
   useEffect(() => {
@@ -159,8 +159,8 @@ const TourTrigger: React.FC = () => {
 
 export const OnboardingTour: React.FC = () => {
   return (
-    <ShepherdTour steps={steps} tourOptions={tourOptions}>
+    <ShepherdJourneyProvider {...({ steps, tourOptions } as any)}>
       <TourTrigger />
-    </ShepherdTour>
+    </ShepherdJourneyProvider>
   );
 };

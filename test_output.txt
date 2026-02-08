@@ -1,0 +1,294 @@
+
+> datascope-dashboard@1.0.0 test /app
+> vitest --run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/app[39m
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait transformer correctement un TCD simple
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait transformer correctement un TCD multi-séries
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m2[39m,
+  seriesHeadersCount: [33m2[39m,
+  seriesHeaders: [ [32m'2023'[39m, [32m'2024'[39m ],
+  isMultiSeries: [33mtrue[39m,
+  firstRowMetrics: { [32m'2023'[39m: [33m100[39m, [32m'2024'[39m: [33m120[39m },
+  firstRowTotal: [33m220[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait exclure les sous-totaux par défaut
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m50[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait trier les données par valeur (décroissant)
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait trier les données par nom (croissant)
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait limiter les résultats au Top N
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation des données TCD vers format Recharts[2m > [22m[2mdevrait grouper les autres en "Autres" quand showOthers=true
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation vers Treemap[2m > [22m[2mdevrait transformer correctement un TCD hiérarchique en Treemap
+[22m[39m🌳 transformPivotToTreemapData - dataRows: [33m4[39m
+🌳 Données treemap (top 10): [
+  { name: [32m'Sud > Produit A'[39m, size: [33m75[39m, value: [33m75[39m },
+  { name: [32m'Sud > Produit B'[39m, size: [33m75[39m, value: [33m75[39m },
+  { name: [32m'Nord > Produit A'[39m, size: [33m50[39m, value: [33m50[39m },
+  { name: [32m'Nord > Produit B'[39m, size: [33m50[39m, value: [33m50[39m }
+]
+🌳 Premier élément: { name: [32m'Sud > Produit A'[39m, size: [33m75[39m, value: [33m75[39m }
+🌳 Format correct pour Recharts: [33mtrue[39m
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation vers Treemap[2m > [22m[2mdevrait inclure les propriétés name et size pour chaque noeud
+[22m[39m🌳 transformPivotToTreemapData - dataRows: [33m4[39m
+🌳 Données treemap (top 10): [
+  { name: [32m'Sud > Produit A'[39m, size: [33m75[39m, value: [33m75[39m },
+  { name: [32m'Sud > Produit B'[39m, size: [33m75[39m, value: [33m75[39m },
+  { name: [32m'Nord > Produit A'[39m, size: [33m50[39m, value: [33m50[39m },
+  { name: [32m'Nord > Produit B'[39m, size: [33m50[39m, value: [33m50[39m }
+]
+🌳 Premier élément: { name: [32m'Sud > Produit A'[39m, size: [33m75[39m, value: [33m75[39m }
+🌳 Format correct pour Recharts: [33mtrue[39m
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mCas limites et erreurs[2m > [22m[2mdevrait gérer des valeurs nulles/undefined dans les métriques
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m2[39m,
+  seriesHeadersCount: [33m2[39m,
+  seriesHeaders: [ [32m'2023'[39m, [32m'2024'[39m ],
+  isMultiSeries: [33mtrue[39m,
+  firstRowMetrics: { [32m'2023'[39m: [1mnull[22m, [32m'2024'[39m: [33m120[39m },
+  firstRowTotal: [33m120[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mCas limites et erreurs[2m > [22m[2mdevrait gérer des rowTotal non numériques
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [32m'invalid'[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mCas limites et erreurs[2m > [22m[2mdevrait gérer un limit=0 (pas de limite)
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+[90mstdout[2m | logic/__tests__/pivotToChart.test.ts[2m > [22m[2mTransformation Pivot vers Graphiques - Tests de Fiabilité[2m > [22m[2mCas limites et erreurs[2m > [22m[2mdevrait gérer un limit supérieur au nombre de lignes
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m0[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  isMultiSeries: [33mfalse[39m,
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+
+ [32m✓[39m logic/__tests__/pivotToChart.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+ [32m✓[39m __tests__/Button.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+ [32m✓[39m logic/__tests__/pivotEngine.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 99[2mms[22m[39m
+ [32m✓[39m __tests__/temporalComparisonUtils.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+[90mstdout[2m | __tests__/utils.test.ts[2m > [22m[2mMapping de Données (mapDataToSchema)[2m > [22m[2mdevrait gérer des milliers de lignes efficacement
+[22m[39m⏱️ mapDataToSchema (1000 rows, 10 cols): 5.61ms
+
+ [32m✓[39m __tests__/utils.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+[90mstdout[2m | __tests__/pivotTemporalChart.test.ts[2m > [22m[2mConversion TCD Temporel vers Graphiques - Tests de Fiabilité[2m > [22m[2mTransformation vers données de graphique[2m > [22m[2mdevrait transformer correctement un PivotResult temporel en données de graphique
+[22m[39m📊 transformPivotToChartData: {
+  colHeadersCount: [33m2[39m,
+  seriesHeadersCount: [33m2[39m,
+  seriesHeaders: [ [32m'2023'[39m, [32m'2024'[39m ],
+  isMultiSeries: [33mtrue[39m,
+  firstRowMetrics: { [32m'2023'[39m: [33m1000[39m, [32m'2024'[39m: [33m1200[39m },
+  firstRowTotal: [33m2200[39m
+}
+
+ [32m✓[39m __tests__/pivotTemporalChart.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m hooks/__tests__/useWidgetData.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+[90mstdout[2m | __tests__/sunburst.test.ts[2m > [22m[2mSunburst Data Transformation[2m > [22m[2mshould build a hierarchical tree correctly
+[22m[39m🌞🌞🌞 buildHierarchicalTree START: {
+  dataRowsCount: [33m3[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  hasMultiCols: [33mfalse[39m,
+  firstRow: {
+    type: [32m'data'[39m,
+    keys: [ [32m'A'[39m, [32m'A1'[39m, [32m'A11'[39m ],
+    metrics: {},
+    rowTotal: [33m100[39m,
+    level: [33m2[39m
+  },
+  firstRowKeys: [ [32m'A'[39m, [32m'A1'[39m, [32m'A11'[39m ],
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+🌞 No multiCols, adding to rowTotal: 100
+🌞 No multiCols, adding to rowTotal: 50
+🌞🌞🌞 buildHierarchicalTree END: {
+  treeLength: [33m2[39m,
+  tree: [
+    { name: [32m'A'[39m, children: [36m[Array][39m, path: [36m[Array][39m },
+    { name: [32m'B'[39m, children: [36m[Array][39m, path: [36m[Array][39m }
+  ],
+  firstNodeChildren: [33m1[39m,
+  firstNodeValue: [90mundefined[39m
+}
+
+[90mstdout[2m | __tests__/sunburst.test.ts[2m > [22m[2mSunburst Data Transformation[2m > [22m[2mshould generate sunburst rings with correct values
+[22m[39m🌞🌞🌞 buildHierarchicalTree START: {
+  dataRowsCount: [33m3[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  hasMultiCols: [33mfalse[39m,
+  firstRow: {
+    type: [32m'data'[39m,
+    keys: [ [32m'A'[39m, [32m'A1'[39m, [32m'A11'[39m ],
+    metrics: {},
+    rowTotal: [33m100[39m,
+    level: [33m2[39m
+  },
+  firstRowKeys: [ [32m'A'[39m, [32m'A1'[39m, [32m'A11'[39m ],
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+🌞 No multiCols, adding to rowTotal: 100
+🌞 No multiCols, adding to rowTotal: 50
+🌞🌞🌞 buildHierarchicalTree END: {
+  treeLength: [33m2[39m,
+  tree: [
+    { name: [32m'A'[39m, children: [36m[Array][39m, path: [36m[Array][39m },
+    { name: [32m'B'[39m, children: [36m[Array][39m, path: [36m[Array][39m }
+  ],
+  firstNodeChildren: [33m1[39m,
+  firstNodeValue: [90mundefined[39m
+}
+🌞🌞🌞 treeToSunburstRings START: {
+  treeLength: [33m2[39m,
+  grandTotal: [33m350[39m,
+  baseColorsLength: [33m2[39m,
+  baseColors: [ [32m'#ff0000'[39m, [32m'#00ff00'[39m ]
+}
+🌞 Traversing level 0, nodes count: 2
+🌞 ITEM level=0 idx=0: name="A", value=150, fill="#ff0000", path=["A"], nodeValue=undefined, hasChildren=true, childrenCount=1
+🌞 Traversing level 1, nodes count: 1
+🌞 Traversing level 2, nodes count: 2
+🌞 ITEM level=0 idx=1: name="B", value=200, fill="#00ff00", path=["B"], nodeValue=undefined, hasChildren=true, childrenCount=1
+🌞 Traversing level 1, nodes count: 1
+🌞 Traversing level 2, nodes count: 1
+🌞🌞🌞 treeToSunburstRings END: {
+  ringsLength: [33m3[39m,
+  ringsItemCounts: [ [33m2[39m, [33m2[39m, [33m3[39m ],
+  firstRing: [
+    {
+      name: [32m'A'[39m,
+      value: [33m150[39m,
+      fill: [32m'#ff0000'[39m,
+      path: [36m[Array][39m,
+      parentName: [32m'Total'[39m,
+      parentTotal: [33m350[39m,
+      grandTotal: [33m350[39m
+    },
+    {
+      name: [32m'B'[39m,
+      value: [33m200[39m,
+      fill: [32m'#00ff00'[39m,
+      path: [36m[Array][39m,
+      parentName: [32m'Total'[39m,
+      parentTotal: [33m350[39m,
+      grandTotal: [33m350[39m
+    }
+  ]
+}
+
+ [32m✓[39m __tests__/sunburst.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+[90mstdout[2m | __tests__/sunburst_bug.test.ts[2m > [22m[2mSunburst Data Transformation[2m > [22m[2mshould handle rows with different key lengths correctly
+[22m[39m🌞🌞🌞 buildHierarchicalTree START: {
+  dataRowsCount: [33m2[39m,
+  seriesHeadersCount: [33m0[39m,
+  seriesHeaders: [],
+  hasMultiCols: [33mfalse[39m,
+  firstRow: {
+    type: [32m'data'[39m,
+    keys: [ [32m'A'[39m, [32m'A1'[39m, [32m'A11'[39m ],
+    metrics: {},
+    rowTotal: [33m100[39m,
+    level: [33m2[39m
+  },
+  firstRowKeys: [ [32m'A'[39m, [32m'A1'[39m, [32m'A11'[39m ],
+  firstRowMetrics: {},
+  firstRowTotal: [33m100[39m
+}
+🌞 No multiCols, adding to rowTotal: 100
+🌞 No multiCols, adding to rowTotal: 50
+🌞🌞🌞 buildHierarchicalTree END: {
+  treeLength: [33m1[39m,
+  tree: [ { name: [32m'A'[39m, children: [36m[Array][39m, path: [36m[Array][39m } ],
+  firstNodeChildren: [33m1[39m,
+  firstNodeValue: [90mundefined[39m
+}
+
+ [32m✓[39m __tests__/sunburst_bug.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m __tests__/transformations.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+[90mstderr[2m | __tests__/calculatedFieldActions.test.ts[2m > [22m[2mRobustesse REGEX dans evaluateFormula[2m > [22m[2mne devrait pas planter avec un regex invalide
+[22m[39mRegex invalide: [
+
+ [32m✓[39m __tests__/calculatedFieldActions.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m __tests__/autoRefresh.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m __tests__/pivotToDataset.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+[2m      Tests [22m [1m[32m142 passed[39m[22m[90m (142)[39m
+[2m   Start at [22m 07:30:08
+[2m   Duration [22m 4.74s[2m (transform 1.06s, setup 0ms, import 4.20s, tests 402ms, environment 5.89s)[22m

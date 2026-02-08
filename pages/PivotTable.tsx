@@ -159,7 +159,7 @@ export const PivotTable: React.FC = () => {
   return (
     <div className="h-full flex flex-col p-2 gap-2 relative bg-slate-50">
       <PivotHeader
-        isTemporalMode={isTemporalMode}
+        isTemporalMode={!!isTemporalMode}
         setIsTemporalMode={setIsTemporalMode}
         handleToChart={() => setIsChartModalOpen(true)}
         setIsSelectionMode={setIsSelectionMode}
@@ -188,7 +188,7 @@ export const PivotTable: React.FC = () => {
         openSpecificDashboardModal={() => setIsSpecificDashboardModalOpen(true)}
         openSaveAsDatasetModal={() => setIsSaveAsDatasetModalOpen(true)}
         selectedItemsCount={specificDashboardItems.length}
-        searchTerm={searchTerm}
+        searchTerm={searchTerm || ''}
         setSearchTerm={setSearchTerm}
         undo={undo}
         redo={redo}
@@ -199,16 +199,16 @@ export const PivotTable: React.FC = () => {
       <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
         <PivotSidePanel
           {...{
-            sources,
-            datasets,
-            datasetBatches,
-            selectedBatchId,
+            sources: sources || [],
+            datasets: datasets || [],
+            datasetBatches: datasetBatches || [],
+            selectedBatchId: selectedBatchId || '',
             setSelectedBatchId,
             startAddSource: () => setIsSourceModalOpen(true),
-            removeSource: (id) => setSources((s) => s.filter((x) => x.id !== id)),
+            removeSource: (id: string) => setSources((s: any) => s.filter((x: any) => x.id !== id)),
             isDataSourcesPanelCollapsed,
             setIsDataSourcesPanelCollapsed,
-            isTemporalMode,
+            isTemporalMode: !!isTemporalMode,
             isTemporalConfigPanelCollapsed,
             setIsTemporalConfigPanelCollapsed,
             setIsTemporalSourceModalOpen,
@@ -218,14 +218,14 @@ export const PivotTable: React.FC = () => {
             setRowFields,
             colFields,
             setColFields,
-            valField,
+            valField: valField || '',
             handleValFieldChange,
             setValField,
-            aggType,
+            aggType: aggType || 'count',
             setAggType,
-            metrics,
+            metrics: metrics || [],
             setMetrics,
-            valFormatting,
+            valFormatting: valFormatting || {},
             setValFormatting,
             filters,
             setFilters,
@@ -240,11 +240,11 @@ export const PivotTable: React.FC = () => {
             colGrouping,
             setColGrouping,
             isColFieldDate,
-            showSubtotals,
+            showSubtotals: !!showSubtotals,
             setShowSubtotals,
-            showTotalCol,
+            showTotalCol: !!showTotalCol,
             setShowTotalCol,
-            showVariations,
+            showVariations: !!showVariations,
             setShowVariations,
             handleDragStart,
             handleDragOver: (e) => e.preventDefault(),
@@ -291,26 +291,26 @@ export const PivotTable: React.FC = () => {
           <PivotGrid
             {...{
               isCalculating,
-              isTemporalMode,
+              isTemporalMode: !!isTemporalMode,
               pivotData,
-              temporalResults,
-              temporalConfig,
-              rowFields,
-              colFields,
-              columnLabels,
+              temporalResults: temporalResults || [],
+              temporalConfig: temporalConfig || null,
+            rowFields: rowFields || [],
+            colFields: colFields || [],
+              columnLabels: columnLabels || {},
               editingColumn,
               setEditingColumn,
               setColumnLabels,
-              showVariations,
-              showTotalCol,
+              showVariations: !!showVariations,
+              showTotalCol: !!showTotalCol,
               handleDrilldown: handleCellClick,
               handleTemporalDrilldown,
               primaryDataset,
               datasets,
-              aggType,
-              valField,
-              metrics,
-              valFormatting,
+              aggType: aggType || 'count',
+              valField: valField || '',
+              metrics: metrics || [],
+              valFormatting: valFormatting || {},
               virtualItems: rowVirtualizer.getVirtualItems(),
               rowVirtualizer,
               parentRef,
@@ -322,10 +322,10 @@ export const PivotTable: React.FC = () => {
               setSortBy,
               sortOrder,
               setSortOrder,
-              columnWidths,
+              columnWidths: columnWidths || {},
               setColumnWidths,
-              styleRules,
-              conditionalRules,
+              styleRules: (styleRules || []) as any,
+              conditionalRules: (conditionalRules || []) as any,
               onRemoveField: removeField,
               totalColumns:
                 rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
@@ -346,19 +346,19 @@ export const PivotTable: React.FC = () => {
               pivotData,
               temporalColTotals,
               temporalConfig,
-              rowFields,
-              columnWidths,
+              rowFields: rowFields || [],
+              columnWidths: columnWidths || {},
               footerRef,
-              valField,
-              aggType,
-              metrics,
-              primaryDataset,
+              valField: valField || '',
+              aggType: aggType || 'count',
+              metrics: metrics || [],
+              primaryDataset: primaryDataset || null,
               datasets,
-              valFormatting,
-              showTotalCol,
-              showVariations,
-              styleRules,
-              conditionalRules
+              valFormatting: valFormatting || {},
+              showTotalCol: !!showTotalCol,
+              showVariations: !!showVariations,
+              styleRules: styleRules || [],
+              conditionalRules: conditionalRules || []
             }}
           />
         </div>
@@ -367,7 +367,7 @@ export const PivotTable: React.FC = () => {
       <SourceManagementModal
         isOpen={isSourceModalOpen}
         onClose={() => setIsSourceModalOpen(false)}
-        sources={sources}
+        sources={sources || []}
         datasets={datasets}
         batches={batches}
         primaryDataset={primaryDataset}
@@ -386,21 +386,19 @@ export const PivotTable: React.FC = () => {
           onClose={() => setIsChartModalOpen(false)}
           pivotData={chartPivotData as any}
           pivotConfig={{
-            rows: blendedRows,
             rowFields: isTemporalMode ? temporalConfig?.groupByFields || [] : rowFields,
             colFields: isTemporalMode ? [] : colFields,
             colGrouping,
             valField,
-            aggType,
+            aggType: aggType as any,
+            metrics,
             filters,
             sortBy,
             sortOrder,
-            showSubtotals,
+            showSubtotals: !!showSubtotals,
             showVariations,
-            currentDataset: primaryDataset,
-            datasets,
             valFormatting
-          }}
+          } as any}
           isTemporalMode={isTemporalMode}
           temporalComparison={temporalConfig}
           selectedBatchId={selectedBatchId}
@@ -442,13 +440,13 @@ export const PivotTable: React.FC = () => {
       <FormattingModal
         isOpen={isFormattingModalOpen}
         onClose={() => setIsFormattingModalOpen(false)}
-        styleRules={styleRules}
+        styleRules={styleRules || []}
         setStyleRules={setStyleRules}
-        conditionalRules={conditionalRules}
+        conditionalRules={conditionalRules || []}
         setConditionalRules={setConditionalRules}
-        metrics={metrics}
-        rowFields={rowFields}
-        colFields={colFields}
+        metrics={metrics || []}
+        rowFields={rowFields || []}
+        colFields={colFields || []}
         additionalLabels={
           isTemporalMode ? (temporalConfig?.sources || []).map((s: any) => s.label) : []
         }

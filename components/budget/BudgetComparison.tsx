@@ -104,14 +104,22 @@ export const BudgetComparison: React.FC<BudgetComparisonProps> = ({
               );
               if (!comparison) return null;
 
-              const totalV1 = comparison.version1.lines.reduce(
+              const totalV1 = (comparison as any).version1.lines.reduce(
                 (sum: number, line: any) =>
-                  sum + Object.values(line.periodValues).reduce((s: any, v: any) => s + v, 0),
+                  sum +
+                  Object.values(line.periodValues || {}).reduce(
+                    (s: number, v: any) => s + (v as number),
+                    0
+                  ),
                 0
               );
-              const totalV2 = comparison.version2.lines.reduce(
+              const totalV2 = (comparison as any).version2.lines.reduce(
                 (sum: number, line: any) =>
-                  sum + Object.values(line.periodValues).reduce((s: any, v: any) => s + v, 0),
+                  sum +
+                  Object.values(line.periodValues || {}).reduce(
+                    (s: number, v: any) => s + (v as number),
+                    0
+                  ),
                 0
               );
               const variance = totalV2 - totalV1;

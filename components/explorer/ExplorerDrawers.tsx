@@ -373,7 +373,7 @@ export const ExplorerDrawers: React.FC<ExplorerDrawersProps> = ({
                                   ...vlookupConfig,
                                   columnsToAdd: e.target.checked
                                     ? [...vlookupConfig.columnsToAdd, f]
-                                    : vlookupConfig.columnsToAdd.filter((c) => c !== f)
+                                    : vlookupConfig.columnsToAdd.filter((c: string) => c !== f)
                                 })
                               }
                               className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"

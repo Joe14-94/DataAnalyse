@@ -54,6 +54,7 @@ export interface PivotResult {
   displayRows: PivotRow[];
   colTotals: Record<string, number | string>;
   grandTotal: number | string | Record<string, number | string>;
+  isTemporal?: boolean;
 }
 
 export interface PivotJoin {
@@ -136,6 +137,29 @@ export interface TemporalComparisonResult {
   details?: { [sourceId: string]: DataRow[] };
   isSubtotal?: boolean;
   subtotalLevel?: number;
+}
+
+export interface HierarchicalNode {
+  name: string;
+  value?: number;
+  children?: HierarchicalNode[];
+  path?: string[];
+}
+
+export interface SunburstRingItem {
+  name: string;
+  value: number;
+  fill: string;
+  path: string[];
+  parentName: string;
+  parentTotal: number;
+  grandTotal: number;
+}
+
+export interface SunburstData {
+  tree: HierarchicalNode[];
+  rings: SunburstRingItem[][];
+  totalValue: number;
 }
 
 export interface PivotState {

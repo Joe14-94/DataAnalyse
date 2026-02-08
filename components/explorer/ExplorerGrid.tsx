@@ -21,7 +21,7 @@ interface ExplorerGridProps {
   columnFilters: Record<string, string>;
   handleColumnFilterChange: (key: string, value: string) => void;
   isEditMode: boolean;
-  pendingChanges: Record<string, Record<string, string | number | boolean>>;
+  pendingChanges: Record<string, Record<string, Record<string, string | number | boolean>>>;
   handleCellEdit: (
     batchId: string,
     rowId: string,
@@ -319,9 +319,9 @@ export const ExplorerGrid: React.FC<ExplorerGridProps> = ({
 
                   if (!isEditMode || isBlended) {
                     if (config?.type === 'number' && val !== undefined && val !== '')
-                      displayVal = formatNumberValue(val, config);
+                      displayVal = formatNumberValue(val as any, config);
                     else if (config?.type === 'date' && val !== undefined && val !== '')
-                      displayVal = formatDateFr(val);
+                      displayVal = formatDateFr(val as any);
                     else if (typeof val === 'boolean')
                       displayVal = val ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -347,7 +347,7 @@ export const ExplorerGrid: React.FC<ExplorerGridProps> = ({
                         <input
                           type="text"
                           className="w-full px-2 py-1 text-sm border border-brand-300 rounded focus:ring-1 focus:ring-brand-500 bg-white"
-                          value={val ?? ''}
+                          value={String(val ?? '')}
                           onChange={(e) =>
                             handleCellEdit(row._batchId, row.id, field, e.target.value)
                           }

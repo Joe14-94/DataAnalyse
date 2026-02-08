@@ -6,6 +6,7 @@ import {
   applyPreparedFilters
 } from '../utils';
 import {
+  DataRow,
   FieldConfig,
   Dataset,
   FilterRule,
@@ -38,10 +39,16 @@ interface GroupStats {
   rawMetrics: Map<string, number>;
 }
 
+interface PivotCalculationProps extends PivotConfig {
+  rows: DataRow[];
+  currentDataset?: Dataset | null;
+  datasets?: Dataset[];
+}
+
 /**
  * MOTEUR TCD : Logique pure de calcul optimisée
  */
-export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
+export const calculatePivotData = (config: PivotCalculationProps): PivotResult | null => {
   const {
     rows,
     rowFields,

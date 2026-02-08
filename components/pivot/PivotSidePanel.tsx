@@ -24,7 +24,8 @@ import {
   ImportBatch,
   FieldConfig,
   AggregationType,
-  DateGrouping
+  DateGrouping,
+  PivotMetric
 } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
 import { formatDateFr } from '../../utils';
@@ -55,8 +56,8 @@ interface PivotSidePanelProps {
   setValField: (f: string) => void;
   aggType: AggregationType;
   setAggType: (t: AggregationType) => void;
-  metrics: any[];
-  setMetrics: (m: any[]) => void;
+  metrics: PivotMetric[];
+  setMetrics: (m: PivotMetric[]) => void;
   valFormatting: Partial<FieldConfig>;
   setValFormatting: (f: Partial<FieldConfig>) => void;
   filters: FilterRule[];

@@ -374,6 +374,7 @@ export interface ForecastVarianceAnalysis {
 
 export interface ForecastReconciliationReport {
   id: string;
+  name: string;
   forecastId: string;
   forecastVersionId: string;
   periodStart: string;
@@ -385,6 +386,7 @@ export interface ForecastReconciliationReport {
   totalVariancePercent: number;
   mape?: number;
   rmse?: number;
+  accuracyScore: number;
   recommendations?: string[];
   createdAt: number;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table2, History, Filter } from 'lucide-react';
 import { formatDateFr } from '../../utils';
-import { Dataset, Batch } from '../../types';
+import { Dataset, ImportBatch as Batch } from '../../types';
 
 interface ExplorerHeaderProps {
   currentDataset: Dataset;

@@ -49,7 +49,7 @@ export const Forecast: React.FC = () => {
             onClick={() => {
               const name = prompt('Nom du forecast:');
               if (name)
-                handleCreateForecast(name, 'financial', 2025, chartsOfAccounts[0]?.id || '', false);
+                handleCreateForecast(name, 'monthly' as any, 2025, chartsOfAccounts[0]?.id || '', false);
             }}
           >
             <Plus className="w-4 h-4 mr-2" />

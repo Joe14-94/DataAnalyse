@@ -23,7 +23,7 @@ interface PivotGridProps {
   isTemporalMode: boolean;
   pivotData: PivotResult | null;
   temporalResults: TemporalComparisonResult[];
-  temporalConfig: TemporalComparisonConfig | null;
+  temporalConfig: TemporalComparisonConfig | null | undefined;
   rowFields: string[];
   columnLabels: Record<string, string>;
   editingColumn: string | null;

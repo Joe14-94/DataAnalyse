@@ -60,42 +60,42 @@ export const runSelfDiagnostics = (): DiagnosticSuite[] => {
       name: 'Opération simple',
       status: 'success',
       expected: 100,
-      actual: evaluateFormula({ A: 10, B: 10 }, '[A] * [B]')
+      actual: evaluateFormula({ id: '1', A: 10, B: 10 }, '[A] * [B]')
     },
     {
       id: 'f2',
       name: 'Calcul avec unité',
       status: 'success',
       expected: 120,
-      actual: evaluateFormula({ Prix: '10 €', Qte: 12 }, '[Prix] * [Qte]')
+      actual: evaluateFormula({ id: '1', Prix: '10 €', Qte: 12 }, '[Prix] * [Qte]')
     },
     {
       id: 'f3',
       name: 'Fonction SI',
       status: 'success',
       expected: 'Grand',
-      actual: evaluateFormula({ Age: 20 }, "SI([Age] > 18, 'Grand', 'Petit')")
+      actual: evaluateFormula({ id: '1', Age: 20 }, "SI([Age] > 18, 'Grand', 'Petit')")
     },
     {
       id: 'f4',
       name: 'Fonction SOMME',
       status: 'success',
       expected: 30,
-      actual: evaluateFormula({ A: 10, B: 20 }, 'SOMME([A], [B])')
+      actual: evaluateFormula({ id: '1', A: 10, B: 20 }, 'SOMME([A], [B])')
     },
     {
       id: 'f5',
       name: 'Priorité opérateurs',
       status: 'success',
       expected: 14,
-      actual: evaluateFormula({}, '2 + 3 * 4')
+      actual: evaluateFormula({ id: '1' }, '2 + 3 * 4')
     },
     {
       id: 'f6',
       name: 'Parenthèses',
       status: 'success',
       expected: 20,
-      actual: evaluateFormula({}, '(2 + 3) * 4')
+      actual: evaluateFormula({ id: '1' }, '(2 + 3) * 4')
     }
   ];
   formulaTests.forEach((t) => {

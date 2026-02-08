@@ -13,14 +13,16 @@ import {
   Calculator,
   Trash2,
   AlertTriangle,
-  BarChart2,
-  BarChart,
+  BarChart2
+} from 'lucide-react';
+import {
+  BarChart as ReBarChart,
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as ReTooltip,
   ResponsiveContainer
-} from 'lucide-react';
+} from 'recharts';
 
 export const DataExplorer: React.FC = () => {
   const logic = useDataExplorerLogic();
@@ -49,6 +51,7 @@ export const DataExplorer: React.FC = () => {
     setIsColumnDrawerOpen,
     showColumnBorders,
     setShowColumnBorders,
+    columnWidths,
     activeBatchFilter,
     deleteBatch,
     handleExportFullCSV,
@@ -64,7 +67,6 @@ export const DataExplorer: React.FC = () => {
     setRenamingValue,
     handleRenameColumn,
     handleFormatChange,
-    currentDataset: ds,
     handleEditCalculatedField,
     handleDeleteColumn,
     distributionData,
@@ -357,10 +359,10 @@ export const DataExplorer: React.FC = () => {
             </div>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={distributionData}>
-                  <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ fontSize: '10px' }} />
+                <ReBarChart data={distributionData}>
+                  <ReTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ fontSize: '10px' }} />
                   <Bar dataKey="value" fill="#0d9488" radius={[2, 2, 0, 0]} />
-                </BarChart>
+                </ReBarChart>
               </ResponsiveContainer>
             </div>
           </div>

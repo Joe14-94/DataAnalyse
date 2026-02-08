@@ -12,9 +12,10 @@ export const useSettingsLogic = () => {
   const {
     getBackupJson,
     currentDataset,
+    currentDatasetId,
     switchDataset,
     companyLogo,
-    setCompanyLogo,
+    updateCompanyLogo,
     importBackup,
     clearAll,
     loadDemoData,
@@ -100,6 +101,7 @@ export const useSettingsLogic = () => {
   const [searchAccountQuery, setSearchAccountQuery] = useState('');
   const [editingChartId, setEditingChartId] = useState<string | null>(null);
   const [editChartName, setEditChartName] = useState('');
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   // Forms
   const [axisForm, setAxisForm] = useState({
@@ -231,6 +233,8 @@ export const useSettingsLogic = () => {
     storageLimit,
     diagResults,
     isRunningDiag,
+    showRestoreModal,
+    setShowRestoreModal,
     editingDatasetId,
     setEditingDatasetId,
     editName,
@@ -274,6 +278,10 @@ export const useSettingsLogic = () => {
     uiPrefs,
     batches,
     datasets,
+    currentDataset,
+    currentDatasetId,
+    companyLogo,
+    importBackup,
     savedAnalyses,
     chartsOfAccounts,
     analyticalAxes,
@@ -285,7 +293,9 @@ export const useSettingsLogic = () => {
     // Handlers
     updateUIPrefs,
     resetUIPrefs,
+    setCompanyLogo: updateCompanyLogo,
     handleDownloadBackup,
+    handleExportBackup: () => handleDownloadBackup(['datasets', 'batches', 'dashboardWidgets', 'savedAnalyses', 'companyLogo', 'financeReferentials', 'budgetModule', 'forecastModule', 'pipelineModule', 'uiPrefs']),
     handleFileChange,
     handleConfirmRestore,
     handleRunDiagnostics,

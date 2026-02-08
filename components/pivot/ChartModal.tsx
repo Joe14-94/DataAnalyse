@@ -58,12 +58,11 @@ export const ChartModal: React.FC<ChartModalProps> = (props) => {
     'treemap'
   ];
 
-  const hasData =
-    logic.selectedChartType === 'sunburst'
-      ? logic.sunburstData && logic.sunburstData.rings.length > 0
-      : logic.selectedChartType === 'treemap'
-        ? logic.currentTreemapData && logic.currentTreemapData.length > 0
-        : logic.chartData && logic.chartData.length > 0;
+  const hasData = !!(logic.selectedChartType === 'sunburst'
+    ? logic.sunburstData && logic.sunburstData.rings.length > 0
+    : logic.selectedChartType === 'treemap'
+      ? logic.currentTreemapData && logic.currentTreemapData.length > 0
+      : logic.chartData && logic.chartData.length > 0);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -134,7 +133,7 @@ export const ChartModal: React.FC<ChartModalProps> = (props) => {
               sunburstTitle={logic.sunburstTitle}
               showSunburstLegend={logic.showSunburstLegend}
               sunburstColors={logic.sunburstColors}
-              currentTreemapData={logic.currentTreemapData}
+              currentTreemapData={logic.currentTreemapData || []}
               treemapDrillPath={logic.treemapDrillPath}
               handleTreemapDrill={logic.handleTreemapDrill}
               handleTreemapBreadcrumb={logic.handleTreemapBreadcrumb}

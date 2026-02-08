@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
-import { ReconciliationReport } from '../../types';
+import { ForecastReconciliationReport as ReconciliationReport } from '../../types';
 
 interface ForecastReconciliationProps {
   reconciliationReports: ReconciliationReport[];
@@ -41,9 +41,9 @@ export const ForecastReconciliation: React.FC<ForecastReconciliationProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="font-bold">MAPE:</span> {report.mape.toFixed(2)}%{' '}
+                  <span className="font-bold">MAPE:</span> {(report.mape || 0).toFixed(2)}%{' '}
                   <ArrowRight className="w-3 h-3" /> <span className="font-bold">RMSE:</span>{' '}
-                  {report.rmse.toLocaleString()}
+                  {(report.rmse || 0).toLocaleString()}
                 </div>
               </div>
             ))}

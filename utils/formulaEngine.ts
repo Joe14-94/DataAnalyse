@@ -216,7 +216,8 @@ class FormulaParser {
     // Unary minus
     if (token.type === 'OPERATOR' && token.value === '-') {
       this.consume();
-      return -this.parseFactor();
+      const val = this.parseFactor();
+      return typeof val === 'number' ? -val : 0;
     }
 
     // Token invalide : lever une exception au lieu de retourner 0
@@ -245,7 +246,7 @@ class FormulaParser {
         return args[0] ? args[1] : args[2];
       case 'SOMME':
       case 'SUM':
-        return args.reduce((a, b) => a + parseSmartNumber(b), 0);
+        return args.reduce<number>((a, b) => a + parseSmartNumber(b || 0), 0);
       case 'MOYENNE':
       case 'AVG':
       case 'AVERAGE':
@@ -260,7 +261,7 @@ class FormulaParser {
       case 'ARRONDI':
       case 'ROUND':
         const p = Math.pow(10, parseSmartNumber(args[1]));
-        return Math.round(parseSmartNumber(args[0]) * p) / p;
+        return Math.round(parseSmartNumber(args[0] ?? 0) * p) / p;
 
       // --- STRING FUNCTIONS ---
       case 'CONCAT':

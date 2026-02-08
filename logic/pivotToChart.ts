@@ -42,31 +42,10 @@ export interface ChartMetadata {
 }
 
 // ============================================================================
-// TYPES POUR SUNBURST ET TREEMAP HIERARCHIQUE
+// TYPES POUR SUNBURST ET TREEMAP HIERARCHIQUE - IMPORTED FROM TYPES
 // ============================================================================
-
-export interface HierarchicalNode {
-  name: string;
-  value?: number;
-  children?: HierarchicalNode[];
-  path?: string[];
-}
-
-export interface SunburstRingItem {
-  name: string;
-  value: number;
-  fill: string;
-  path: string[];
-  parentName: string;
-  parentTotal: number;
-  grandTotal: number;
-}
-
-export interface SunburstData {
-  tree: HierarchicalNode[];
-  rings: SunburstRingItem[][];
-  totalValue: number;
-}
+import { HierarchicalNode, SunburstRingItem, SunburstData } from '../types';
+export type { HierarchicalNode, SunburstRingItem, SunburstData };
 
 /**
  * Convertit le tree Sunburst (array de nodes) en un seul node root pour D3

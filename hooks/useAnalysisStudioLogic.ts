@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import {
   parseSmartNumber,
@@ -55,6 +56,7 @@ export const useAnalysisStudioLogic = () => {
   const {
     currentDataset,
     batches,
+    datasets,
     currentDatasetId,
     switchDataset,
     addDashboardWidget,
@@ -62,6 +64,8 @@ export const useAnalysisStudioLogic = () => {
     savedAnalyses,
     companyLogo
   } = useData();
+
+  const navigate = useNavigate();
 
   // --- Configuration State ---
   const [mode, setMode] = useState<AnalysisMode>('snapshot');
@@ -76,7 +80,7 @@ export const useAnalysisStudioLogic = () => {
   const [segment, setSegment] = useState<string>('');
   const [chartType, setChartType] = useState<ChartType>('column');
   const [limit, setLimit] = useState<number>(10);
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'alpha'>('desc');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'alpha' | 'none'>('desc');
   const [isCumulative, setIsCumulative] = useState(false);
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [showForecast, setShowForecast] = useState(false);
@@ -94,6 +98,7 @@ export const useAnalysisStudioLogic = () => {
 
   // UI State
   const [isSaving, setIsSaving] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   const [analysisName, setAnalysisName] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -939,6 +944,7 @@ export const useAnalysisStudioLogic = () => {
     // Derived
     batches,
     currentDataset,
+    datasets,
     fields,
     numericFields,
     currentBatch,
@@ -949,6 +955,8 @@ export const useAnalysisStudioLogic = () => {
     companyLogo,
     insightText,
     currentDatasetId,
+    isCalculating,
+    navigate,
     availableAnalyses: savedAnalyses.filter(
       (a) => a.type === 'analytics' && a.datasetId === currentDataset?.id
     ),

@@ -115,7 +115,7 @@ export const useDataExplorerLogic = () => {
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<
-    Record<string, Record<string, string | number | boolean>>
+    Record<string, Record<string, Record<string, string | number | boolean>>>
   >({});
   const [isVlookupDrawerOpen, setIsVlookupDrawerOpen] = useState(false);
   const [vlookupConfig, setVlookupConfig] = useState<{
@@ -280,7 +280,13 @@ export const useDataExplorerLogic = () => {
       const rowChanges = batchChanges[rowId] || {};
       return {
         ...prev,
-        [batchId]: { ...batchChanges, [rowId]: { ...rowChanges, [field]: value } }
+        [batchId]: {
+          ...batchChanges,
+          [rowId]: {
+            ...rowChanges,
+            [field]: value
+          }
+        }
       };
     });
   };
@@ -729,6 +735,7 @@ export const useDataExplorerLogic = () => {
       })),
     columnFilters,
     handleColumnFilterChange,
+    handleHeaderClick,
     clearFilters,
     selectedCol,
     setSelectedCol,
@@ -786,6 +793,7 @@ export const useDataExplorerLogic = () => {
     processedRows,
     allRows,
     displayFields,
+    activeBatchFilter: columnFilters._batchId || null,
     rowVirtualizer,
     distributionData,
     historyData,

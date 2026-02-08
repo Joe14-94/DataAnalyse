@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
+import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule, PivotMetric } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
@@ -13,7 +13,7 @@ interface PivotFooterProps {
   footerRef: React.RefObject<HTMLDivElement>;
   valField: string;
   aggType: string;
-  metrics: any[];
+  metrics: PivotMetric[];
   primaryDataset: Dataset | null;
   datasets: Dataset[];
   valFormatting: any;

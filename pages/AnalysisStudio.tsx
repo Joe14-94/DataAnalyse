@@ -69,6 +69,7 @@ export const AnalysisStudio: React.FC = () => {
     setShowExportMenu,
     snapshotData,
     trendData,
+    chartColors,
     isCalculating,
     mode,
     setMode,
@@ -175,6 +176,10 @@ export const AnalysisStudio: React.FC = () => {
               gradientStart={gradientStart}
               gradientEnd={gradientEnd}
               customUnit={customUnit}
+              chartColors={chartColors}
+              valueField={valueField}
+              valueField2={valueField2}
+              showForecast={showForecast}
             />
 
             <div className="grid grid-cols-1 gap-6">
@@ -186,6 +191,7 @@ export const AnalysisStudio: React.FC = () => {
                 metric2={metric2}
                 isCumulative={isCumulative}
                 customUnit={customUnit}
+                showForecast={showForecast}
               />
             </div>
           </div>

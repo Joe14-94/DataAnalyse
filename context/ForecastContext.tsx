@@ -651,6 +651,8 @@ export const ForecastProvider: React.FC<ForecastProviderProps> = ({
 
     const report: ForecastReconciliationReport = {
       id: generateId(),
+      name: `Rapport ${version.name} - ${new Date().toLocaleDateString()}`,
+      accuracyScore: Math.max(0, 100 - mape),
       forecastId: forecast.id,
       forecastVersionId: versionId,
       periodStart: version.referenceDate,

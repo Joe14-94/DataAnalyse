@@ -45,8 +45,8 @@ interface AnalysisSidebarProps {
   setChartType: (t: ChartType) => void;
   limit: number;
   setLimit: (l: number) => void;
-  sortOrder: 'asc' | 'desc' | 'none';
-  setSortOrder: (o: 'asc' | 'desc' | 'none') => void;
+  sortOrder: 'asc' | 'desc' | 'alpha' | 'none';
+  setSortOrder: (o: 'asc' | 'desc' | 'alpha' | 'none') => void;
   isCumulative: boolean;
   setIsCumulative: (c: boolean) => void;
   filters: FilterRule[];
@@ -179,7 +179,7 @@ export const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name} ({b.date.split('-').reverse().join('/')})
+                      Import du {b.date.split('-').reverse().join('/')}
                     </option>
                   ))}
                 </select>
@@ -456,6 +456,7 @@ export const AnalysisSidebar: React.FC<AnalysisSidebarProps> = ({
                     <option value="none">Aucun</option>
                     <option value="desc">Décroissant</option>
                     <option value="asc">Croissant</option>
+                    <option value="alpha">Alphabétique</option>
                   </select>
                 </div>
               )}

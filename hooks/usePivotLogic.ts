@@ -149,7 +149,7 @@ export const usePivotLogic = () => {
   const [isFieldsPanelCollapsed, setIsFieldsPanelCollapsed] = useState(false);
 
   const [drilldownData, setDrilldownData] = useState<{
-    rows: Record<string, string | number | boolean>[];
+    rows: DataRow[];
     title: string;
     fields: string[];
   } | null>(null);

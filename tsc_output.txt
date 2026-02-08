@@ -1,0 +1,52 @@
+components/OnboardingTour.tsx(162,30): error TS2322: Type '{ children: Element; steps: ShepherdStep[]; tourOptions: { defaultStepOptions: { cancelIcon: { enabled: boolean; }; scrollTo: { behavior: string; block: string; }; }; useModalOverlay: boolean; }; }' is not assignable to type 'IntrinsicAttributes & { children?: ReactNode; }'.
+  Property 'steps' does not exist on type 'IntrinsicAttributes & { children?: ReactNode; }'.
+components/analytics/AnalysisChartDisplay.tsx(125,5): error TS2353: Object literal may only specify known properties, and 'rows' does not exist in type 'PivotConfig'.
+components/dashboard/WidgetDisplay.tsx(38,3): error TS2459: Module '"../../logic/pivotToChart"' declares 'HierarchicalNode' locally, but it is not exported.
+components/dashboard/WidgetDisplay.tsx(649,50): error TS18048: 'max' is possibly 'undefined'.
+components/explorer/ExplorerDrawers.tsx(376,74): error TS7006: Parameter 'c' implicitly has an 'any' type.
+components/explorer/ExplorerGrid.tsx(312,31): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'string | number | boolean'.
+  No index signature with a parameter of type 'string' was found on type 'string | number | boolean'.
+components/explorer/ExplorerHeader.tsx(4,19): error TS2305: Module '"../../types"' has no exported member 'Batch'.
+components/forecast/ForecastReconciliation.tsx(4,10): error TS2305: Module '"../../types"' has no exported member 'ReconciliationReport'.
+components/pivot/ChartModal.tsx(137,15): error TS2322: Type 'any[] | null' is not assignable to type 'any[]'.
+  Type 'null' is not assignable to type 'any[]'.
+hooks/useChartModalLogic.ts(8,3): error TS2459: Module '"../logic/pivotToChart"' declares 'SunburstData' locally, but it is not exported.
+hooks/useChartModalLogic.ts(9,3): error TS2459: Module '"../logic/pivotToChart"' declares 'HierarchicalNode' locally, but it is not exported.
+hooks/useSettingsLogic.ts(301,5): error TS1117: An object literal cannot have multiple properties with the same name.
+logic/pivotEngine.ts(42,9): error TS2304: Cannot find name 'DataRow'.
+pages/AnalysisStudio.tsx(131,11): error TS2322: Type 'Dispatch<SetStateAction<"asc" | "desc" | "alpha">>' is not assignable to type '(o: "none" | "asc" | "desc" | "alpha") => void'.
+  Types of parameters 'value' and 'o' are incompatible.
+    Type '"none" | "asc" | "desc" | "alpha"' is not assignable to type 'SetStateAction<"asc" | "desc" | "alpha">'.
+      Type '"none"' is not assignable to type 'SetStateAction<"asc" | "desc" | "alpha">'.
+pages/DataExplorer.tsx(54,5): error TS2339: Property 'activeBatchFilter' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; currentDataset: Dataset | null; batches: ImportBatch[]; datasets: Dataset[]; currentDatasetId: string | null; ... 70 more ...; navigate: NavigateFunction; }'.
+pages/DataExplorer.tsx(77,5): error TS2339: Property 'handleHeaderClick' does not exist on type '{ undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean; currentDataset: Dataset | null; batches: ImportBatch[]; datasets: Dataset[]; currentDatasetId: string | null; ... 70 more ...; navigate: NavigateFunction; }'.
+pages/DataExplorer.tsx(380,25): error TS2304: Cannot find name 'columnWidths'.
+pages/DataExplorer.tsx(389,11): error TS2322: Type 'Record<string, Record<string, Record<string, string | number | boolean>>>' is not assignable to type 'Record<string, Record<string, string | number | boolean>>'.
+  'string' index signatures are incompatible.
+    Type 'Record<string, Record<string, string | number | boolean>>' is not assignable to type 'Record<string, string | number | boolean>'.
+      'string' index signatures are incompatible.
+        Type 'Record<string, string | number | boolean>' is not assignable to type 'string | number | boolean'.
+pages/Forecast.tsx(52,44): error TS2345: Argument of type '"financial"' is not assignable to parameter of type 'ForecastType'.
+pages/PivotTable.tsx(191,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+pages/PivotTable.tsx(200,10): error TS2322: Type '{ sources: PivotSourceConfig[]; datasets: Dataset[]; datasetBatches: ImportBatch[]; selectedBatchId: string; setSelectedBatchId: (v: any) => void; ... 50 more ...; openFormattingModal: () => void; }' is not assignable to type 'PivotSidePanelProps'.
+  Types of property 'metrics' are incompatible.
+    Type 'PivotMetric[] | undefined' is not assignable to type 'any[]'.
+      Type 'undefined' is not assignable to type 'any[]'.
+pages/PivotTable.tsx(208,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+pages/PivotTable.tsx(208,63): error TS7006: Parameter 'x' implicitly has an 'any' type.
+pages/PivotTable.tsx(291,12): error TS2322: Type '{ isCalculating: boolean; isTemporalMode: boolean; pivotData: PivotResult | null; temporalResults: TemporalComparisonResult[]; temporalConfig: TemporalComparisonConfig | undefined; ... 34 more ...; paddingBottom: number; }' is not assignable to type 'PivotGridProps'.
+  Types of property 'temporalConfig' are incompatible.
+    Type 'TemporalComparisonConfig | undefined' is not assignable to type 'TemporalComparisonConfig | null'.
+      Type 'undefined' is not assignable to type 'TemporalComparisonConfig | null'.
+pages/PivotTable.tsx(370,9): error TS2322: Type 'PivotSourceConfig[] | undefined' is not assignable to type 'PivotSourceConfig[]'.
+  Type 'undefined' is not assignable to type 'PivotSourceConfig[]'.
+pages/PivotTable.tsx(380,9): error TS2322: Type 'Record<string, string | number | boolean>[]' is not assignable to type 'DataRow[]'.
+  Property 'id' is missing in type 'Record<string, string | number | boolean>' but required in type 'DataRow'.
+pages/PivotTable.tsx(443,9): error TS2322: Type 'PivotStyleRule[] | undefined' is not assignable to type 'PivotStyleRule[]'.
+  Type 'undefined' is not assignable to type 'PivotStyleRule[]'.
+pages/PivotTable.tsx(445,9): error TS2322: Type 'ConditionalFormattingRule[] | undefined' is not assignable to type 'ConditionalFormattingRule[]'.
+  Type 'undefined' is not assignable to type 'ConditionalFormattingRule[]'.
+pages/PivotTable.tsx(447,9): error TS2322: Type 'PivotMetric[] | undefined' is not assignable to type 'PivotMetric[]'.
+  Type 'undefined' is not assignable to type 'PivotMetric[]'.
+utils/formulaEngine.ts(219,15): error TS2531: Object is possibly 'null'.

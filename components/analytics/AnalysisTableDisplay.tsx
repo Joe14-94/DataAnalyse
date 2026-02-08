@@ -9,6 +9,7 @@ interface AnalysisTableDisplayProps {
   metric2: string;
   isCumulative: boolean;
   showForecast: boolean;
+  customUnit?: string;
 }
 
 export const AnalysisTableDisplay: React.FC<AnalysisTableDisplayProps> = ({
@@ -18,7 +19,8 @@ export const AnalysisTableDisplay: React.FC<AnalysisTableDisplayProps> = ({
   dimension,
   metric2,
   isCumulative,
-  showForecast
+  showForecast,
+  customUnit
 }) => {
   if (mode === 'snapshot') {
     return (

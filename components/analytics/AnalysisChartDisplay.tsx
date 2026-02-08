@@ -38,6 +38,7 @@ interface AnalysisChartDisplayProps {
   chartColors: string[];
   customUnit: string;
   segment: string;
+  dimension: string;
   metric: MetricType;
   metric2: MetricType | 'none';
   valueField: string;
@@ -103,6 +104,7 @@ export const AnalysisChartDisplay: React.FC<AnalysisChartDisplayProps> = ({
   chartColors,
   customUnit,
   segment,
+  dimension,
   metric,
   metric2,
   valueField,
@@ -120,7 +122,6 @@ export const AnalysisChartDisplay: React.FC<AnalysisChartDisplayProps> = ({
     sortBy: 'label',
     sortOrder: 'asc',
     showSubtotals: true,
-    rows: [],
     valFormatting: { unit: customUnit }
   };
 

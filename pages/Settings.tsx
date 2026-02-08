@@ -171,7 +171,7 @@ export const Settings: React.FC = () => {
                   savedAnalyses: logic.savedAnalyses,
                   savedMappings: logic.savedMappings,
                   financeReferentials: {
-                    chartsOfAccounts: logic.chartsOfAccounts,
+                    chartOfAccounts: logic.chartsOfAccounts,
                     analyticalAxes: logic.analyticalAxes,
                     fiscalCalendars: logic.fiscalCalendars,
                     masterData: logic.masterData
@@ -196,13 +196,19 @@ export const Settings: React.FC = () => {
                     </p>
                     <div className="flex flex-wrap gap-3">
                       <button
-                        onClick={logic.handleExportBackup}
+                        onClick={() => logic.setBackupModalMode('backup')}
                         className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700 shadow-sm transition-all"
                       >
                         Créer un Backup
                       </button>
                       <button
-                        onClick={() => logic.setShowRestoreModal(true)}
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = '.json';
+                          input.onchange = (e: any) => logic.handleFileChange(e);
+                          input.click();
+                        }}
                         className="px-4 py-2 border border-brand-200 text-brand-700 rounded-lg text-sm font-bold hover:bg-brand-50 transition-all"
                       >
                         Restaurer un Backup
@@ -280,9 +286,14 @@ export const Settings: React.FC = () => {
       </div>
 
       <BackupRestoreModal
-        isOpen={logic.showRestoreModal}
-        onClose={() => logic.setShowRestoreModal(false)}
-        onRestore={logic.importBackup}
+        mode={logic.backupModalMode || 'backup'}
+        isOpen={logic.backupModalMode !== null}
+        onClose={() => logic.setBackupModalMode(null)}
+        onConfirm={(keys) => {
+          if (logic.backupModalMode === 'backup') logic.handleDownloadBackup(keys);
+          else logic.handleConfirmRestore(keys);
+        }}
+        availableData={logic.restoreAvailableData}
       />
     </div>
   );

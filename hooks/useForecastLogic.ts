@@ -49,19 +49,20 @@ export const useForecastLogic = () => {
   const [driverUnit, setDriverUnit] = useState('');
 
   // Get selected forecast and version
-  const selectedForecast = selectedForecastId
-    ? forecasts.find((f) => f.id === selectedForecastId)
-    : null;
+  const selectedForecast =
+    (selectedForecastId ? forecasts.find((f) => f.id === selectedForecastId) : null) || null;
   const selectedVersion =
-    selectedForecast && selectedVersionId
+    (selectedForecast && selectedVersionId
       ? selectedForecast.versions.find((v) => v.id === selectedVersionId)
-      : null;
-  const selectedChart = selectedForecast
-    ? chartsOfAccounts.find((c) => c.id === selectedForecast.chartOfAccountsId)
-    : null;
-  const selectedCalendar = selectedForecast?.fiscalCalendarId
-    ? fiscalCalendars.find((c) => c.id === selectedForecast.fiscalCalendarId)
-    : null;
+      : null) || null;
+  const selectedChart =
+    (selectedForecast
+      ? chartsOfAccounts.find((c) => c.id === selectedForecast.chartOfAccountsId)
+      : null) || null;
+  const selectedCalendar =
+    (selectedForecast?.fiscalCalendarId
+      ? fiscalCalendars.find((c) => c.id === selectedForecast.fiscalCalendarId)
+      : null) || null;
 
   // Generate period IDs for next 12 months from reference date
   const generatePeriods = (referenceDate: string, count: number = 12) => {

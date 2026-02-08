@@ -63,7 +63,7 @@ interface WidgetData {
 
 interface WidgetDisplayProps {
   widget: DashboardWidget;
-  data: WidgetData;
+  data: WidgetData | null;
 }
 
 const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
@@ -83,7 +83,14 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
 
   // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
   if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
-    const { colors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
+    const {
+      colors = CHART_COLORS,
+      data: chartData,
+      unit,
+      seriesName,
+      sunburstData,
+      hierarchicalData
+    } = data;
     const chartType = widget.config.pivotChart
       ? widget.config.pivotChart.chartType
       : widget.config.chartType;
@@ -565,7 +572,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
   };
 
   if (widget.type === 'kpi') {
-    const { current, trend, progress, target } = data;
+    const { current = 0, trend = 0, progress = 0, target } = data;
     const isPositive = trend >= 0;
     const style = widget.config.kpiStyle || 'simple';
     const showTrend = widget.config.showTrend && !widget.config.secondarySource;
@@ -639,7 +646,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-brand-500 rounded-full opacity-80"
-                style={{ width: `${(item.value / max) * 100}%` }}
+                style={{ width: `${(item.value / (max || 1)) * 100}%` }}
               />
             </div>
           </div>
