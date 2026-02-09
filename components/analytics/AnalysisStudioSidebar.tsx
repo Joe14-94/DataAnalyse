@@ -125,7 +125,7 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                             <label className="block text-xs font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
                             <div className="grid grid-cols-3 gap-1">
-                                {['count', 'distinct', 'sum'].map(m => (
+                                {(['count', 'distinct', 'sum'] as MetricType[]).map(m => (
                                     <button
                                         key={m}
                                         onClick={() => onSetMetric(m)}

@@ -240,6 +240,10 @@ export const useChartModalLogic = ({
         dispatch({ type: 'SET_TREEMAP_DRILL_PATH', payload: state.treemapDrillPath.slice(0, index) });
     }, [state.treemapDrillPath]);
 
+    const handleChartTypeChange = useCallback((type: ChartType) => {
+        dispatch({ type: 'SET_CHART_TYPE', payload: type });
+    }, []);
+
     const handleCreateWidget = useCallback(() => {
         if (!currentDatasetId) return;
         const hasFilters = pivotConfig.filters && pivotConfig.filters.length > 0;
@@ -698,6 +702,7 @@ export const useChartModalLogic = ({
         currentTreemapData,
         handleTreemapDrill,
         handleTreemapBreadcrumb,
+        handleChartTypeChange,
         handleCreateWidget,
         handleOpenInAnalytics,
         handleExportHTML,

@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { useSettings as useUISettings } from '../context/SettingsContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { runSelfDiagnostics } from '../utils';
-import { AppState, DiagnosticSuite, CalculatedField, Dataset, MasterDataItem } from '../types';
+import { AppState, DiagnosticSuite, CalculatedField, Dataset, MasterDataItem, MasterDataType } from '../types';
 
 type SettingsAction =
     | { type: 'SET_DIAG_RESULTS'; payload: DiagnosticSuite[] | null }
@@ -20,7 +20,7 @@ type SettingsAction =
     | { type: 'SET_SHOW_AXIS_MODAL'; payload: boolean }
     | { type: 'SET_SHOW_CALENDAR_MODAL'; payload: boolean }
     | { type: 'SET_SHOW_MASTER_DATA_MODAL'; payload: boolean }
-    | { type: 'SET_MASTER_DATA_TYPE'; payload: 'customer' | 'supplier' | 'product' | 'employee' }
+    | { type: 'SET_MASTER_DATA_TYPE'; payload: MasterDataType }
     | { type: 'SET_VIEWING_CHART_ID'; payload: string | null }
     | { type: 'SET_SEARCH_ACCOUNT_QUERY'; payload: string }
     | { type: 'SET_VIEWING_DATASET_VERSIONS_ID'; payload: string | null }
@@ -44,7 +44,7 @@ interface SettingsState {
     showAxisModal: boolean;
     showCalendarModal: boolean;
     showMasterDataModal: boolean;
-    masterDataType: 'customer' | 'supplier' | 'product' | 'employee';
+    masterDataType: MasterDataType;
     viewingChartId: string | null;
     searchAccountQuery: string;
     viewingDatasetVersionsId: string | null;

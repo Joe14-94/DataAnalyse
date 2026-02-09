@@ -8,7 +8,7 @@ interface DataExplorerGridProps {
     tableContainerRef: React.RefObject<HTMLDivElement>;
     rowVirtualizer: {
         getTotalSize: () => number;
-        getVirtualItems: () => { key: string; index: number; start: number; end: number }[];
+        getVirtualItems: () => any[];
     };
     processedRows: DataRow[];
     displayFields: string[];
