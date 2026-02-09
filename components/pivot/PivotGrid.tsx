@@ -347,7 +347,9 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           const colKey = `${source.id}_${mLabel}`;
                                           const width = columnWidths[colKey] || 120;
                                           const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, mLabel, isSubtotal ? 'subtotal' : 'data');
-                                          const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), source.label);
+
+                                          const displayLabel = metrics.length > 1 ? `${source.label} - ${mLabel}` : source.label;
+                                          const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), displayLabel);
 
                                           return (
                                              <React.Fragment key={source.id}>
@@ -356,7 +358,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                    style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
                                                    onClick={() => {
                                                       if (isSelectionMode) {
-                                                         handleDrilldown(result.groupLabel.split('\x1F'), colKey, value, mLabel);
+                                                         handleDrilldown(result.groupLabel.split('\x1F'), displayLabel, value, mLabel);
                                                       } else if (!isSubtotal) {
                                                          handleTemporalDrilldown(result, source.id, mLabel);
                                                       }

@@ -513,7 +513,8 @@ export const usePivotLogic = () => {
         }
 
         const id = generateId();
-        const label = `${rowKeys[rowKeys.length-1]} - ${colLabel}`;
+        const rowLabel = rowKeys.length > 0 ? rowKeys[rowKeys.length - 1] : 'Total';
+        const label = `${rowLabel} - ${colLabel}`;
 
         const newItem: SpecificDashboardItem = {
             id,
@@ -530,7 +531,9 @@ export const usePivotLogic = () => {
     const handleTemporalDrilldown = (result: TemporalComparisonResult, sourceId: string, metricLabel: string) => {
         const source = temporalConfig?.sources.find(s => s.id === sourceId);
         const value = result.values[sourceId]?.[metricLabel] || 0;
-        const label = source?.label || sourceId;
+        const sourceLabel = source?.label || sourceId;
+        const activeMetricsCount = metrics.length > 0 ? metrics.length : (valField ? 1 : 0);
+        const displayColLabel = activeMetricsCount > 1 ? `${sourceLabel} - ${metricLabel}` : sourceLabel;
 
         if (formattingSelectionRule) {
             const rowKeys = result.groupLabel.split('\x1F');
@@ -549,20 +552,8 @@ export const usePivotLogic = () => {
         }
 
         if (isSelectionMode) {
-            const id = generateId();
             const rowKeys = result.groupLabel.split('\x1F');
-            const displayLabel = `${rowKeys[rowKeys.length - 1]} - ${label}`;
-
-            const newItem: SpecificDashboardItem = {
-                id,
-                label: displayLabel,
-                value,
-                rowPath: rowKeys,
-                colLabel: label,
-                metricLabel: label
-            };
-
-            setSpecificDashboardItems(prev => [...prev, newItem]);
+            handleCellClick(rowKeys, displayColLabel, value, metricLabel);
             return;
         }
 
@@ -716,6 +707,8 @@ export const usePivotLogic = () => {
     };
 
     const handleReset = () => {
+        setSources([]);
+        setSelectedBatchId('');
         setRowFields([]);
         setColFields([]);
         setValField('');
