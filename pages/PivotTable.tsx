@@ -94,7 +94,8 @@ export const PivotTable: React.FC = () => {
                    openCalcModal: () => { setEditingCalcField(null); setIsCalcModalOpen(true); },
                    removeCalculatedField: handleRemoveCalculatedField,
                    openEditCalcModal: (field: any) => { setEditingCalcField(field); setIsCalcModalOpen(true); },
-                   openFormattingModal: () => setIsFormattingModalOpen(true) }}
+                   openFormattingModal: () => setIsFormattingModalOpen(true),
+                   handleReset }}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm relative">

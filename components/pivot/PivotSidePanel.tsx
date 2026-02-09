@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette, Pencil } from 'lucide-react';
+import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette, Pencil, RotateCcw } from 'lucide-react';
 import { PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig, AggregationType, DateGrouping } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
 import { formatDateFr } from '../../utils';
@@ -63,6 +63,7 @@ interface PivotSidePanelProps {
    removeCalculatedField?: (id: string) => void;
    openEditCalcModal?: (field: any) => void;
    openFormattingModal: () => void;
+   handleReset: () => void;
 }
 
 const FieldChip: React.FC<{
@@ -535,13 +536,26 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
             </div>
 
          <div className="p-1.5 bg-slate-50 rounded border border-slate-200 text-xs flex flex-col gap-1">
-            <button
-               onClick={props.openFormattingModal}
-               className="flex items-center gap-2 w-full px-2 py-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 hover:border-indigo-400 transition-all font-bold mb-1"
-            >
-               <Palette className="w-3.5 h-3.5 text-indigo-500" />
-               Mise en forme
-            </button>
+            <div className="flex gap-1 mb-1">
+               <button
+                  onClick={props.openFormattingModal}
+                  className="flex items-center justify-center gap-2 flex-1 px-2 py-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 hover:border-indigo-400 transition-all font-bold"
+               >
+                  <Palette className="w-3.5 h-3.5 text-indigo-500" />
+                  Mise en forme
+               </button>
+               <button
+                  onClick={() => {
+                     if (confirm("Réinitialiser toute la configuration du TCD ?")) {
+                        handleReset();
+                     }
+                  }}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-red-200 rounded text-red-600 hover:bg-red-50 hover:border-red-400 transition-all font-bold"
+                  title="Réinitialiser toute la configuration"
+               >
+                  <RotateCcw className="w-3.5 h-3.5" />
+               </button>
+            </div>
             <Checkbox checked={showSubtotals} onChange={() => setShowSubtotals(!showSubtotals)} label="Sous-totaux" />
             <Checkbox checked={showTotalCol} onChange={() => setShowTotalCol(!showTotalCol)} label="Total général" />
             {(isTemporalMode || colFields.length > 0 || (metrics && metrics.length > 1)) && <Checkbox checked={showVariations} onChange={() => setShowVariations(!showVariations)} label="Comparaisons" className="text-brand-700 font-bold" />}

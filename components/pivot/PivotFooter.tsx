@@ -156,7 +156,9 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                  const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId]?.[mLabel] || 0;
                                  const deltaValue = val - referenceTotal;
                                  const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
-                                 const isSelected = isSelectionMode && isItemSelected([], source.label);
+
+                                 const displayLabel = metrics.length > 1 ? `${source.label} - ${mLabel}` : source.label;
+                                 const isSelected = isSelectionMode && isItemSelected([], displayLabel);
 
                                  return (
                                     <React.Fragment key={source.id}>
@@ -170,7 +172,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                           }}
                                           onClick={() => {
                                              if (isSelectionMode && handleDrilldown) {
-                                                handleDrilldown([], colKey, val, mLabel);
+                                                handleDrilldown([], displayLabel, val, mLabel);
                                              } else if (handleTemporalDrilldown) {
                                                 handleTemporalDrilldown({ values: temporalColTotals, groupLabel: 'Total', groupKey: 'total', deltas: {} }, source.id, mLabel);
                                              }
