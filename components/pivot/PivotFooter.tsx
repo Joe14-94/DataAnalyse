@@ -33,31 +33,72 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return columnWidths[id] || (isRowField ? 150 : 120);
    };
 
-   const getMetricInfoFromCol = (col: string) => {
-      if (col.includes('\x1F')) {
-         const parts = col.split('\x1F');
-         let metricLabel = parts[1].trim();
-         const isDiff = metricLabel.endsWith('_DIFF');
-         const isPct = metricLabel.endsWith('_PCT');
+   // BOLT OPTIMIZATION: Memoized metric info lookup to avoid repetitive string parsing and metadata lookups
+   const metricInfoCache = React.useMemo(() => {
+      const cache = new Map<string, any>();
+      const headers = pivotData?.colHeaders || [];
 
-         if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
-         if (isPct) metricLabel = metricLabel.replace('_PCT', '');
+      headers.forEach(col => {
+         if (col.includes('\x1F')) {
+            const parts = col.split('\x1F');
+            let metricLabel = parts[1].trim();
+            const isDiff = metricLabel.endsWith('_DIFF');
+            const isPct = metricLabel.endsWith('_PCT');
 
-         const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
-         return { metric, isDiff, isPct };
-      }
+            if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
+            if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
-      const isDiff = col.endsWith('_DIFF');
-      const isPct = col.endsWith('_PCT');
-      let baseCol = col;
-      if (isDiff) baseCol = col.replace('_DIFF', '');
-      if (isPct) baseCol = col.replace('_PCT', '');
+            const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
+            cache.set(col, { metric, isDiff, isPct });
+            return;
+         }
 
-      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
-      if (directMetric) return { metric: directMetric, isDiff, isPct };
+         const isDiff = col.endsWith('_DIFF');
+         const isPct = col.endsWith('_PCT');
+         let baseCol = col;
+         if (isDiff) baseCol = col.replace('_DIFF', '');
+         if (isPct) baseCol = col.replace('_PCT', '');
 
-      return { metric: metrics[0], isDiff, isPct };
-   };
+         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         if (directMetric) {
+            cache.set(col, { metric: directMetric, isDiff, isPct });
+         } else {
+            cache.set(col, { metric: metrics[0], isDiff, isPct });
+         }
+      });
+      return cache;
+   }, [pivotData?.colHeaders, metrics]);
+
+   // BOLT OPTIMIZATION: Pre-calculate sticky positions for row fields to avoid repeated slice().reduce()
+   const rowFieldLeftPositions = React.useMemo(() => {
+      const positions: number[] = [];
+      let currentLeft = 0;
+      (rowFields || []).forEach(f => {
+         positions.push(currentLeft);
+         currentLeft += columnWidths[`row_${f}`] || 150;
+      });
+      return positions;
+   }, [rowFields, columnWidths]);
+
+   const groupFieldLeftPositions = React.useMemo(() => {
+      const positions: number[] = [];
+      let currentLeft = 0;
+      (rowFields || []).forEach(f => {
+         positions.push(currentLeft);
+         currentLeft += columnWidths[`group_${f}`] || 150;
+      });
+      return positions;
+   }, [rowFields, columnWidths]);
+
+   // BOLT OPTIMIZATION: Memoized metric label map for fast lookup
+   const metricLabelMap = React.useMemo(() => {
+      const map = new Map<string, any>();
+      (metrics || []).forEach(m => {
+         const label = m.label || `${m.field} (${m.aggType})`;
+         map.set(label, m);
+      });
+      return map;
+   }, [metrics]);
 
    const getCellFormatting = (col: string, value: any, metricLabel: string) => {
       return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, 'grandTotal');
@@ -80,7 +121,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            key={idx}
                            className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
                            style={{
-                              left: `${rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`group_${f}`] || 150), 0)}px`,
+                              left: `${groupFieldLeftPositions[idx]}px`,
                               width: `${columnWidths[`group_${field}`] || 150}px`,
                               minWidth: `${columnWidths[`group_${field}`] || 150}px`,
                               maxWidth: `${columnWidths[`group_${field}`] || 150}px`
@@ -148,7 +189,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         key={idx}
                         className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
                         style={{
-                           left: `${rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0)}px`,
+                           left: `${rowFieldLeftPositions[idx]}px`,
                            width: `${getColWidth(`row_${field}`, true)}px`,
                            minWidth: `${getColWidth(`row_${field}`, true)}px`,
                            maxWidth: `${getColWidth(`row_${field}`, true)}px`
@@ -159,7 +200,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                   ))}
                   {pivotData?.colHeaders.map((col: string) => {
                      const val = pivotData?.colTotals[col];
-                     const { metric, isPct } = getMetricInfoFromCol(col);
+                     const { metric, isPct } = metricInfoCache.get(col) || {};
                      const metricLabel = metric?.label || (metric?.field ? `${metric.field} (${metric.aggType})` : '');
                      const customStyle = getCellFormatting(col, val, metricLabel);
 
@@ -193,7 +234,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         {typeof pivotData.grandTotal === 'object' ? (
                            <div className="flex flex-col gap-0.5">
                               {Object.entries(pivotData.grandTotal).map(([label, v], idx) => {
-                                 const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === label);
+                                 const metric = metricLabelMap.get(label);
                                  const metricStyle = getCellStyle([], 'Total', v, label, styleRules, conditionalRules, 'grandTotal');
                                  return (
                                     <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}>
