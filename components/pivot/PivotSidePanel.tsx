@@ -198,7 +198,7 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
       handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal,
-      removeCalculatedField, openEditCalcModal
+      removeCalculatedField, openEditCalcModal, handleReset
    } = props;
 
    return (
