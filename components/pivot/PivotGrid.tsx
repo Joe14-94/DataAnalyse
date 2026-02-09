@@ -60,32 +60,82 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       columnWidths, setColumnWidths, styleRules = [], conditionalRules = [], onRemoveField
    } = props;
 
-   const getMetricInfoFromCol = (col: string) => {
-      if (col.includes('\x1F')) {
-         const parts = col.split('\x1F');
-         const colLabel = parts[0].trim();
-         let metricLabel = parts[1].trim();
-         const isDiff = metricLabel.endsWith('_DIFF');
-         const isPct = metricLabel.endsWith('_PCT');
+   // BOLT OPTIMIZATION: Memoized metric info lookup to avoid expensive string parsing and array searches in render loop
+   const metricInfoCache = React.useMemo(() => {
+      const cache = new Map<string, any>();
+      const headers = [
+         ...(pivotData?.colHeaders || []),
+         ...(temporalResults.length > 0 ? (temporalConfig?.sources || []).flatMap((s: any) => {
+            const ms = metrics.length > 0 ? metrics : [{ field: valField, aggType }];
+            return ms.flatMap((m: any) => {
+               const mLabel = m.label || `${m.field} (${m.aggType})`;
+               return [`${s.id}_${mLabel}`];
+            });
+         }) : [])
+      ];
 
-         if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
-         if (isPct) metricLabel = metricLabel.replace('_PCT', '');
+      headers.forEach(col => {
+         if (col.includes('\x1F')) {
+            const parts = col.split('\x1F');
+            const colLabel = parts[0].trim();
+            let metricLabel = parts[1].trim();
+            const isDiff = metricLabel.endsWith('_DIFF');
+            const isPct = metricLabel.endsWith('_PCT');
 
-         const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
-         return { colLabel, metricLabel, metric, isDiff, isPct };
-      }
+            if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
+            if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
-      const isDiff = col.endsWith('_DIFF');
-      const isPct = col.endsWith('_PCT');
-      let baseCol = col;
-      if (isDiff) baseCol = col.replace('_DIFF', '');
-      if (isPct) baseCol = col.replace('_PCT', '');
+            const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
+            cache.set(col, { colLabel, metricLabel, metric, isDiff, isPct });
+            return;
+         }
 
-      const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
-      if (directMetric) return { colLabel: 'ALL', metricLabel: baseCol, metric: directMetric, isDiff, isPct };
+         const isDiff = col.endsWith('_DIFF');
+         const isPct = col.endsWith('_PCT');
+         let baseCol = col;
+         if (isDiff) baseCol = col.replace('_DIFF', '');
+         if (isPct) baseCol = col.replace('_PCT', '');
 
-      return { colLabel: baseCol, metricLabel: '', metric: metrics[0], isDiff, isPct };
-   };
+         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         if (directMetric) {
+            cache.set(col, { colLabel: 'ALL', metricLabel: baseCol, metric: directMetric, isDiff, isPct });
+         } else {
+            cache.set(col, { colLabel: baseCol, metricLabel: '', metric: metrics[0], isDiff, isPct });
+         }
+      });
+      return cache;
+   }, [pivotData?.colHeaders, temporalResults, temporalConfig, metrics, valField, aggType]);
+
+   // BOLT OPTIMIZATION: Pre-calculate sticky positions for row fields to avoid repeated slice().reduce()
+   const rowFieldLeftPositions = React.useMemo(() => {
+      const positions: number[] = [];
+      let currentLeft = 0;
+      (rowFields || []).forEach(f => {
+         positions.push(currentLeft);
+         currentLeft += columnWidths[`row_${f}`] || 150;
+      });
+      return positions;
+   }, [rowFields, columnWidths]);
+
+   const groupFieldLeftPositions = React.useMemo(() => {
+      const positions: number[] = [];
+      let currentLeft = 0;
+      (rowFields || []).forEach(f => {
+         positions.push(currentLeft);
+         currentLeft += columnWidths[`group_${f}`] || 150;
+      });
+      return positions;
+   }, [rowFields, columnWidths]);
+
+   // BOLT OPTIMIZATION: Memoized metric label map for fast lookup
+   const metricLabelMap = React.useMemo(() => {
+      const map = new Map<string, any>();
+      (metrics || []).forEach(m => {
+         const label = m.label || `${m.field} (${m.aggType})`;
+         map.set(label, m);
+      });
+      return map;
+   }, [metrics]);
 
    const formatOutput = (val: string | number, metric?: any) => {
       const field = metric?.field || valField;
@@ -93,13 +143,15 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
    };
 
-   const isItemSelected = (rowKeys: string[], colLabel: string) => {
+   // BOLT OPTIMIZATION: Memoized selection check
+   const isItemSelected = React.useCallback((rowKeys: string[], colLabel: string) => {
+      if (!selectedItems || selectedItems.length === 0) return false;
       return selectedItems.some(item =>
          item.colLabel === colLabel &&
          item.rowPath.length === rowKeys.length &&
          item.rowPath.every((k: string, i: number) => k === rowKeys[i])
       );
-   };
+   }, [selectedItems]);
 
    const handleHeaderClick = (newSortBy: string) => {
       // If we are in selection mode, use header click as selection
@@ -164,7 +216,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const isEditing = editingColumn === `group_${field}`;
                            const widthId = `group_${field}`;
                            const width = columnWidths[widthId] || 150;
-                           const left = rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`group_${f}`] || 150), 0);
+                           const left = groupFieldLeftPositions[idx];
                            const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === field);
                            const headerStyle = getCellFormatting([field], '', undefined, '', 'data');
 
@@ -269,7 +321,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     if (isSubtotal && gIdx > subtotalLevel) return null;
                                     const field = rowFields[gIdx];
                                     const width = columnWidths[`group_${field}`] || 150;
-                                    const left = rowFields.slice(0, gIdx).reduce((acc, f) => acc + (columnWidths[`group_${f}`] || 150), 0);
+                                    const left = groupFieldLeftPositions[gIdx];
                                     const rowStyle = getCellFormatting(result.groupLabel.split('\x1F'), '', undefined, '', isSubtotal ? 'subtotal' : 'data');
 
                                     return (
@@ -338,7 +390,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            {rowFields.map((field, idx) => {
                               const widthId = `row_${field}`;
                               const width = columnWidths[widthId] || 150;
-                              const left = rowFields.slice(0, idx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
+                              const left = rowFieldLeftPositions[idx];
                               const calcField = primaryDataset?.calculatedFields?.find(cf => cf.name === field);
                               const headerStyle = getCellFormatting([field], '', undefined, '', 'data');
                               return (
@@ -379,8 +431,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               );
                            })}
                            {(pivotData?.colHeaders || []).map((col: string) => {
-                              const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
-                              let displayLabel = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(colLabel);
+                              const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(col) || {};
+                              let displayLabel = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(colLabel || col);
                               if (metricLabel && !isDiff && !isPct && colLabel === 'ALL') displayLabel = metricLabel;
                               else if (metricLabel && !isDiff && !isPct) displayLabel = `${displayLabel} - ${metricLabel}`;
 
@@ -420,8 +472,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           <button
                                              onClick={(e) => {
                                                 e.stopPropagation();
-                                                const { metric } = getMetricInfoFromCol(col);
-                                                if (metric) onRemoveField('val', metric.field);
+                                                const info = metricInfoCache.get(col);
+                                                if (info?.metric) onRemoveField('val', info.metric.field);
                                                 else if (colLabel !== 'ALL') onRemoveField('col', colLabel);
                                              }}
                                              className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100"
@@ -463,7 +515,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               <tr key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
                                  {(rowFields || []).map((field, cIdx) => {
                                     const width = columnWidths[`row_${field}`] || 150;
-                                    const left = rowFields.slice(0, cIdx).reduce((acc, f) => acc + (columnWidths[`row_${f}`] || 150), 0);
+                                    const left = rowFieldLeftPositions[cIdx];
                                     const headerStyle = getCellFormatting(row.keys, '', undefined, '', row.type);
 
                                     if (row.type === 'subtotal') {
@@ -506,9 +558,9 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  {(pivotData?.colHeaders || []).map((col: string) => {
                                     const width = columnWidths[col] || 120;
                                     const val = row.metrics[col];
-                                    const { colLabel, metricLabel, metric, isDiff, isPct } = getMetricInfoFromCol(col);
+                                    const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(col) || {};
 
-                                    const customStyle = getCellFormatting(row.keys, col, val, metricLabel, row.type);
+                                    const customStyle = getCellFormatting(row.keys, col, val, metricLabel || '', row.type);
 
                                     let formatted = formatOutput(val, metric);
                                     let cellClass = "text-slate-600";
@@ -520,13 +572,13 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        if (val === 0 || val === undefined) formatted = '-';
                                        else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
                                     }
-                                    const isSelected = isSelectionMode && isItemSelected(row.keys, col);
+                                    const isSelected = isSelectionMode && isItemSelected(row.keys, colLabel || col);
                                     return (
                                        <td
                                           key={col}
                                           className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
                                        style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
-                                          onClick={() => handleDrilldown(row.keys, col, val, metricLabel)}
+                                          onClick={() => handleDrilldown(row.keys, colLabel || col, val, metricLabel || '')}
                                        >
                                           {formatted}
                                        </td>
@@ -549,7 +601,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        {typeof row.rowTotal === 'object' ? (
                                           <div className="flex flex-col gap-0.5">
                                              {Object.entries(row.rowTotal).map(([label, v], idx) => {
-                                                const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === label);
+                                                const metric = metricLabelMap.get(label);
                                                 const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type);
                                                 return (
                                                    <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}>
