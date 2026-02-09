@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, ChevronDown, MousePointerClick } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, ChevronDown, MousePointerClick, RotateCcw } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -32,6 +32,7 @@ interface PivotHeaderProps {
    selectedItemsCount?: number;
    searchTerm: string;
    setSearchTerm: (v: string) => void;
+   handleReset: () => void;
 }
 
 export const PivotHeader: React.FC<PivotHeaderProps> = ({
@@ -40,7 +41,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
    openCalcModal, openFormattingModal, openSpecificDashboardModal, openSaveAsDatasetModal, selectedItemsCount = 0,
-   searchTerm, setSearchTerm, setIsSelectionMode
+   searchTerm, setSearchTerm, setIsSelectionMode, handleReset
 }) => {
    const [showChartMenu, setShowChartMenu] = useState(false);
 
@@ -101,6 +102,19 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
 
             <button onClick={openSaveAsDatasetModal} disabled={!primaryDataset} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 disabled:opacity-50">
                <Database className="w-3 h-3" /> Sauver comme Dataset
+            </button>
+
+            <button
+               onClick={() => {
+                  if (confirm("Réinitialiser toute la configuration du TCD ?")) {
+                     handleReset();
+                  }
+               }}
+               disabled={!primaryDataset}
+               className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-white text-red-600 hover:bg-red-50 border border-red-200 disabled:opacity-50 transition-colors"
+               title="Réinitialiser toute la configuration"
+            >
+               <RotateCcw className="w-3 h-3" /> Réinitialiser
             </button>
 
             <button onClick={openSpecificDashboardModal} disabled={!primaryDataset} className="relative flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">

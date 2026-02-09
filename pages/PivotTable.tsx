@@ -53,7 +53,7 @@ export const PivotTable: React.FC = () => {
         handleExport, handleExportSpreadsheet, handleCellClick,
         handleTemporalDrilldown, handleLoadAnalysis, handleSaveCalculatedField,
         handleRemoveCalculatedField, handleSaveSpecificDashboard, handleSaveAnalysis,
-        handleSaveAsDataset, companyLogo
+        handleSaveAsDataset, handleReset, companyLogo
     } = usePivotLogic();
 
     const rowVirtualizer = useVirtualizer({
@@ -80,6 +80,7 @@ export const PivotTable: React.FC = () => {
                selectedItemsCount={specificDashboardItems.length}
                searchTerm={searchTerm}
                setSearchTerm={setSearchTerm}
+               handleReset={handleReset}
             />
 
             <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
@@ -122,7 +123,8 @@ export const PivotTable: React.FC = () => {
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
                     />
                     <PivotFooter
-                       {...{ pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules, conditionalRules }}
+                       {...{ pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules, conditionalRules,
+                       isSelectionMode, selectedItems: specificDashboardItems, handleDrilldown: handleCellClick, handleTemporalDrilldown }}
                     />
                 </div>
             </div>
