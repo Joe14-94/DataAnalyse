@@ -381,6 +381,22 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                   </tbody>
                </table>
             </div>
+         ) : isTemporalMode && temporalResults.length === 0 && temporalConfig ? (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
+               <Calendar className="w-12 h-12 mb-4 text-purple-200" />
+               <p className="text-sm font-bold text-slate-600 mb-1">Aucune donnée disponible pour cette période</p>
+               {temporalConfig.comparisonMode === 'mtd' ? (
+                  <p className="text-xs text-slate-500 max-w-md">
+                     Aucune donnée n'a été trouvée pour le mode <strong>cumul mensuel</strong>.
+                     Essayez de passer en mode <strong>cumul annuel (YTD)</strong> dans la configuration des périodes.
+                  </p>
+               ) : (
+                  <p className="text-xs text-slate-500 max-w-md">
+                     Aucune donnée n'a été trouvée pour le mois sélectionné.
+                     Vérifiez que vos imports contiennent des données pour cette période.
+                  </p>
+               )}
+            </div>
          ) : pivotData ? (
             <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar flex flex-col w-full relative">
                <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
