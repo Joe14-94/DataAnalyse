@@ -5,9 +5,9 @@ import { Edit2, ArrowLeft, Plus, Calendar, FileText, Brain, Trash2, X } from 'lu
 import { Forecast, ForecastVersion, ChartOfAccounts } from '../../types/finance';
 
 interface ForecastEditorProps {
-    selectedForecast: Forecast;
-    selectedVersion: ForecastVersion | null;
-    selectedChart: ChartOfAccounts | null;
+    selectedForecast: Forecast | null | undefined;
+    selectedVersion: ForecastVersion | null | undefined;
+    selectedChart: ChartOfAccounts | null | undefined;
     editingCellId: string | null;
     editingValue: string;
     showNewLineModal: boolean;
