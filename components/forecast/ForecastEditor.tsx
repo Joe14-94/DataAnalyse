@@ -2,11 +2,12 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Edit2, ArrowLeft, Plus, Calendar, FileText, Brain, Trash2, X } from 'lucide-react';
+import { Forecast, ForecastVersion, ChartOfAccounts } from '../../types/finance';
 
 interface ForecastEditorProps {
-    selectedForecast: any;
-    selectedVersion: any;
-    selectedChart: any;
+    selectedForecast: Forecast | null | undefined;
+    selectedVersion: ForecastVersion | null | undefined;
+    selectedChart: ChartOfAccounts | null | undefined;
     editingCellId: string | null;
     editingValue: string;
     showNewLineModal: boolean;
@@ -96,7 +97,7 @@ export const ForecastEditor: React.FC<ForecastEditorProps> = ({
                 {/* Version Selection */}
                 <div className="flex items-center gap-3 flex-wrap">
                     <span className="text-sm font-bold text-slate-700">Version:</span>
-                    {selectedForecast.versions.map((version: any) => {
+                    {selectedForecast.versions.map((version) => {
                         const statusColors: Record<string, string> = {
                             draft: 'bg-gray-100 text-gray-700 border-gray-300',
                             submitted: 'bg-brand-100 text-brand-700 border-brand-300',
@@ -182,7 +183,7 @@ export const ForecastEditor: React.FC<ForecastEditorProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {selectedVersion.lines.map((line: any) => {
+                                    {selectedVersion.lines.map((line) => {
                                         const periods = generatePeriods(selectedVersion.referenceDate);
                                         const total = periods.reduce((sum, period) =>
                                             sum + (line.forecastValues[period.id] || 0), 0
@@ -333,13 +334,13 @@ export const ForecastEditor: React.FC<ForecastEditorProps> = ({
                             </div>
                             <div className="space-y-1 max-h-96 overflow-y-auto">
                                 {selectedChart?.accounts
-                                    .filter((acc: any) =>
+                                    .filter((acc) =>
                                         acc.canReceiveEntries &&
                                         (accountSearchQuery === '' ||
                                             acc.code.toLowerCase().includes(accountSearchQuery.toLowerCase()) ||
                                             acc.label.toLowerCase().includes(accountSearchQuery.toLowerCase()))
                                     )
-                                    .map((account: any) => (
+                                    .map((account) => (
                                         <button
                                             key={account.code}
                                             onClick={() => onAddLine(account.code)}

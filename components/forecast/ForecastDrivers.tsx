@@ -2,10 +2,11 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Target, Plus, Trash2 } from 'lucide-react';
+import { Forecast } from '../../types/finance';
 
 interface ForecastDriversProps {
     selectedForecastId: string | null;
-    selectedForecast: any;
+    selectedForecast: Forecast | null | undefined;
     showNewDriverModal: boolean;
     driverName: string;
     driverUnit: string;

@@ -2,10 +2,11 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { RefreshCw, Clock, Eye } from 'lucide-react';
+import { Forecast } from '../../types/finance';
 
 interface RollingForecastProps {
     selectedForecastId: string | null;
-    selectedForecast: any;
+    selectedForecast: Forecast | null | undefined;
     getRollingSnapshots: (id: string) => any[];
     onCreateSnapshot: () => void;
 }
