@@ -343,7 +343,7 @@ export const usePivotLogic = () => {
 
             temporalResults.forEach(result => {
                 const rowData: any[] = [];
-                const keys = result.groupLabel.split('\x1F');
+                const keys = result.groupLabel ? result.groupLabel.split('\x1F') : [];
                 const isSubtotal = result.isSubtotal;
                 const subLevel = result.subtotalLevel || 0;
 
@@ -536,7 +536,7 @@ export const usePivotLogic = () => {
         const displayColLabel = activeMetricsCount > 1 ? `${sourceLabel} - ${metricLabel}` : sourceLabel;
 
         if (formattingSelectionRule) {
-            const rowKeys = result.groupLabel.split('\x1F');
+            const rowKeys = result.groupLabel ? result.groupLabel.split('\x1F') : [];
             const targetKey = `${rowKeys.join('\x1F')}|${sourceId}_${metricLabel}`;
 
             if (formattingSelectionRule.type === 'style') {
@@ -552,13 +552,13 @@ export const usePivotLogic = () => {
         }
 
         if (isSelectionMode) {
-            const rowKeys = result.groupLabel.split('\x1F');
+            const rowKeys = result.groupLabel ? result.groupLabel.split('\x1F') : [];
             handleCellClick(rowKeys, displayColLabel, value, metricLabel);
             return;
         }
 
         const prefilledFilters: Record<string, string> = {};
-        const rowKeys = result.groupLabel.split('\x1F');
+        const rowKeys = result.groupLabel ? result.groupLabel.split('\x1F') : [];
 
         rowFields.forEach((field, i) => {
             const val = rowKeys[i];
@@ -707,31 +707,50 @@ export const usePivotLogic = () => {
     };
 
     const handleReset = () => {
+        // Data sources and selection
         setSources([]);
         setSelectedBatchId('');
+
+        // Fields and Metrics
         setRowFields([]);
         setColFields([]);
         setValField('');
+        setMetrics([]);
         setColGrouping('none');
         setAggType('count');
-        setMetrics([]);
         setValFormatting({});
+
+        // Filters
         setFilters([]);
+        setSearchTerm('');
+
+        // Display options
         setShowSubtotals(true);
         setShowTotalCol(true);
         setShowVariations(false);
         setSortBy('label');
         setSortOrder('asc');
-        setSearchTerm('');
+
+        // Temporal comparison
         setIsTemporalMode(false);
         setTemporalConfig(null);
+
+        // Customization
         setColumnLabels({});
         setColumnWidths({});
         setStyleRules([]);
         setConditionalRules([]);
+
+        // UI State
         setAnalysisName('');
         setIsEditMode(false);
         setSpecificDashboardItems([]);
+        setExpandedSections({});
+        setDrilldownData(null);
+        setIsChartModalOpen(false);
+        setEditingCalcField(null);
+        setEditingColumn(null);
+        setDraggedField(null);
     };
 
     const handleSaveAsDataset = (name: string) => {
@@ -790,7 +809,7 @@ export const usePivotLogic = () => {
             });
 
             const displayRows = (temporalResults || []).map(r => {
-                const keys = r.groupLabel.split('\x1F');
+                const keys = r.groupLabel ? r.groupLabel.split('\x1F') : [];
                 const rowMetrics: Record<string, number> = {};
                 let rowTotal = 0;
 

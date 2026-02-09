@@ -10,6 +10,7 @@ interface TemporalSourceModalProps {
     primaryDataset: Dataset | null;
     batches: ImportBatch[];
     currentSources: TemporalComparisonSource[];
+    currentConfig?: any;
     onSourcesChange: (sources: TemporalComparisonSource[], referenceId: string, extraConfig?: any) => void;
 }
 
@@ -19,22 +20,33 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
     primaryDataset,
     batches,
     currentSources,
+    currentConfig,
     onSourcesChange
 }) => {
     const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>(
         (currentSources || []).map(s => s.batchId)
     );
     const [referenceId, setReferenceId] = useState<string>(
-        (currentSources || []).find(s => s.label.includes('2024'))?.id || ''
+        currentConfig?.referenceSourceId || (currentSources || [])[0]?.id || ''
     );
 
     const [comparisonMode, setComparisonMode] = useState<'mtd' | 'ytd'>(
-        'mtd'
+        currentConfig?.comparisonMode || 'ytd'
     );
 
     const [comparisonMonth, setComparisonMonth] = useState<number>(
-        new Date().getMonth() + 1
+        currentConfig?.comparisonMonth || (new Date().getMonth() + 1)
     );
+
+    // Reset local state when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            setSelectedBatchIds((currentSources || []).map(s => s.batchId));
+            setReferenceId(currentConfig?.referenceSourceId || (currentSources || [])[0]?.id || '');
+            setComparisonMode(currentConfig?.comparisonMode || 'ytd');
+            setComparisonMonth(currentConfig?.comparisonMonth || (new Date().getMonth() + 1));
+        }
+    }, [isOpen, currentSources, currentConfig]);
 
     // Initialize labels with proper format for existing sources
     const [labels, setLabels] = useState<{ [batchId: string]: string }>(() => {
