@@ -142,14 +142,19 @@ export const usePivotData = ({
                }
            });
 
-           const dateColumn = detectDateColumn(primaryDataset?.fields || []) || 'Date écriture';
+           const allFields = [...(primaryDataset?.fields || []), ...(primaryDataset?.calculatedFields || []).map(cf => cf.name)];
+           const dateColumn = detectDateColumn(allFields) || 'Date écriture';
 
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
                groupByFields: rowFields,
                valueField: activeMetrics[0].field, // Backward compatibility
                aggType: (activeMetrics[0].aggType === 'list' ? 'sum' : activeMetrics[0].aggType) as any, // Backward compatibility
-               metrics: activeMetrics.map(m => ({ ...m, aggType: m.aggType === 'list' ? 'sum' : m.aggType })),
+               metrics: activeMetrics.map(m => ({
+                   ...m,
+                   aggType: m.aggType === 'list' ? 'sum' : m.aggType,
+                   label: m.label || `${m.field} (${m.aggType})` // Force label to match UI expectations
+               })),
                sortBy,
                sortOrder
            };

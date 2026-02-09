@@ -172,7 +172,7 @@ export const aggregateDataByGroup = (
        }
 
        const aggType = m.aggType;
-       if (aggType === 'sum' || aggType === 'avg') {
+       if (aggType === 'sum' || aggType === 'avg' || aggType === 'list') {
          group.metrics[mLabel] += value;
        } else if (aggType === 'count') {
          group.metrics[mLabel] += 1;
@@ -238,14 +238,16 @@ export const calculateTemporalComparison = (
       // 1. Period Filter
       const dateValue = row[dateColumn];
       const date = parseDateValue(dateValue);
-      if (!date) return false;
 
-      const month = date.getMonth() + 1;
-      const inPeriod = startMonth <= endMonth
-        ? (month >= startMonth && month <= endMonth)
-        : (month >= startMonth || month <= endMonth);
+      // BOLT ENHANCEMENT: If date cannot be parsed, we skip period filtering but keep the row
+      if (date) {
+        const month = date.getMonth() + 1;
+        const inPeriod = startMonth <= endMonth
+          ? (month >= startMonth && month <= endMonth)
+          : (month >= startMonth || month <= endMonth);
 
-      if (!inPeriod) return false;
+        if (!inPeriod) return false;
+      }
 
       // 2. Prepared Filters
       return applyPreparedFilters(row, preparedFilters);
@@ -268,7 +270,8 @@ export const calculateTemporalComparison = (
      colTotals[s.id] = {};
      metrics.forEach(m => {
         const mLabel = m.label || `${m.field} (${m.aggType})`;
-        colTotals[s.id][mLabel] = 0;
+        // Use proper initialization for min/max
+        colTotals[s.id][mLabel] = (m.aggType === 'min') ? Infinity : (m.aggType === 'max' ? -Infinity : 0);
      });
   });
 
@@ -294,12 +297,12 @@ export const calculateTemporalComparison = (
         if (group && !groupLabel) groupLabel = group.label;
 
         // Sum for column totals
-        if (m.aggType === 'sum' || m.aggType === 'count' || m.aggType === 'avg') {
+        if (m.aggType === 'sum' || m.aggType === 'count' || m.aggType === 'avg' || m.aggType === 'list') {
            colTotals[source.id][mLabel] += val;
         } else if (m.aggType === 'min') {
-           colTotals[source.id][mLabel] = (colTotals[source.id][mLabel] === 0 && results.length === 0) ? val : Math.min(colTotals[source.id][mLabel], val);
+           colTotals[source.id][mLabel] = Math.min(colTotals[source.id][mLabel], val);
         } else if (m.aggType === 'max') {
-           colTotals[source.id][mLabel] = (colTotals[source.id][mLabel] === 0 && results.length === 0) ? val : Math.max(colTotals[source.id][mLabel], val);
+           colTotals[source.id][mLabel] = Math.max(colTotals[source.id][mLabel], val);
         }
       });
     });
@@ -330,12 +333,16 @@ export const calculateTemporalComparison = (
     results.push({ groupKey, groupLabel, values, deltas, details });
   });
 
-  // Finalize averages for totals
+  // Finalize averages and min/max for totals
   sources.forEach(source => {
      metrics.forEach(m => {
+        const mLabel = m.label || `${m.field} (${m.aggType})`;
         if (m.aggType === 'avg' && results.length > 0) {
-           const mLabel = m.label || `${m.field} (${m.aggType})`;
            colTotals[source.id][mLabel] = colTotals[source.id][mLabel] / results.length;
+        } else if (m.aggType === 'min' && colTotals[source.id][mLabel] === Infinity) {
+           colTotals[source.id][mLabel] = 0;
+        } else if (m.aggType === 'max' && colTotals[source.id][mLabel] === -Infinity) {
+           colTotals[source.id][mLabel] = 0;
         }
      });
   });
