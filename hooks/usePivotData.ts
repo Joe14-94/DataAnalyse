@@ -104,7 +104,7 @@ export const usePivotData = ({
 
        const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
 
-       if (rowFields.length === 0 || activeMetrics.length === 0 || (temporalConfig?.sources?.length || 0) < 2) {
+       if (activeMetrics.length === 0 || (temporalConfig?.sources?.length || 0) < 2) {
            setTemporalResults([]);
            return;
        }

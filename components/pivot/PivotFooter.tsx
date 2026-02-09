@@ -22,10 +22,15 @@ interface PivotFooterProps {
    showVariations?: boolean;
    styleRules?: PivotStyleRule[];
    conditionalRules?: ConditionalFormattingRule[];
+   isSelectionMode?: boolean;
+   selectedItems?: any[];
+   handleDrilldown?: (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => void;
+   handleTemporalDrilldown?: (result: any, sourceId: string, metricLabel: string) => void;
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations = false, styleRules = [], conditionalRules = []
+   pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations = false, styleRules = [], conditionalRules = [],
+   isSelectionMode = false, selectedItems = [], handleDrilldown, handleTemporalDrilldown
 }) => {
    if (!pivotData && !temporalColTotals) return null;
 
@@ -110,6 +115,15 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
    };
 
+   const isItemSelected = (rowKeys: string[], colLabel: string) => {
+      if (!selectedItems || selectedItems.length === 0) return false;
+      return selectedItems.some(item =>
+         item.colLabel === colLabel &&
+         item.rowPath.length === rowKeys.length &&
+         item.rowPath.every((k: string, i: number) => k === rowKeys[i])
+      );
+   };
+
    if (temporalColTotals && temporalConfig) {
       return (
          <div ref={footerRef} className="border-t-2 border-slate-300 bg-slate-100 shadow-inner overflow-x-hidden flex-shrink-0">
@@ -142,16 +156,24 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                  const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId]?.[mLabel] || 0;
                                  const deltaValue = val - referenceTotal;
                                  const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
+                                 const isSelected = isSelectionMode && isItemSelected([], source.label);
 
                                  return (
                                     <React.Fragment key={source.id}>
                                        <td
-                                          className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
+                                          className={`px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate cursor-pointer transition-all ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
                                           style={{
                                              ...customStyle,
                                              width: `${columnWidths[colKey] || 120}px`,
                                              minWidth: `${columnWidths[colKey] || 120}px`,
                                              maxWidth: `${columnWidths[colKey] || 120}px`
+                                          }}
+                                          onClick={() => {
+                                             if (isSelectionMode && handleDrilldown) {
+                                                handleDrilldown([], colKey, val, mLabel);
+                                             } else if (handleTemporalDrilldown) {
+                                                handleTemporalDrilldown({ values: temporalColTotals, groupLabel: 'Total', groupKey: 'total', deltas: {} }, source.id, mLabel);
+                                             }
                                           }}
                                        >
                                           {formatOutput(val, metric)}
@@ -206,16 +228,19 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
 
                      let formatted = formatOutput(val, metric);
                      if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
+                     const isSelected = isSelectionMode && isItemSelected([], col);
+
                      return (
                         <td
                            key={col}
-                           className="px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate"
+                           className={`px-2 py-2 text-right text-xs text-slate-700 border-r border-slate-200 truncate cursor-pointer transition-all ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
                            style={{
                               ...customStyle,
                               width: `${getColWidth(col)}px`,
                               minWidth: `${getColWidth(col)}px`,
                               maxWidth: `${getColWidth(col)}px`
                            }}
+                           onClick={() => handleDrilldown && handleDrilldown([], col, val, metricLabel)}
                         >
                            {formatted}
                         </td>
@@ -223,12 +248,16 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                   })}
                   {showTotalCol && pivotData && (
                      <td
-                        className="px-2 py-2 text-right bg-slate-200 border-l border-slate-300 truncate"
+                        className={`px-2 py-2 text-right bg-slate-200 border-l border-slate-300 truncate cursor-pointer transition-all ${isSelectionMode ? (isItemSelected([], 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`}
                         style={{
                            ...getCellFormatting('Total', typeof pivotData.grandTotal === 'object' ? Object.values(pivotData.grandTotal)[0] : pivotData.grandTotal, ''),
                            width: `${getColWidth('Grand Total', true)}px`,
                            minWidth: `${getColWidth('Grand Total', true)}px`,
                            maxWidth: `${getColWidth('Grand Total', true)}px`
+                        }}
+                        onClick={() => {
+                           const value = typeof pivotData.grandTotal === 'object' ? Object.values(pivotData.grandTotal)[0] : pivotData.grandTotal;
+                           handleDrilldown && handleDrilldown([], 'Total', value, '');
                         }}
                      >
                         {typeof pivotData.grandTotal === 'object' ? (

@@ -715,6 +715,32 @@ export const usePivotLogic = () => {
         }
     };
 
+    const handleReset = () => {
+        setRowFields([]);
+        setColFields([]);
+        setValField('');
+        setColGrouping('none');
+        setAggType('count');
+        setMetrics([]);
+        setValFormatting({});
+        setFilters([]);
+        setShowSubtotals(true);
+        setShowTotalCol(true);
+        setShowVariations(false);
+        setSortBy('label');
+        setSortOrder('asc');
+        setSearchTerm('');
+        setIsTemporalMode(false);
+        setTemporalConfig(null);
+        setColumnLabels({});
+        setColumnWidths({});
+        setStyleRules([]);
+        setConditionalRules([]);
+        setAnalysisName('');
+        setIsEditMode(false);
+        setSpecificDashboardItems([]);
+    };
+
     const handleSaveAsDataset = (name: string) => {
         if (!primaryDataset) return;
 
@@ -837,6 +863,6 @@ export const usePivotLogic = () => {
         handleExport, handleExportSpreadsheet, handleDrilldown, handleCellClick,
         handleTemporalDrilldown, handleLoadAnalysis, handleSaveCalculatedField,
         handleRemoveCalculatedField, handleSaveSpecificDashboard, handleSaveAnalysis,
-        handleSaveAsDataset, companyLogo
+        handleSaveAsDataset, handleReset, companyLogo
     };
 };
