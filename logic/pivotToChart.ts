@@ -2,6 +2,33 @@ import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, Char
 
 export type { ChartType, ColorPalette, ColorMode };
 
+// ============================================================================
+// TYPES POUR SUNBURST ET TREEMAP HIERARCHIQUE
+// ============================================================================
+
+export interface HierarchicalNode {
+  name: string;
+  value?: number;
+  children?: HierarchicalNode[];
+  path?: string[];
+}
+
+export interface SunburstRingItem {
+  name: string;
+  value: number;
+  fill: string;
+  path: string[];
+  parentName: string;
+  parentTotal: number;
+  grandTotal: number;
+}
+
+export interface SunburstData {
+  tree: HierarchicalNode[];
+  rings: SunburstRingItem[][];
+  totalValue: number;
+}
+
 export interface ChartDataPoint {
   name: string;
   [key: string]: any; // Pour les séries multiples
@@ -30,33 +57,6 @@ export interface ChartMetadata {
   hasHierarchy: boolean;
   totalDataPoints: number;
   valueFieldLabel: string;
-}
-
-// ============================================================================
-// TYPES POUR SUNBURST ET TREEMAP HIERARCHIQUE
-// ============================================================================
-
-export interface HierarchicalNode {
-  name: string;
-  value?: number;
-  children?: HierarchicalNode[];
-  path?: string[];
-}
-
-export interface SunburstRingItem {
-  name: string;
-  value: number;
-  fill: string;
-  path: string[];
-  parentName: string;
-  parentTotal: number;
-  grandTotal: number;
-}
-
-export interface SunburstData {
-  tree: HierarchicalNode[];
-  rings: SunburstRingItem[][];
-  totalValue: number;
 }
 
 /**
