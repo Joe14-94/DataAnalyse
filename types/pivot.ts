@@ -149,6 +149,7 @@ export interface PivotState {
     sources?: PivotSourceConfig[];
     temporalComparison?: TemporalComparisonConfig;
     columnLabels?: Record<string, string>;
+    valFormatting?: Partial<FieldConfig>;
     styleRules?: PivotStyleRule[];
     conditionalRules?: ConditionalFormattingRule[];
     [key: string]: any;

@@ -7,7 +7,7 @@ interface Token {
   value: string;
 }
 
-type Evaluator = (row: Record<string, unknown>) => unknown;
+type Evaluator = (row: any) => any;
 
 // BOLT OPTIMIZATION: Global cache for compiled formulas
 const COMPILE_CACHE = new Map<string, Evaluator>();
@@ -210,7 +210,7 @@ class FormulaCompiler {
       case 'SI': case 'IF':
         return (row) => argEvals[0](row) ? argEvals[1](row) : argEvals[2](row);
       case 'SOMME': case 'SUM':
-        return (row) => argEvals.reduce((a: number, b) => a + parseSmartNumber(b(row)), 0);
+        return (row) => argEvals.reduce((a, b) => a + parseSmartNumber(b(row)), 0);
       case 'MOYENNE': case 'AVG': case 'AVERAGE':
         return (row) => {
            const nums = argEvals.map(a => parseSmartNumber(a(row)));
@@ -334,7 +334,7 @@ class FormulaCompiler {
   }
 }
 
-export const evaluateFormula = (row: Record<string, unknown>, formula: string, outputType?: 'number' | 'text' | 'boolean' | 'date'): number | string | boolean | null | Date => {
+export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean' | 'date'): number | string | boolean | null | Date => {
   if (!formula || !formula.trim()) return null;
 
   try {

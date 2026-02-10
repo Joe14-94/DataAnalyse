@@ -1,4 +1,4 @@
-import { PivotResult, PivotConfig, PivotRow, ChartType, ColorPalette, ColorMode } from '../types';
+import { PivotResult, PivotConfig, PivotRow, ChartType, ColorPalette, ColorMode, FieldConfig } from '../types';
 import { formatDateFr } from '../utils';
 
 export type { ChartType, ColorPalette, ColorMode };
@@ -813,7 +813,7 @@ export const getChartColors = (count: number = 9, palette: ColorPalette = 'defau
  */
 export const formatChartValue = (
   value: number | string,
-  config: PivotConfig
+  config: { valFormatting?: Partial<FieldConfig> }
 ): string => {
   if (typeof value === 'string') return value;
 
