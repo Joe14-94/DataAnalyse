@@ -25,7 +25,7 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
         (currentSources || []).map(s => s.batchId)
     );
     const [referenceId, setReferenceId] = useState<string>(
-        (currentSources || []).find(s => s.label.includes('2024'))?.id || ''
+        (currentSources || []).length > 0 ? currentSources[0].id : ''
     );
 
     const [comparisonMode, setComparisonMode] = useState<'mtd' | 'ytd'>(
@@ -89,7 +89,6 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
             // Auto-generate label with import date for uniqueness
             const batch = datasetBatches.find(b => b.id === batchId);
             if (batch) {
-                const year = detectYearForBatch(batch);
                 const autoLabel = `Import: ${formatDateFr(batch.date)}`;
                 setLabels(prev => ({ ...prev, [batchId]: autoLabel }));
             }
