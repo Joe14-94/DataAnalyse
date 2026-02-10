@@ -63,6 +63,20 @@ export default {
       fontSize: {
         'app-base': 'var(--app-font-size)',
       },
+      spacing: {
+        'ds-0.5': '0.125rem',
+        'ds-1': 'var(--spacing-1)',
+        'ds-1.5': '0.375rem',
+        'ds-2': 'var(--spacing-2)',
+        'ds-2.5': '0.625rem',
+        'ds-3': 'var(--spacing-3)',
+        'ds-4': 'var(--spacing-4)',
+        'ds-5': 'var(--spacing-5)',
+        'ds-6': 'var(--spacing-6)',
+        'ds-8': 'var(--spacing-8)',
+        'ds-10': 'var(--spacing-10)',
+        'ds-12': 'var(--spacing-12)',
+      },
       boxShadow: {
         'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
         'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',

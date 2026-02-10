@@ -41,7 +41,7 @@ export const TabsList: React.FC<{ className?: string; children: React.ReactNode 
       role="tablist"
       aria-orientation="horizontal"
       onKeyDown={handleKeyDown}
-      className={`flex gap-2 border-b border-slate-200 ${className}`}
+      className={`flex gap-ds-2 border-b border-border-default ${className}`}
     >
       {children}
     </div>
@@ -63,10 +63,10 @@ export const TabsTrigger: React.FC<{ value: string; children: React.ReactNode; c
       aria-controls={`panel-${value.toLowerCase().replace(/\s+/g, '-')}`}
       tabIndex={isActive ? 0 : -1}
       onClick={() => context.setActiveTab(value)}
-      className={`px-4 py-2 text-sm font-bold transition-all rounded-t-lg focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 outline-none ${
+      className={`px-ds-4 py-ds-2 text-sm font-bold transition-all rounded-t-lg focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 outline-none ${
         isActive
           ? 'bg-brand-600 text-white shadow-md'
-          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          : 'bg-canvas text-txt-secondary hover:bg-border-default hover:text-txt-main'
       } ${className}`}
     >
       {children}
@@ -87,7 +87,7 @@ export const TabsContent: React.FC<{ value: string; children: React.ReactNode; c
       id={id}
       role="tabpanel"
       aria-labelledby={`tab-${value.toLowerCase().replace(/\s+/g, '-')}`}
-      className={`mt-4 animate-in fade-in slide-in-from-top-2 duration-300 ${className}`}
+      className={`mt-ds-4 animate-in fade-in slide-in-from-top-2 duration-300 ${className}`}
     >
       {children}
     </div>

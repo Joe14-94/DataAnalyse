@@ -178,8 +178,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <main className="flex-1 h-full relative overflow-hidden bg-canvas">
         {children}
-        <div className="absolute bottom-1 right-2 text-xs text-slate-400 pointer-events-none z-[60] font-medium bg-white/50 px-1 rounded shadow-sm">
-           v{APP_VERSION} | 01/02/2026
+        <div className="absolute bottom-1 right-2 text-xs text-txt-muted pointer-events-none z-[60] font-medium bg-surface/50 px-1 rounded shadow-sm border border-border-default">
+           v{APP_VERSION} | 10/02/2026
         </div>
       </main>
     </div>

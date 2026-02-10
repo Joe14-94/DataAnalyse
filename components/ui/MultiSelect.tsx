@@ -43,9 +43,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onC
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-left text-xs flex items-center justify-between hover:border-brand-300 focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+        className="w-full bg-surface border border-border-default rounded px-ds-2 py-ds-1 text-left text-xs flex items-center justify-between hover:border-brand-300 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-colors"
       >
-        <span className="truncate text-slate-700">
+        <span className="truncate text-txt-main">
           {selected.length === 0 
             ? placeholder 
             : selected.length === options.length 
@@ -53,31 +53,31 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, selected, onC
                : `${selected.length} sélectionné(s)`
           }
         </span>
-        <ChevronDown className="w-3 h-3 text-slate-400 ml-1 shrink-0" />
+        <ChevronDown className="w-3 h-3 text-txt-muted ml-1 shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
-          <div className="sticky top-0 bg-slate-50 p-2 border-b border-slate-100 flex justify-between items-center">
-             <span className="text-xs font-bold text-slate-500 uppercase">Options</span>
-             <button onClick={handleSelectAll} className="text-xs text-brand-600 hover:underline">
+        <div className="absolute z-50 w-full mt-ds-1 bg-surface border border-border-default rounded shadow-lg max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+          <div className="sticky top-0 bg-canvas p-ds-2 border-b border-border-default flex justify-between items-center">
+             <span className="text-xs font-bold text-txt-muted uppercase">Options</span>
+             <button onClick={handleSelectAll} className="text-xs text-brand-600 hover:text-brand-700 hover:underline transition-colors">
                 {selected.length === options.length ? 'Tout décocher' : 'Tout cocher'}
              </button>
           </div>
           {options.length === 0 ? (
-             <div className="p-2 text-xs text-slate-400 italic text-center">Aucune donnée</div>
+             <div className="p-ds-2 text-xs text-txt-muted italic text-center">Aucune donnée</div>
           ) : (
              options.map(option => {
                const isChecked = selected.includes(option);
                return (
-                  <div key={option} className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer" onClick={() => handleToggle(option)}>
+                  <div key={option} className="flex items-center px-ds-2 py-ds-1.5 hover:bg-canvas cursor-pointer transition-colors" onClick={() => handleToggle(option)}>
                      <div 
-                        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center mr-2 transition-colors 
-                        ${isChecked ? 'bg-white border-brand-600' : 'bg-white border-slate-300'}`}
+                        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center mr-ds-2 transition-colors
+                        ${isChecked ? 'bg-brand-600 border-brand-600' : 'bg-surface border-border-default'}`}
                       >
-                        {isChecked && <Check className="w-3 h-3 text-brand-600" strokeWidth={3} />}
+                        {isChecked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                      </div>
-                     <span className="text-xs text-slate-700 truncate" title={option}>{option}</span>
+                     <span className="text-xs text-txt-main truncate" title={option}>{option}</span>
                   </div>
                );
              })
