@@ -4,7 +4,7 @@ import { Loader2, Table2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import {
    TemporalComparisonResult, Dataset, PivotResult, SortBy, SortOrder,
    PivotStyleRule, ConditionalFormattingRule, TemporalComparisonConfig,
-   PivotMetric, FieldConfig
+   PivotMetric, FieldConfig, AggregationType
 } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { formatPercentage } from '../../utils/temporalComparison';
@@ -76,10 +76,10 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
    const virtualCols = colVirtualizer.getVirtualItems();
 
-   const effectiveMetrics = React.useMemo(() => {
+   const effectiveMetrics = React.useMemo<PivotMetric[]>(() => {
       if (metrics && metrics.length > 0) return metrics;
-      if (valField) return [{ field: valField, aggType: aggType as any }];
-      return [{ field: '_count', aggType: 'count' as any, label: 'Nombre' }];
+      if (valField) return [{ field: valField, aggType: aggType as AggregationType }];
+      return [{ field: '_count', aggType: 'count', label: 'Nombre' }];
    }, [metrics, valField, aggType]);
 
    // BOLT OPTIMIZATION: Memoized metric info lookup

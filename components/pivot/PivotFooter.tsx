@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
+import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule, PivotMetric, AggregationType } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
@@ -38,10 +38,10 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return columnWidths[id] || (isRowField ? 150 : 120);
    };
 
-   const effectiveMetrics = React.useMemo(() => {
+   const effectiveMetrics = React.useMemo<PivotMetric[]>(() => {
       if (metrics && metrics.length > 0) return metrics;
-      if (valField) return [{ field: valField, aggType: aggType as any }];
-      return [{ field: '_count', aggType: 'count' as any, label: 'Nombre' }];
+      if (valField) return [{ field: valField, aggType: aggType as AggregationType }];
+      return [{ field: '_count', aggType: 'count', label: 'Nombre' }];
    }, [metrics, valField, aggType]);
 
    // BOLT OPTIMIZATION: Memoized metric info lookup to avoid repetitive string parsing and metadata lookups
