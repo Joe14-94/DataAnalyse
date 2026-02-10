@@ -63,30 +63,25 @@ export const usePivotData = ({
        });
    }, [currentBatch, sources, primaryDataset, datasets, batches]);
 
-   // BOLT OPTIMIZATION: Pre-calculate search index for O(N) search performance
-   const blendedRowsWithIndex = useMemo(() => {
-       if (blendedRows.length === 0) return [];
-       const searchableKeys = Object.keys(blendedRows[0]).filter(k => !k.startsWith('_'));
+   const filteredRows = useMemo(() => {
+       const term = searchTerm.trim().toLowerCase();
+       if (!term) return blendedRows;
 
-       return blendedRows.map(row => {
-           let searchContent = "";
+       // BOLT OPTIMIZATION: On-the-fly search instead of pre-calculating massive index strings
+       const searchableKeys = blendedRows.length > 0
+           ? Object.keys(blendedRows[0]).filter(k => !k.startsWith('_'))
+           : [];
+
+       return blendedRows.filter(row => {
            for (let i = 0; i < searchableKeys.length; i++) {
                const v = row[searchableKeys[i]];
-               if (v !== null && v !== undefined && v !== "") {
-                   searchContent += (searchContent ? " " : "") + String(v);
+               if (v !== null && v !== undefined && String(v).toLowerCase().includes(term)) {
+                   return true;
                }
            }
-           return { ...row, _searchIndex: searchContent.toLowerCase() };
+           return false;
        });
-   }, [blendedRows]);
-
-   const filteredRows = useMemo(() => {
-       if (!searchTerm.trim()) return blendedRows;
-       const term = searchTerm.toLowerCase();
-       return blendedRowsWithIndex.filter(row =>
-           (row as any)._searchIndex.includes(term)
-       );
-   }, [blendedRows, blendedRowsWithIndex, searchTerm]);
+   }, [blendedRows, searchTerm]);
 
    // --- ASYNC CALCULATION (STANDARD) ---
    useEffect(() => {
@@ -145,27 +140,24 @@ export const usePivotData = ({
                    rows = rows.map(r => {
                        const enriched = { ...r };
                        if (calcFields.length > 0) {
-                           calcFields.forEach(cf => {
-                               enriched[cf.name] = evaluateFormula(enriched, cf.formula);
-                           });
-                       }
-
-                       if (term) {
-                           // Pre-calculate search index to avoid O(N*M) allocations in filter
-                           let searchContent = "";
-                           for (let i = 0; i < searchableKeys.length; i++) {
-                               const v = enriched[searchableKeys[i]];
-                               if (v !== null && v !== undefined && v !== "") {
-                                   searchContent += (searchContent ? " " : "") + String(v);
-                               }
+                           for (let i = 0; i < calcFields.length; i++) {
+                               const cf = calcFields[i];
+                               enriched[cf.name] = evaluateFormula(r, cf.formula);
                            }
-                           (enriched as any)._searchIndex = searchContent.toLowerCase();
                        }
                        return enriched;
                    });
 
                    if (term) {
-                       rows = rows.filter(row => (row as any)._searchIndex.includes(term));
+                       rows = rows.filter(row => {
+                           for (let i = 0; i < searchableKeys.length; i++) {
+                               const v = row[searchableKeys[i]];
+                               if (v !== null && v !== undefined && String(v).toLowerCase().includes(term)) {
+                                   return true;
+                               }
+                           }
+                           return false;
+                       });
                    }
 
                    sourceDataMap.set(source.id, rows);

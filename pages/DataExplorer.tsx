@@ -16,9 +16,11 @@ export const DataExplorer: React.FC = () => {
         currentDatasetId,
         processedRows,
         displayFields,
+        allColumns,
         distributionData,
         historyData,
         rowVirtualizer,
+        colVirtualizer,
         tableContainerRef,
         state,
         dispatch,
@@ -170,8 +172,10 @@ export const DataExplorer: React.FC = () => {
                 <DataExplorerGrid
                     tableContainerRef={tableContainerRef}
                     rowVirtualizer={rowVirtualizer}
+                    colVirtualizer={colVirtualizer}
                     processedRows={processedRows}
                     displayFields={displayFields}
+                    allColumns={allColumns}
                     currentDataset={currentDataset}
                     sortConfig={state.sortConfig}
                     handleHeaderClick={handleHeaderClick}

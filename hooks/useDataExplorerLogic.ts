@@ -492,62 +492,74 @@ export function useDataExplorerLogic() {
     };
 
     // --- Data Processing ---
+    // BOLT OPTIMIZATION: Consolidate data processing into a single pass and avoid expensive pre-indexing
     const allRows = useMemo(() => {
         if (!currentDataset) return [];
         const calcFields = currentDataset?.calculatedFields || [];
-
-        let rows = (batches || [])
-            .filter(b => b.datasetId === currentDataset.id)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .flatMap(batch => (batch.rows || []).map(r => {
-                const extendedRow: DataRow = { ...r, _importDate: batch.date, _batchId: batch.id };
-                calcFields.forEach(cf => {
-                    const val = evaluateFormula(r, cf.formula, cf.outputType);
-                    extendedRow[cf.name] = val;
-                });
-                return extendedRow;
-            }));
-
         const { blendingConfig } = state;
+
+        // 1. Prepare Blending Lookups (O(M) where M is rows in secondary dataset)
+        const blendingLookups = new Map<string, { lookup: Map<string, DataRow>, dsName: string }>();
         if (blendingConfig && blendingConfig.secondaryDatasetId && blendingConfig.joinKeyPrimary && blendingConfig.joinKeySecondary) {
             const secDS = datasets.find(d => d.id === blendingConfig.secondaryDatasetId);
             if (secDS) {
-                const secBatches = batches.filter(b => b.datasetId === blendingConfig.secondaryDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const secBatches = batches.filter(b => b.datasetId === blendingConfig.secondaryDatasetId)
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
                 if (secBatches.length > 0) {
                     const secBatch = secBatches[secBatches.length - 1];
                     const lookup = new Map<string, DataRow>();
                     secBatch.rows.forEach(r => {
-                        const k = String(r[blendingConfig.joinKeySecondary]).trim();
+                        const k = String(r[blendingConfig.joinKeySecondary!] || '').trim();
                         if (k) lookup.set(k, r);
                     });
-                    rows = (rows || []).map(row => {
-                        const k = String(row[blendingConfig.joinKeyPrimary]).trim();
-                        const match = lookup.get(k);
-                        if (match) {
-                           const prefixedMatch: Partial<DataRow> = {};
-                           Object.keys(match || {}).forEach(key => {
-                              if (key !== 'id') (prefixedMatch as DataRow)[`[${secDS.name}] ${key}`] = match[key];
-                           });
-                           return { ...row, ...prefixedMatch };
-                        }
-                        return row;
-                    });
+                    blendingLookups.set(blendingConfig.secondaryDatasetId, { lookup, dsName: secDS.name });
                 }
             }
         }
 
-        const searchableKeys = rows.length > 0 ? Object.keys(rows[0]).filter(k => !k.startsWith('_') || k === '_importDate') : [];
+        // 2. Process primary rows in a single pass (O(N * (C + B)))
+        const datasetBatches = (batches || [])
+            .filter(b => b.datasetId === currentDataset.id)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        return rows.map(row => {
-            const vals: string[] = [];
-            for (let i = 0; i < searchableKeys.length; i++) {
-                const v = row[searchableKeys[i]];
-                if (v !== null && v !== undefined && v !== '') {
-                    vals.push(String(v));
+        const result: (DataRow & { _importDate: string; _batchId: string })[] = [];
+        const activeLookup = blendingConfig?.secondaryDatasetId ? blendingLookups.get(blendingConfig.secondaryDatasetId) : null;
+
+        for (const batch of datasetBatches) {
+            const batchRows = batch.rows || [];
+            const batchDate = batch.date;
+            const batchId = batch.id;
+
+            for (let i = 0; i < batchRows.length; i++) {
+                const r = batchRows[i];
+                // Clone row only once
+                const extendedRow = { ...r, _importDate: batchDate, _batchId: batchId } as DataRow & { _importDate: string; _batchId: string };
+
+                // Calculated Fields
+                if (calcFields.length > 0) {
+                    for (let j = 0; j < calcFields.length; j++) {
+                        const cf = calcFields[j];
+                        extendedRow[cf.name] = evaluateFormula(r, cf.formula, cf.outputType);
+                    }
                 }
+
+                // Blending (O(1) lookup)
+                if (activeLookup && blendingConfig) {
+                    const k = String(extendedRow[blendingConfig.joinKeyPrimary!] || '').trim();
+                    const match = activeLookup.lookup.get(k);
+                    if (match) {
+                       for (const key in match) {
+                          if (key !== 'id') (extendedRow as any)[`[${activeLookup.dsName}] ${key}`] = match[key];
+                       }
+                    }
+                }
+
+                result.push(extendedRow);
             }
-            return { ...row, _searchIndex: vals.join(' ').toLowerCase() } as DataRow & { _searchIndex: string; _importDate: string; _batchId: string };
-        });
+        }
+
+        return result;
     }, [currentDataset, batches, state.blendingConfig, datasets]);
 
     const displayFields = useMemo(() => {
@@ -590,8 +602,24 @@ export function useDataExplorerLogic() {
         const lowerSearchTerm = state.searchTerm.trim().toLowerCase();
 
         if (lowerSearchTerm || activeFilters.length > 0) {
+            // BOLT OPTIMIZATION: Cache searchable keys once per filter run
+            const searchableKeys = (lowerSearchTerm && data.length > 0)
+                ? Object.keys(data[0]).filter(k => !k.startsWith('_') || k === '_importDate')
+                : [];
+
             data = data.filter(row => {
-                if (lowerSearchTerm && !row._searchIndex.includes(lowerSearchTerm)) return false;
+                // BOLT OPTIMIZATION: On-the-fly search instead of pre-calculating giant strings
+                if (lowerSearchTerm) {
+                    let match = false;
+                    for (let i = 0; i < searchableKeys.length; i++) {
+                        const val = row[searchableKeys[i]];
+                        if (val !== undefined && val !== null && String(val).toLowerCase().includes(lowerSearchTerm)) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (!match) return false;
+                }
 
                 for (let i = 0; i < activeFilters.length; i++) {
                     const f = activeFilters[i];
@@ -671,11 +699,39 @@ export function useDataExplorerLogic() {
             .slice(0, 15);
     }, [state.selectedCol, processedRows, currentDataset]);
 
+    const allColumns = useMemo(() => {
+        const cols: { key: string; width: number }[] = [
+            { key: '_importDate', width: state.columnWidths['_importDate'] || 140 },
+            { key: 'id', width: state.columnWidths['id'] || 120 }
+        ];
+
+        displayFields.forEach(f => {
+            const config = currentDataset?.fieldConfigs?.[f];
+            const defaultWidth = config?.type === 'number' ? 120 : 180;
+            cols.push({ key: f, width: state.columnWidths[f] || defaultWidth });
+        });
+
+        (currentDataset?.calculatedFields || []).forEach(cf => {
+            cols.push({ key: cf.name, width: state.columnWidths[cf.name] || 150 });
+        });
+
+        cols.push({ key: '_actions', width: 60 });
+        return cols;
+    }, [displayFields, currentDataset, state.columnWidths]);
+
     const rowVirtualizer = useVirtualizer({
         count: processedRows.length,
         getScrollElement: () => tableContainerRef.current,
         estimateSize: () => 40,
         overscan: 10,
+    });
+
+    const colVirtualizer = useVirtualizer({
+        horizontal: true,
+        count: allColumns.length,
+        getScrollElement: () => tableContainerRef.current,
+        estimateSize: (index) => allColumns[index].width,
+        overscan: 5,
     });
 
     const historyData = useMemo(() => {
@@ -753,9 +809,11 @@ export function useDataExplorerLogic() {
         allRows,
         processedRows,
         displayFields,
+        allColumns,
         distributionData,
         historyData,
         rowVirtualizer,
+        colVirtualizer,
         tableContainerRef,
 
         // State
