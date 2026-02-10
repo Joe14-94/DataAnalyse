@@ -41,7 +41,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    const effectiveMetrics = React.useMemo<PivotMetric[]>(() => {
       if (metrics && metrics.length > 0) return metrics;
       if (valField) return [{ field: valField, aggType: aggType as AggregationType }];
-      return [{ field: '_count', aggType: 'count', label: 'Nombre' }];
+      return [];
    }, [metrics, valField, aggType]);
 
    // BOLT OPTIMIZATION: Memoized metric info lookup to avoid repetitive string parsing and metadata lookups
@@ -254,7 +254,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         </td>
                      );
                   })}
-                  {showTotalCol && pivotData && (
+                  {showTotalCol && pivotData && effectiveMetrics.length > 0 && (
                      <td
                         className={`px-2 py-2 text-right bg-slate-200 border-l border-slate-300 truncate cursor-pointer transition-all ${isSelectionMode ? (isItemSelected([], 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`}
                         style={{
