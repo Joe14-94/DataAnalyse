@@ -38,6 +38,12 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return columnWidths[id] || (isRowField ? 150 : 120);
    };
 
+   const effectiveMetrics = React.useMemo(() => {
+      if (metrics && metrics.length > 0) return metrics;
+      if (valField) return [{ field: valField, aggType: aggType as any }];
+      return [{ field: '_count', aggType: 'count' as any, label: 'Nombre' }];
+   }, [metrics, valField, aggType]);
+
    // BOLT OPTIMIZATION: Memoized metric info lookup to avoid repetitive string parsing and metadata lookups
    const metricInfoCache = React.useMemo(() => {
       const cache = new Map<string, any>();
@@ -53,7 +59,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
             if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
             if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
-            const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
+            const metric = effectiveMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
             cache.set(col, { metric, isDiff, isPct });
             return;
          }
@@ -64,15 +70,15 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          if (isDiff) baseCol = col.replace('_DIFF', '');
          if (isPct) baseCol = col.replace('_PCT', '');
 
-         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         const directMetric = effectiveMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
          if (directMetric) {
             cache.set(col, { metric: directMetric, isDiff, isPct });
          } else {
-            cache.set(col, { metric: metrics[0], isDiff, isPct });
+            cache.set(col, { metric: effectiveMetrics[0], isDiff, isPct });
          }
       });
       return cache;
-   }, [pivotData?.colHeaders, metrics]);
+   }, [pivotData?.colHeaders, effectiveMetrics]);
 
    // BOLT OPTIMIZATION: Pre-calculate sticky positions for row fields to avoid repeated slice().reduce()
    const rowFieldLeftPositions = React.useMemo(() => {
@@ -98,12 +104,12 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    // BOLT OPTIMIZATION: Memoized metric label map for fast lookup
    const metricLabelMap = React.useMemo(() => {
       const map = new Map<string, any>();
-      (metrics || []).forEach(m => {
+      (effectiveMetrics || []).forEach(m => {
          const label = m.label || `${m.field} (${m.aggType})`;
          map.set(label, m);
       });
       return map;
-   }, [metrics]);
+   }, [effectiveMetrics]);
 
    const getCellFormatting = (col: string, value: any, metricLabel: string) => {
       return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, 'grandTotal');
@@ -144,7 +150,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            {idx === rowFields.length - 1 ? 'Total' : ''}
                         </td>
                      ))}
-                     {(metrics || [{ field: valField, aggType }]).map((metric) => {
+                     {(effectiveMetrics).map((metric) => {
                         const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                         return (
                            <React.Fragment key={mLabel}>
@@ -157,7 +163,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                  const deltaValue = val - referenceTotal;
                                  const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
 
-                                 const displayLabel = metrics.length > 1 ? `${source.label} - ${mLabel}` : source.label;
+                                 const displayLabel = effectiveMetrics.length > 1 ? `${source.label} - ${mLabel}` : source.label;
                                  const isSelected = isSelectionMode && isItemSelected([], displayLabel);
 
                                  return (
@@ -276,7 +282,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                               })}
                            </div>
                         ) : (
-                           <span className="text-xs text-black">{formatOutput(pivotData.grandTotal, metrics[0])}</span>
+                           <span className="text-xs text-black">{formatOutput(pivotData.grandTotal, effectiveMetrics[0])}</span>
                         )}
                      </td>
                   )}

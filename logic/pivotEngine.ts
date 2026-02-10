@@ -31,11 +31,15 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   } = config;
 
   // Backward compatibility for metrics
-  const activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
+  let activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
     ? config.metrics
     : (config.valField ? [{ field: config.valField, aggType: config.aggType }] : []);
 
-  if (rows.length === 0 || rowFields.length === 0 || activeMetrics.length === 0) return null;
+  if (rows.length === 0 || (rowFields.length === 0 && (!colFields || colFields.length === 0))) return null;
+
+  if (activeMetrics.length === 0) {
+      activeMetrics = [{ field: '_count', aggType: 'count', label: 'Nombre' }];
+  }
 
   // --- PHASE 0 : PREPARATION CONFIG & META-DONNEES ---
   
@@ -417,7 +421,19 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   };
 
   // Lancement récursif
-  processLevel(optimizedRows, 0, []);
+  if (rowFields.length > 0) {
+    processLevel(optimizedRows, 0, []);
+  } else {
+    // Si pas de lignes, on ajoute une seule ligne de total
+    const grandTotalStatsForRows = computeGroupStats(optimizedRows);
+    displayRows.push({
+      type: 'data',
+      keys: [],
+      level: 0,
+      metrics: grandTotalStatsForRows.metrics,
+      rowTotal: grandTotalStatsForRows.rowTotal
+    });
+  }
 
   // Total Général
   const grandTotalStats = computeGroupStats(optimizedRows);

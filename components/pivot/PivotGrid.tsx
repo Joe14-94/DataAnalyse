@@ -76,6 +76,12 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
    const virtualCols = colVirtualizer.getVirtualItems();
 
+   const effectiveMetrics = React.useMemo(() => {
+      if (metrics && metrics.length > 0) return metrics;
+      if (valField) return [{ field: valField, aggType: aggType as any }];
+      return [{ field: '_count', aggType: 'count' as any, label: 'Nombre' }];
+   }, [metrics, valField, aggType]);
+
    // BOLT OPTIMIZATION: Memoized metric info lookup
    const metricInfoCache = React.useMemo(() => {
       interface MetricInfo {
@@ -99,7 +105,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
             if (isDiff) metricLabel = metricLabel.replace('_DIFF', '').replace('_DELTA', '');
             if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
-            const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
+            const metric = effectiveMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
             cache.set(col, { colLabel, metricLabel, metric, isDiff, isPct });
             return;
          }
@@ -110,15 +116,15 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
          if (isDiff) baseCol = col.replace('_DIFF', '').replace('_DELTA', '');
          if (isPct) baseCol = col.replace('_PCT', '');
 
-         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         const directMetric = effectiveMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
          if (directMetric) {
             cache.set(col, { colLabel: 'ALL', metricLabel: baseCol, metric: directMetric, isDiff, isPct });
          } else {
-            cache.set(col, { colLabel: baseCol, metricLabel: '', metric: metrics[0], isDiff, isPct });
+            cache.set(col, { colLabel: baseCol, metricLabel: '', metric: effectiveMetrics[0], isDiff, isPct });
          }
       });
       return cache;
-   }, [allDataColumns, metrics]);
+   }, [allDataColumns, effectiveMetrics]);
 
    const rowFieldLeftPositions = React.useMemo(() => {
       const positions: number[] = [];
@@ -132,12 +138,12 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
    const metricLabelMap = React.useMemo(() => {
       const map = new Map<string, PivotMetric>();
-      (metrics || []).forEach(m => {
+      (effectiveMetrics || []).forEach(m => {
          const label = m.label || `${m.field} (${m.aggType})`;
          map.set(label, m);
       });
       return map;
-   }, [metrics]);
+   }, [effectiveMetrics]);
 
    const formatOutput = (val: string | number | undefined | null, metric?: PivotMetric) => {
       if (val === undefined || val === null) return '';
@@ -295,14 +301,14 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const sourceId = colKey.split('_')[0];
                                  const value = result.values[sourceId]?.[metricLabel || ''] || 0;
                                  const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, metricLabel || '', isSubtotal ? 'subtotal' : 'data');
-                                 const displayColLabel = metrics.length > 1 ? `${temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId} - ${metricLabel}` : (temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId);
+                                 const displayColLabel = effectiveMetrics.length > 1 ? `${temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId} - ${metricLabel}` : (temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId);
                                  const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), displayColLabel);
 
                                  return (
                                     <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${sourceId === temporalConfig?.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
                                        style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }}
                                        onClick={() => { if (isSelectionMode) handleDrilldown(result.groupLabel.split('\x1F'), displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId, metricLabel || ''); }}>
-                                       {formatOutput(value, metric)}
+                                       {formatOutput(value, metric || effectiveMetrics[0])}
                                     </td>
                                  );
                               })}
@@ -405,7 +411,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  })}
                                  {showTotalCol && (
                                     <td className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`} style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150, ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '', row.type) }} onClick={() => { const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); }}>
-                                       {typeof row.rowTotal === 'object' ? <div className="flex flex-col gap-0.5">{Object.entries(row.rowTotal).map(([label, v], idx) => { const metric = metricLabelMap.get(label); const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type); return <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}><span className="text-slate-400 font-medium mr-1">{label}:</span><span className="font-bold text-slate-800">{formatOutput(v, metric)}</span></div>; })}</div> : <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, metrics[0])}</span>}
+                                       {typeof row.rowTotal === 'object' ? <div className="flex flex-col gap-0.5">{Object.entries(row.rowTotal).map(([label, v], idx) => { const metric = metricLabelMap.get(label); const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type); return <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}><span className="text-slate-400 font-medium mr-1">{label}:</span><span className="font-bold text-slate-800">{formatOutput(v, metric)}</span></div>; })}</div> : <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, effectiveMetrics[0])}</span>}
                                     </td>
                                  )}
                               </tr>
