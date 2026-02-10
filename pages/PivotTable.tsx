@@ -2,6 +2,7 @@
 import React from 'react';
 import { usePivotLogic } from '../hooks/usePivotLogic';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { PivotResult } from '../types';
 
 import { PivotHeader } from '../components/pivot/PivotHeader';
 import { PivotSidePanel } from '../components/pivot/PivotSidePanel';
@@ -136,7 +137,7 @@ export const PivotTable: React.FC = () => {
                 <ChartModal
                    isOpen={isChartModalOpen}
                    onClose={() => setIsChartModalOpen(false)}
-                   pivotData={chartPivotData as any}
+                   pivotData={chartPivotData as PivotResult}
                    pivotConfig={{
                       rows: blendedRows,
                       rowFields: isTemporalMode ? (temporalConfig?.groupByFields || []) : rowFields,

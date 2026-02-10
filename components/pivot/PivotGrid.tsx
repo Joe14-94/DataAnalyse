@@ -3,33 +3,40 @@ import React from 'react';
 import { Loader2, Table2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult, SortBy, SortOrder, PivotStyleRule, ConditionalFormattingRule, DEFAULT_METRIC } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
-import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
+import { formatPercentage } from '../../utils/temporalComparison';
 import { formatDateLabelForDisplay } from '../../utils';
 import { getCellStyle } from '../../utils/pivotFormatting';
+
+interface SelectedPivotItem {
+   colLabel: string;
+   rowPath: string[];
+   value?: number | string;
+   metricLabel?: string;
+}
 
 interface PivotGridProps {
    isCalculating: boolean;
    isTemporalMode: boolean;
    pivotData: PivotResult | null;
    temporalResults: TemporalComparisonResult[];
-   temporalConfig: any;
+   temporalConfig: TemporalComparisonConfig | null;
    rowFields: string[];
    columnLabels: Record<string, string>;
    editingColumn: string | null;
    setEditingColumn: (v: string | null) => void;
-   setColumnLabels: (v: any) => void;
+   setColumnLabels: React.Dispatch<React.SetStateAction<Record<string, string>>>;
    showVariations: boolean;
    showTotalCol: boolean;
-   handleDrilldown: (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => void;
+   handleDrilldown: (rowKeys: string[], colLabel: string, value: number | string | undefined, metricLabel: string) => void;
    handleTemporalDrilldown: (result: TemporalComparisonResult, sourceId: string, metricLabel: string) => void;
    primaryDataset: Dataset | null;
    datasets: Dataset[];
    aggType: string;
    valField: string;
-   metrics: any[];
-   valFormatting: any;
-   virtualItems: any[];
-   rowVirtualizer: any;
+   metrics: PivotMetric[];
+   valFormatting: Partial<FieldConfig>;
+   virtualItems: any[]; // From @tanstack/react-virtual
+   rowVirtualizer: any;  // From @tanstack/react-virtual
    parentRef: React.RefObject<HTMLDivElement>;
    totalColumns: number;
    paddingTop: number;
@@ -37,16 +44,16 @@ interface PivotGridProps {
    isSelectionMode?: boolean;
    isFormattingSelectionMode?: boolean;
    isEditMode?: boolean;
-   selectedItems?: any[];
+   selectedItems?: SelectedPivotItem[];
    sortBy: SortBy;
    setSortBy: (v: SortBy) => void;
    sortOrder: SortOrder;
    setSortOrder: (v: SortOrder) => void;
    columnWidths: Record<string, number>;
-   setColumnWidths: (v: any) => void;
+   setColumnWidths: React.Dispatch<React.SetStateAction<Record<string, number>>>;
    styleRules: PivotStyleRule[];
    conditionalRules: ConditionalFormattingRule[];
-   onRemoveField?: (zone: any, field: string) => void;
+   onRemoveField?: (zone: 'row' | 'col' | 'val' | 'filter', field: string) => void;
 }
 
 export const PivotGrid: React.FC<PivotGridProps> = (props) => {
@@ -129,7 +136,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
    // BOLT OPTIMIZATION: Memoized metric label map for fast lookup
    const metricLabelMap = React.useMemo(() => {
-      const map = new Map<string, any>();
+      const map = new Map<string, PivotMetric>();
       (metrics || []).forEach(m => {
          const label = m.label || `${m.field} (${m.aggType})`;
          map.set(label, m);
@@ -137,7 +144,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       return map;
    }, [metrics]);
 
-   const formatOutput = (val: string | number, metric?: any) => {
+   const formatOutput = (val: string | number | undefined | null, metric?: PivotMetric) => {
+      if (val === undefined || val === null) return '';
       const field = metric?.field || valField;
       const type = metric?.aggType || aggType;
       return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
@@ -173,7 +181,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />;
    };
 
-   const getCellFormatting = (rowKeys: string[], col: string, value: any, metricLabel: string, rowType: 'data' | 'subtotal' | 'grandTotal' = 'data') => {
+   const getCellFormatting = (rowKeys: string[], col: string, value: string | number | undefined, metricLabel: string, rowType: 'data' | 'subtotal' | 'grandTotal' = 'data') => {
       return getCellStyle(rowKeys, col, value, metricLabel, styleRules, conditionalRules, rowType);
    };
 
@@ -185,7 +193,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
 
       const onMouseMove = (moveEvent: MouseEvent) => {
          const newWidth = Math.max(50, startWidth + (moveEvent.clientX - startX));
-         setColumnWidths((prev: any) => ({ ...prev, [id]: newWidth }));
+         setColumnWidths((prev) => ({ ...prev, [id]: newWidth }));
       };
 
       const onMouseUp = () => {
@@ -240,7 +248,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                              autoFocus
                                              className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                              onClick={(e) => e.stopPropagation()}
-                                             onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`group_${field}`]: e.target.value }))}
+                                             onChange={(e) => setColumnLabels((prev) => ({ ...prev, [`group_${field}`]: e.target.value }))}
                                              onBlur={() => setEditingColumn(null)}
                                              onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                           />
@@ -261,7 +269,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                            return (
                               <React.Fragment key={`m-${mIdx}`}>
-                                 {(temporalConfig?.sources || []).map((source: any) => {
+                                 {(temporalConfig?.sources || []).map((source) => {
                                     const colKey = `${source.id}_${mLabel}`;
                                     const width = columnWidths[colKey] || 120;
                                     const headerStyle = getCellFormatting([], colKey, undefined, mLabel, 'data');
@@ -286,7 +294,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                          autoFocus
                                                          className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                                          onClick={(e) => e.stopPropagation()}
-                                                         onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [colKey]: e.target.value }))}
+                                                         onChange={(e) => setColumnLabels((prev) => ({ ...prev, [colKey]: e.target.value }))}
                                                          onBlur={() => setEditingColumn(null)}
                                                          onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                                       />
@@ -345,7 +353,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                                  return (
                                     <React.Fragment key={`m-data-${mIdx}`}>
-                                       {(temporalConfig?.sources || []).map((source: any) => {
+                                       {(temporalConfig?.sources || []).map((source) => {
                                           const value = result.values[source.id]?.[mLabel] || 0;
                                           const delta = result.deltas[source.id]?.[mLabel] || { value: 0, percentage: 0 };
                                           const colKey = `${source.id}_${mLabel}`;
@@ -419,7 +427,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [`row_${field}`]: e.target.value }))}
+                                                onChange={(e) => setColumnLabels((prev) => ({ ...prev, [`row_${field}`]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
@@ -446,7 +454,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               const calcField = metric ? primaryDataset?.calculatedFields?.find(cf => cf.name === metric.field) : null;
                               const formulaTitle = calcField ? `\nFormule: ${calcField.formula}` : '';
 
-                              const headerStyle = getCellFormatting([], col, undefined, metricLabel, 'data');
+                              const headerStyle = getCellFormatting([], col, undefined, metricLabel || '', 'data');
 
                               return (
                                  <th
@@ -468,7 +476,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 autoFocus
                                                 className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900"
                                                 onClick={(e) => e.stopPropagation()}
-                                                onChange={(e) => setColumnLabels((prev: any) => ({ ...prev, [col]: e.target.value }))}
+                                                onChange={(e) => setColumnLabels((prev) => ({ ...prev, [col]: e.target.value }))}
                                                 onBlur={() => setEditingColumn(null)}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }}
                                              />
@@ -480,7 +488,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 e.stopPropagation();
                                                 const info = metricInfoCache.get(col);
                                                 if (info?.metric) onRemoveField('val', info.metric.field);
-                                                else if (colLabel !== 'ALL') onRemoveField('col', colLabel);
+                                                else if (colLabel && colLabel !== 'ALL') onRemoveField('col', colLabel);
                                              }}
                                              className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100"
                                              title="Retirer"
@@ -590,7 +598,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           key={col}
                                           className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
                                        style={{ width, minWidth: width, maxWidth: width, ...customStyle }}
-                                          onClick={() => handleDrilldown(row.keys, colLabel || col, val, metricLabel || '')}
+                                          onClick={() => handleDrilldown(row.keys, colLabel || col, val as string | number | undefined, metricLabel || '')}
                                        >
                                           {formatted}
                                        </td>

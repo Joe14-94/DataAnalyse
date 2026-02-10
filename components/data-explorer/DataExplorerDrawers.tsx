@@ -2,15 +2,16 @@ import React from 'react';
 import { Palette, X, Plus, Trash2, ArrowRight, Link as LinkIcon, AlertTriangle, History, GitCommit, Columns, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { formatDateFr } from '../../utils';
+import { Dataset, ConditionalRule, DataRow } from '../../types';
 
 interface ConditionalFormattingDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    currentDataset: any;
+    currentDataset: Dataset;
     selectedFormatCol: string;
     setSelectedFormatCol: (col: string) => void;
-    newRule: any;
-    setNewRule: (rule: any) => void;
+    newRule: Partial<ConditionalRule>;
+    setNewRule: (rule: Partial<ConditionalRule>) => void;
     handleAddConditionalRule: () => void;
     handleRemoveConditionalRule: (col: string, id: string) => void;
 }
@@ -32,13 +33,13 @@ export const ConditionalFormattingDrawer: React.FC<ConditionalFormattingDrawerPr
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Appliquer sur la colonne</label>
                         <select className="w-full p-2.5 border border-slate-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500 text-sm" value={selectedFormatCol} onChange={e => setSelectedFormatCol(e.target.value)}>
-                            {(currentDataset.fields || []).map((f: any) => <option key={f} value={f}>{f}</option>)}
+                            {(currentDataset.fields || []).map((f) => <option key={f} value={f}>{f}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Règles existantes</label>
                         <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 p-2 rounded border border-slate-200 min-h-[60px]">
-                            {(currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).length === 0 ? <div className="text-xs text-slate-400 italic text-center py-4">Aucune règle définie pour cette colonne.</div> : (currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).map((rule: any) => (
+                            {(currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).length === 0 ? <div className="text-xs text-slate-400 italic text-center py-4">Aucune règle définie pour cette colonne.</div> : (currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).map((rule) => (
                                 <div key={rule.id} className="flex items-center justify-between bg-white p-2 rounded border border-slate-200 shadow-sm text-xs">
                                     <div className="flex items-center gap-2 flex-wrap"><span className="font-mono bg-slate-100 px-1 rounded text-slate-600">{rule.operator === 'gt' ? '>' : rule.operator === 'lt' ? '<' : rule.operator === 'contains' ? 'contient' : '='} {rule.value}</span><ArrowRight className="w-3 h-3 text-slate-400" /><span className={`px-2 py-0.5 rounded ${rule.style.color} ${rule.style.backgroundColor} ${rule.style.fontWeight}`}>Exemple</span></div>
                                     <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-slate-400 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
@@ -49,7 +50,7 @@ export const ConditionalFormattingDrawer: React.FC<ConditionalFormattingDrawerPr
                     <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 space-y-4">
                         <div className="text-sm font-bold text-purple-800 flex items-center gap-2"><Plus className="w-4 h-4" /> Nouvelle règle</div>
                         <div className="flex gap-2">
-                            <select className="w-1/3 p-2 text-xs border-purple-200 rounded focus:ring-purple-500" value={newRule.operator} onChange={e => setNewRule({ ...newRule, operator: e.target.value as any })}>
+                            <select className="w-1/3 p-2 text-xs border-purple-200 rounded focus:ring-purple-500" value={newRule.operator} onChange={e => setNewRule({ ...newRule, operator: e.target.value as ConditionalRule['operator'] })}>
                                 <option value="gt">Supérieur à (&gt;)</option>
                                 <option value="lt">Inférieur à (&lt;)</option>
                                 <option value="eq">Égal à (=)</option>
@@ -86,13 +87,21 @@ export const ConditionalFormattingDrawer: React.FC<ConditionalFormattingDrawerPr
     );
 };
 
+interface VLookupConfig {
+    targetDatasetId: string;
+    primaryKey: string;
+    secondaryKey: string;
+    columnsToAdd: string[];
+    newColumnName: string;
+}
+
 interface VlookupDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    vlookupConfig: any;
-    setVlookupConfig: (config: any) => void;
-    datasets: any[];
-    currentDataset: any;
+    vlookupConfig: VLookupConfig;
+    setVlookupConfig: (config: VLookupConfig) => void;
+    datasets: Dataset[];
+    currentDataset: Dataset | null;
     handleApplyVlookup: () => void;
 }
 
@@ -145,7 +154,7 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                                     onChange={(e) => setVlookupConfig({ ...vlookupConfig, primaryKey: e.target.value })}
                                 >
                                     <option value="">-- Sélectionner un champ --</option>
-                                    {currentDataset?.fields.map((f: any) => (
+                                    {currentDataset?.fields.map((f) => (
                                         <option key={f} value={f}>{f}</option>
                                     ))}
                                 </select>
@@ -161,7 +170,7 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                                     onChange={(e) => setVlookupConfig({ ...vlookupConfig, secondaryKey: e.target.value })}
                                 >
                                     <option value="">-- Sélectionner un champ --</option>
-                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map((f: any) => (
+                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map((f) => (
                                         <option key={f} value={f}>{f}</option>
                                     ))}
                                 </select>
@@ -176,7 +185,7 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                                     4. Colonnes à récupérer
                                 </label>
                                 <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 p-3 rounded border border-slate-200">
-                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map((f: any) => (
+                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map((f) => (
                                         <label key={f} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
                                             <input
                                                 type="checkbox"
@@ -185,7 +194,7 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                                                     if (e.target.checked) {
                                                         setVlookupConfig({ ...vlookupConfig, columnsToAdd: [...vlookupConfig.columnsToAdd, f] });
                                                     } else {
-                                                        setVlookupConfig({ ...vlookupConfig, columnsToAdd: vlookupConfig.columnsToAdd.filter((c: any) => c !== f) });
+                                                        setVlookupConfig({ ...vlookupConfig, columnsToAdd: vlookupConfig.columnsToAdd.filter((c) => c !== f) });
                                                     }
                                                 }}
                                                 className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
@@ -241,11 +250,11 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
 interface DetailsDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    selectedRow: any;
+    selectedRow: (DataRow & { _importDate: string; _batchId: string }) | null;
     trackingKey: string;
     setTrackingKey: (key: string) => void;
-    currentDataset: any;
-    historyData: any[];
+    currentDataset: Dataset;
+    historyData: DataRow[];
 }
 
 export const DetailsDrawer: React.FC<DetailsDrawerProps> = ({
@@ -258,7 +267,7 @@ export const DetailsDrawer: React.FC<DetailsDrawerProps> = ({
                 <div><div className="flex items-center gap-2 mb-1"><History className="w-5 h-5 text-brand-600" /><h3 className="text-lg font-bold text-slate-800">Fiche Détail & Historique</h3></div><p className="text-xs text-slate-500">Suivi de l'entité via la clé : <strong className="text-slate-700">{trackingKey}</strong></p></div>
                 <button onClick={onClose} className="text-slate-400 hover:text-slate-600 bg-white rounded-full p-1 shadow-sm border border-slate-200"><X className="w-5 h-5" /></button>
             </div>
-            <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-brand-500 focus:border-brand-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{(currentDataset.fields || []).map((f: any) => <option key={f} value={f}>{f}</option>)}</select></div>
+            <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3"><span className="text-xs font-bold text-slate-500 uppercase">Clé de réconciliation :</span><select className="text-xs bg-white border-slate-300 rounded py-1 px-2 focus:ring-brand-500 focus:border-brand-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{(currentDataset.fields || []).map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/50 space-y-8">
                 <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                     <div className="bg-brand-50 px-4 py-2 border-b border-brand-100 flex justify-between items-center"><span className="text-xs font-bold text-brand-700 uppercase tracking-wider">État Actuel</span><span className="text-xs bg-white px-2 py-0.5 rounded-full border border-brand-200 text-brand-600 font-mono">{formatDateFr(selectedRow._importDate)}</span></div>
@@ -274,7 +283,7 @@ export const DetailsDrawer: React.FC<DetailsDrawerProps> = ({
                     <div className="space-y-6">
                         {historyData.map((histRow, idx) => {
                             const prevRow = historyData[idx + 1];
-                            const changes = prevRow ? currentDataset.fields.filter((f: any) => String(histRow[f]) !== String(prevRow[f])) : [];
+                            const changes = prevRow ? currentDataset.fields.filter((f) => String(histRow[f]) !== String(prevRow[f])) : [];
                             const isCreation = !prevRow;
                             return (
                                 <div key={histRow._batchId} className="relative pl-10 group">
@@ -310,7 +319,7 @@ export const DetailsDrawer: React.FC<DetailsDrawerProps> = ({
 interface ColumnManagementDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    currentDataset: any;
+    currentDataset: Dataset;
     reorderDatasetFields: (id: string, fields: string[]) => void;
 }
 
@@ -342,7 +351,7 @@ export const ColumnManagementDrawer: React.FC<ColumnManagementDrawerProps> = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">
-                    {(currentDataset.fields || []).map((field: any, idx: number) => (
+                    {(currentDataset.fields || []).map((field, idx: number) => (
                         <div
                             key={field}
                             className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg hover:border-brand-300 transition-all group"

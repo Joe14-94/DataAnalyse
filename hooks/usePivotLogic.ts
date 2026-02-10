@@ -15,7 +15,7 @@ import { usePivotData } from './usePivotData';
 import { formatPivotOutput } from '../logic/pivotEngine';
 import { pivotResultToRows, temporalResultToRows } from '../utils/pivotToDataset';
 
-type DropZoneType = 'row' | 'col' | 'val' | 'filter';
+export type DropZoneType = 'row' | 'col' | 'val' | 'filter' | 'list';
 
 export const usePivotLogic = () => {
     const {
@@ -184,7 +184,7 @@ export const usePivotLogic = () => {
             const prefix = src.isPrimary ? '' : `[${ds.name}] `;
             const fields = [...(ds.fields || []), ...(ds.calculatedFields || []).map(cf => cf.name)].map(f => `${prefix}${f}`);
             return { id: src.id, name: ds.name, isPrimary: src.isPrimary, fields, color: src.color };
-        }).filter(Boolean);
+        }).filter((x): x is NonNullable<typeof x> => x !== null);
     }, [sources, datasets]);
 
     // Sync scroll
@@ -498,7 +498,7 @@ export const usePivotLogic = () => {
         navigate('/data', { state: { prefilledFilters } });
     };
 
-    const handleCellClick = (rowKeys: string[], colLabel: string, value: string | number, metricLabel: string) => {
+    const handleCellClick = (rowKeys: string[], colLabel: string, value: string | number | undefined, metricLabel: string) => {
         if (formattingSelectionRule) {
             const targetKey = colLabel === '' ? (rowKeys[rowKeys.length - 1] || '') : (rowKeys.length === 0 ? colLabel : `${rowKeys.join('\x1F')}|${colLabel}`);
 
@@ -526,7 +526,7 @@ export const usePivotLogic = () => {
         const newItem: SpecificDashboardItem = {
             id,
             label,
-            value,
+            value: value ?? 0,
             rowPath: rowKeys,
             colLabel,
             metricLabel
