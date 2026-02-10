@@ -1,5 +1,5 @@
 import { DataRow, FilterCondition, FilterOperator, JoinType, ETLAggregationType } from '../types';
-import { generateId } from '../utils';
+import { generateId, evaluateFormula } from '../utils';
 
 /**
  * Applique un filtre sur les données
@@ -358,7 +358,7 @@ export const applyMerge = (
 };
 
 /**
- * Colonne calculée (formule simple)
+ * Colonne calculée (formule sécurisée via FormulaParser)
  */
 export const applyCalculate = (
   data: DataRow[],
@@ -367,21 +367,8 @@ export const applyCalculate = (
 ): DataRow[] => {
   return data.map(row => {
     try {
-      // Remplacer les références de colonnes [Col] par leur valeur
-      let expression = formula;
-      const matches = formula.match(/\[([^\]]+)\]/g);
-
-      if (matches) {
-        matches.forEach(match => {
-          const colName = match.slice(1, -1);
-          const value = row[colName] || 0;
-          expression = expression.replace(match, String(value));
-        });
-      }
-
-      // Évaluer l'expression (attention: eval est dangereux en prod)
-      // Pour une version production, utiliser une vraie lib de parsing
-      const result = Function('"use strict"; return (' + expression + ')')();
+      // Évaluer l'expression de manière sécurisée avec le FormulaParser
+      const result = evaluateFormula(row, formula);
 
       return {
         ...row,

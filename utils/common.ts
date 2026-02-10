@@ -382,9 +382,9 @@ export const detectUnit = (values: string[]): string => {
  * BOLT OPTIMIZATION: Sampling on 100 lines and avoid O(N) filter() for large datasets.
  */
 export const detectColumnType = (values: string[]): 'text' | 'number' | 'boolean' | 'date' => {
-  // BOLT OPTIMIZATION: Use a limited sample for performance on large datasets
+  // BOLT OPTIMIZATION: Use a representative sample for performance on large datasets
   const sample: string[] = [];
-  for (let i = 0; i < values.length && sample.length < 100; i++) {
+  for (let i = 0; i < values.length && sample.length < 500; i++) {
     const v = values[i];
     if (v && v.trim() !== '') {
       sample.push(v);
