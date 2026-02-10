@@ -30,10 +30,10 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizes = {
-    xs: "h-7 px-2 text-xs",
-    sm: "h-9 px-3 text-sm",
-    md: "h-10 px-4 py-2 text-sm",
-    lg: "h-12 px-6 text-base"
+    xs: "h-7 px-ds-2 text-xs",
+    sm: "h-9 px-ds-3 text-sm",
+    md: "h-10 px-ds-4 py-ds-2 text-sm",
+    lg: "h-12 px-ds-6 text-base"
   };
 
   const derivedAriaLabel = props['aria-label'] || (typeof props.title === 'string' ? props.title : undefined);

@@ -58,7 +58,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-ds-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={typeof title === 'string' ? 'modal-title' : undefined}
@@ -72,8 +72,8 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Container */}
       <div className={`relative bg-surface rounded-lg shadow-xl w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-border-default`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border-default bg-canvas/30 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between p-ds-4 border-b border-border-default bg-canvas/30 shrink-0">
+          <div className="flex items-center gap-ds-3">
             {icon && <div className="text-brand-600">{icon}</div>}
             {title && (
               typeof title === 'string' ? (
@@ -92,13 +92,13 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6 custom-scrollbar text-txt-main">
+        <div className="flex-1 overflow-auto p-ds-6 custom-scrollbar text-txt-main">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 bg-canvas/30 border-t border-border-default flex justify-end items-center gap-3 shrink-0">
+          <div className="px-ds-6 py-ds-4 bg-canvas/30 border-t border-border-default flex justify-end items-center gap-ds-3 shrink-0">
             {footer}
           </div>
         )}

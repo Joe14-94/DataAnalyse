@@ -94,22 +94,8 @@ export const SettingsProvider: React.FC<{
             root.style.setProperty(`--brand-${key}`, value);
         });
 
-        // Theme specific variables
-        if (uiPrefs.theme === 'dark') {
-            root.style.setProperty('--canvas', '#0f172a'); // slate-950
-            root.style.setProperty('--surface', '#1e293b'); // slate-800
-            root.style.setProperty('--txt-main', '#f8fafc'); // slate-50
-            root.style.setProperty('--txt-secondary', '#cbd5e1'); // slate-300
-            root.style.setProperty('--txt-muted', '#64748b'); // slate-500
-            root.style.setProperty('--border-default', '#334155'); // slate-700
-        } else {
-            root.style.setProperty('--canvas', '#f8fafc'); // slate-50
-            root.style.setProperty('--surface', '#ffffff');
-            root.style.setProperty('--txt-main', '#1e293b'); // slate-800
-            root.style.setProperty('--txt-secondary', '#475569'); // slate-600
-            root.style.setProperty('--txt-muted', '#94a3b8'); // slate-400
-            root.style.setProperty('--border-default', '#e2e8f0'); // slate-200
-        }
+        // Theme specific variables are now handled in index.css via .dark class
+        // This avoids inline styles overriding CSS declarations and improves maintenance.
     }, [uiPrefs]);
 
     return (

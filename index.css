@@ -7,13 +7,29 @@
     --app-font-size: 11px;
     --app-sidebar-width: 176px;
 
+    /* Spacing Tokens */
+    --spacing-px: 1px;
+    --spacing-0: 0px;
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-5: 1.25rem;
+    --spacing-6: 1.5rem;
+    --spacing-8: 2rem;
+    --spacing-10: 2.5rem;
+    --spacing-12: 3rem;
+
     /* DEFAULT LIGHT THEME (BLUE) */
     --brand-50: #eff6ff;
     --brand-100: #dbeafe;
     --brand-200: #bfdbfe;
+    --brand-300: #93c5fd;
+    --brand-400: #60a5fa;
     --brand-500: #3b82f6;
     --brand-600: #2563eb;
     --brand-700: #1d4ed8;
+    --brand-800: #1e40af;
     --brand-900: #1e3a8a;
 
     --canvas: #f8fafc;
@@ -43,6 +59,47 @@
 
     --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --card-radius: 0.5rem;
+  }
+
+  /* DARK THEME */
+  html.dark {
+    --brand-50: #0f172a;
+    --brand-100: #1e293b;
+    --brand-200: #1d4ed8;
+    --brand-300: #2563eb;
+    --brand-400: #3b82f6;
+    --brand-500: #60a5fa;
+    --brand-600: #93c5fd;
+    --brand-700: #bfdbfe;
+    --brand-800: #dbeafe;
+    --brand-900: #eff6ff;
+
+    --canvas: #0f172a;
+    --surface: #1e293b;
+
+    --txt-main: #f8fafc;
+    --txt-secondary: #cbd5e1;
+    --txt-muted: #64748b;
+
+    --border-default: #334155;
+
+    --success-bg: rgba(21, 128, 61, 0.2);
+    --success-text: #4ade80;
+    --success-border: rgba(74, 222, 128, 0.3);
+
+    --warning-bg: rgba(161, 98, 7, 0.2);
+    --warning-text: #facc15;
+    --warning-border: rgba(250, 204, 21, 0.3);
+
+    --danger-bg: rgba(185, 28, 28, 0.2);
+    --danger-text: #f87171;
+    --danger-border: rgba(248, 113, 113, 0.3);
+
+    --info-bg: rgba(3, 105, 161, 0.2);
+    --info-text: #38bdf8;
+    --info-border: rgba(56, 189, 248, 0.3);
+
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
   }
 
   /* MATERIAL STYLE */
