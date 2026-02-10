@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
 import {
     detectColumnType, generateId, exportView, exportPivotToHTML, formatDateLabelForDisplay
@@ -93,6 +94,48 @@ export const usePivotLogic = () => {
        blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, primaryDataset, datasetBatches
     } = usePivotData({
        sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig, searchTerm
+    });
+
+    // --- COLUMN VIRTUALIZATION PREP ---
+    const allDataColumns = useMemo(() => {
+        if (isTemporalMode) {
+            const ms = metrics.length > 0 ? metrics : [{ field: valField, aggType: aggType as PivotMetric['aggType'] }];
+            const cols: { key: string; width: number; isDiff?: boolean }[] = [];
+
+            ms.forEach(m => {
+                const mLabel = m.label || `${m.field} (${m.aggType})`;
+                (temporalConfig?.sources || []).forEach(source => {
+                    const colKey = `${source.id}_${mLabel}`;
+                    cols.push({ key: colKey, width: columnWidths[colKey] || 120 });
+
+                    if (showVariations && source.id !== temporalConfig?.referenceSourceId) {
+                        cols.push({ key: `${colKey}_DELTA`, width: 60, isDiff: true });
+                    }
+                });
+            });
+            return cols;
+        } else if (pivotData) {
+            return (pivotData.colHeaders || []).map(h => ({
+                key: h,
+                width: columnWidths[h] || 120
+            }));
+        }
+        return [];
+    }, [isTemporalMode, pivotData, metrics, valField, aggType, temporalConfig, showVariations, columnWidths]);
+
+    const rowVirtualizer = useVirtualizer({
+        count: isTemporalMode ? temporalResults.length : (pivotData?.displayRows.length || 0),
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 32,
+        overscan: 10,
+    });
+
+    const colVirtualizer = useVirtualizer({
+        horizontal: true,
+        count: allDataColumns.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: (index) => allDataColumns[index].width,
+        overscan: 5,
     });
 
     // --- INITIALISATION ---
@@ -829,6 +872,7 @@ export const usePivotLogic = () => {
         // Data & Hooks
         batches, currentDataset, datasets, savedAnalyses, primaryDataset, datasetBatches,
         blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, chartPivotData,
+        rowVirtualizer, colVirtualizer, allDataColumns,
         // UI State
         isInitialized, sources, setSources, selectedBatchId, setSelectedBatchId,
         rowFields, setRowFields, colFields, setColFields, valField, setValField,

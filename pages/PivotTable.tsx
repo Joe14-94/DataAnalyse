@@ -49,6 +49,7 @@ export const PivotTable: React.FC = () => {
         draggedField, isTemporalMode, setIsTemporalMode,
         temporalConfig, setTemporalConfig, isTemporalSourceModalOpen, setIsTemporalSourceModalOpen,
         parentRef, footerRef,
+        rowVirtualizer, colVirtualizer, allDataColumns,
         allAvailableFields, usedFields, groupedFields, isColFieldDate,
         handleValFieldChange, handleDragStart, handleDrop, removeField,
         handleExport, handleExportSpreadsheet, handleCellClick,
@@ -56,13 +57,6 @@ export const PivotTable: React.FC = () => {
         handleRemoveCalculatedField, handleSaveSpecificDashboard, handleSaveAnalysis,
         handleSaveAsDataset, handleReset, companyLogo
     } = usePivotLogic();
-
-    const rowVirtualizer = useVirtualizer({
-        count: pivotData ? pivotData.displayRows.length : 0,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 35,
-        overscan: 20
-    });
 
     return (
         <div className="h-full flex flex-col p-2 gap-2 relative bg-slate-50">
@@ -114,7 +108,8 @@ export const PivotTable: React.FC = () => {
                     )}
                     <PivotGrid
                        {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, colFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
-                       handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting, virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, parentRef,
+                       handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting,
+                       virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, colVirtualizer, allDataColumns, parentRef,
                        isSelectionMode, isFormattingSelectionMode: !!formattingSelectionRule, selectedItems: specificDashboardItems, isEditMode,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,

@@ -7,21 +7,21 @@ interface Token {
   value: string;
 }
 
-// BOLT OPTIMIZATION: Global cache for tokenized formulas to avoid repeated parsing
-const FORMULA_CACHE = new Map<string, Token[]>();
+type Evaluator = (row: any) => any;
 
-class FormulaParser {
+// BOLT OPTIMIZATION: Global cache for compiled formulas
+const COMPILE_CACHE = new Map<string, Evaluator>();
+
+class FormulaCompiler {
   private pos = 0;
   private tokens: Token[];
-  private row: any;
 
-  constructor(tokens: Token[], row: any) {
+  constructor(tokens: Token[]) {
     this.tokens = tokens;
-    this.row = row;
   }
 
   private error(message: string): never {
-    throw new Error(`Erreur de formule: ${message}`);
+    throw new Error(`Erreur de compilation de formule: ${message}`);
   }
 
   public static tokenize(input: string): Token[] {
@@ -31,10 +31,8 @@ class FormulaParser {
     while (cursor < input.length) {
       const char = input[cursor];
 
-      // BOLT OPTIMIZATION: Faster whitespace check (including non-breaking space for FR format)
       if (char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\u00A0') { cursor++; continue; }
 
-      // BOLT OPTIMIZATION: Faster digit check
       if (char >= '0' && char <= '9') {
         let val = '';
         while (cursor < input.length && ((input[cursor] >= '0' && input[cursor] <= '9') || input[cursor] === '.')) val += input[cursor++];
@@ -48,7 +46,6 @@ class FormulaParser {
         let val = '';
         while (cursor < input.length) {
           if (input[cursor] === quote) {
-            // Check for escaped quote (double quote)
             if (input[cursor + 1] === quote) {
               val += quote;
               cursor += 2;
@@ -68,13 +65,10 @@ class FormulaParser {
         cursor++;
         let val = '';
         while (cursor < input.length && input[cursor] !== ']') val += input[cursor++];
-
-        // Vérifier que le bracket fermant a bien été trouvé
         if (cursor >= input.length || input[cursor] !== ']') {
           throw new Error(`Erreur de syntaxe: bracket fermant ']' manquant pour le champ`);
         }
-
-        cursor++; // Consommer le ']'
+        cursor++;
         tokens.push({ type: 'FIELD', value: val });
         continue;
       }
@@ -115,61 +109,66 @@ class FormulaParser {
     return this.tokens[this.pos++];
   }
 
-  public evaluate(): any {
+  public compile(): Evaluator {
     this.pos = 0;
-    if (this.tokens.length === 0) return null;
+    if (this.tokens.length === 0) return () => null;
     return this.parseExpression();
   }
 
-  private parseExpression(): any {
-    let left = this.parseTerm();
+  private parseExpression(): Evaluator {
+    let leftEval = this.parseTerm();
     while (this.peek().type === 'OPERATOR' && ['+', '-', '>', '<', '>=', '<=', '=', '<>'].includes(this.peek().value)) {
       const op = this.consume().value;
-      const right = this.parseTerm();
-      if (op === '+') left = parseSmartNumber(left) + parseSmartNumber(right);
-      else if (op === '-') left = parseSmartNumber(left) - parseSmartNumber(right);
-      else if (op === '>') left = left > right;
-      else if (op === '<') left = left < right;
-      else if (op === '>=') left = left >= right;
-      else if (op === '<=') left = left <= right;
-      else if (op === '=') left = left == right;
-      else if (op === '<>') left = left != right;
+      const rightEval = this.parseTerm();
+      const prevLeft = leftEval;
+
+      if (op === '+') leftEval = (row) => parseSmartNumber(prevLeft(row)) + parseSmartNumber(rightEval(row));
+      else if (op === '-') leftEval = (row) => parseSmartNumber(prevLeft(row)) - parseSmartNumber(rightEval(row));
+      else if (op === '>') leftEval = (row) => prevLeft(row) > rightEval(row);
+      else if (op === '<') leftEval = (row) => prevLeft(row) < rightEval(row);
+      else if (op === '>=') leftEval = (row) => prevLeft(row) >= rightEval(row);
+      else if (op === '<=') leftEval = (row) => prevLeft(row) <= rightEval(row);
+      else if (op === '=') leftEval = (row) => prevLeft(row) == rightEval(row);
+      else if (op === '<>') leftEval = (row) => prevLeft(row) != rightEval(row);
     }
-    return left;
+    return leftEval;
   }
 
-  private parseTerm(): any {
-    let left = this.parseFactor();
+  private parseTerm(): Evaluator {
+    let leftEval = this.parseFactor();
     while (this.peek().type === 'OPERATOR' && ['*', '/'].includes(this.peek().value)) {
       const op = this.consume().value;
-      const right = this.parseFactor();
-      if (op === '*') left = parseSmartNumber(left) * parseSmartNumber(right);
-      else if (op === '/') {
-        const r = parseSmartNumber(right);
-        left = r !== 0 ? parseSmartNumber(left) / r : 0;
-      }
+      const rightEval = this.parseFactor();
+      const prevLeft = leftEval;
+
+      if (op === '*') leftEval = (row) => parseSmartNumber(prevLeft(row)) * parseSmartNumber(rightEval(row));
+      else if (op === '/') leftEval = (row) => {
+        const r = parseSmartNumber(rightEval(row));
+        return r !== 0 ? parseSmartNumber(prevLeft(row)) / r : 0;
+      };
     }
-    return left;
+    return leftEval;
   }
 
-  private parseFactor(): any {
+  private parseFactor(): Evaluator {
     const token = this.peek();
 
     if (token.type === 'NUMBER') {
-      this.consume();
-      return parseFloat(token.value);
+      const val = parseFloat(this.consume().value);
+      return () => val;
     }
 
     if (token.type === 'STRING') {
-      this.consume();
-      return token.value;
+      const val = this.consume().value;
+      return () => val;
     }
 
     if (token.type === 'FIELD') {
-      this.consume();
-      const val = this.row[token.value];
-      // Retourner la valeur brute, les opérateurs et fonctions se chargeront de la conversion si nécessaire
-      return val === undefined ? null : val;
+      const fieldName = this.consume().value;
+      return (row) => {
+          const val = row[fieldName];
+          return val === undefined ? null : val;
+      };
     }
 
     if (token.type === 'IDENTIFIER') {
@@ -178,155 +177,132 @@ class FormulaParser {
 
     if (token.type === 'LPAREN') {
       this.consume();
-      const expr = this.parseExpression();
+      const exprEval = this.parseExpression();
       if (this.peek().type === 'RPAREN') this.consume();
-      return expr;
+      return exprEval;
     }
 
-    // Unary minus
     if (token.type === 'OPERATOR' && token.value === '-') {
       this.consume();
-      return -this.parseFactor();
+      const factorEval = this.parseFactor();
+      return (row) => -parseSmartNumber(factorEval(row));
     }
 
-    // Token invalide : lever une exception au lieu de retourner 0
     this.error(`Token inattendu: ${token.type} "${token.value}"`);
   }
 
-  private parseFunctionCall(): any {
+  private parseFunctionCall(): Evaluator {
     const funcName = this.consume().value;
-    if (this.peek().type !== 'LPAREN') return 0;
-    this.consume(); // (
+    if (this.peek().type !== 'LPAREN') return () => 0;
+    this.consume();
 
-    const args: any[] = [];
+    const argEvals: Evaluator[] = [];
     if (this.peek().type !== 'RPAREN') {
-      args.push(this.parseExpression());
+      argEvals.push(this.parseExpression());
       while (this.peek().type === 'COMMA') {
         this.consume();
-        args.push(this.parseExpression());
+        argEvals.push(this.parseExpression());
       }
     }
     if (this.peek().type === 'RPAREN') this.consume();
 
-    // Dispatch Function
     switch (funcName) {
       case 'SI': case 'IF':
-        return args[0] ? args[1] : args[2];
+        return (row) => argEvals[0](row) ? argEvals[1](row) : argEvals[2](row);
       case 'SOMME': case 'SUM':
-        return args.reduce((a, b) => a + parseSmartNumber(b), 0);
+        return (row) => argEvals.reduce((a, b) => a + parseSmartNumber(b(row)), 0);
       case 'MOYENNE': case 'AVG': case 'AVERAGE':
-        const nums = args.map(a => parseSmartNumber(a));
-        return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+        return (row) => {
+           const nums = argEvals.map(a => parseSmartNumber(a(row)));
+           return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+        };
       case 'MIN':
-        return Math.min(...args.map(n => parseSmartNumber(n)));
+        return (row) => Math.min(...argEvals.map(n => parseSmartNumber(n(row))));
       case 'MAX':
-        return Math.max(...args.map(n => parseSmartNumber(n)));
+        return (row) => Math.max(...argEvals.map(n => parseSmartNumber(n(row))));
       case 'ABS':
-        return Math.abs(parseSmartNumber(args[0]));
+        return (row) => Math.abs(parseSmartNumber(argEvals[0](row)));
       case 'ARRONDI': case 'ROUND':
-        const p = Math.pow(10, parseSmartNumber(args[1]));
-        return Math.round(parseSmartNumber(args[0]) * p) / p;
-
-      // --- STRING FUNCTIONS ---
+        return (row) => {
+            const p = Math.pow(10, parseSmartNumber(argEvals[1](row)));
+            return Math.round(parseSmartNumber(argEvals[0](row)) * p) / p;
+        };
       case 'CONCAT': case 'CONCATENER':
-        // CONCAT(texte1, texte2, ..., séparateur_optionnel)
-        if (args.length > 1) {
-          const lastArg = String(args[args.length - 1] || '');
-          if (lastArg.length <= 3 && args.length > 2) {
-            const separator = lastArg;
-            return args.slice(0, -1).map(a => String(a || '')).join(separator);
-          }
-        }
-        return args.map(a => String(a || '')).join('');
-
+        return (row) => {
+           const args = argEvals.map(e => e(row));
+           if (args.length > 1) {
+             const lastArg = String(args[args.length - 1] || '');
+             if (lastArg.length <= 3 && args.length > 2) {
+               const separator = lastArg;
+               return args.slice(0, -1).map(a => String(a || '')).join(separator);
+             }
+           }
+           return args.map(a => String(a || '')).join('');
+        };
       case 'REMPLACER': case 'REPLACE':
-        const text = String(args[0] || '');
-        const search = String(args[1] || '');
-        const replacement = String(args[2] || '');
-        try {
-          return text.replace(new RegExp(search, 'g'), replacement);
-        } catch (e) {
-          console.warn(`Regex invalide: ${search}`);
-          return text;
-        }
-
+        return (row) => {
+           const text = String(argEvals[0](row) || '');
+           const search = String(argEvals[1](row) || '');
+           const replacement = String(argEvals[2](row) || '');
+           try {
+             return text.replace(new RegExp(search, 'g'), replacement);
+           } catch (e) { return text; }
+        };
       case 'SUBSTITUER': case 'SUBSTITUTE':
-        const textSub = String(args[0] || '');
-        const oldText = String(args[1] || '');
-        const newText = String(args[2] || '');
-        return textSub.split(oldText).join(newText);
-
+        return (row) => String(argEvals[0](row) || '').split(String(argEvals[1](row) || '')).join(String(argEvals[2](row) || ''));
       case 'EXTRAIRE': case 'SUBSTRING': case 'MID':
-        const textExt = String(args[0] || '');
-        const start = Number(args[1] || 0);
-        const length = args[2] !== undefined ? Number(args[2]) : undefined;
-        return length !== undefined ? textExt.substring(start, start + length) : textExt.substring(start);
-
+        return (row) => {
+           const text = String(argEvals[0](row) || '');
+           const start = Number(argEvals[1](row) || 0);
+           const length = argEvals[2] !== undefined ? Number(argEvals[2](row)) : undefined;
+           return length !== undefined ? text.substring(start, start + length) : text.substring(start);
+        };
       case 'GAUCHE': case 'LEFT':
-        const textLeft = String(args[0] || '');
-        const leftLen = Number(args[1] || 0);
-        return textLeft.substring(0, leftLen);
-
+        return (row) => String(argEvals[0](row) || '').substring(0, Number(argEvals[1](row) || 0));
       case 'DROITE': case 'RIGHT':
-        const textRight = String(args[0] || '');
-        const rightLen = Number(args[1] || 0);
-        return textRight.substring(textRight.length - rightLen);
-
+        return (row) => {
+           const text = String(argEvals[0](row) || '');
+           const len = Number(argEvals[1](row) || 0);
+           return text.substring(text.length - len);
+        };
       case 'LONGUEUR': case 'LENGTH': case 'LEN':
-        return String(args[0] || '').length;
-
+        return (row) => String(argEvals[0](row) || '').length;
       case 'TROUVE': case 'FIND': case 'SEARCH':
-        const searchText = String(args[0] || '');
-        const textFind = String(args[1] || '');
-        const startPos = args[2] !== undefined ? Number(args[2]) : 0;
-        const index = textFind.indexOf(searchText, startPos);
-        return index;
-
+        return (row) => String(argEvals[1](row) || '').indexOf(String(argEvals[0](row) || ''), argEvals[2] !== undefined ? Number(argEvals[2](row)) : 0);
       case 'CONTIENT': case 'CONTAINS': case 'INCLUS':
-        const textContains = String(args[0] || '');
-        const searchContains = String(args[1] || '');
-        return textContains.includes(searchContains);
-
+        return (row) => String(argEvals[0](row) || '').includes(String(argEvals[1](row) || ''));
       case 'SUPPRESPACE': case 'TRIM': case 'NETTOYER':
-        return String(args[0] || '').trim();
-
+        return (row) => String(argEvals[0](row) || '').trim();
       case 'MAJUSCULE': case 'UPPER':
-        return String(args[0] || '').toUpperCase();
-
+        return (row) => String(argEvals[0](row) || '').toUpperCase();
       case 'MINUSCULE': case 'LOWER':
-        return String(args[0] || '').toLowerCase();
-
+        return (row) => String(argEvals[0](row) || '').toLowerCase();
       case 'CAPITALISEPREMIER': case 'CAPITALIZE':
-        const textCap = String(args[0] || '');
-        return textCap.charAt(0).toUpperCase() + textCap.slice(1).toLowerCase();
-
+        return (row) => {
+           const text = String(argEvals[0](row) || '');
+           return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+        };
       case 'CAPITALISEMOTS': case 'PROPER': case 'TITLE':
-        const textProper = String(args[0] || '');
-        return textProper.split(' ').map(word =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-        ).join(' ');
-
+        return (row) => String(argEvals[0](row) || '').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
       default:
-        return 0;
+        return () => 0;
     }
   }
 }
 
-/**
- * Évalue une formule de manière sécurisée sans utiliser eval() ni new Function()
- */
 export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean'): number | string | boolean | null => {
   if (!formula || !formula.trim()) return null;
 
   try {
-    let tokens = FORMULA_CACHE.get(formula);
-    if (!tokens) {
-      tokens = FormulaParser.tokenize(formula);
-      FORMULA_CACHE.set(formula, tokens);
+    let evaluator = COMPILE_CACHE.get(formula);
+    if (!evaluator) {
+      const tokens = FormulaCompiler.tokenize(formula);
+      const compiler = new FormulaCompiler(tokens);
+      evaluator = compiler.compile();
+      COMPILE_CACHE.set(formula, evaluator);
     }
 
-    const parser = new FormulaParser(tokens, row);
-    let result = parser.evaluate();
+    const result = evaluator(row);
 
     if (outputType) {
       if (outputType === 'text') {
