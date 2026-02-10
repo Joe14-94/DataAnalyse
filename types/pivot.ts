@@ -51,6 +51,7 @@ export interface PivotResult {
   displayRows: PivotRow[];
   colTotals: Record<string, number | string>;
   grandTotal: number | string | Record<string, number | string>;
+  isTemporal?: boolean;
 }
 
 export interface PivotJoin {

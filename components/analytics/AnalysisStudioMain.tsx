@@ -9,6 +9,25 @@ import { Table as TableIcon, Activity, BarChart3 } from 'lucide-react';
 import { AnalysisMode, ChartType } from '../../hooks/useAnalysisStudioLogic';
 import { TreemapContent } from './AnalysisStudioComponents';
 import { formatChartValue } from '../../logic/pivotToChart';
+import { PivotConfig } from '../../types';
+
+interface SnapshotAggregationItem {
+    name: string;
+    value: number;
+    value2: number;
+    size: number;
+    cumulative?: number;
+    [key: string]: number | string | undefined;
+}
+
+interface TrendTimePoint {
+    date: string;
+    displayDate: string;
+    total: number | null;
+    total2: number;
+    forecast?: number;
+    [key: string]: number | string | null | undefined;
+}
 
 interface AnalysisStudioMainProps {
     mode: AnalysisMode;
@@ -22,8 +41,14 @@ interface AnalysisStudioMainProps {
     isCumulative: boolean;
     showTable: boolean;
     showForecast: boolean;
-    snapshotData: any;
-    trendData: any;
+    snapshotData: {
+        data: SnapshotAggregationItem[];
+        series: string[];
+    };
+    trendData: {
+        data: TrendTimePoint[];
+        series: string[];
+    };
     chartColors: string[];
     customUnit: string;
     chartTitle: string;
@@ -35,6 +60,8 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
     isCumulative, showTable, showForecast, snapshotData, trendData, chartColors,
     customUnit, chartTitle, insightText
 }) => {
+    const commonPivotConfig = { valFormatting: { unit: customUnit } } as unknown as PivotConfig;
+
     const tooltipStyle = {
         backgroundColor: '#ffffff',
         borderRadius: '6px',
@@ -64,12 +91,12 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {snapshotData.data.map((row: any, idx: number) => (
+                                {snapshotData.data.map((row, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-50">
                                         <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.name}</td>
                                         <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.value.toLocaleString()}</td>
                                         {metric2 !== 'none' && <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">{row.value2?.toLocaleString()}</td>}
-                                        {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{row.cumulative.toLocaleString()}</td>}
+                                        {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{row.cumulative?.toLocaleString()}</td>}
                                         {snapshotData.series.map((s: string) => <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>)}
                                     </tr>
                                 ))}
@@ -91,7 +118,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {trendData.data.map((row: any, idx: number) => (
+                                {trendData.data.map((row, idx: number) => (
                                     <tr key={idx} className={`hover:bg-slate-50 ${row.date === 'prediction' ? 'bg-indigo-50/50 italic' : ''}`}>
                                         <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.displayDate}</td>
                                         <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total !== null ? row.total.toLocaleString() : '-'}</td>
@@ -119,7 +146,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                         <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
                         <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
                         {metric2 !== 'none' && !isStacked && <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={12} />}
-                        <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(Number(val) * 100).toFixed(1)}%` : formatChartValue(Number(val), commonPivotConfig)} />
                         <Legend verticalAlign="top" iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
 
                         {trendData.series.map((s: string, idx: number) => {
@@ -156,7 +183,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                             <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} fontSize={11} height={60} stroke="#94a3b8" />
                             <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
                             {metric2 !== 'none' && !isStacked && <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={12} />}
-                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(Number(val) * 100).toFixed(1)}%` : formatChartValue(Number(val), commonPivotConfig)} />
 
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (
@@ -164,7 +191,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 ))
                             ) : (
                                 <Bar yAxisId="left" dataKey="value" name={metric === 'sum' ? `Somme (${valueField})` : (metric === 'distinct' ? 'Distinct' : 'Nombre')} radius={[4, 4, 0, 0]}>
-                                    {snapshotData.data.map((entry: any, index: number) => (
+                                    {snapshotData.data.map((_, index: number) => (
                                         <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                     ))}
                                 </Bar>
@@ -189,7 +216,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                             <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
                             <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(val * 100).toFixed(1)}%` : formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(Number(val) * 100).toFixed(1)}%` : formatChartValue(Number(val), commonPivotConfig)} />
 
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (
@@ -197,7 +224,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 ))
                             ) : (
                                 <Bar dataKey="value" name={metric === 'sum' ? 'Somme' : 'Volume'} radius={[0, 4, 4, 0]}>
-                                    {snapshotData.data.map((entry: any, index: number) => (
+                                    {snapshotData.data.map((_, index: number) => (
                                         <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                     ))}
                                 </Bar>
@@ -222,13 +249,13 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 dataKey="value"
                                 stroke="#fff"
                                 strokeWidth={2}
-                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                label={({ name, percent }: { name: string; percent: number }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                             >
-                                {snapshotData.data.map((entry: any, index: number) => (
+                                {snapshotData.data.map((_, index: number) => (
                                     <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
                             <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
                         </PieChart>
                     </ResponsiveContainer>
@@ -242,7 +269,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                             <YAxis stroke="#94a3b8" fontSize={12} />
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (
                                     <Area key={s} type="monotone" dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />
@@ -269,7 +296,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                             ) : (
                                 <Radar name={metric === 'sum' ? 'Somme' : 'Volume'} dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.3} />
                             )}
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
                             {segment && <Legend verticalAlign="top" />}
                         </RadarChart>
                     </ResponsiveContainer>
@@ -285,7 +312,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                             fill="#8884d8"
                             content={<TreemapContent colors={chartColors} />}
                         >
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
                         </Treemap>
                     </ResponsiveContainer>
                 );
@@ -302,20 +329,20 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 outerRadius={60}
                                 fill="#8884d8"
                             >
-                                {snapshotData.data.map((entry: any, index: number) => (
+                                {snapshotData.data.map((_, index: number) => (
                                     <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                 ))}
                             </Pie>
                             {segment && (
                                 <Pie
-                                    data={snapshotData.data.flatMap((d: any) => snapshotData.series.map((s: string) => ({ name: `${d.name} - ${s}`, value: d[s] || 0, parentColor: chartColors[snapshotData.data.indexOf(d) % chartColors.length] })))}
+                                    data={snapshotData.data.flatMap((d) => snapshotData.series.map((s: string) => ({ name: `${d.name} - ${s}`, value: Number(d[s]) || 0, parentColor: chartColors[snapshotData.data.indexOf(d) % chartColors.length] })))}
                                     dataKey="value"
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={70}
                                     outerRadius={100}
                                 >
-                                    {snapshotData.data.flatMap((d: any, idx: number) => snapshotData.series.map((s: string, sIdx: number) => (
+                                    {snapshotData.data.flatMap((_, idx: number) => snapshotData.series.map((s: string, sIdx: number) => (
                                         <Cell key={`cell-outer-${idx}-${sIdx}`} fill={chartColors[sIdx % chartColors.length]} />
                                     )))}
                                 </Pie>
@@ -333,11 +360,11 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 background
                                 dataKey="value"
                             >
-                                {snapshotData.data.map((entry: any, index: number) => (
+                                {snapshotData.data.map((_, index: number) => (
                                     <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                 ))}
                             </RadialBar>
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
                             <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ right: 0, top: 0, bottom: 0, width: 140 }} />
                         </RadialBarChart>
                     </ResponsiveContainer>
@@ -346,14 +373,14 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                 return (
                     <ResponsiveContainer width="100%" height="100%">
                         <FunnelChart>
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => formatChartValue(val, { valFormatting: { unit: customUnit } } as any)} />
+                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
                             <Funnel
                                 dataKey="value"
                                 data={snapshotData.data}
                                 isAnimationActive
                             >
                                 <LabelList position="right" fill="#64748b" stroke="none" dataKey="name" fontSize={11} />
-                                {snapshotData.data.map((entry: any, index: number) => (
+                                {snapshotData.data.map((_, index: number) => (
                                     <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                 ))}
                             </Funnel>
@@ -363,11 +390,11 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
             case 'kpi':
                 return (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto h-full p-2">
-                        {snapshotData.data.map((item: any, idx: number) => (
+                        {snapshotData.data.map((item, idx: number) => (
                             <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col items-center justify-center text-center">
                                 <div className="text-xs text-slate-500 uppercase font-bold truncate w-full mb-2" title={item.name}>{item.name}</div>
                                 <div className="text-2xl font-bold text-slate-700">{item.value.toLocaleString()}</div>
-                                {isCumulative && <div className="text-xs text-slate-400 mt-1">Cumul: {item.cumulative.toLocaleString()}</div>}
+                                {isCumulative && item.cumulative !== undefined && <div className="text-xs text-slate-400 mt-1">Cumul: {item.cumulative.toLocaleString()}</div>}
                             </div>
                         ))}
                     </div>

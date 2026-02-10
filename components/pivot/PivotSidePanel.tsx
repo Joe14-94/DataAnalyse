@@ -1,10 +1,15 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette, Pencil, RotateCcw } from 'lucide-react';
-import { PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig, AggregationType, DateGrouping } from '../../types';
+import {
+   PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig,
+   AggregationType, DateGrouping, TemporalComparisonConfig, PivotMetric,
+   CalculatedField
+} from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
 import { formatDateFr } from '../../utils';
 import { Checkbox } from '../ui/Checkbox';
+import { DropZoneType } from '../../hooks/usePivotLogic';
 
 interface PivotSidePanelProps {
    sources: PivotSourceConfig[];
@@ -20,8 +25,8 @@ interface PivotSidePanelProps {
    isTemporalConfigPanelCollapsed: boolean;
    setIsTemporalConfigPanelCollapsed: (v: boolean) => void;
    setIsTemporalSourceModalOpen: (v: boolean) => void;
-   temporalConfig: any;
-   setTemporalConfig: (c: any) => void;
+   temporalConfig: TemporalComparisonConfig | null;
+   setTemporalConfig: (c: TemporalComparisonConfig | null) => void;
    rowFields: string[];
    setRowFields: (f: string[]) => void;
    colFields: string[];
@@ -31,15 +36,15 @@ interface PivotSidePanelProps {
    setValField: (f: string) => void;
    aggType: AggregationType;
    setAggType: (t: AggregationType) => void;
-   metrics: any[];
-   setMetrics: (m: any[]) => void;
+   metrics: PivotMetric[];
+   setMetrics: (m: PivotMetric[]) => void;
    valFormatting: Partial<FieldConfig>;
    setValFormatting: (f: Partial<FieldConfig>) => void;
    filters: FilterRule[];
    setFilters: (f: FilterRule[]) => void;
    isFieldsPanelCollapsed: boolean;
    setIsFieldsPanelCollapsed: (v: boolean) => void;
-   groupedFields: any[];
+   groupedFields: { id: string; name: string; isPrimary: boolean; fields: string[]; color: string }[];
    expandedSections: Record<string, boolean>;
    toggleSection: (id: string) => void;
    usedFields: Set<string>;
@@ -54,26 +59,26 @@ interface PivotSidePanelProps {
    setShowTotalCol: (v: boolean) => void;
    showVariations: boolean;
    setShowVariations: (v: boolean) => void;
-   handleDragStart: (e: React.DragEvent, field: string, source: any) => void;
+   handleDragStart: (e: React.DragEvent, field: string, source: DropZoneType) => void;
    handleDragOver: (e: React.DragEvent) => void;
-   handleDrop: (e: React.DragEvent, targetZone: any) => void;
-   removeField: (zone: any, field: string, index?: number) => void;
+   handleDrop: (e: React.DragEvent, targetZone: DropZoneType) => void;
+   removeField: (zone: DropZoneType, field: string, index?: number) => void;
    draggedField: string | null;
    openCalcModal?: () => void;
    removeCalculatedField?: (id: string) => void;
-   openEditCalcModal?: (field: any) => void;
+   openEditCalcModal?: (field: CalculatedField) => void;
    openFormattingModal: () => void;
    handleReset: () => void;
 }
 
 const FieldChip: React.FC<{
    field: string,
-   zone: string,
+   zone: DropZoneType,
    onDelete?: () => void,
    onEdit?: () => void,
    disabled?: boolean,
    color?: string,
-   handleDragStart: (e: React.DragEvent, field: string, source: any) => void,
+   handleDragStart: (e: React.DragEvent, field: string, source: DropZoneType) => void,
    isCalculated?: boolean
 }> = ({ field, zone, onDelete, onEdit, disabled, color = 'blue', handleDragStart, isCalculated }) => {
    const isJoined = field.startsWith('[');

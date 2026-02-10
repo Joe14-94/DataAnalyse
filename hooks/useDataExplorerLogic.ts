@@ -27,7 +27,7 @@ type DataExplorerAction =
     | { type: 'UPDATE_COLUMN_FILTER'; payload: { key: string; value: string } }
     | { type: 'SET_SELECTED_COL'; payload: string | null }
     | { type: 'SET_RENAMING_VALUE'; payload: string }
-    | { type: 'SET_SELECTED_ROW'; payload: DataRow | null }
+    | { type: 'SET_SELECTED_ROW'; payload: (DataRow & { _importDate: string; _batchId: string }) | null }
     | { type: 'SET_DRAWER_OPEN'; payload: boolean }
     | { type: 'SET_TRACKING_KEY'; payload: string }
     | { type: 'SET_CALC_MODAL_OPEN'; payload: boolean }
@@ -57,7 +57,7 @@ interface DataExplorerState {
     columnFilters: Record<string, string>;
     selectedCol: string | null;
     renamingValue: string;
-    selectedRow: DataRow | null;
+    selectedRow: (DataRow & { _importDate: string; _batchId: string }) | null;
     isDrawerOpen: boolean;
     trackingKey: string;
     isCalcModalOpen: boolean;
@@ -318,7 +318,7 @@ export function useDataExplorerLogic() {
         };
     }, [state.resizingColumn, state.resizeStartX, state.resizeStartWidth]);
 
-    const handleRowClick = (row: DataRow) => {
+    const handleRowClick = (row: DataRow & { _importDate: string; _batchId: string }) => {
         if (state.isEditMode) return;
         dispatch({ type: 'SET_SELECTED_ROW', payload: row });
         dispatch({ type: 'SET_DRAWER_OPEN', payload: true });
