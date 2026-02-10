@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, ChevronDown, ChevronUp, BookOpen, Trash2, ArrowUp, ArrowDown, Wand2, Type as TypeIcon, Scissors, Layers, MessageSquare } from 'lucide-react';
+import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, ChevronDown, ChevronUp, BookOpen, Trash2, ArrowUp, ArrowDown, Wand2, Type as TypeIcon, Scissors, Layers, MessageSquare, Copy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { evaluateFormula, generateId } from '../../utils';
 import { CalculatedField, CalculatedFieldAction, CalculatedFieldActionType } from '../../types';
@@ -26,6 +26,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
     const [actions, setActions] = useState<CalculatedFieldAction[]>(initialField?.actions || []);
 
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
+    const [copied, setCopied] = useState(false);
     const [showExamples, setShowExamples] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -47,6 +48,15 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
             setActions([]);
         }
     }, [initialField, isOpen]);
+
+    // --- ACCESSIBILITY (ESCAPE KEY) ---
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [isOpen, onClose]);
 
     useEffect(() => {
         if (!formula) {
@@ -274,7 +284,14 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             onChange={e => setFormula(e.target.value)}
                                         />
                                         <div className="absolute bottom-2 right-2 flex gap-1">
-                                            <button onClick={() => setFormula('')} className="p-1 text-slate-300 hover:text-slate-500 transition-colors" title="Effacer"><X className="w-3 h-3" /></button>
+                                            <button
+                                                onClick={() => setFormula('')}
+                                                className="p-1 text-slate-300 hover:text-slate-500 transition-colors"
+                                                title="Effacer la formule"
+                                                aria-label="Effacer la formule"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
                                         </div>
                                     </div>
                                     <p className="text-xs text-slate-400 italic">
@@ -457,7 +474,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             key={f}
                                             title={f}
                                             onClick={() => insertIntoFormula(`[${f}]`)}
-                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
+                                            className="group text-left px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-between"
                                         >
                                             <span className="truncate flex-1 font-medium">{f}</span>
                                             <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
@@ -489,7 +506,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                             className="w-full text-left px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
                                                         >
                                                             <div className="flex justify-between items-center mb-0.5">
-                                                                <span className="text-[11px] font-bold text-indigo-700 font-mono">{fn.name}</span>
+                                                                <span className="text-xs font-bold text-indigo-700 font-mono">{fn.name}</span>
                                                                 <Plus className="w-3 h-3 text-slate-300 group-hover:text-indigo-500" />
                                                             </div>
                                                             <div className="text-xs text-slate-400 font-mono mb-1">{fn.syntax}</div>
@@ -506,13 +523,32 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                     </div>
 
                     {/* Preview Section */}
-                    <div className={`p-4 rounded-xl border ${previewResult?.error ? 'bg-red-50 border-red-200' : 'bg-green-50/50 border-green-200'} transition-all shadow-sm`}>
+                    <div className={`p-4 rounded-xl border ${previewResult?.error ? 'bg-red-50 border-red-200' : 'bg-green-50/50 border-green-200'} transition-all shadow-sm relative group/preview`}>
                         <div className="flex items-center justify-between mb-2">
                             <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${previewResult?.error ? 'text-red-700' : 'text-green-700'}`}>
                                 {previewResult?.error ? <X className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
                                 {previewResult?.error ? 'Erreur dans la formule' : 'Aperçu du résultat'}
                             </span>
-                            {!previewResult?.error && formula && <span className="text-xs text-green-600 font-medium italic">Calculé sur la 1ère ligne</span>}
+                            {!previewResult?.error && formula && previewResult && (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-green-600 font-medium italic">Calculé sur la 1ère ligne</span>
+                                    {previewResult.value !== null && (
+                                        <button
+                                            onClick={() => {
+                                                const val = String(previewResult!.value) + (unit && outputType === 'number' ? ` ${unit}` : '');
+                                                navigator.clipboard.writeText(val);
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="flex items-center gap-1 text-xs font-bold text-green-700 bg-white px-2 py-0.5 rounded border border-green-200 hover:bg-green-100 transition-colors shadow-sm"
+                                            title="Copier le résultat"
+                                        >
+                                            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                            {copied ? 'Copié !' : 'Copier'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className={`text-base font-mono break-all ${previewResult?.error ? 'text-red-800 italic opacity-80' : 'text-slate-800 font-bold'}`}>
                             {previewResult ? (previewResult.error || (previewResult.value === null ? 'null' : String(previewResult.value)) + (unit && outputType === 'number' ? ` ${unit}` : '')) : <span className="text-slate-400 italic">Saisissez une formule pour voir un aperçu...</span>}

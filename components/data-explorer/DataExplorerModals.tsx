@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, GitCommit } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { formatDateFr } from '../../utils';
@@ -10,6 +10,14 @@ interface DeleteRowModalProps {
 }
 
 export const DeleteRowModal: React.FC<DeleteRowModalProps> = ({ deleteConfirmRow, onClose, onConfirm }) => {
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (deleteConfirmRow) window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [deleteConfirmRow, onClose]);
+
     if (!deleteConfirmRow) return null;
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
