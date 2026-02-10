@@ -21,6 +21,8 @@ export const AnalysisStudio: React.FC = () => {
         chartColors,
         insightText,
         savedAnalyses,
+        isDateMetric,
+        isDateMetric2,
         handlers
     } = useAnalysisStudioLogic();
 
@@ -160,6 +162,8 @@ export const AnalysisStudio: React.FC = () => {
                     customUnit={state.customUnit}
                     chartTitle={state.chartTitle}
                     insightText={insightText}
+                    isDateMetric={isDateMetric}
+                    isDateMetric2={isDateMetric2}
                 />
             </div>
         </div>

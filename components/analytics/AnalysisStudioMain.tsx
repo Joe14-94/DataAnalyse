@@ -2,7 +2,7 @@ import React from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell,
-    PieChart, Pie, AreaChart, Area, Treemap, LineChart, Line, ComposedChart,
+    PieChart, Pie, AreaChart, Area, Treemap, Line, ComposedChart,
     RadialBarChart, RadialBar, FunnelChart, Funnel, LabelList
 } from 'recharts';
 import { Table as TableIcon, Activity, BarChart3 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { AnalysisMode, ChartType } from '../../hooks/useAnalysisStudioLogic';
 import { TreemapContent } from './AnalysisStudioComponents';
 import { formatChartValue } from '../../logic/pivotToChart';
 import { PivotConfig } from '../../types';
+import { formatDateFr } from '../../utils';
 
 interface SnapshotAggregationItem {
     name: string;
@@ -53,12 +54,14 @@ interface AnalysisStudioMainProps {
     customUnit: string;
     chartTitle: string;
     insightText: string;
+    isDateMetric?: boolean;
+    isDateMetric2?: boolean;
 }
 
 export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
     mode, dimension, metric, valueField, metric2, valueField2, segment, chartType,
     isCumulative, showTable, showForecast, snapshotData, trendData, chartColors,
-    customUnit, chartTitle, insightText
+    customUnit, chartTitle, insightText, isDateMetric = false, isDateMetric2 = false
 }) => {
     const commonPivotConfig = { valFormatting: { unit: customUnit } } as unknown as PivotConfig;
 
@@ -144,9 +147,40 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                     <ComposedChart data={trendData.data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }} stackOffset={isPercent ? 'expand' : undefined}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="displayDate" stroke="#94a3b8" fontSize={12} />
-                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
-                        {metric2 !== 'none' && !isStacked && <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={12} />}
-                        <Tooltip contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(Number(val) * 100).toFixed(1)}%` : formatChartValue(Number(val), commonPivotConfig)} />
+                        <YAxis
+                            yAxisId="left"
+                            stroke="#94a3b8"
+                            fontSize={12}
+                            tickFormatter={(val) => {
+                                if (isPercent) return `${(val * 100).toFixed(0)}%`;
+                                if (isDateMetric) return formatDateFr(val);
+                                return val.toLocaleString();
+                            }}
+                        />
+                        {metric2 !== 'none' && !isStacked && (
+                            <YAxis
+                                yAxisId="right"
+                                orientation="right"
+                                stroke="#6366f1"
+                                fontSize={12}
+                                tickFormatter={(val) => {
+                                    if (isDateMetric2) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
+                        )}
+                        <Tooltip
+                            contentStyle={tooltipStyle}
+                            formatter={(val: number | string, name: string) => {
+                                if (isPercent) return `${(Number(val) * 100).toFixed(1)}%`;
+                                if (name === 'total2' || name.endsWith('_m2')) {
+                                    if (isDateMetric2) return formatDateFr(val);
+                                } else if (isDateMetric) {
+                                    return formatDateFr(val);
+                                }
+                                return formatChartValue(Number(val), commonPivotConfig);
+                            }}
+                        />
                         <Legend verticalAlign="top" iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
 
                         {trendData.series.map((s: string, idx: number) => {
@@ -181,9 +215,41 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                         <ComposedChart data={snapshotData.data} margin={{ top: 20, right: 10, left: 0, bottom: 0 }} stackOffset={isPercent ? 'expand' : undefined}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} fontSize={11} height={60} stroke="#94a3b8" />
-                            <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
-                            {metric2 !== 'none' && !isStacked && <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={12} />}
-                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(Number(val) * 100).toFixed(1)}%` : formatChartValue(Number(val), commonPivotConfig)} />
+                            <YAxis
+                                yAxisId="left"
+                                stroke="#94a3b8"
+                                fontSize={12}
+                                tickFormatter={(val) => {
+                                    if (isPercent) return `${(val * 100).toFixed(0)}%`;
+                                    if (isDateMetric) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
+                            {metric2 !== 'none' && !isStacked && (
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    stroke="#6366f1"
+                                    fontSize={12}
+                                    tickFormatter={(val) => {
+                                        if (isDateMetric2) return formatDateFr(val);
+                                        return val.toLocaleString();
+                                    }}
+                                />
+                            )}
+                            <Tooltip
+                                cursor={{ fill: '#f8fafc' }}
+                                contentStyle={tooltipStyle}
+                                formatter={(val: number | string, name: string) => {
+                                    if (isPercent) return `${(Number(val) * 100).toFixed(1)}%`;
+                                    if (name === 'value2') {
+                                        if (isDateMetric2) return formatDateFr(val);
+                                    } else if (isDateMetric) {
+                                        return formatDateFr(val);
+                                    }
+                                    return formatChartValue(Number(val), commonPivotConfig);
+                                }}
+                            />
 
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (
@@ -214,9 +280,26 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={snapshotData.data} layout="vertical" margin={{ top: 20, right: 30, left: 10, bottom: 5 }} stackOffset={isPercent ? 'expand' : undefined}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                            <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
+                            <XAxis
+                                type="number"
+                                stroke="#94a3b8"
+                                fontSize={12}
+                                tickFormatter={(val) => {
+                                    if (isPercent) return `${(val * 100).toFixed(0)}%`;
+                                    if (isDateMetric) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
                             <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} formatter={(val: any) => isPercent ? `${(Number(val) * 100).toFixed(1)}%` : formatChartValue(Number(val), commonPivotConfig)} />
+                            <Tooltip
+                                cursor={{ fill: '#f8fafc' }}
+                                contentStyle={tooltipStyle}
+                                formatter={(val: number | string) => {
+                                    if (isPercent) return `${(Number(val) * 100).toFixed(1)}%`;
+                                    if (isDateMetric) return formatDateFr(val);
+                                    return formatChartValue(Number(val), commonPivotConfig);
+                                }}
+                            />
 
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (

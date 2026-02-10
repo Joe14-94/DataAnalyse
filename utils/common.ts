@@ -213,6 +213,16 @@ export const getDaysDifference = (dateStr: any): number => {
 };
 
 /**
+ * Formate une différence en jours (delta de dates)
+ */
+export const formatDateDelta = (days: number): string => {
+  if (days === 0) return '-';
+  const prefix = days > 0 ? '+' : '';
+  const rounded = Math.round(days * 10) / 10; // Garder une décimale si nécessaire
+  return `${prefix}${rounded} j`;
+};
+
+/**
  * Extrait un nombre depuis une chaine avec potentiellement une unité
  * Optimisé pour la performance (Regex pre-compilé pour cas généraux)
  */

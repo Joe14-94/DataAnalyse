@@ -145,11 +145,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       return map;
    }, [effectiveMetrics]);
 
-   const formatOutput = (val: string | number | undefined | null, metric?: PivotMetric) => {
+   const formatOutput = (val: string | number | undefined | null, metric?: PivotMetric, isDelta: boolean = false) => {
       if (val === undefined || val === null) return '';
       const field = metric?.field || valField;
       const type = metric?.aggType || aggType;
-      return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
+      return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting, isDelta);
    };
 
    const isItemSelected = React.useCallback((rowKeys: string[], colLabel: string) => {
@@ -293,7 +293,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     const delta = result.deltas[sourceId]?.[mLabel] || { value: 0, percentage: 0 };
                                     return (
                                        <td key={colKey} className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>
-                                          {temporalConfig?.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatOutput(delta.value, metricLabelMap.get(mLabel)) : '-')}
+                                          {temporalConfig?.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatOutput(delta.value, metricLabelMap.get(mLabel), true) : '-')}
                                        </td>
                                     );
                                  }
@@ -396,10 +396,13 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     const val = row.metrics[colKey];
                                     const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(colKey) || {};
                                     const customStyle = getCellFormatting(row.keys, colKey, val, metricLabel || '', row.type);
-                                    let formatted = formatOutput(val, metric);
+                                 let formatted = formatOutput(val, metric, isDiff);
                                     let cellClass = "text-slate-600";
                                     if (isDiff) {
-                                       if (Number(val) > 0) { formatted = `+${formatted}`; cellClass = "text-green-600 font-bold"; }
+                                    if (Number(val) > 0) {
+                                        if (!formatted.startsWith('+')) formatted = `+${formatted}`;
+                                        cellClass = "text-green-600 font-bold";
+                                    }
                                        else if (Number(val) < 0) { cellClass = "text-red-600 font-bold"; }
                                        else cellClass = "text-slate-400";
                                     } else if (isPct) {

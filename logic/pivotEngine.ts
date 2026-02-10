@@ -476,16 +476,31 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   };
 };
 
+import { formatDateDelta } from '../utils/common';
+
 /**
  * Helper de formatage d'affichage
  */
-export const formatPivotOutput = (val: number | string, valField: string, aggType: string, dataset?: Dataset | null, secondaryDatasetId?: string, allDatasets?: Dataset[], overrideConfig?: Partial<FieldConfig>) => {
+export const formatPivotOutput = (
+    val: number | string,
+    valField: string,
+    aggType: string,
+    dataset?: Dataset | null,
+    secondaryDatasetId?: string,
+    allDatasets?: Dataset[],
+    overrideConfig?: Partial<FieldConfig>,
+    isDelta: boolean = false
+) => {
     if (val === undefined || val === null) return '-';
     if (typeof val === 'string') return val;
     
     // Utiliser config standard si numérique
     if (aggType !== 'count' && valField) {
         if (overrideConfig && (overrideConfig.decimalPlaces !== undefined || overrideConfig.displayScale !== undefined || overrideConfig.unit)) {
+            // Pour un delta de date, on utilise formatDateDelta au lieu du formatage standard
+            if (isDelta && overrideConfig.type === 'date' && typeof val === 'number') {
+                return formatDateDelta(val);
+            }
             return formatNumberValue(val, overrideConfig as FieldConfig);
         }
 
@@ -515,7 +530,13 @@ export const formatPivotOutput = (val: number | string, valField: string, aggTyp
            }
         }
         
-        if (config) return formatNumberValue(val, config);
+        if (config) {
+            // Pour un delta de date, on utilise formatDateDelta
+            if (isDelta && config.type === 'date' && typeof val === 'number') {
+                return formatDateDelta(val);
+            }
+            return formatNumberValue(val, config);
+        }
     }
     
     // Fallback
