@@ -351,7 +351,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           colSpan={isSubtotal && gIdx === subtotalLevel ? numFields - subtotalLevel : 1}
                                           onClick={() => handleDrilldown(result.groupLabel.split('\x1F').slice(0, gIdx + 1), '', undefined, '')}
                                        >
-                                          {(!isSubtotal || gIdx <= subtotalLevel) ? (gIdx === subtotalLevel && isSubtotal ? `Total ${label}` : label) : ''}
+                                          {(!isSubtotal || gIdx <= subtotalLevel) ?
+                                             (gIdx === subtotalLevel && isSubtotal
+                                                ? `Total ${primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(label) : label}`
+                                                : (primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(label) : label))
+                                             : ''}
                                        </td>
                                     );
                                  });
@@ -547,7 +551,9 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50 overflow-hidden truncate sticky left-0 z-20"
                                           style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
                                              >
-                                                {row.keys[cIdx]}
+                                                {primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date'
+                                                   ? formatDateLabelForDisplay(row.keys[cIdx])
+                                                   : row.keys[cIdx]}
                                              </td>
                                           );
                                        }
@@ -559,7 +565,9 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                                 className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate sticky left-0 z-20 bg-slate-50"
                                                 style={{ left: `${left}px`, ...headerStyle }}
                                              >
-                                                {row.label}
+                                                {row.label?.startsWith('Total ') && primaryDataset?.fieldConfigs?.[rowFields[row.level]]?.type === 'date'
+                                                   ? `Total ${formatDateLabelForDisplay(row.label.substring(6))}`
+                                                   : row.label}
                                              </td>
                                           );
                                        }
@@ -572,7 +580,9 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                           style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
                                           onClick={() => handleDrilldown(row.keys.slice(0, cIdx + 1), '', undefined, '')}
                                        >
-                                          {row.keys[cIdx]}
+                                          {primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date'
+                                             ? formatDateLabelForDisplay(row.keys[cIdx])
+                                             : row.keys[cIdx]}
                                        </td>
                                     );
                                  })}

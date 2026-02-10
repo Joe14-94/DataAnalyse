@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import {
-    detectColumnType, generateId, exportView, exportPivotToHTML
+    detectColumnType, generateId, exportView, exportPivotToHTML, formatDateLabelForDisplay
 } from '../utils';
 import * as XLSX from 'xlsx';
 import {
@@ -289,12 +289,14 @@ export const usePivotLogic = () => {
                     temporalColTotals,
                     metrics: metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []),
                     showVariations,
-                    formatOutput
+                    formatOutput,
+                    fieldConfigs: primaryDataset?.fieldConfigs
                 });
             } else if (pivotData) {
                 exportPivotToHTML(pivotData, rowFields, showTotalCol, title, companyLogo, {
                     formatOutput,
-                    metrics: metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : [])
+                    metrics: metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []),
+                    fieldConfigs: primaryDataset?.fieldConfigs
                 });
             } else {
                 alert("Aucune donnée à exporter");
@@ -348,13 +350,15 @@ export const usePivotLogic = () => {
                 const isSubtotal = result.isSubtotal;
                 const subLevel = result.subtotalLevel || 0;
 
-                rowFields.forEach((_, idx) => {
+                rowFields.forEach((field, idx) => {
+                    const rawValue = keys[idx] || '';
+                    const label = primaryDataset?.fieldConfigs?.[field]?.type === 'date' ? formatDateLabelForDisplay(rawValue) : rawValue;
                     if (isSubtotal) {
-                        if (idx === subLevel) rowData.push(`Total ${keys[idx]}`);
-                        else if (idx < subLevel) rowData.push(keys[idx]);
+                        if (idx === subLevel) rowData.push(`Total ${label}`);
+                        else if (idx < subLevel) rowData.push(label);
                         else rowData.push('');
                     } else {
-                        rowData.push(keys[idx] || '');
+                        rowData.push(label);
                     }
                 });
 
@@ -406,7 +410,9 @@ export const usePivotLogic = () => {
                         const indent = row.type === 'subtotal' && index === row.keys.length - 1
                             ? '  '.repeat(row.level || 0)
                             : '';
-                        rowData.push(indent + row.keys[index]);
+                        const rawValue = row.keys[index] || '';
+                        const label = primaryDataset?.fieldConfigs?.[field]?.type === 'date' ? formatDateLabelForDisplay(rawValue) : rawValue;
+                        rowData.push(indent + label);
                     } else {
                         rowData.push('');
                     }

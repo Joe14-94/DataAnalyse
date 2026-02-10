@@ -1,3 +1,5 @@
+import { formatDateLabelForDisplay } from './common';
+
 /**
  * EXPORT UTILS
  * Supports PDF, HTML and PNG exports.
@@ -222,7 +224,8 @@ export const exportPivotToHTML = (
     temporalColTotals?: any,
     metrics?: any[],
     showVariations?: boolean,
-    formatOutput?: (val: any, metric?: any) => string
+    formatOutput?: (val: any, metric?: any) => string,
+    fieldConfigs?: Record<string, any>
   } = {}
 ) => {
   const timestamp = new Date().toISOString().split('T')[0];
@@ -263,13 +266,15 @@ export const exportPivotToHTML = (
         const keys = result.groupLabel.split('\x1F');
         const subLevel = result.subtotalLevel || 0;
 
-        rowFields.forEach((_, idx) => {
+        rowFields.forEach((field, idx) => {
+          const rawValue = keys[idx] || '';
+          const label = options.fieldConfigs?.[field]?.type === 'date' ? formatDateLabelForDisplay(rawValue) : rawValue;
           if (result.isSubtotal) {
-            if (idx === subLevel) tableHTML += `<td class="row-label">Total ${keys[idx]}</td>`;
-            else if (idx < subLevel) tableHTML += `<td class="row-label">${keys[idx]}</td>`;
+            if (idx === subLevel) tableHTML += `<td class="row-label">Total ${label}</td>`;
+            else if (idx < subLevel) tableHTML += `<td class="row-label">${label}</td>`;
             else tableHTML += '<td class="row-label"></td>';
           } else {
-            tableHTML += `<td class="row-label">${keys[idx] || ''}</td>`;
+            tableHTML += `<td class="row-label">${label}</td>`;
           }
         });
 
@@ -332,7 +337,9 @@ export const exportPivotToHTML = (
         rowFields.forEach((field, index) => {
           if (index < row.keys.length) {
             const indent = row.type === 'subtotal' && index === row.keys.length - 1 ? '&nbsp;&nbsp;'.repeat(row.level || 0) : '';
-            tableHTML += `<td class="row-label">${indent}${row.keys[index]}</td>`;
+            const rawValue = row.keys[index] || '';
+            const label = options.fieldConfigs?.[field]?.type === 'date' ? formatDateLabelForDisplay(rawValue) : rawValue;
+            tableHTML += `<td class="row-label">${indent}${label}</td>`;
           } else { tableHTML += '<td class="row-label"></td>'; }
         });
         pivotData.colHeaders.forEach((colHeader: string) => {
