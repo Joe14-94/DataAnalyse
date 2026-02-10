@@ -224,7 +224,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         <option value="date">Date</option>
                                     </select>
                                 </div>
-                                {outputType === 'number' ? (
+                                {outputType === 'number' && (
                                     <div>
                                         <label className="block text-xs font-bold text-txt-muted uppercase mb-1.5 tracking-wider">Unité</label>
                                         <input
@@ -235,7 +235,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             onChange={e => setUnit(e.target.value)}
                                         />
                                     </div>
-                                ) : <div />}
+                                )}
                             </div>
 
                             <div className="pt-2">
@@ -325,7 +325,6 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                                             <input type="text" className="w-full text-xs border border-border-default rounded px-2 py-1 bg-canvas" placeholder="Remplacer" value={action.params.replacement || ''} onChange={e => updateAction(action.id, { replacement: e.target.value })} />
                                                         </div>
                                                     )}
-                                                    {/* Other simplified action inputs */}
                                                 </div>
                                             </div>
                                         ))
