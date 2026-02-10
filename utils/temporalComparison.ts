@@ -277,6 +277,7 @@ export const calculateTemporalComparison = (
       return sortOrder === 'asc' ? a.groupLabel.localeCompare(b.groupLabel) : b.groupLabel.localeCompare(a.groupLabel);
     } else {
       // Logic for sorting by value (needs to handle specific metric if possible, defaulting to first metric)
+      if (metrics.length === 0) return 0;
       const firstMetricLabel = metrics[0].label || `${metrics[0].field} (${metrics[0].aggType})`;
       const valA = a.values[sortBy]?.[firstMetricLabel] || 0;
       const valB = b.values[sortBy]?.[firstMetricLabel] || 0;
