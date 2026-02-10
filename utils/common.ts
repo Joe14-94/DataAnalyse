@@ -535,13 +535,32 @@ export const extractDomain = (email: string): string => {
 export const prepareFilters = (filters: any[]) => {
   return filters.map(f => {
     let preparedValue = f.value;
-    const isArrayIn = (f.operator === 'in' || !f.operator) && Array.isArray(f.value);
+    const isArrayIn = (f.operator === 'in' || !f.operator) && (Array.isArray(f.value) || typeof f.value === 'string');
 
     if (f.operator === 'gt' || f.operator === 'lt') {
       preparedValue = parseSmartNumber(f.value);
     } else if (isArrayIn) {
-      // BOLT OPTIMIZATION: Convert filter array to Set for O(1) lookups
-      preparedValue = new Set((f.value as any[]).map(v => String(v)));
+      if (Array.isArray(f.value)) {
+        // BOLT OPTIMIZATION: Convert filter array to Set for O(1) lookups
+        preparedValue = new Set((f.value as any[]).map(v => String(v)));
+      } else {
+        // Support multiple values as string (e.g. pasted from Excel or comma-separated)
+        const strVal = String(f.value || '');
+        let values: string[] = [];
+
+        // Heuristic: If commas are present, use them as primary separators.
+        // Otherwise, split by semicolon, then by whitespace (space, tab, newline).
+        if (strVal.includes(',')) {
+          values = strVal.split(',').map(v => v.trim());
+        } else if (strVal.includes(';')) {
+          values = strVal.split(';').map(v => v.trim());
+        } else {
+          // Split by any whitespace or special \x1F separator
+          values = strVal.split(/[\s\x1F]+/).map(v => v.trim());
+        }
+
+        preparedValue = new Set(values.filter(v => v !== ''));
+      }
     } else if (typeof f.value === 'string' && f.operator !== 'in') {
       preparedValue = f.value.toLowerCase();
     }

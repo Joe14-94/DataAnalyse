@@ -653,17 +653,24 @@ export function useDataExplorerLogic() {
                     const config = currentDataset?.fieldConfigs?.[f.key];
 
                     if (f.isExact) {
-                        let matched = (valStr === f.lowerFilter);
+                        // Support multiple values in exact match mode (e.g. =Valeur1, Valeur2)
+                        const filterValues = (f.targetVal.includes(',') || f.targetVal.includes(';'))
+                            ? f.targetVal.split(/[;,]+/).map(v => v.trim().toLowerCase()).filter(v => v !== '')
+                            : [f.lowerFilter];
+
+                        let matched = filterValues.some(fv => valStr === fv);
 
                         if (!matched && (config?.type === 'date' || f.key.toLowerCase().includes('date'))) {
-                            if (getGroupedLabel(valStr, 'month').toLowerCase() === f.lowerFilter) matched = true;
-                            else if (getGroupedLabel(valStr, 'year').toLowerCase() === f.lowerFilter) matched = true;
-                            else if (getGroupedLabel(valStr, 'quarter').toLowerCase() === f.lowerFilter) matched = true;
+                            const month = getGroupedLabel(valStr, 'month').toLowerCase();
+                            const year = getGroupedLabel(valStr, 'year').toLowerCase();
+                            const quarter = getGroupedLabel(valStr, 'quarter').toLowerCase();
+                            if (filterValues.some(fv => month === fv || year === fv || quarter === fv)) matched = true;
                         }
 
                         if (!matched && f.key === '_importDate') {
                             const dateStr = val as string;
-                            if (dateStr === f.targetVal || formatDateFr(dateStr) === f.targetVal) matched = true;
+                            const formattedDate = formatDateFr(dateStr).toLowerCase();
+                            if (filterValues.some(fv => dateStr === fv || formattedDate === fv)) matched = true;
                         }
 
                         if (!matched) return false;

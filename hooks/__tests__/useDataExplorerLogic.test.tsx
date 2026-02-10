@@ -108,4 +108,24 @@ describe('useDataExplorerLogic', () => {
     expect(result.current.processedRows).toHaveLength(1);
     expect(result.current.processedRows[0].City).toBe('Paris');
   });
+
+  it('supports multi-value exact match filters', () => {
+    vi.mocked(DataContext.useData).mockReturnValue({
+      batches: mockBatches,
+      currentDataset: mockDatasets[0],
+      currentDatasetId: 'ds1',
+      datasets: mockDatasets,
+      switchDataset: vi.fn(),
+      saveDataExplorerState: vi.fn(),
+      lastDataExplorerState: null,
+    } as any);
+
+    const { result } = renderHook(() => useDataExplorerLogic(), { wrapper });
+
+    act(() => {
+        result.current.handleColumnFilterChange('City', '=Paris, Lyon');
+    });
+
+    expect(result.current.processedRows).toHaveLength(2);
+  });
 });
