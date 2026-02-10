@@ -194,32 +194,60 @@ export function useDataExplorerLogic() {
     const [state, dispatch] = useReducer(dataExplorerReducer, initialState);
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
+    const isInitializedRef = useRef<string | null>(null);
 
-    // --- EFFECT: Handle Drilldown from Navigation ---
+    // --- Initialization (Restore State or Drilldown) ---
+    // BOLT FIX: Consolidated initialization to prevent flickering between drilldown and saved state
     useEffect(() => {
-        if (location.state) {
+        if (!currentDataset) return;
+
+        // Only run if we haven't initialized for this dataset ID yet
+        if (isInitializedRef.current === currentDataset.id) return;
+
+        const hasDrilldown = location.state && (location.state.prefilledFilters || location.state.blendingConfig);
+        const hasSavedState = lastDataExplorerState && lastDataExplorerState.datasetId === currentDataset.id;
+
+        const newState: Partial<DataExplorerState> = {};
+
+        // 1. Handle Drilldown (Prioritary for filters/blending)
+        if (hasDrilldown) {
             if (location.state.prefilledFilters) {
-                dispatch({ type: 'SET_COLUMN_FILTERS', payload: location.state.prefilledFilters });
-                dispatch({ type: 'SET_SEARCH_TERM', payload: '' });
-                dispatch({ type: 'SET_SORT_CONFIG', payload: null });
-                dispatch({ type: 'SET_SHOW_FILTERS', payload: true });
+                newState.columnFilters = location.state.prefilledFilters;
+                newState.searchTerm = '';
+                newState.sortConfig = null;
+                newState.showFilters = true;
             }
             if (location.state.blendingConfig) {
-                dispatch({ type: 'SET_BLENDING_CONFIG', payload: location.state.blendingConfig });
+                newState.blendingConfig = location.state.blendingConfig;
             } else {
-                dispatch({ type: 'SET_BLENDING_CONFIG', payload: null });
+                newState.blendingConfig = null;
             }
         }
-    }, [location.state]);
 
-    // Initialize tracking key
-    useEffect(() => {
-        if (currentDataset && (currentDataset?.fields?.length || 0) > 0 && !state.trackingKey) {
+        // 2. Restore Saved State (for widths, borders, and filters if no drilldown)
+        if (hasSavedState) {
+            if (!hasDrilldown) {
+                newState.searchTerm = lastDataExplorerState.searchTerm || '';
+                newState.sortConfig = lastDataExplorerState.sortConfig || null;
+                newState.showFilters = lastDataExplorerState.showFilters || false;
+                newState.columnFilters = lastDataExplorerState.columnFilters || {};
+                newState.blendingConfig = lastDataExplorerState.blendingConfig || null;
+            }
+            newState.columnWidths = lastDataExplorerState.columnWidths || {};
+            newState.showColumnBorders = lastDataExplorerState.showColumnBorders !== undefined ? lastDataExplorerState.showColumnBorders : true;
+            newState.trackingKey = lastDataExplorerState.trackingKey || '';
+        }
+
+        // 3. Defaults if still missing
+        if (!newState.trackingKey && (currentDataset?.fields?.length || 0) > 0) {
             const candidates = ['email', 'id', 'reference', 'ref', 'code', 'matricule', 'nom'];
             const found = currentDataset.fields.find(f => candidates.includes(f.toLowerCase()));
-            dispatch({ type: 'SET_TRACKING_KEY', payload: found || currentDataset.fields[0] });
+            newState.trackingKey = found || currentDataset.fields[0];
         }
-    }, [currentDataset, state.trackingKey]);
+
+        dispatch({ type: 'RESTORE_STATE', payload: newState });
+        isInitializedRef.current = currentDataset.id;
+    }, [currentDataset, location.state, lastDataExplorerState]);
 
     useEffect(() => {
         if (currentDataset && !state.selectedFormatCol && currentDataset?.fields?.length > 0) {
@@ -233,25 +261,11 @@ export function useDataExplorerLogic() {
         }
     }, [state.selectedCol]);
 
-    // --- Initialization (Restore State) ---
-    useEffect(() => {
-        if (lastDataExplorerState && currentDataset && lastDataExplorerState.datasetId === currentDataset.id) {
-            dispatch({ type: 'RESTORE_STATE', payload: {
-                searchTerm: lastDataExplorerState.searchTerm || '',
-                sortConfig: lastDataExplorerState.sortConfig || null,
-                showFilters: lastDataExplorerState.showFilters || false,
-                columnFilters: lastDataExplorerState.columnFilters || {},
-                columnWidths: lastDataExplorerState.columnWidths || {},
-                showColumnBorders: lastDataExplorerState.showColumnBorders !== undefined ? lastDataExplorerState.showColumnBorders : true,
-                trackingKey: lastDataExplorerState.trackingKey || state.trackingKey,
-                blendingConfig: lastDataExplorerState.blendingConfig || null
-            }});
-        }
-    }, [currentDataset, lastDataExplorerState, state.trackingKey]);
-
     // --- Save State ---
     useEffect(() => {
-        if (!currentDataset) return;
+        // Only save if we have already initialized for the current dataset
+        if (!currentDataset || isInitializedRef.current !== currentDataset.id) return;
+
         saveDataExplorerState({
             datasetId: currentDataset.id,
             searchTerm: state.searchTerm,
