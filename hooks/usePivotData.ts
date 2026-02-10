@@ -1,7 +1,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useBatches, useDatasets } from '../context/DataContext';
-import { PivotSourceConfig, Dataset, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder, PivotMetric } from '../types';
+import { PivotSourceConfig, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder, PivotMetric } from '../types';
 import { evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
@@ -63,15 +63,30 @@ export const usePivotData = ({
        });
    }, [currentBatch, sources, primaryDataset, datasets, batches]);
 
+   // BOLT OPTIMIZATION: Pre-calculate search index for O(N) search performance
+   const blendedRowsWithIndex = useMemo(() => {
+       if (blendedRows.length === 0) return [];
+       const searchableKeys = Object.keys(blendedRows[0]).filter(k => !k.startsWith('_'));
+
+       return blendedRows.map(row => {
+           let searchContent = "";
+           for (let i = 0; i < searchableKeys.length; i++) {
+               const v = row[searchableKeys[i]];
+               if (v !== null && v !== undefined && v !== "") {
+                   searchContent += (searchContent ? " " : "") + String(v);
+               }
+           }
+           return { ...row, _searchIndex: searchContent.toLowerCase() };
+       });
+   }, [blendedRows]);
+
    const filteredRows = useMemo(() => {
        if (!searchTerm.trim()) return blendedRows;
        const term = searchTerm.toLowerCase();
-       return blendedRows.filter(row =>
-           Object.values(row).some(val =>
-               String(val ?? '').toLowerCase().includes(term)
-           )
+       return blendedRowsWithIndex.filter(row =>
+           (row as any)._searchIndex.includes(term)
        );
-   }, [blendedRows, searchTerm]);
+   }, [blendedRows, blendedRowsWithIndex, searchTerm]);
 
    // --- ASYNC CALCULATION (STANDARD) ---
    useEffect(() => {
@@ -119,23 +134,38 @@ export const usePivotData = ({
                    const calcFields = primaryDataset.calculatedFields || [];
                    let rows = batch.rows;
 
-                   if (calcFields.length > 0) {
-                       rows = rows.map(r => {
-                           const enriched = { ...r };
+                   // BOLT OPTIMIZATION: Consolidated pass for enrichment and search indexing
+                   const term = searchTerm.trim().toLowerCase();
+
+                   // Pre-calculate searchable keys once for the entire batch to avoid O(M) work per row
+                   const searchableKeys = rows.length > 0
+                       ? [...Object.keys(rows[0]), ...calcFields.map(cf => cf.name)].filter(k => !k.startsWith('_'))
+                       : [];
+
+                   rows = rows.map(r => {
+                       const enriched = { ...r };
+                       if (calcFields.length > 0) {
                            calcFields.forEach(cf => {
                                enriched[cf.name] = evaluateFormula(enriched, cf.formula);
                            });
-                           return enriched;
-                       });
-                   }
+                       }
 
-                   if (searchTerm.trim()) {
-                       const term = searchTerm.toLowerCase();
-                       rows = rows.filter(row =>
-                           Object.values(row).some(val =>
-                               String(val ?? '').toLowerCase().includes(term)
-                           )
-                       );
+                       if (term) {
+                           // Pre-calculate search index to avoid O(N*M) allocations in filter
+                           let searchContent = "";
+                           for (let i = 0; i < searchableKeys.length; i++) {
+                               const v = enriched[searchableKeys[i]];
+                               if (v !== null && v !== undefined && v !== "") {
+                                   searchContent += (searchContent ? " " : "") + String(v);
+                               }
+                           }
+                           (enriched as any)._searchIndex = searchContent.toLowerCase();
+                       }
+                       return enriched;
+                   });
+
+                   if (term) {
+                       rows = rows.filter(row => (row as any)._searchIndex.includes(term));
                    }
 
                    sourceDataMap.set(source.id, rows);
