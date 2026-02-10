@@ -124,19 +124,25 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                     <div className="space-y-3">
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                             <label className="block text-xs font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
-                            <div className="grid grid-cols-3 gap-1">
-                                {(['count', 'distinct', 'sum'] as MetricType[]).map(m => (
+                            <div className="grid grid-cols-5 gap-1">
+                                {[
+                                    { id: 'count', label: 'Cpt' },
+                                    { id: 'distinct', label: 'Dist' },
+                                    { id: 'sum', label: 'Σ' },
+                                    { id: 'min', label: 'Min' },
+                                    { id: 'max', label: 'Max' }
+                                ].map(m => (
                                     <button
-                                        key={m}
-                                        onClick={() => onSetMetric(m)}
-                                        className={`py-1.5 text-xs font-bold rounded border transition-all ${metric === m ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                        key={m.id}
+                                        onClick={() => onSetMetric(m.id as MetricType)}
+                                        className={`py-1.5 text-[10px] font-bold rounded border transition-all ${metric === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                                     >
-                                        {m === 'count' ? 'Compte' : m === 'distinct' ? 'Distinct' : 'Somme'}
+                                        {m.label}
                                     </button>
                                 ))}
                             </div>
 
-                            {metric === 'sum' && (
+                            {['sum', 'min', 'max'].includes(metric) && (
                                 <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                                     <label className="block text-xs font-black text-slate-500 mb-1 uppercase">Champ de données à afficher (Y1) :</label>
                                     {numericFields.length > 0 ? (
@@ -164,24 +170,26 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                                     <button onClick={() => onSetMetric2('none')} className="text-xs font-bold text-brand-600 hover:underline uppercase">Masquer</button>
                                 )}
                             </div>
-                            <div className="grid grid-cols-4 gap-1">
+                            <div className="grid grid-cols-6 gap-1">
                                 {[
                                     { id: 'none', label: 'Off' },
                                     { id: 'count', label: 'Cpt' },
                                     { id: 'distinct', label: 'Dist' },
-                                    { id: 'sum', label: 'Σ' }
+                                    { id: 'sum', label: 'Σ' },
+                                    { id: 'min', label: 'Min' },
+                                    { id: 'max', label: 'Max' }
                                 ].map(m => (
                                     <button
                                         key={m.id}
                                         onClick={() => onSetMetric2(m.id as any)}
-                                        className={`py-1 text-xs font-black rounded border transition-all ${metric2 === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                        className={`py-1 text-[10px] font-black rounded border transition-all ${metric2 === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                                     >
                                         {m.label}
                                     </button>
                                 ))}
                             </div>
 
-                            {metric2 === 'sum' && (
+                            {['sum', 'min', 'max'].includes(metric2) && (
                                 <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                                     <label className="block text-xs font-black text-brand-600 mb-1 uppercase">Champ de données à afficher (Y2) :</label>
                                     {numericFields.length > 0 ? (

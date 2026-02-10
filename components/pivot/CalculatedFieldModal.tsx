@@ -19,7 +19,7 @@ interface CalculatedFieldModalProps {
 export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOpen, onClose, fields, onSave, initialField, sampleRow }) => {
     const [name, setName] = useState(initialField?.name || '');
     const [formula, setFormula] = useState(initialField?.formula || '');
-    const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean'>(initialField?.outputType || 'number');
+    const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean' | 'date'>(initialField?.outputType || 'number');
     const [unit, setUnit] = useState(initialField?.unit || '');
     const [mode, setMode] = useState<'formula' | 'actions'>(initialField?.mode || 'formula');
     const [actions, setActions] = useState<CalculatedFieldAction[]>(initialField?.actions || []);
@@ -150,6 +150,12 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
         { name: 'ABS', syntax: 'ABS(nombre)', desc: 'Valeur absolue', category: 'Math' },
         { name: 'MIN', syntax: 'MIN(v1, v2...)', desc: 'Valeur minimale', category: 'Math' },
         { name: 'MAX', syntax: 'MAX(v1, v2...)', desc: 'Valeur maximale', category: 'Math' },
+        { name: 'AUJOURDHUI', syntax: 'AUJOURDHUI()', desc: 'Date du jour', category: 'Date' },
+        { name: 'ANNEE', syntax: 'ANNEE(date)', desc: 'Année d\'une date', category: 'Date' },
+        { name: 'MOIS', syntax: 'MOIS(date)', desc: 'Mois d\'une date (1-12)', category: 'Date' },
+        { name: 'JOUR', syntax: 'JOUR(date)', desc: 'Jour d\'une date (1-31)', category: 'Date' },
+        { name: 'DATE', syntax: 'DATE(année, mois, jour)', desc: 'Crée une date', category: 'Date' },
+        { name: 'DATEDIF', syntax: 'DATEDIF(début, fin, unité)', desc: 'Différence entre dates (y, m, d)', category: 'Date' },
         { name: 'CONCAT', syntax: 'CONCAT(texte1, texte2, [sep])', desc: 'Concatène avec séparateur optionnel', category: 'Texte' },
         { name: 'MAJUSCULE', syntax: 'MAJUSCULE(texte)', desc: 'Convertit en majuscules', category: 'Texte' },
         { name: 'MINUSCULE', syntax: 'MINUSCULE(texte)', desc: 'Convertit en minuscules', category: 'Texte' },
@@ -213,6 +219,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                         <option value="number">Nombre</option>
                                         <option value="text">Texte</option>
                                         <option value="boolean">Vrai/Faux</option>
+                                        <option value="date">Date</option>
                                     </select>
                                 </div>
                                 {outputType === 'number' && (
@@ -348,7 +355,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                         </div>
                         <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
                             <div className="space-y-3">
-                                {['Logique', 'Math', 'Texte'].map(category => {
+                                {['Logique', 'Math', 'Texte', 'Date'].map(category => {
                                     const categoryFunctions = functions.filter(fn => fn.category === category);
                                     if (categoryFunctions.length === 0) return null;
                                     return (

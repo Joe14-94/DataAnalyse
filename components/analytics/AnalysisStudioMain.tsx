@@ -63,7 +63,12 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
     isCumulative, showTable, showForecast, snapshotData, trendData, chartColors,
     customUnit, chartTitle, insightText, isDateMetric = false, isDateMetric2 = false
 }) => {
-    const commonPivotConfig = { valFormatting: { unit: customUnit } } as unknown as PivotConfig;
+    const commonPivotConfig = {
+        valFormatting: {
+            unit: customUnit,
+            type: isDateMetric ? 'date' : 'number'
+        }
+    } as unknown as PivotConfig;
 
     const tooltipStyle = {
         backgroundColor: '#ffffff',
@@ -97,10 +102,16 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 {snapshotData.data.map((row, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-50">
                                         <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.name}</td>
-                                        <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.value.toLocaleString()}</td>
-                                        {metric2 !== 'none' && <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">{row.value2?.toLocaleString()}</td>}
+                                        <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">
+                                            {isDateMetric ? formatDateFr(row.value) : row.value.toLocaleString()}
+                                        </td>
+                                        {metric2 !== 'none' && (
+                                            <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">
+                                                {isDateMetric2 ? formatDateFr(row.value2) : row.value2?.toLocaleString()}
+                                            </td>
+                                        )}
                                         {isCumulative && <td className="px-4 py-2 text-sm text-slate-500 text-right">{row.cumulative?.toLocaleString()}</td>}
-                                        {snapshotData.series.map((s: string) => <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>)}
+                                        {snapshotData.series.map((s: string) => <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{isDateMetric ? formatDateFr(Number(row[s])) : row[s]?.toLocaleString()}</td>)}
                                     </tr>
                                 ))}
                             </tbody>
@@ -124,10 +135,16 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 {trendData.data.map((row, idx: number) => (
                                     <tr key={idx} className={`hover:bg-slate-50 ${row.date === 'prediction' ? 'bg-indigo-50/50 italic' : ''}`}>
                                         <td className="px-4 py-2 text-sm text-slate-700 font-medium">{row.displayDate}</td>
-                                        <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">{row.total !== null ? row.total.toLocaleString() : '-'}</td>
-                                        {metric2 !== 'none' && <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">{row.total2?.toLocaleString()}</td>}
+                                        <td className="px-4 py-2 text-sm text-slate-900 text-right font-bold">
+                                            {row.total !== null ? (isDateMetric ? formatDateFr(row.total) : row.total.toLocaleString()) : '-'}
+                                        </td>
+                                        {metric2 !== 'none' && (
+                                            <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">
+                                                {isDateMetric2 ? formatDateFr(row.total2) : row.total2?.toLocaleString()}
+                                            </td>
+                                        )}
                                         {showForecast && <td className="px-4 py-2 text-sm text-indigo-600 text-right font-bold">{row.forecast?.toLocaleString()}</td>}
-                                        {trendData.series.map((s: string) => <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{row[s]?.toLocaleString()}</td>)}
+                                        {trendData.series.map((s: string) => <td key={s} className="px-4 py-2 text-xs text-slate-500 text-right">{isDateMetric ? formatDateFr(Number(row[s])) : row[s]?.toLocaleString()}</td>)}
                                     </tr>
                                 ))}
                             </tbody>
@@ -294,9 +311,13 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                             <Tooltip
                                 cursor={{ fill: '#f8fafc' }}
                                 contentStyle={tooltipStyle}
-                                formatter={(val: number | string) => {
+                                formatter={(val: number | string, name: string) => {
                                     if (isPercent) return `${(Number(val) * 100).toFixed(1)}%`;
-                                    if (isDateMetric) return formatDateFr(val);
+                                    if (name === 'value2') {
+                                        if (isDateMetric2) return formatDateFr(val);
+                                    } else if (isDateMetric) {
+                                        return formatDateFr(val);
+                                    }
                                     return formatChartValue(Number(val), commonPivotConfig);
                                 }}
                             />
@@ -351,8 +372,25 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                         <AreaChart data={snapshotData.data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                            <YAxis stroke="#94a3b8" fontSize={12} />
-                            <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
+                            <YAxis
+                                stroke="#94a3b8"
+                                fontSize={12}
+                                tickFormatter={(val) => {
+                                    if (isDateMetric) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
+                            <Tooltip
+                                contentStyle={tooltipStyle}
+                                formatter={(val: number | string, name: string) => {
+                                    if (name === 'value2') {
+                                        if (isDateMetric2) return formatDateFr(val);
+                                    } else if (isDateMetric) {
+                                        return formatDateFr(val);
+                                    }
+                                    return formatChartValue(Number(val), commonPivotConfig);
+                                }}
+                            />
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (
                                     <Area key={s} type="monotone" dataKey={s} name={s} stackId={isStacked ? 'a' : undefined} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />
@@ -371,7 +409,13 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={snapshotData.data}>
                             <PolarGrid stroke="#e2e8f0" />
                             <PolarAngleAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
-                            <PolarRadiusAxis stroke="#cbd5e1" />
+                            <PolarRadiusAxis
+                                stroke="#cbd5e1"
+                                tickFormatter={(val) => {
+                                    if (isDateMetric) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
                             {segment ? (
                                 snapshotData.series.map((s: string, idx: number) => (
                                     <Radar key={s} name={s} dataKey={s} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.4} />

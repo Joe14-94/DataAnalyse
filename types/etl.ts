@@ -88,7 +88,7 @@ export interface MergeConfig {
 export interface CalculateConfig {
   newColumn: string;
   formula: string;
-  type: 'number' | 'text' | 'boolean';
+  type: 'number' | 'text' | 'boolean' | 'date';
 }
 
 export interface SortConfig {

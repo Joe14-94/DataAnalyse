@@ -106,6 +106,14 @@ export const excelToJSDate = (serial: number): Date => {
   return new Date(Math.round((serial - 25569) * 86400 * 1000));
 };
 
+/**
+ * Convertit un objet Date JS en numéro de série Excel (OLE Automation Date)
+ */
+export const jsToExcelDate = (date: Date): number => {
+  // 25569 est le nombre de jours entre 30/12/1899 et 01/01/1970
+  return (date.getTime() / (1000 * 86400)) + 25569;
+};
+
 // BOLT OPTIMIZATION: Global cache for date parsing to avoid redundant parsing in tight loops
 const DATE_CACHE = new Map<any, Date | null>();
 const MAX_DATE_CACHE_SIZE = 10000;

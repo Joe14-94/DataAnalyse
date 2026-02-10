@@ -254,7 +254,10 @@ export const usePivotLogic = () => {
         setValField(newField);
         setValFormatting({});
         if (blendedRows.length > 0) {
-            const type = detectColumnType(blendedRows.slice(0, 50).map(r => String(r[newField] || '')));
+            let type = primaryDataset?.fieldConfigs?.[newField]?.type;
+            if (!type) {
+                type = detectColumnType(blendedRows.slice(0, 50).map(r => String(r[newField] || '')));
+            }
             const newAgg = (type === 'number' ? 'sum' : (type === 'date' ? 'max' : 'count')) as AggregationType;
             setAggType(newAgg);
 
@@ -290,7 +293,10 @@ export const usePivotLogic = () => {
         else if (targetZone === 'col' && !colFields.includes(field)) setColFields(prev => [...prev, field]);
         else if (targetZone === 'val') {
             if (metrics.length < 15) {
-                const type = blendedRows.length > 0 ? detectColumnType(blendedRows.slice(0, 50).map(r => String(r[field] || ''))) : 'text';
+                let type = primaryDataset?.fieldConfigs?.[field]?.type;
+                if (!type) {
+                    type = blendedRows.length > 0 ? detectColumnType(blendedRows.slice(0, 50).map(r => String(r[field] || ''))) : 'text';
+                }
                 const agg = (type === 'number' ? 'sum' : (type === 'date' ? 'max' : 'count')) as AggregationType;
                 setMetrics(prev => [...prev, { field, aggType: agg }]);
                 if (!valField) {
