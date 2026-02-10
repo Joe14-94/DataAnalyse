@@ -427,11 +427,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                     onChange={(e) => {
                                        const n = [...filters];
                                        const val = e.target.value;
-                                       if (f.operator === 'in') {
-                                          n[idx] = { ...n[idx], value: val.split(',').map(v => v.trim()).filter(v => v !== '') };
-                                       } else {
-                                          n[idx] = { ...n[idx], value: val };
-                                       }
+                                       // On garde la chaîne brute pendant l'édition pour éviter que les caractères (virgules, espaces) ne disparaissent
+                                       n[idx] = { ...n[idx], value: val };
                                        setFilters(n);
                                     }}
                                  />
