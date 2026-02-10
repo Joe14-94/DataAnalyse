@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
-import { X, Maximize2 } from 'lucide-react';
+import { X, LayoutDashboard } from 'lucide-react';
 import { DashboardWidget } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ import { WidgetDrawer } from '../components/dashboard/WidgetDrawer';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { DashboardFilters } from '../components/dashboard/DashboardFilters';
 import { ShareDashboardModal } from '../components/dashboard/ShareDashboardModal';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useWidgetData } from '../hooks/useWidgetData';
 import { useExport } from '../hooks/useExport';
 import { o365Service } from '../services/o365Service';
@@ -213,10 +214,16 @@ export const Dashboard: React.FC = () => {
 
             {/* Grid */}
             {dashboardWidgets.length === 0 ? (
-               <div className="text-center py-20 border-2 border-dashed border-border-default rounded-xl bg-surface">
-                  <div className="w-12 h-12 text-txt-muted mx-auto mb-3" />
-                  <p className="mb-4">Votre tableau de bord est vide.</p>
-                  <button className="px-4 py-2 bg-brand-600 text-white rounded-lg" onClick={() => { setIsEditMode(true); openNewWidget(); }}>Créer mon premier widget</button>
+               <div className="py-20 border-2 border-dashed border-border-default rounded-xl bg-surface">
+                  <EmptyState
+                     icon={<LayoutDashboard />}
+                     title="Votre tableau de bord est vide"
+                     description="Commencez par ajouter des widgets pour visualiser vos indicateurs clés en un coup d'œil."
+                     action={{
+                        label: "Créer mon premier widget",
+                        onClick: () => { setIsEditMode(true); openNewWidget(); }
+                     }}
+                  />
                </div>
             ) : (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
