@@ -287,6 +287,10 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
  * Formate un nombre selon la configuration du champ
  */
 export const formatNumberValue = (value: number | string, config?: FieldConfig): string => {
+  if (config?.type === 'date' && value !== undefined && value !== null && value !== '') {
+    return formatDateFr(value);
+  }
+
   let numVal = typeof value === 'number' ? value : parseSmartNumber(value);
   if (isNaN(numVal)) return String(value);
 

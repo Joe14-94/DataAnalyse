@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table2, Download } from 'lucide-react';
-import { DataRow } from '../../types';
-import { formatNumberValue } from '../../utils';
+import { DataRow, Dataset } from '../../types';
+import { formatNumberValue, formatDateFr } from '../../utils';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 
@@ -11,6 +11,7 @@ interface DrilldownModalProps {
     title: string;
     rows: DataRow[];
     fields: string[];
+    dataset?: Dataset | null;
 }
 
 export const DrilldownModal: React.FC<DrilldownModalProps> = ({
@@ -97,14 +98,17 @@ export const DrilldownModal: React.FC<DrilldownModalProps> = ({
                             >
                                 {fields.map((field, colIdx) => {
                                     const value = row[field];
-                                    let displayValue: string;
+                                    let displayValue: React.ReactNode;
+                                    const config = dataset?.fieldConfigs?.[field];
 
                                     if (value === null || value === undefined) {
                                         displayValue = '-';
                                     } else if (typeof value === 'boolean') {
                                         displayValue = value ? 'Oui' : 'Non';
-                                    } else if (typeof value === 'number') {
-                                        displayValue = formatNumberValue(value);
+                                    } else if (config?.type === 'date') {
+                                        displayValue = formatDateFr(value);
+                                    } else if (config?.type === 'number' || typeof value === 'number') {
+                                        displayValue = formatNumberValue(value, config);
                                     } else {
                                         displayValue = String(value);
                                     }
