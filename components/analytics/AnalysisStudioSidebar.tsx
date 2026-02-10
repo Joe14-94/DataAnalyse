@@ -1,7 +1,7 @@
 import React from 'react';
 import { Database, Table as TableIcon, Filter, Check, LayoutGrid, BarChart3, PieChart as PieIcon, Activity, TrendingUp, Radar as RadarIcon, Settings2, X } from 'lucide-react';
 import { AnalysisMode, ChartType, MetricType } from '../../hooks/useAnalysisStudioLogic';
-import { MultiSelect } from './AnalysisStudioComponents';
+import { MultiSelect } from '../ui/MultiSelect';
 import { FilterRule, ColorMode, ColorPalette } from '../../types';
 import { Dataset } from '../../types/dataset';
 
