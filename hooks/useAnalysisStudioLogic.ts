@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 
 export type AnalysisMode = 'snapshot' | 'trend';
 export type ChartType = 'bar' | 'column' | 'stacked-bar' | 'stacked-column' | 'percent-bar' | 'percent-column' | 'pie' | 'donut' | 'area' | 'stacked-area' | 'radar' | 'treemap' | 'kpi' | 'line' | 'sunburst' | 'radial' | 'funnel';
-export type MetricType = 'count' | 'distinct' | 'sum';
+export type MetricType = 'count' | 'distinct' | 'sum' | 'max' | 'min';
 
 interface AnalysisStudioState {
     mode: AnalysisMode;
@@ -207,20 +207,22 @@ export const useAnalysisStudioLogic = () => {
     [batches, state.selectedBatchId]);
 
     const isDateMetric = useMemo(() => {
-        if (state.metric !== 'sum' || !state.valueField) return false;
+        const m = state.metric;
+        if ((m !== 'sum' && m !== 'max' && m !== 'min') || !state.valueField) return false;
         return currentDataset?.fieldConfigs?.[state.valueField]?.type === 'date';
     }, [state.metric, state.valueField, currentDataset]);
 
     const isDateMetric2 = useMemo(() => {
-        if (state.metric2 !== 'none' && (state.metric2 !== 'sum' || !state.valueField2)) return false;
-        if (state.metric2 === 'none') return false;
+        const m = state.metric2;
+        if (m === 'none') return false;
+        if ((m !== 'sum' && m !== 'max' && m !== 'min') || !state.valueField2) return false;
         return currentDataset?.fieldConfigs?.[state.valueField2]?.type === 'date';
     }, [state.metric2, state.valueField2, currentDataset]);
 
     const numericFields = useMemo(() => {
         if (!currentDataset) return [];
         const configuredNumeric = Object.entries(currentDataset.fieldConfigs || {})
-            .filter(([, config]) => config.type === 'number')
+            .filter(([, config]) => config.type === 'number' || config.type === 'date')
             .map(([name]) => name);
 
         if (configuredNumeric.length > 0) {
@@ -233,7 +235,10 @@ export const useAnalysisStudioLogic = () => {
             return sample.some((r: DataRow) => {
                 const val = r[f];
                 if (val === undefined || val === '' || val === null) return false;
-                return parseSmartNumber(val) !== 0 || val === '0' || val === 0;
+                if (parseSmartNumber(val) !== 0 || val === '0' || val === 0) return true;
+                // Check if it's a date string
+                const strVal = String(val);
+                return /^\d{4}-\d{2}-\d{2}/.test(strVal) || /^\d{2}\/\d{2}\/\d{4}/.test(strVal);
             });
         });
     }, [currentBatch, fields, currentDataset]);
@@ -397,11 +402,27 @@ export const useAnalysisStudioLogic = () => {
             agg[dimVal].count++;
             if (state.metric === 'distinct') agg[dimVal].distinctSet.add(row.id);
             if (state.metric === 'sum' && state.valueField) agg[dimVal].sum += getValue(row, state.valueField);
+            if (state.metric === 'max' && state.valueField) {
+                const v = getValue(row, state.valueField);
+                if (agg[dimVal].sum === 0 || v > agg[dimVal].sum) agg[dimVal].sum = v;
+            }
+            if (state.metric === 'min' && state.valueField) {
+                const v = getValue(row, state.valueField);
+                if (agg[dimVal].sum === 0 || v < agg[dimVal].sum) agg[dimVal].sum = v;
+            }
 
             if (state.metric2 !== 'none') {
                 agg[dimVal].count2++;
                 if (state.metric2 === 'distinct') agg[dimVal].distinctSet2.add(row.id);
                 if (state.metric2 === 'sum' && state.valueField2) agg[dimVal].sum2 += getValue(row, state.valueField2);
+                if (state.metric2 === 'max' && state.valueField2) {
+                    const v = getValue(row, state.valueField2);
+                    if (agg[dimVal].sum2 === 0 || v > agg[dimVal].sum2) agg[dimVal].sum2 = v;
+                }
+                if (state.metric2 === 'min' && state.valueField2) {
+                    const v = getValue(row, state.valueField2);
+                    if (agg[dimVal].sum2 === 0 || v < agg[dimVal].sum2) agg[dimVal].sum2 = v;
+                }
             }
 
             if (state.segment) {
@@ -417,12 +438,12 @@ export const useAnalysisStudioLogic = () => {
             const { distinctSet, distinctSet2, ...rest } = item;
             let finalVal = 0;
             if (state.metric === 'distinct') finalVal = distinctSet.size;
-            else if (state.metric === 'sum') finalVal = parseFloat(item.sum.toFixed(2));
+            else if (state.metric === 'sum' || state.metric === 'max' || state.metric === 'min') finalVal = parseFloat(item.sum.toFixed(2));
             else finalVal = item.count;
 
             let finalVal2 = 0;
             if (state.metric2 === 'distinct') finalVal2 = distinctSet2.size;
-            else if (state.metric2 === 'sum') finalVal2 = parseFloat(item.sum2.toFixed(2));
+            else if (state.metric2 === 'sum' || state.metric2 === 'max' || state.metric2 === 'min') finalVal2 = parseFloat(item.sum2.toFixed(2));
             else if (state.metric2 === 'count') finalVal2 = item.count2;
 
             return { ...rest, value: finalVal, value2: finalVal2, size: finalVal };
@@ -490,6 +511,12 @@ export const useAnalysisStudioLogic = () => {
                 const val = String(row[state.dimension] || 'Non défini');
                 let increment = 1;
                 if (state.metric === 'sum' && state.valueField) increment = getValue(row, state.valueField);
+                if ((state.metric === 'max' || state.metric === 'min') && state.valueField) {
+                    const v = getValue(row, state.valueField);
+                    if (globalCounts[val] === undefined) globalCounts[val] = v;
+                    else globalCounts[val] = state.metric === 'max' ? Math.max(globalCounts[val], v) : Math.min(globalCounts[val], v);
+                    return;
+                }
                 globalCounts[val] = (globalCounts[val] || 0) + increment;
             });
         });
@@ -552,19 +579,42 @@ export const useAnalysisStudioLogic = () => {
                 if (topSeries.includes(val)) {
                     let qty = 1;
                     if (state.metric === 'sum' && state.valueField) qty = getValue(row, state.valueField);
-                    point[val] = parseFloat((( (point[val] as number) || 0) + qty).toFixed(2));
+                    if ((state.metric === 'max' || state.metric === 'min') && state.valueField) {
+                        const v = getValue(row, state.valueField);
+                        if (point[val] === 0 || point[val] === undefined) point[val] = v;
+                        else point[val] = state.metric === 'max' ? Math.max(point[val] as number, v) : Math.min(point[val] as number, v);
+                    } else {
+                        point[val] = parseFloat((( (point[val] as number) || 0) + qty).toFixed(2));
+                    }
 
                     if (state.metric2 !== 'none') {
                         let qty2 = 1;
                         if (state.metric2 === 'sum' && state.valueField2) qty2 = getValue(row, state.valueField2);
-                        point[val + '_m2'] = parseFloat((( (point[val + '_m2'] as number) || 0) + qty2).toFixed(2));
+                        if ((state.metric2 === 'max' || state.metric2 === 'min') && state.valueField2) {
+                            const v = getValue(row, state.valueField2);
+                            if (point[val + '_m2'] === 0 || point[val + '_m2'] === undefined) point[val + '_m2'] = v;
+                            else point[val + '_m2'] = state.metric2 === 'max' ? Math.max(point[val + '_m2'] as number, v) : Math.min(point[val + '_m2'] as number, v);
+                        } else {
+                            point[val + '_m2'] = parseFloat((( (point[val + '_m2'] as number) || 0) + qty2).toFixed(2));
+                        }
                     }
                 }
+
                 if (state.metric === 'sum' && state.valueField) (point.total as number) += getValue(row, state.valueField);
+                else if ((state.metric === 'max' || state.metric === 'min') && state.valueField) {
+                    const v = getValue(row, state.valueField);
+                    if (point.total === 0 || point.total === null) point.total = v;
+                    else point.total = state.metric === 'max' ? Math.max(point.total as number, v) : Math.min(point.total as number, v);
+                }
                 else (point.total as number)++;
 
                 if (state.metric2 !== 'none') {
                     if (state.metric2 === 'sum' && state.valueField2) point.total2 += getValue(row, state.valueField2);
+                    else if ((state.metric2 === 'max' || state.metric2 === 'min') && state.valueField2) {
+                        const v = getValue(row, state.valueField2);
+                        if (point.total2 === 0 || point.total2 === undefined) point.total2 = v;
+                        else point.total2 = state.metric2 === 'max' ? Math.max(point.total2 as number, v) : Math.min(point.total2 as number, v);
+                    }
                     else point.total2++;
                 }
             });

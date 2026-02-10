@@ -10,13 +10,17 @@ import { TreemapContent } from '../../ui/TreemapContent';
 import { SunburstD3 } from '../../charts/SunburstD3';
 import { formatChartValue } from '../../../logic/pivotToChart';
 import { formatDateFr } from '../../../utils';
+import { PivotState } from '../../../types';
 
 interface ChartModalDisplayProps {
-    selectedChartType: any;
+    selectedChartType: string;
     chartData: any[];
-    metadata: any;
+    metadata: {
+        isMultiSeries: boolean;
+        seriesNames: string[];
+    };
     colors: string[];
-    pivotConfig: any;
+    pivotConfig: PivotState['config'];
     sunburstData: any;
     d3HierarchyData: any;
     sunburstColors: string[];
@@ -44,7 +48,7 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
     };
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
         if (!active || !payload || !payload.length) return null;
         const title = label || payload[0].payload.name || '';
         return (
@@ -59,7 +63,7 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
         );
     };
 
-    const TreemapTooltip = ({ active, payload }: any) => {
+    const TreemapTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
         if (!active || !payload || !payload.length) return null;
         const data = payload[0].payload;
         const path = data.path || (treemapDrillPath.length > 0 ? [...treemapDrillPath, data.name] : [data.name]);

@@ -1,6 +1,6 @@
 
 import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters } from '../utils';
-import { FieldConfig, Dataset, FilterRule, PivotJoin, PivotConfig, PivotResult, PivotRow, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
+import { FieldConfig, Dataset, PivotConfig, PivotResult, PivotRow } from '../types';
 
 import { PivotMetric } from '../types/pivot';
 
@@ -31,7 +31,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   } = config;
 
   // Backward compatibility for metrics
-  let activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
+  const activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
     ? config.metrics
     : (config.valField ? [{ field: config.valField, aggType: config.aggType }] : []);
 
@@ -435,7 +435,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const grandTotalStats = computeGroupStats(optimizedRows);
 
   // Construction des headers finaux
-  let finalHeaders: string[] = [];
+  const finalHeaders: string[] = [];
   const metricLabels = metricConfigs.map(mc => mc.label || `${mc.field} (${mc.aggType})`);
 
   if (colFields && colFields.length > 0) {

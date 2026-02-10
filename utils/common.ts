@@ -1,4 +1,4 @@
-import { ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from '../types';
+import { ImportBatch, FieldConfig } from '../types';
 
 // Updated version
 export const APP_VERSION = "2026-02-04-03";
@@ -19,7 +19,7 @@ export const compressBatch = (batch: ImportBatch): any => {
   // On convertit les lignes en tableaux de valeurs
   const data = batch.rows.map(row => fields.map(f => row[f]));
 
-  const { rows, ...meta } = batch;
+  const { rows: _r, ...meta } = batch;
   return {
     ...meta,
     _c: true, // Flag compressé
@@ -34,7 +34,7 @@ export const compressBatch = (batch: ImportBatch): any => {
 export const decompressBatch = (batch: any): ImportBatch => {
   if (!batch || !batch._c) return batch as ImportBatch;
 
-  const { f, d, _c, ...meta } = batch;
+  const { f, d, _c: _comp, ...meta } = batch;
   const rows = d.map((rowValues: any[]) => {
     const row: any = {};
     f.forEach((fieldName: string, i: number) => {
@@ -194,7 +194,7 @@ export const formatDateFr = (dateStr: string | number): string => {
       month: 'long',
       day: 'numeric'
     }).format(date);
-  } catch (e) {
+  } catch {
     return String(dateStr);
   }
 };
@@ -207,7 +207,7 @@ export const getDaysDifference = (dateStr: any): number => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - target.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  } catch (e) {
+  } catch {
     return 999;
   }
 };
@@ -534,7 +534,7 @@ export const extractDomain = (email: string): string => {
   if (!email || typeof email !== 'string' || !email.includes('@')) return 'Inconnu';
   try {
     return email.split('@')[1].trim().toLowerCase();
-  } catch (e) {
+  } catch {
     return 'Format invalide';
   }
 };

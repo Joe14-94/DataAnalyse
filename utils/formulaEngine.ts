@@ -1,4 +1,4 @@
-import { parseSmartNumber } from './common';
+import { parseSmartNumber, parseDateValue } from './common';
 
 type TokenType = 'NUMBER' | 'STRING' | 'FIELD' | 'IDENTIFIER' | 'OPERATOR' | 'LPAREN' | 'RPAREN' | 'COMMA' | 'EOF';
 
@@ -7,7 +7,7 @@ interface Token {
   value: string;
 }
 
-type Evaluator = (row: any) => any;
+type Evaluator = (row: Record<string, unknown>) => unknown;
 
 // BOLT OPTIMIZATION: Global cache for compiled formulas
 const COMPILE_CACHE = new Map<string, Evaluator>();
@@ -210,7 +210,7 @@ class FormulaCompiler {
       case 'SI': case 'IF':
         return (row) => argEvals[0](row) ? argEvals[1](row) : argEvals[2](row);
       case 'SOMME': case 'SUM':
-        return (row) => argEvals.reduce((a, b) => a + parseSmartNumber(b(row)), 0);
+        return (row) => argEvals.reduce((a: number, b) => a + parseSmartNumber(b(row)), 0);
       case 'MOYENNE': case 'AVG': case 'AVERAGE':
         return (row) => {
            const nums = argEvals.map(a => parseSmartNumber(a(row)));
@@ -246,7 +246,7 @@ class FormulaCompiler {
            const replacement = String(argEvals[2](row) || '');
            try {
              return text.replace(new RegExp(search, 'g'), replacement);
-           } catch (e) { return text; }
+           } catch { return text; }
         };
       case 'SUBSTITUER': case 'SUBSTITUTE':
         return (row) => String(argEvals[0](row) || '').split(String(argEvals[1](row) || '')).join(String(argEvals[2](row) || ''));
@@ -284,13 +284,57 @@ class FormulaCompiler {
         };
       case 'CAPITALISEMOTS': case 'PROPER': case 'TITLE':
         return (row) => String(argEvals[0](row) || '').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+
+      // Fonctions DATE
+      case 'AUJOURDHUI': case 'TODAY':
+        return () => new Date();
+      case 'ANNEE': case 'YEAR':
+        return (row) => {
+          const d = parseDateValue(argEvals[0](row));
+          return d ? d.getFullYear() : null;
+        };
+      case 'MOIS': case 'MONTH':
+        return (row) => {
+          const d = parseDateValue(argEvals[0](row));
+          return d ? d.getMonth() + 1 : null;
+        };
+      case 'JOUR': case 'DAY':
+        return (row) => {
+          const d = parseDateValue(argEvals[0](row));
+          return d ? d.getDate() : null;
+        };
+      case 'DATE':
+        return (row) => {
+          const y = Number(argEvals[0](row));
+          const m = Number(argEvals[1](row));
+          const d = Number(argEvals[2](row));
+          return new Date(y, m - 1, d);
+        };
+      case 'DATEDIF': case 'DATEDIFF':
+        return (row) => {
+          const d1 = parseDateValue(argEvals[0](row));
+          const d2 = parseDateValue(argEvals[1](row));
+          const unit = String(argEvals[2] ? argEvals[2](row) : 'j').toLowerCase();
+
+          if (!d1 || !d2) return null;
+
+          const diffMs = d2.getTime() - d1.getTime();
+          if (unit === 'j' || unit === 'd') return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          if (unit === 'm') {
+            return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+          }
+          if (unit === 'y' || unit === 'a') {
+            return d2.getFullYear() - d1.getFullYear();
+          }
+          return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        };
       default:
         return () => 0;
     }
   }
 }
 
-export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean'): number | string | boolean | null => {
+export const evaluateFormula = (row: Record<string, unknown>, formula: string, outputType?: 'number' | 'text' | 'boolean' | 'date'): number | string | boolean | null | Date => {
   if (!formula || !formula.trim()) return null;
 
   try {
@@ -314,6 +358,8 @@ export const evaluateFormula = (row: any, formula: string, outputType?: 'number'
         const num = Number(result);
         if (!isFinite(num) || isNaN(num)) return null;
         return Math.round(num * 10000) / 10000;
+      } else if (outputType === 'date') {
+        return parseDateValue(result);
       }
     }
 
@@ -322,7 +368,7 @@ export const evaluateFormula = (row: any, formula: string, outputType?: 'number'
       return Math.round(result * 10000) / 10000;
     }
     return result;
-  } catch (e) {
+  } catch {
     return null;
   }
 };

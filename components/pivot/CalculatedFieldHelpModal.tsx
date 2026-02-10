@@ -147,6 +147,20 @@ const FunctionsTab: React.FC = () => (
                 <FunctionCard name="SUPPRESPACE" syntax="SUPPRESPACE(texte)" desc="Supprime les espaces de début et fin" example="SUPPRESPACE([Nom])" />
             </div>
         </div>
+
+        <div>
+            <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-sm">Fonctions Date</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FunctionCard name="AUJOURDHUI" syntax="AUJOURDHUI()" desc="Retourne la date du jour" example="AUJOURDHUI()" />
+                <FunctionCard name="ANNEE" syntax="ANNEE(date)" desc="Extrait l'année d'une date" example="ANNEE([Date Facture])" />
+                <FunctionCard name="MOIS" syntax="MOIS(date)" desc="Extrait le numéro du mois (1-12)" example="MOIS([Date Naissance])" />
+                <FunctionCard name="JOUR" syntax="JOUR(date)" desc="Extrait le jour du mois (1-31)" example="JOUR([Date])" />
+                <FunctionCard name="DATE" syntax="DATE(a, m, j)" desc="Crée une date à partir de l'année, mois et jour" example="DATE(2025, 1, 1)" />
+                <FunctionCard name="DATEDIF" syntax="DATEDIF(d1, d2, [unit])" desc="Écart entre 2 dates (unité: j, m, a)" example='DATEDIF([Dép.], [Arr.], "j")' />
+            </div>
+        </div>
     </div>
 );
 
@@ -307,6 +321,22 @@ const ExamplesTab: React.FC = () => (
             data={{ CodePostal: '75001' }}
             result="75"
             explanation="Extrait le département du code postal."
+        />
+
+        <ExampleSection
+            title="Calculer l'âge"
+            formula='DATEDIF([Date Naissance], AUJOURDHUI(), "a")'
+            data={{ "Date Naissance": '15/05/1990' }}
+            result="34"
+            explanation="Calcule l'âge en années entre la date de naissance et aujourd'hui."
+        />
+
+        <ExampleSection
+            title="Délai en jours"
+            formula='DATEDIF([Date Commande], [Date Livraison], "j")'
+            data={{ "Date Commande": '01/01/2024', "Date Livraison": '05/01/2024' }}
+            result="4"
+            explanation="Calcule le nombre de jours entre la commande et la livraison."
         />
     </div>
 );

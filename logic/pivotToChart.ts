@@ -1,4 +1,4 @@
-import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
+import { PivotResult, PivotConfig, PivotRow, ChartType, ColorPalette, ColorMode } from '../types';
 import { formatDateFr } from '../utils';
 
 export type { ChartType, ColorPalette, ColorMode };
@@ -82,8 +82,8 @@ export const detectBestChartType = (
   config: PivotConfig,
   result: PivotResult
 ): ChartType => {
-  const { rowFields, colFields, colGrouping, aggType } = config;
-  const hasMultipleCols = (colFields || []).length > 0;
+  const { rowFields, colGrouping, aggType } = config;
+  const hasMultipleCols = (config.colFields || []).length > 0;
   const isTemporal = colGrouping !== 'none';
   const dataRowsCount = (result?.displayRows || []).filter(r => r.type === 'data').length;
   const hasHierarchy = (rowFields || []).length > 1;
@@ -179,7 +179,6 @@ export const transformPivotToChartData = (
   options: ChartTransformOptions
 ): ChartDataPoint[] => {
   const {
-    chartType,
     limit = 0,
     excludeSubtotals = true,
     sortBy = 'value',
@@ -189,7 +188,7 @@ export const transformPivotToChartData = (
   } = options;
 
   // Filtrer les lignes de données (exclure sous-totaux et grand total)
-  let dataRows = (result.displayRows || []).filter(row => {
+  const dataRows = (result.displayRows || []).filter(row => {
     // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
     if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
       return row.type !== 'grandTotal' && row.level === hierarchyLevel;
@@ -660,7 +659,7 @@ const formatRowLabel = (row: PivotRow, config: PivotConfig): string => {
 /**
  * Retourne le label d'agrégation selon le type
  */
-const getAggregationLabel = (aggType: AggregationType, valField: string): string => {
+const getAggregationLabel = (aggType: string, valField: string): string => {
   const fieldLabel = valField || 'Valeur';
 
   switch (aggType) {

@@ -125,18 +125,18 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
                             <label className="block text-xs font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
                             <div className="grid grid-cols-3 gap-1">
-                                {(['count', 'distinct', 'sum'] as MetricType[]).map(m => (
+                                {(['count', 'distinct', 'sum', 'max', 'min'] as MetricType[]).map(m => (
                                     <button
                                         key={m}
                                         onClick={() => onSetMetric(m)}
                                         className={`py-1.5 text-xs font-bold rounded border transition-all ${metric === m ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
                                     >
-                                        {m === 'count' ? 'Compte' : m === 'distinct' ? 'Distinct' : 'Somme'}
+                                        {m === 'count' ? 'Compte' : m === 'distinct' ? 'Distinct' : m === 'sum' ? 'Somme' : m === 'max' ? 'Max' : 'Min'}
                                     </button>
                                 ))}
                             </div>
 
-                            {metric === 'sum' && (
+                            {(metric === 'sum' || metric === 'max' || metric === 'min') && (
                                 <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                                     <label className="block text-xs font-black text-slate-500 mb-1 uppercase">Champ de données à afficher (Y1) :</label>
                                     {numericFields.length > 0 ? (
@@ -164,12 +164,14 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                                     <button onClick={() => onSetMetric2('none')} className="text-xs font-bold text-brand-600 hover:underline uppercase">Masquer</button>
                                 )}
                             </div>
-                            <div className="grid grid-cols-4 gap-1">
+                            <div className="grid grid-cols-3 gap-1">
                                 {[
                                     { id: 'none', label: 'Off' },
                                     { id: 'count', label: 'Cpt' },
                                     { id: 'distinct', label: 'Dist' },
-                                    { id: 'sum', label: 'Σ' }
+                                    { id: 'sum', label: 'Σ' },
+                                    { id: 'max', label: 'Max' },
+                                    { id: 'min', label: 'Min' }
                                 ].map(m => (
                                     <button
                                         key={m.id}
@@ -181,7 +183,7 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                                 ))}
                             </div>
 
-                            {metric2 === 'sum' && (
+                            {(metric2 === 'sum' || metric2 === 'max' || metric2 === 'min') && (
                                 <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                                     <label className="block text-xs font-black text-brand-600 mb-1 uppercase">Champ de données à afficher (Y2) :</label>
                                     {numericFields.length > 0 ? (

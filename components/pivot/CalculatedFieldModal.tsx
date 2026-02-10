@@ -20,7 +20,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
     const [name, setName] = useState(initialField?.name || '');
     const [formula, setFormula] = useState(initialField?.formula || '');
-    const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean'>(initialField?.outputType || 'number');
+    const [outputType, setOutputType] = useState<'number' | 'text' | 'boolean' | 'date'>(initialField?.outputType || 'number');
     const [unit, setUnit] = useState(initialField?.unit || '');
     const [mode, setMode] = useState<'formula' | 'actions'>(initialField?.mode || 'formula');
     const [actions, setActions] = useState<CalculatedFieldAction[]>(initialField?.actions || []);
@@ -193,6 +193,14 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
         // Utilitaires texte
         { name: 'LONGUEUR', syntax: 'LONGUEUR(texte)', desc: 'Nombre de caractères', category: 'Texte' },
         { name: 'SUPPRESPACE', syntax: 'SUPPRESPACE(texte)', desc: 'Supprime les espaces de début/fin', category: 'Texte' },
+
+        // Fonctions DATE
+        { name: 'AUJOURDHUI', syntax: 'AUJOURDHUI()', desc: 'Date du jour', category: 'Date' },
+        { name: 'ANNEE', syntax: 'ANNEE(date)', desc: "Extrait l'année d'une date", category: 'Date' },
+        { name: 'MOIS', syntax: 'MOIS(date)', desc: "Extrait le mois (1-12) d'une date", category: 'Date' },
+        { name: 'JOUR', syntax: 'JOUR(date)', desc: "Extrait le jour (1-31) d'une date", category: 'Date' },
+        { name: 'DATE', syntax: 'DATE(annee, mois, jour)', desc: 'Crée une date', category: 'Date' },
+        { name: 'DATEDIF', syntax: 'DATEDIF(d1, d2, [unité])', desc: 'Écart entre 2 dates (unité: j, m, a)', category: 'Date' },
     ];
 
     return (
@@ -238,6 +246,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                             <option value="number">Nombre</option>
                                             <option value="text">Texte</option>
                                             <option value="boolean">Vrai/Faux</option>
+                                            <option value="date">Date</option>
                                         </select>
                                     </div>
                                     {outputType === 'number' && (
@@ -502,7 +511,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 custom-scrollbar max-h-[400px]">
                                 <div className="space-y-3">
-                                    {['Logique', 'Math', 'Texte'].map(category => {
+                                    {['Logique', 'Math', 'Texte', 'Date'].map(category => {
                                         const categoryFunctions = functions.filter(fn => fn.category === category);
                                         if (categoryFunctions.length === 0) return null;
                                         return (
@@ -561,7 +570,12 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             )}
                         </div>
                         <div className={`text-base font-mono break-all ${previewResult?.error ? 'text-red-800 italic opacity-80' : 'text-slate-800 font-bold'}`}>
-                            {previewResult ? (previewResult.error || (previewResult.value === null ? 'null' : String(previewResult.value)) + (unit && outputType === 'number' ? ` ${unit}` : '')) : <span className="text-slate-400 italic">Saisissez une formule pour voir un aperçu...</span>}
+                            {previewResult ? (
+                                previewResult.error ||
+                                (previewResult.value === null ? 'null' :
+                                 (previewResult.value instanceof Date ? previewResult.value.toLocaleDateString('fr-FR') : String(previewResult.value))) +
+                                (unit && outputType === 'number' ? ` ${unit}` : '')
+                            ) : <span className="text-slate-400 italic">Saisissez une formule pour voir un aperçu...</span>}
                         </div>
                     </div>
 
