@@ -143,7 +143,7 @@ export const calculateTemporalComparison = (
   // Use configMetrics if available, otherwise fallback to single metric (backward compatibility)
   const metrics = (configMetrics && configMetrics.length > 0)
      ? configMetrics
-     : [{ field: valueField, aggType: aggType || 'sum' }];
+     : (valueField ? [{ field: valueField, aggType: aggType || 'sum' }] : []);
 
   // Préparer les filtres une seule fois
   const preparedFilters = prepareFilters(filters);
@@ -214,12 +214,12 @@ export const calculateTemporalComparison = (
       deltas[source.id] = {};
       details[source.id] = group?.details || [];
 
+      if (group && !groupLabel) groupLabel = group.label;
+
       metrics.forEach(m => {
         const mLabel = m.label || `${m.field} (${m.aggType})`;
         const val = group ? (group.metrics[mLabel] || 0) : 0;
         values[source.id][mLabel] = val;
-
-        if (group && !groupLabel) groupLabel = group.label;
 
         // Sum for column totals
         if (m.aggType === 'sum' || m.aggType === 'count' || m.aggType === 'avg') {

@@ -114,7 +114,7 @@ export const usePivotData = ({
 
        const activeMetrics = metrics.length > 0
            ? metrics
-           : (valField ? [{ field: valField, aggType }] : [{ field: '_count', aggType: 'count' as any, label: 'Nombre' }]);
+           : (valField ? [{ field: valField, aggType }] : []);
 
        if ((temporalConfig?.sources?.length || 0) < 2) {
            setTemporalResults([]);

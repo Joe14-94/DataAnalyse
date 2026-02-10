@@ -99,7 +99,7 @@ export const usePivotLogic = () => {
     // --- COLUMN VIRTUALIZATION PREP ---
     const allDataColumns = useMemo(() => {
         if (isTemporalMode) {
-            const ms = metrics.length > 0 ? metrics : [{ field: valField, aggType: aggType as PivotMetric['aggType'] }];
+            const ms = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType: aggType as PivotMetric['aggType'] }] : []);
             const cols: { key: string; width: number; isDiff?: boolean }[] = [];
 
             ms.forEach(m => {

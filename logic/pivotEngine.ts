@@ -37,10 +37,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   if (rows.length === 0 || (rowFields.length === 0 && (!colFields || colFields.length === 0))) return null;
 
-  if (activeMetrics.length === 0) {
-      activeMetrics = [{ field: '_count', aggType: 'count', label: 'Nombre' }];
-  }
-
   // --- PHASE 0 : PREPARATION CONFIG & META-DONNEES ---
   
   const metricConfigs = activeMetrics.map(m => {

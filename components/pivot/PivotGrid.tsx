@@ -79,7 +79,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
    const effectiveMetrics = React.useMemo<PivotMetric[]>(() => {
       if (metrics && metrics.length > 0) return metrics;
       if (valField) return [{ field: valField, aggType: aggType as AggregationType }];
-      return [{ field: '_count', aggType: 'count', label: 'Nombre' }];
+      return [];
    }, [metrics, valField, aggType]);
 
    // BOLT OPTIMIZATION: Memoized metric info lookup
@@ -366,7 +366,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  </th>
                               );
                            })}
-                           {showTotalCol && (
+                           {showTotalCol && effectiveMetrics.length > 0 && (
                               <th className="px-2 py-1.5 text-right text-xs font-black text-slate-700 uppercase border-b bg-slate-100 whitespace-nowrap cursor-pointer group" style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150 }} onClick={() => handleHeaderClick('value')}>
                                  <div className="flex items-center justify-end relative">Total {renderSortIcon('value')}<div className="absolute -right-2 top-0 bottom-0 w-4 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, 'Grand Total', 150)} /></div>
                               </th>
@@ -409,7 +409,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     const isSelected = isSelectionMode && isItemSelected(row.keys, colLabel || colKey);
                                     return <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }} onClick={() => handleDrilldown(row.keys, colLabel || colKey, val as string | number | undefined, metricLabel || '')}>{formatted}</td>;
                                  })}
-                                 {showTotalCol && (
+                                 {showTotalCol && effectiveMetrics.length > 0 && (
                                     <td className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`} style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150, ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '', row.type) }} onClick={() => { const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); }}>
                                        {typeof row.rowTotal === 'object' ? <div className="flex flex-col gap-0.5">{Object.entries(row.rowTotal).map(([label, v], idx) => { const metric = metricLabelMap.get(label); const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type); return <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}><span className="text-slate-400 font-medium mr-1">{label}:</span><span className="font-bold text-slate-800">{formatOutput(v, metric)}</span></div>; })}</div> : <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, effectiveMetrics[0])}</span>}
                                     </td>
