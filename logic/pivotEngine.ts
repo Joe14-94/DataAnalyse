@@ -496,7 +496,7 @@ export const formatPivotOutput = (
     
     // Utiliser config standard si numérique
     if (aggType !== 'count' && valField) {
-        if (overrideConfig && (overrideConfig.decimalPlaces !== undefined || overrideConfig.displayScale !== undefined || overrideConfig.unit)) {
+        if (overrideConfig && (overrideConfig.decimalPlaces !== undefined || overrideConfig.displayScale !== undefined || overrideConfig.unit || overrideConfig.type === 'date')) {
             // Pour un delta de date, on utilise formatDateDelta au lieu du formatage standard
             if (isDelta && overrideConfig.type === 'date' && typeof val === 'number') {
                 return formatDateDelta(val);
@@ -508,8 +508,11 @@ export const formatPivotOutput = (
         
         if (!config && dataset?.calculatedFields) {
             const cf = dataset.calculatedFields.find(c => c.name === valField);
-            if (cf?.unit) {
-                config = { type: 'number', unit: cf.unit };
+            if (cf) {
+                config = {
+                    type: (cf.outputType as any) === 'date' ? 'date' : 'number',
+                    unit: cf.unit
+                };
             }
         }
 
@@ -523,8 +526,11 @@ export const formatPivotOutput = (
                
                if (!config && sourceDS?.calculatedFields) {
                    const cf = sourceDS.calculatedFields.find(c => c.name === originalFieldName);
-                   if (cf?.unit) {
-                       config = { type: 'number', unit: cf.unit };
+                   if (cf) {
+                       config = {
+                           type: (cf.outputType as any) === 'date' ? 'date' : 'number',
+                           unit: cf.unit
+                       };
                    }
                }
            }

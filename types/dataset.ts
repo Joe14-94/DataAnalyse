@@ -36,7 +36,7 @@ export interface CalculatedField {
   id: string;
   name: string;
   formula: string;
-  outputType: 'number' | 'text' | 'boolean';
+  outputType: 'number' | 'text' | 'boolean' | 'date';
   unit?: string;
   mode?: 'formula' | 'actions';
   actions?: CalculatedFieldAction[];

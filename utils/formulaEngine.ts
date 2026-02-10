@@ -1,4 +1,4 @@
-import { parseSmartNumber } from './common';
+import { parseSmartNumber, parseDateValue, jsToExcelDate } from './common';
 
 type TokenType = 'NUMBER' | 'STRING' | 'FIELD' | 'IDENTIFIER' | 'OPERATOR' | 'LPAREN' | 'RPAREN' | 'COMMA' | 'EOF';
 
@@ -284,13 +284,65 @@ class FormulaCompiler {
         };
       case 'CAPITALISEMOTS': case 'PROPER': case 'TITLE':
         return (row) => String(argEvals[0](row) || '').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+      case 'AUJOURDHUI': case 'TODAY':
+        return () => {
+          const now = new Date();
+          return jsToExcelDate(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())));
+        };
+      case 'ANNEE': case 'YEAR':
+        return (row) => {
+          const d = parseDateValue(argEvals[0](row));
+          return d ? d.getUTCFullYear() : (d ? (d as Date).getFullYear() : 0);
+        };
+      case 'MOIS': case 'MONTH':
+        return (row) => {
+          const d = parseDateValue(argEvals[0](row));
+          return d ? d.getUTCMonth() + 1 : (d ? (d as Date).getMonth() + 1 : 0);
+        };
+      case 'JOUR': case 'DAY':
+        return (row) => {
+          const d = parseDateValue(argEvals[0](row));
+          return d ? d.getUTCDate() : (d ? (d as Date).getDate() : 0);
+        };
+      case 'DATE':
+        return (row) => {
+          const y = parseSmartNumber(argEvals[0](row));
+          const m = parseSmartNumber(argEvals[1](row));
+          const d = parseSmartNumber(argEvals[2](row));
+          return jsToExcelDate(new Date(Date.UTC(y, m - 1, d)));
+        };
+      case 'DATEDIF':
+        return (row) => {
+          const start = parseDateValue(argEvals[0](row));
+          const end = parseDateValue(argEvals[1](row));
+          const unit = String(argEvals[2] ? argEvals[2](row) : 'd').toLowerCase();
+          if (!start || !end) return 0;
+
+          if (unit === 'y') {
+            let years = end.getUTCFullYear() - start.getUTCFullYear();
+            if (end.getUTCMonth() < start.getUTCMonth() || (end.getUTCMonth() === start.getUTCMonth() && end.getUTCDate() < start.getUTCDate())) {
+              years--;
+            }
+            return Math.max(0, years);
+          }
+          if (unit === 'm') {
+            let months = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + (end.getUTCMonth() - start.getUTCMonth());
+            if (end.getUTCDate() < start.getUTCDate()) {
+              months--;
+            }
+            return Math.max(0, months);
+          }
+          // Default: days
+          const diffMs = end.getTime() - start.getTime();
+          return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        };
       default:
         return () => 0;
     }
   }
 }
 
-export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean'): number | string | boolean | null => {
+export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean' | 'date'): number | string | boolean | null => {
   if (!formula || !formula.trim()) return null;
 
   try {
@@ -314,6 +366,9 @@ export const evaluateFormula = (row: any, formula: string, outputType?: 'number'
         const num = Number(result);
         if (!isFinite(num) || isNaN(num)) return null;
         return Math.round(num * 10000) / 10000;
+      } else if (outputType === 'date') {
+        const d = parseDateValue(result);
+        return d ? jsToExcelDate(d) : null;
       }
     }
 
