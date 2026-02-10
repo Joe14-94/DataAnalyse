@@ -242,7 +242,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
           // BOLT OPTIMIZATION: Only iterate over columns that actually have data for this group
           // This changes complexity from O(Groups * TotalColumns) to O(Rows)
-          stats.colMetrics.forEach((colMetricVals, h) => {
+          stats.colMetrics.forEach((colMetricVals: any[], h: string) => {
               let val = colMetricVals[mIdx];
               const count = stats.colCounts.get(h) || 1;
               let rawColVal = 0;

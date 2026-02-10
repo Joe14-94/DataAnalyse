@@ -225,7 +225,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            );
                         })}
                         {virtualCols[0]?.start > 0 && <th style={{ width: virtualCols[0].start }} />}
-                        {virtualCols.map(vCol => {
+                        {virtualCols.map((vCol: any) => {
                            const col = allDataColumns[vCol.index];
                            const colKey = col.key;
                            if (col.isDiff) return <th key={colKey} className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>Δ</th>;
@@ -277,7 +277,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  });
                               })()}
                               {virtualCols[0]?.start > 0 && <td />}
-                              {virtualCols.map(vCol => {
+                              {virtualCols.map((vCol: any) => {
                                  const col = allDataColumns[vCol.index];
                                  const colKey = col.key;
                                  if (col.isDiff) {
@@ -339,7 +339,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               );
                            })}
                            {virtualCols[0]?.start > 0 && <th style={{ width: virtualCols[0].start }} />}
-                           {virtualCols.map(vCol => {
+                           {virtualCols.map((vCol: any) => {
                               const col = allDataColumns[vCol.index];
                               const colKey = col.key;
                               const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(colKey) || {};
@@ -385,7 +385,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }} onClick={() => handleDrilldown(row.keys.slice(0, cIdx + 1), '', undefined, '')}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
                                  })}
                                  {virtualCols[0]?.start > 0 && <td />}
-                                 {virtualCols.map(vCol => {
+                                 {virtualCols.map((vCol: any) => {
                                     const colKey = allDataColumns[vCol.index].key;
                                     const val = row.metrics[colKey];
                                     const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(colKey) || {};

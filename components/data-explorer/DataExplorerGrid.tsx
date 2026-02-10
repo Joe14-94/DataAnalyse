@@ -203,18 +203,18 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
             <div style={{ height: rowVirtualizer.getTotalSize(), width: colVirtualizer.getTotalSize(), position: 'relative' }}>
                 {/* Header Row */}
                 <div className="bg-slate-50 sticky top-0 z-20 shadow-sm" style={{ height: 44, width: '100%' }}>
-                    {virtualCols.map(virtualCol => renderHeaderCell(virtualCol.index, virtualCol))}
+                    {virtualCols.map((virtualCol: any) => renderHeaderCell(virtualCol.index, virtualCol))}
                 </div>
 
                 {/* Filter Row */}
                 {showFilters && (
                     <div className="bg-slate-50 sticky top-[44px] z-10" style={{ height: 44, width: '100%' }}>
-                        {virtualCols.map(virtualCol => renderFilterCell(virtualCol.index, virtualCol))}
+                        {virtualCols.map((virtualCol: any) => renderFilterCell(virtualCol.index, virtualCol))}
                     </div>
                 )}
 
                 {/* Data Rows */}
-                {virtualRows.map(virtualRow => {
+                {virtualRows.map((virtualRow: any) => {
                     const row = processedRows[virtualRow.index] as DataRow & { _importDate: string; _batchId: string };
                     const isFilterOffset = showFilters ? 44 : 0;
                     return (
@@ -224,7 +224,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                             style={{ top: virtualRow.start + 44 + isFilterOffset, height: virtualRow.size }}
                             onClick={() => handleRowClick(row)}
                         >
-                            {virtualCols.map(virtualCol => renderDataCell(virtualRow.index, virtualCol.index, virtualCol, row))}
+                            {virtualCols.map((virtualCol: any) => renderDataCell(virtualRow.index, virtualCol.index, virtualCol, row))}
                         </div>
                     );
                 })}
