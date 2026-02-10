@@ -324,6 +324,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     const left = groupFieldLeftPositions[gIdx];
                                     const rowStyle = getCellFormatting(result.groupLabel.split('\x1F'), '', undefined, '', isSubtotal ? 'subtotal' : 'data');
 
+                                    return (
                                        <td
                                           key={gIdx}
                                           className={`px-2 py-1 text-xs border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors ${isSubtotal ? 'font-bold bg-slate-50' : ''}`}

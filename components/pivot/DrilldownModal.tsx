@@ -19,7 +19,8 @@ export const DrilldownModal: React.FC<DrilldownModalProps> = ({
     onClose,
     title,
     rows,
-    fields
+    fields,
+    dataset
 }) => {
     const handleExport = () => {
         // Export to CSV
