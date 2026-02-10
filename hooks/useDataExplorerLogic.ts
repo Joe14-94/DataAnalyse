@@ -508,19 +508,20 @@ export function useDataExplorerLogic() {
                 return extendedRow;
             }));
 
-        if (state.blendingConfig && state.blendingConfig.secondaryDatasetId && state.blendingConfig.joinKeyPrimary && state.blendingConfig.joinKeySecondary) {
-            const secDS = datasets.find(d => d.id === state.blendingConfig.secondaryDatasetId);
+        const { blendingConfig } = state;
+        if (blendingConfig && blendingConfig.secondaryDatasetId && blendingConfig.joinKeyPrimary && blendingConfig.joinKeySecondary) {
+            const secDS = datasets.find(d => d.id === blendingConfig.secondaryDatasetId);
             if (secDS) {
-                const secBatches = batches.filter(b => b.datasetId === state.blendingConfig.secondaryDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const secBatches = batches.filter(b => b.datasetId === blendingConfig.secondaryDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 if (secBatches.length > 0) {
                     const secBatch = secBatches[secBatches.length - 1];
                     const lookup = new Map<string, DataRow>();
                     secBatch.rows.forEach(r => {
-                        const k = String(r[state.blendingConfig!.joinKeySecondary]).trim();
+                        const k = String(r[blendingConfig.joinKeySecondary]).trim();
                         if (k) lookup.set(k, r);
                     });
                     rows = (rows || []).map(row => {
-                        const k = String(row[state.blendingConfig!.joinKeyPrimary]).trim();
+                        const k = String(row[blendingConfig.joinKeyPrimary]).trim();
                         const match = lookup.get(k);
                         if (match) {
                            const prefixedMatch: Partial<DataRow> = {};
@@ -545,15 +546,16 @@ export function useDataExplorerLogic() {
                     vals.push(String(v));
                 }
             }
-            return { ...row, _searchIndex: vals.join(' ').toLowerCase() };
+            return { ...row, _searchIndex: vals.join(' ').toLowerCase() } as DataRow & { _searchIndex: string; _importDate: string; _batchId: string };
         });
     }, [currentDataset, batches, state.blendingConfig, datasets]);
 
     const displayFields = useMemo(() => {
         if (!currentDataset) return [];
         const primFields = [...(currentDataset.fields || [])];
-        if (state.blendingConfig && state.blendingConfig.secondaryDatasetId) {
-            const secDS = (datasets || []).find(d => d.id === state.blendingConfig.secondaryDatasetId);
+        const { blendingConfig } = state;
+        if (blendingConfig && blendingConfig.secondaryDatasetId) {
+            const secDS = (datasets || []).find(d => d.id === blendingConfig.secondaryDatasetId);
             if (secDS) {
                 const secFields = (secDS.fields || []).map(f => `[${secDS.name}] ${f}`);
                 const secCalcFields = (secDS.calculatedFields || []).map(f => `[${secDS.name}] ${f.name}`);

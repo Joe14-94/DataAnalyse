@@ -322,7 +322,7 @@ export const usePivotLogic = () => {
             return;
         }
 
-        const exportData: (string | number | boolean)[][] = [];
+        const exportData: (string | number | boolean | Record<string, any>)[][] = [];
         const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
 
         if (isTemporalMode && temporalConfig) {
@@ -343,7 +343,7 @@ export const usePivotLogic = () => {
             exportData.push(headers);
 
             temporalResults.forEach(result => {
-                const rowData: (string | number | boolean)[] = [];
+                const rowData: (string | number | boolean | Record<string, any>)[] = [];
                 const keys = result.groupLabel.split('\x1F');
                 const isSubtotal = result.isSubtotal;
                 const subLevel = result.subtotalLevel || 0;
@@ -379,7 +379,7 @@ export const usePivotLogic = () => {
             });
 
             if (temporalColTotals) {
-                const totalsRow: (string | number | boolean)[] = ['TOTAL'];
+                const totalsRow: (string | number | boolean | Record<string, any>)[] = ['TOTAL'];
                 for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
 
                 temporalConfig.sources.forEach((s: TemporalComparisonSource) => {
@@ -400,7 +400,7 @@ export const usePivotLogic = () => {
             exportData.push(headers);
 
             pivotData.displayRows.forEach(row => {
-                const rowData: (string | number | boolean)[] = [];
+                const rowData: (string | number | boolean | Record<string, any>)[] = [];
                 rowFields.forEach((field, index) => {
                     if (index < row.keys.length) {
                         const indent = row.type === 'subtotal' && index === row.keys.length - 1
@@ -423,7 +423,7 @@ export const usePivotLogic = () => {
             });
 
             if (pivotData.colTotals) {
-                const totalsRow: (string | number | boolean)[] = ['Total'];
+                const totalsRow: (string | number | boolean | Record<string, any>)[] = ['Total'];
                 for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
                 pivotData.colHeaders.forEach(colHeader => totalsRow.push(pivotData.colTotals[colHeader] ?? ''));
                 if (showTotalCol && pivotData.grandTotal !== undefined) totalsRow.push(pivotData.grandTotal);

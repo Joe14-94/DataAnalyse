@@ -2,7 +2,7 @@ import React from 'react';
 import { Table2, History, Filter, Search, X, Palette, FunctionSquare, Link as LinkIcon, GitCommit, Columns, FilterX, Trash2, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { formatDateFr } from '../../utils';
-import { Dataset, ImportBatch } from '../../types/dataset';
+import { Dataset, ImportBatch, BlendingConfig } from '../../types/dataset';
 
 interface DataExplorerHeaderProps {
     currentDataset: Dataset | null;
@@ -13,7 +13,7 @@ interface DataExplorerHeaderProps {
     processedRowsCount: number;
     totalRowsCount: number;
     activeBatchDate: string | null;
-    blendingConfig: { sourceDatasetId: string; targetDatasetId: string } | null;
+    blendingConfig: BlendingConfig | null;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     isFormatDrawerOpen: boolean;

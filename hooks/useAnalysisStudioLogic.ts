@@ -106,7 +106,7 @@ function analysisStudioReducer(state: AnalysisStudioState, action: AnalysisStudi
             return { ...state, dimension: action.payload };
         case 'SET_METRIC':
             return action.payload.target === 1
-                ? { ...state, metric: action.payload.metric }
+                ? { ...state, metric: action.payload.metric as MetricType }
                 : { ...state, metric2: action.payload.metric };
         case 'SET_VALUE_FIELD':
             return action.payload.target === 1
@@ -433,7 +433,7 @@ export const useAnalysisStudioLogic = () => {
 
         const series = state.segment ? Array.from(new Set(filteredRows.map(r => String(r[state.segment] !== undefined ? r[state.segment] : 'N/A')))).sort() : [];
 
-        return { data: result, series };
+        return { data: result as (typeof result[0] & { [key: string]: number | string })[], series };
     }, [state, currentBatch, getValue]);
 
     const trendData = useMemo(() => {
@@ -559,12 +559,12 @@ export const useAnalysisStudioLogic = () => {
             });
 
             point.total = parseFloat((point.total as number).toFixed(2));
-            if (state.metric2 !== 'none') point.total2 = parseFloat(point.total2.toFixed(2));
+            if (state.metric2 !== 'none' && point.total2 !== undefined) point.total2 = parseFloat(point.total2.toFixed(2));
             return point;
         });
 
         if (state.showForecast && timeData.length >= 2) {
-            const totals = timeData.map(d => d.total);
+            const totals = timeData.map(d => d.total).filter((v): v is number => v !== null);
             const { slope, intercept } = calculateLinearRegression(totals);
             timeData.forEach((d, i) => {
                 d.forecast = parseFloat((intercept + slope * i).toFixed(2));
@@ -577,6 +577,7 @@ export const useAnalysisStudioLogic = () => {
                 date: 'prediction',
                 displayDate: '(Proj.)',
                 total: null,
+                total2: 0,
                 forecast: parseFloat(nextTotal.toFixed(2))
             });
         }
