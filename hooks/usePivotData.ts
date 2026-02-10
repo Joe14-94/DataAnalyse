@@ -171,8 +171,8 @@ export const usePivotData = ({
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
                groupByFields: rowFields,
-               valueField: activeMetrics[0].field, // Backward compatibility
-               aggType: (activeMetrics[0].aggType === 'list' ? 'sum' : activeMetrics[0].aggType) as any, // Backward compatibility
+               valueField: activeMetrics[0]?.field || '', // Backward compatibility
+               aggType: (activeMetrics[0]?.aggType === 'list' ? 'sum' : (activeMetrics[0]?.aggType || 'sum')) as any, // Backward compatibility
                metrics: activeMetrics.map(m => ({ ...m, aggType: m.aggType === 'list' ? 'sum' : m.aggType })),
                sortBy,
                sortOrder

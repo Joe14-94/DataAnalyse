@@ -35,4 +35,16 @@ describe('Calcul Comparaison Temporelle - No Metrics', () => {
     expect(colTotals['s1']).toEqual({});
     expect(colTotals['s2']).toEqual({});
   });
+
+  it('devrait gérer le tri sans métriques', () => {
+    const configWithSort: TemporalComparisonConfig = {
+        ...config,
+        sortBy: 's1',
+        sortOrder: 'desc'
+    };
+
+    // Ne devrait pas crasher
+    const { results } = calculateTemporalComparison(sourceDataMap, configWithSort);
+    expect(results).toHaveLength(1);
+  });
 });
