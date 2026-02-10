@@ -59,7 +59,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                             <span>Date d'import</span>
                             {sortConfig?.key === '_importDate' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                         </div>
-                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity" onMouseDown={(e) => handleResizeStart(e, '_importDate', virtualCol.size)} />
+                        <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity z-30" onMouseDown={(e) => handleResizeStart(e, '_importDate', virtualCol.size)} />
                     </div>
                 </div>
             );
@@ -71,7 +71,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                     style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                     <div className="flex items-center gap-2 justify-between h-full">
                         <span>Id</span>
-                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity" onMouseDown={(e) => handleResizeStart(e, 'id', virtualCol.size)} />
+                        <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity z-30" onMouseDown={(e) => handleResizeStart(e, 'id', virtualCol.size)} />
                     </div>
                 </div>
             );
@@ -94,7 +94,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                             <span>{field}</span>
                             {sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600" /> : <ArrowDown className="w-3 h-3 text-indigo-600" />) : <ArrowUpDown className="w-3 h-3 text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                         </div>
-                        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-400 active:bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" onMouseDown={(e) => handleResizeStart(e, field, virtualCol.size)} onClick={(e) => e.stopPropagation()} />
+                        <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-indigo-400 active:bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity z-30" onMouseDown={(e) => handleResizeStart(e, field, virtualCol.size)} onClick={(e) => e.stopPropagation()} />
                     </div>
                 </div>
             );
@@ -110,7 +110,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                         <span>{field}</span>
                         {sortConfig?.key === field ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                     </div>
-                    <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity" onMouseDown={(e) => handleResizeStart(e, field, virtualCol.size)} onClick={(e) => e.stopPropagation()} />
+                    <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400 active:bg-brand-600 opacity-0 group-hover:opacity-100 transition-opacity z-30" onMouseDown={(e) => handleResizeStart(e, field, virtualCol.size)} onClick={(e) => e.stopPropagation()} />
                 </div>
             </div>
         );

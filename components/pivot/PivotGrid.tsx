@@ -226,7 +226,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     {onRemoveField && !isEditing && <button onClick={(e) => { e.stopPropagation(); onRemoveField('row', field); }} className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100" title="Retirer"><X className="w-3 h-3" /></button>}
                                     {idx === 0 && renderSortIcon('label')}
                                  </div>
-                                 <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
+                                 <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
                               </th>
                            );
                         })}
@@ -250,7 +250,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                     <span className="truncate flex-1">{editingColumn === colKey ? <input type="text" value={columnLabels[colKey] || displayLabel} autoFocus className="w-full px-1 py-0.5 text-xs border border-brand-300 rounded text-slate-900" onClick={(e) => e.stopPropagation()} onChange={(e) => setColumnLabels((prev) => ({ ...prev, [colKey]: e.target.value }))} onBlur={() => setEditingColumn(null)} onKeyDown={(e) => { if (e.key === 'Enter') setEditingColumn(null); }} /> : (columnLabels[colKey] || displayLabel)}</span>
                                     {metric && renderSortIcon(sourceId)}
                                  </div>
-                                 <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, colKey, 120)} />
+                                 <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, colKey, 120)} />
                               </th>
                            );
                         })}
@@ -340,7 +340,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        {onRemoveField && !editingColumn?.startsWith('row_') && <button onClick={(e) => { e.stopPropagation(); onRemoveField('row', field); }} className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100" title="Retirer"><X className="w-3 h-3" /></button>}
                                        {idx === 0 && renderSortIcon('label')}
                                     </div>
-                                    <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
+                                    <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, widthId, 150)} />
                                  </th>
                               );
                            })}
@@ -362,7 +362,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        {onRemoveField && !isDiff && !isPct && !editingColumn && <button onClick={(e) => { e.stopPropagation(); const info = metricInfoCache.get(colKey); if (info?.metric) onRemoveField('val', info.metric.field); else if (colLabel && colLabel !== 'ALL') onRemoveField('col', colLabel!); }} className="p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded transition-all bg-white/50 shadow-sm border border-slate-100" title="Retirer"><X className="w-3 h-3" /></button>}
                                        {renderSortIcon(colKey)}
                                     </div>
-                                    <div className="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, colKey, 120)} />
+                                    <div className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-brand-400/40 z-30 transition-colors" onMouseDown={(e) => onResizeStart(e, colKey, 120)} />
                                  </th>
                               );
                            })}

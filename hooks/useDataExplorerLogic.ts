@@ -755,6 +755,11 @@ export function useDataExplorerLogic() {
         overscan: 5,
     });
 
+    // BOLT FIX: Ensure virtualizer re-measures when column widths change
+    useEffect(() => {
+        colVirtualizer.measure();
+    }, [allColumns, colVirtualizer]);
+
     const historyData = useMemo(() => {
         if (!currentDataset || !state.selectedRow || !state.trackingKey) return [];
         const trackValue = state.selectedRow[state.trackingKey];

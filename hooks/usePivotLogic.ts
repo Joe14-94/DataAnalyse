@@ -138,6 +138,11 @@ export const usePivotLogic = () => {
         overscan: 5,
     });
 
+    // BOLT FIX: Ensure virtualizer re-measures when column widths change
+    useEffect(() => {
+        colVirtualizer.measure();
+    }, [allDataColumns, colVirtualizer]);
+
     // --- INITIALISATION ---
     useEffect(() => {
         if (isInitialized) return;
