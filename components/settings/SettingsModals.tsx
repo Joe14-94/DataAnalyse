@@ -61,28 +61,34 @@ interface AxisModalProps {
 }
 
 export const AxisModal: React.FC<AxisModalProps> = ({ isOpen, onClose, axisForm, setAxisForm, handleCreateAxis }) => {
-    if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Créer un axe analytique</h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Code *</label>
-                        <input type="text" className="w-full px-3 py-2 border rounded-md" placeholder="Ex: CC" value={axisForm.code} onChange={(e) => setAxisForm({ ...axisForm, code: e.target.value.toUpperCase() })} maxLength={10} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Nom *</label>
-                        <input type="text" className="w-full px-3 py-2 border rounded-md" placeholder="Ex: Centre de coûts" value={axisForm.name} onChange={(e) => setAxisForm({ ...axisForm, name: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={axisForm.isMandatory} onChange={(e) => setAxisForm({ ...axisForm, isMandatory: e.target.checked })} className="w-4 h-4" /><span className="text-sm">Obligatoire</span></label>
-                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={axisForm.allowMultiple} onChange={(e) => setAxisForm({ ...axisForm, allowMultiple: e.target.checked })} className="w-4 h-4" /><span className="text-sm">Ventilation multiple</span></label>
-                    </div>
-                    <div className="flex gap-3 pt-4"><Button onClick={handleCreateAxis} className="flex-1"><Check className="w-4 h-4 mr-2" />Créer</Button><Button variant="outline" onClick={onClose} className="flex-1"><X className="w-4 h-4 mr-2" />Annuler</Button></div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Créer un axe analytique"
+            maxWidth="md"
+            footer={
+                <div className="flex gap-ds-3 w-full">
+                    <Button onClick={handleCreateAxis} className="flex-1"><Check className="w-4 h-4 mr-2" />Créer</Button>
+                    <Button variant="outline" onClick={onClose} className="flex-1"><X className="w-4 h-4 mr-2" />Annuler</Button>
+                </div>
+            }
+        >
+            <div className="space-y-ds-4">
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Code *</label>
+                    <input type="text" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Ex: CC" value={axisForm.code} onChange={(e) => setAxisForm({ ...axisForm, code: e.target.value.toUpperCase() })} maxLength={10} />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Nom *</label>
+                    <input type="text" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Ex: Centre de coûts" value={axisForm.name} onChange={(e) => setAxisForm({ ...axisForm, name: e.target.value })} />
+                </div>
+                <div className="space-y-ds-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-txt-main"><input type="checkbox" checked={axisForm.isMandatory} onChange={(e) => setAxisForm({ ...axisForm, isMandatory: e.target.checked })} className="w-4 h-4 rounded border-border-default text-brand-600 focus:ring-brand-500" /><span className="text-sm">Obligatoire</span></label>
+                    <label className="flex items-center gap-2 cursor-pointer text-txt-main"><input type="checkbox" checked={axisForm.allowMultiple} onChange={(e) => setAxisForm({ ...axisForm, allowMultiple: e.target.checked })} className="w-4 h-4 rounded border-border-default text-brand-600 focus:ring-brand-500" /><span className="text-sm">Ventilation multiple</span></label>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 
@@ -95,28 +101,34 @@ interface CalendarModalProps {
 }
 
 export const CalendarModal: React.FC<CalendarModalProps> = ({ isOpen, onClose, calendarForm, setCalendarForm, handleCreateCalendar }) => {
-    if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Créer un exercice fiscal</h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Année *</label>
-                        <input type="number" className="w-full px-3 py-2 border rounded-md" value={calendarForm.fiscalYear} onChange={(e) => setCalendarForm({ ...calendarForm, fiscalYear: parseInt(e.target.value) })} min="2000" max="2100" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Début *</label>
-                        <input type="date" className="w-full px-3 py-2 border rounded-md" value={calendarForm.startDate} onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Fin *</label>
-                        <input type="date" className="w-full px-3 py-2 border rounded-md" value={calendarForm.endDate} onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })} />
-                    </div>
-                    <div className="flex gap-3 pt-4"><Button onClick={handleCreateCalendar} className="flex-1"><Check className="w-4 h-4 mr-2" />Créer</Button><Button variant="outline" onClick={onClose} className="flex-1"><X className="w-4 h-4 mr-2" />Annuler</Button></div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Créer un exercice fiscal"
+            maxWidth="md"
+            footer={
+                <div className="flex gap-ds-3 w-full">
+                    <Button onClick={handleCreateCalendar} className="flex-1"><Check className="w-4 h-4 mr-2" />Créer</Button>
+                    <Button variant="outline" onClick={onClose} className="flex-1"><X className="w-4 h-4 mr-2" />Annuler</Button>
+                </div>
+            }
+        >
+            <div className="space-y-ds-4">
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Année *</label>
+                    <input type="number" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" value={calendarForm.fiscalYear} onChange={(e) => setCalendarForm({ ...calendarForm, fiscalYear: parseInt(e.target.value) })} min="2000" max="2100" />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Début *</label>
+                    <input type="date" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" value={calendarForm.startDate} onChange={(e) => setCalendarForm({ ...calendarForm, startDate: e.target.value })} />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Fin *</label>
+                    <input type="date" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" value={calendarForm.endDate} onChange={(e) => setCalendarForm({ ...calendarForm, endDate: e.target.value })} />
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 
@@ -130,35 +142,41 @@ interface MasterDataModalProps {
 }
 
 export const MasterDataModal: React.FC<MasterDataModalProps> = ({ isOpen, onClose, type, form, setForm, onConfirm }) => {
-    if (!isOpen) return null;
     const label = type === 'customer' ? 'client' : type === 'supplier' ? 'fournisseur' : type === 'product' ? 'produit' : 'salarié';
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Ajouter un {label}</h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Code *</label>
-                        <input type="text" className="w-full px-3 py-2 border rounded-md" placeholder="Ex: CLI001" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Nom *</label>
-                        <input type="text" className="w-full px-3 py-2 border rounded-md" placeholder="Ex: ACME Corp" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Catégorie</label>
-                        <input type="text" className="w-full px-3 py-2 border rounded-md" placeholder="Ex: VIP" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-                    </div>
-                    {(type === 'customer' || type === 'supplier') && (
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1">N° TVA / SIREN</label>
-                            <input type="text" className="w-full px-3 py-2 border rounded-md" value={form.taxId} onChange={(e) => setForm({ ...form, taxId: e.target.value })} />
-                        </div>
-                    )}
-                    <div className="flex gap-3 pt-4"><Button onClick={onConfirm} className="flex-1"><Check className="w-4 h-4 mr-2" />Créer</Button><Button variant="outline" onClick={onClose} className="flex-1"><X className="w-4 h-4 mr-2" />Annuler</Button></div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={`Ajouter un ${label}`}
+            maxWidth="md"
+            footer={
+                <div className="flex gap-ds-3 w-full">
+                    <Button onClick={onConfirm} className="flex-1"><Check className="w-4 h-4 mr-2" />Créer</Button>
+                    <Button variant="outline" onClick={onClose} className="flex-1"><X className="w-4 h-4 mr-2" />Annuler</Button>
                 </div>
+            }
+        >
+            <div className="space-y-ds-4">
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Code *</label>
+                    <input type="text" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Ex: CLI001" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Nom *</label>
+                    <input type="text" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Ex: ACME Corp" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div>
+                    <label className="block text-sm font-bold text-txt-main mb-1">Catégorie</label>
+                    <input type="text" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Ex: VIP" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+                </div>
+                {(type === 'customer' || type === 'supplier') && (
+                    <div>
+                        <label className="block text-sm font-bold text-txt-main mb-1">N° TVA / SIREN</label>
+                        <input type="text" className="w-full px-ds-3 py-ds-2 border border-border-default rounded-md bg-surface text-txt-main focus:ring-2 focus:ring-brand-500 outline-none" value={form.taxId} onChange={(e) => setForm({ ...form, taxId: e.target.value })} />
+                    </div>
+                )}
             </div>
-        </div>
+        </Modal>
     );
 };
 
@@ -171,9 +189,8 @@ interface ChartViewerModalProps {
 }
 
 export const ChartViewerModal: React.FC<ChartViewerModalProps> = ({ id, onClose, chartsOfAccounts, searchQuery, setSearchQuery }) => {
-    if (!id) return null;
     const chart = chartsOfAccounts.find(c => c.id === id);
-    if (!chart) return null;
+    if (!id || !chart) return null;
 
     const filteredAccounts = chart.accounts.filter((acc: any) =>
         searchQuery === '' ||
@@ -182,34 +199,35 @@ export const ChartViewerModal: React.FC<ChartViewerModalProps> = ({ id, onClose,
     ).sort((a: any, b: any) => a.code.localeCompare(b.code));
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
-                <div className="p-6 border-b flex justify-between items-start">
-                    <div>
-                        <h3 className="text-xl font-bold">{chart.name}</h3>
-                        <p className="text-sm text-slate-500">{chart.standard} • {chart.accounts.length} comptes</p>
+        <Modal
+            isOpen={!!id}
+            onClose={onClose}
+            title={
+                <div>
+                    <h3 className="text-xl font-bold text-txt-main">{chart.name}</h3>
+                    <p className="text-sm text-txt-secondary">{chart.standard} • {chart.accounts.length} comptes</p>
+                </div>
+            }
+            maxWidth="4xl"
+        >
+            <div className="space-y-ds-4">
+                <div className="sticky top-0 bg-surface z-10 pb-ds-4">
+                    <input type="text" placeholder="Rechercher un compte..." className="w-full px-ds-4 py-ds-2 border border-border-default rounded-md bg-canvas text-txt-main outline-none focus:ring-2 focus:ring-brand-500 shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                    <div className="grid grid-cols-12 gap-4 pb-2 border-b border-border-default text-xs font-bold text-txt-muted uppercase sticky top-[52px] bg-surface z-10">
+                        <div className="col-span-2">Code</div><div className="col-span-6">Libellé</div><div className="col-span-2">Nature</div><div className="col-span-2 text-right">Imputable</div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
-                </div>
-                <div className="p-6 border-b">
-                    <input type="text" placeholder="Rechercher un compte..." className="w-full px-4 py-2 border rounded-md" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                    <div className="space-y-1">
-                        <div className="grid grid-cols-12 gap-4 pb-2 border-b text-xs font-bold text-slate-600 uppercase sticky top-0 bg-white">
-                            <div className="col-span-2">Code</div><div className="col-span-6">Libellé</div><div className="col-span-2">Nature</div><div className="col-span-2 text-right">Imputable</div>
+                    {filteredAccounts.map((account: any) => (
+                        <div key={account.id} className={`grid grid-cols-12 gap-4 py-2 px-ds-3 rounded hover:bg-canvas text-sm transition-colors ${account.level === 1 ? 'bg-canvas font-bold' : 'text-txt-secondary'}`}>
+                            <div className="col-span-2 font-mono text-txt-main">{account.code}</div>
+                            <div className="col-span-6 truncate">{'  '.repeat(Math.max(0, account.level - 1))}{account.label}</div>
+                            <div className="col-span-2 truncate">{account.nature}</div>
+                            <div className="col-span-2 text-right">{account.canReceiveEntries ? 'Oui' : 'Non'}</div>
                         </div>
-                        {filteredAccounts.map((account: any) => (
-                            <div key={account.id} className={`grid grid-cols-12 gap-4 py-2 px-3 rounded hover:bg-slate-50 text-sm ${account.level === 1 ? 'bg-slate-50 font-bold' : ''}`}>
-                                <div className="col-span-2 font-mono">{account.code}</div>
-                                <div className="col-span-6 truncate">{'  '.repeat(Math.max(0, account.level - 1))}{account.label}</div>
-                                <div className="col-span-2 truncate">{account.nature}</div>
-                                <div className="col-span-2 text-right">{account.canReceiveEntries ? 'Oui' : 'Non'}</div>
-                            </div>
-                        ))}
-                    </div>
+                    ))}
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };

@@ -87,8 +87,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           ${isCollapsed ? 'md:w-16' : ''} w-full
         `}
       >
-        <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
-          <div className="flex items-center gap-2 font-bold text-xl text-brand-600 mb-6 overflow-hidden min-h-[40px]">
+        <div className={`p-ds-4 ${isCollapsed ? 'flex justify-center' : ''} relative`}>
+          <div className="flex items-center gap-ds-2 font-bold text-xl text-brand-600 mb-6 overflow-hidden min-h-[40px]">
             {companyLogo ? (
               <img
                 src={companyLogo}
@@ -125,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 id={item.id}
                 to={item.path}
                 title={isCollapsed ? item.name : ''}
-                className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap
+                className={`flex items-center gap-ds-2 px-2 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap
                   ${isActive
                     ? 'bg-brand-50 text-brand-700'
                     : 'text-txt-secondary hover:bg-canvas hover:text-txt-main'
@@ -140,7 +140,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
 
-        <div className={`p-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
+        <div className={`p-ds-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
           <button
             onClick={handleQuickSave}
             className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-1.5 rounded transition-colors
