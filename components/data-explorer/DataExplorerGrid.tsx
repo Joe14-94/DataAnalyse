@@ -23,10 +23,10 @@ interface DataExplorerGridProps {
     handleColumnFilterChange: (key: string, value: string) => void;
     isEditMode: boolean;
     pendingChanges: Record<string, Record<string, Record<string, any>>>;
-    handleCellEdit: (batchId: string, rowId: string, field: string, value: any) => void;
-    handleRowClick: (row: DataRow) => void;
+    handleCellEdit: (batchId: string, rowId: string, field: string, value: string | number | boolean) => void;
+    handleRowClick: (row: DataRow & { _importDate: string; _batchId: string }) => void;
     handleDeleteRow: (row: DataRow, e: React.MouseEvent) => void;
-    getCellStyle: (fieldName: string, value: any) => string;
+    getCellStyle: (fieldName: string, value: string | number | boolean) => string;
     selectedCol: string | null;
 }
 
@@ -152,7 +152,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                         </tr>
                     )}
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                        const row = processedRows[virtualRow.index] as any;
+                        const row = processedRows[virtualRow.index] as DataRow & { _importDate: string; _batchId: string };
                         return (
                             <tr
                                 key={virtualRow.key}
