@@ -56,6 +56,16 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
         joinType: 'left' | 'inner';
     }>({ targetId: '', key1: '', key2: '', joinType: 'left' });
 
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleEscape);
+        }
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [isOpen, onClose]);
+
     const handleAddSource = () => {
         const isPrimary = localSources.length === 0;
 
@@ -172,6 +182,8 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        aria-label="Fermer"
+                        title="Fermer"
                     >
                         <X className="w-5 h-5 text-slate-500" />
                     </button>
@@ -232,6 +244,8 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                                             <button
                                                 onClick={() => handleRemoveSource(src.id)}
                                                 className="p-1.5 hover:bg-red-100 text-slate-400 hover:text-red-600 rounded transition-colors"
+                                                aria-label="Supprimer la source"
+                                                title="Supprimer la source"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>

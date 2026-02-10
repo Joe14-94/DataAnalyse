@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, BookOpen, Code, Lightbulb, Zap, Info } from 'lucide-react';
 import { Button } from '../ui/Button';
 
@@ -8,6 +8,16 @@ interface HelpModalProps {
 }
 
 export const CalculatedFieldHelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleEscape);
+        }
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const [activeTab, setActiveTab] = useState<'functions' | 'regex' | 'examples' | 'advanced'>('functions');
@@ -26,7 +36,7 @@ export const CalculatedFieldHelpModal: React.FC<HelpModalProps> = ({ isOpen, onC
                             <p className="text-sm text-slate-600 mt-1">Guide complet des fonctions et exemples d'utilisation</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-white rounded-full transition-colors">
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-white rounded-full transition-colors" aria-label="Fermer" title="Fermer">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
