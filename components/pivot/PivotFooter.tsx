@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule } from '../../types';
+import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule, DEFAULT_METRIC } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
@@ -42,6 +42,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    const metricInfoCache = React.useMemo(() => {
       const cache = new Map<string, any>();
       const headers = pivotData?.colHeaders || [];
+      const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : [DEFAULT_METRIC]);
 
       headers.forEach(col => {
          if (col.includes('\x1F')) {
@@ -53,7 +54,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
             if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
             if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
-            const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
+            const metric = activeMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
             cache.set(col, { metric, isDiff, isPct });
             return;
          }
@@ -64,15 +65,15 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          if (isDiff) baseCol = col.replace('_DIFF', '');
          if (isPct) baseCol = col.replace('_PCT', '');
 
-         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         const directMetric = activeMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
          if (directMetric) {
             cache.set(col, { metric: directMetric, isDiff, isPct });
          } else {
-            cache.set(col, { metric: metrics[0], isDiff, isPct });
+            cache.set(col, { metric: activeMetrics[0], isDiff, isPct });
          }
       });
       return cache;
-   }, [pivotData?.colHeaders, metrics]);
+   }, [pivotData?.colHeaders, metrics, valField, aggType]);
 
    // BOLT OPTIMIZATION: Pre-calculate sticky positions for row fields to avoid repeated slice().reduce()
    const rowFieldLeftPositions = React.useMemo(() => {
@@ -144,7 +145,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            {idx === rowFields.length - 1 ? 'Total' : ''}
                         </td>
                      ))}
-                     {(metrics || [{ field: valField, aggType }]).map((metric) => {
+                     {(metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : [DEFAULT_METRIC])).map((metric) => {
                         const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                         return (
                            <React.Fragment key={mLabel}>
@@ -276,7 +277,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                               })}
                            </div>
                         ) : (
-                           <span className="text-xs text-black">{formatOutput(pivotData.grandTotal, metrics[0])}</span>
+                           <span className="text-xs text-black">{formatOutput(pivotData.grandTotal, metrics.length > 0 ? metrics[0] : (valField ? { field: valField, aggType } : DEFAULT_METRIC))}</span>
                         )}
                      </td>
                   )}

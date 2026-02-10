@@ -1,4 +1,5 @@
 import { formatDateLabelForDisplay } from './common';
+import { DEFAULT_METRIC } from '../types/pivot';
 
 /**
  * EXPORT UTILS
@@ -232,7 +233,7 @@ export const exportPivotToHTML = (
   const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${timestamp}`;
 
   const { isTemporalMode, temporalConfig, temporalColTotals, metrics, showVariations, formatOutput } = options;
-  const activeMetrics = metrics && metrics.length > 0 ? metrics : [];
+  const activeMetrics = metrics && metrics.length > 0 ? metrics : [DEFAULT_METRIC];
 
   try {
     let tableHTML = '<table id="interactive-pivot" class="pivot-table">';
@@ -344,7 +345,8 @@ export const exportPivotToHTML = (
         });
         pivotData.colHeaders.forEach((colHeader: string) => {
           const value = row.metrics[colHeader];
-          const displayValue = value !== undefined && value !== null ? (formatOutput ? formatOutput(value) : value.toLocaleString()) : '';
+          const metric = activeMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === colHeader) || activeMetrics[0];
+          const displayValue = value !== undefined && value !== null ? (formatOutput ? formatOutput(value, metric) : value.toLocaleString()) : '';
           tableHTML += `<td class="metric-cell">${displayValue}</td>`;
         });
         if (showTotalCol) {
@@ -360,10 +362,11 @@ export const exportPivotToHTML = (
         for (let i = 1; i < rowFields.length; i++) tableHTML += '<td></td>';
         pivotData.colHeaders.forEach((colHeader: string) => {
           const total = pivotData.colTotals[colHeader];
-          tableHTML += `<td class="total-cell">${total !== undefined && total !== null ? (formatOutput ? formatOutput(total) : total.toLocaleString()) : ''}</td>`;
+          const metric = activeMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === colHeader) || activeMetrics[0];
+          tableHTML += `<td class="total-cell">${total !== undefined && total !== null ? (formatOutput ? formatOutput(total, metric) : total.toLocaleString()) : ''}</td>`;
         });
         if (showTotalCol && pivotData.grandTotal !== undefined) {
-          tableHTML += `<td class="grand-total-cell">${formatOutput ? formatOutput(pivotData.grandTotal) : pivotData.grandTotal.toLocaleString()}</td>`;
+          tableHTML += `<td class="grand-total-cell">${formatOutput ? formatOutput(pivotData.grandTotal, activeMetrics[0]) : pivotData.grandTotal.toLocaleString()}</td>`;
         }
         tableHTML += '</tr>';
       }

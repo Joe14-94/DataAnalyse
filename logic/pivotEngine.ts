@@ -2,7 +2,7 @@
 import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters } from '../utils';
 import { FieldConfig, Dataset, FilterRule, PivotJoin, PivotConfig, PivotResult, PivotRow, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
 
-import { PivotMetric } from '../types/pivot';
+import { PivotMetric, DEFAULT_METRIC } from '../types/pivot';
 
 // Structure optimisée pour le calcul interne
 interface OptimizedRow {
@@ -31,9 +31,14 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   } = config;
 
   // Backward compatibility for metrics
-  const activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
+  let activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
     ? config.metrics
     : (config.valField ? [{ field: config.valField, aggType: config.aggType }] : []);
+
+  // BOLT: Si aucune métrique n'est définie, on ajoute une métrique par défaut "Nombre"
+  if (activeMetrics.length === 0 && rows.length > 0) {
+    activeMetrics = [DEFAULT_METRIC];
+  }
 
   if (rows.length === 0 || rowFields.length === 0 || activeMetrics.length === 0) return null;
 

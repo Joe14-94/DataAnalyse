@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Loader2, Table2, ArrowUp, ArrowDown, X } from 'lucide-react';
-import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult, SortBy, SortOrder, PivotStyleRule, ConditionalFormattingRule } from '../../types';
+import { TemporalComparisonResult, Dataset, PivotSourceConfig, PivotResult, SortBy, SortOrder, PivotStyleRule, ConditionalFormattingRule, DEFAULT_METRIC } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
 import { formatDateLabelForDisplay } from '../../utils';
@@ -63,11 +63,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
    // BOLT OPTIMIZATION: Memoized metric info lookup to avoid expensive string parsing and array searches in render loop
    const metricInfoCache = React.useMemo(() => {
       const cache = new Map<string, any>();
+      const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : [DEFAULT_METRIC]);
       const headers = [
          ...(pivotData?.colHeaders || []),
          ...(temporalResults.length > 0 ? (temporalConfig?.sources || []).flatMap((s: any) => {
-            const ms = metrics.length > 0 ? metrics : [{ field: valField, aggType }];
-            return ms.flatMap((m: any) => {
+            return activeMetrics.flatMap((m: any) => {
                const mLabel = m.label || `${m.field} (${m.aggType})`;
                return [`${s.id}_${mLabel}`];
             });
@@ -85,7 +85,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
             if (isDiff) metricLabel = metricLabel.replace('_DIFF', '');
             if (isPct) metricLabel = metricLabel.replace('_PCT', '');
 
-            const metric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
+            const metric = activeMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === metricLabel);
             cache.set(col, { colLabel, metricLabel, metric, isDiff, isPct });
             return;
          }
@@ -96,11 +96,11 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
          if (isDiff) baseCol = col.replace('_DIFF', '');
          if (isPct) baseCol = col.replace('_PCT', '');
 
-         const directMetric = metrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
+         const directMetric = activeMetrics.find(m => (m.label || `${m.field} (${m.aggType})`) === baseCol);
          if (directMetric) {
             cache.set(col, { colLabel: 'ALL', metricLabel: baseCol, metric: directMetric, isDiff, isPct });
          } else {
-            cache.set(col, { colLabel: baseCol, metricLabel: '', metric: metrics[0], isDiff, isPct });
+            cache.set(col, { colLabel: baseCol, metricLabel: '', metric: activeMetrics[0], isDiff, isPct });
          }
       });
       return cache;
@@ -257,7 +257,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               </th>
                            );
                         })}
-                        {(metrics || [{ field: valField, aggType }]).map((metric, mIdx) => {
+                        {(metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : [DEFAULT_METRIC])).map((metric, mIdx) => {
                            const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                            return (
                               <React.Fragment key={`m-${mIdx}`}>
@@ -624,7 +624,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                              })}
                                           </div>
                                        ) : (
-                                          <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, metrics[0])}</span>
+                                          <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, metrics.length > 0 ? metrics[0] : (valField ? { field: valField, aggType } : DEFAULT_METRIC))}</span>
                                        )}
                                     </td>
                                  )}

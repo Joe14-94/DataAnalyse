@@ -24,6 +24,8 @@ export interface PivotMetric {
   formatting?: Partial<FieldConfig>;
 }
 
+export const DEFAULT_METRIC: PivotMetric = { field: 'id', aggType: 'count', label: 'Nombre' };
+
 export interface PivotConfig {
   rows: any[];
   rowFields: string[];

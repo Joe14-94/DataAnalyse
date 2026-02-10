@@ -1,7 +1,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useBatches, useDatasets } from '../context/DataContext';
-import { PivotSourceConfig, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder, PivotMetric } from '../types';
+import { PivotSourceConfig, DataRow, TemporalComparisonConfig, TemporalComparisonResult, FilterRule, PivotResult, AggregationType, DateGrouping, SortBy, SortOrder, PivotMetric, DEFAULT_METRIC } from '../types';
 import { evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
@@ -117,7 +117,12 @@ export const usePivotData = ({
            return;
        }
 
-       const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
+       let activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
+
+       // BOLT: Si aucune métrique n'est définie, on ajoute une métrique par défaut "Nombre"
+       if (activeMetrics.length === 0 && primaryDataset) {
+           activeMetrics = [DEFAULT_METRIC];
+       }
 
        if (activeMetrics.length === 0 || (temporalConfig?.sources?.length || 0) < 2) {
            setTemporalResults([]);
