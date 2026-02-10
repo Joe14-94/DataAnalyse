@@ -9,6 +9,7 @@ import { Home, ChevronRight } from 'lucide-react';
 import { TreemapContent } from '../../ui/TreemapContent';
 import { SunburstD3 } from '../../charts/SunburstD3';
 import { formatChartValue } from '../../../logic/pivotToChart';
+import { formatDateFr } from '../../../utils';
 
 interface ChartModalDisplayProps {
     selectedChartType: any;
@@ -32,6 +33,8 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
     sunburstData, d3HierarchyData, sunburstColors, sunburstTitle, showSunburstLegend,
     currentTreemapData, treemapDrillPath, onTreemapDrill, onTreemapBreadcrumb
 }) => {
+    const isDateValue = pivotConfig?.valFormatting?.type === 'date';
+
     const tooltipStyle = {
         backgroundColor: 'rgba(255, 255, 255, 0.96)',
         border: '1px solid #e2e8f0',
@@ -82,7 +85,17 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} layout="vertical" margin={{ ...chartMargin, left: 140 }} stackOffset={isPercent ? 'expand' : undefined}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                            <XAxis type="number" stroke="#94a3b8" fontSize={11} domain={isPercent ? [0, 1] : [0, 'auto']} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
+                            <XAxis
+                                type="number"
+                                stroke="#94a3b8"
+                                fontSize={11}
+                                domain={isPercent ? [0, 1] : [0, 'auto']}
+                                tickFormatter={(val) => {
+                                    if (isPercent) return `${(val * 100).toFixed(0)}%`;
+                                    if (isDateValue) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
                             <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 10 }} stroke="#94a3b8" />
                             <Tooltip content={<CustomTooltip />} />
                             {metadata.isMultiSeries || isStacked ? (
@@ -113,7 +126,16 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                         <BarChart data={chartData} layout="horizontal" margin={chartMargin} stackOffset={isPercent ? 'expand' : undefined}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} />
-                            <YAxis stroke="#94a3b8" fontSize={11} domain={isPercent ? [0, 1] : [0, 'auto']} tickFormatter={isPercent ? (val) => `${(val * 100).toFixed(0)}%` : undefined} />
+                            <YAxis
+                                stroke="#94a3b8"
+                                fontSize={11}
+                                domain={isPercent ? [0, 1] : [0, 'auto']}
+                                tickFormatter={(val) => {
+                                    if (isPercent) return `${(val * 100).toFixed(0)}%`;
+                                    if (isDateValue) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
                             <Tooltip content={<CustomTooltip />} />
                             {metadata.isMultiSeries || isStacked ? (
                                 metadata.seriesNames.map((series: string, idx: number) => (
@@ -139,7 +161,14 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                         <LineChart data={chartData} margin={chartMargin}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} />
-                            <YAxis stroke="#94a3b8" fontSize={11} />
+                            <YAxis
+                                stroke="#94a3b8"
+                                fontSize={11}
+                                tickFormatter={(val) => {
+                                    if (isDateValue) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
                             <Tooltip content={<CustomTooltip />} />
                             {metadata.isMultiSeries ? (
                                 <>
@@ -161,7 +190,14 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                         <AreaChart data={chartData} margin={chartMargin}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} />
-                            <YAxis stroke="#94a3b8" fontSize={11} />
+                            <YAxis
+                                stroke="#94a3b8"
+                                fontSize={11}
+                                tickFormatter={(val) => {
+                                    if (isDateValue) return formatDateFr(val);
+                                    return val.toLocaleString();
+                                }}
+                            />
                             <Tooltip content={<CustomTooltip />} />
                             {metadata.isMultiSeries ? (
                                 <>

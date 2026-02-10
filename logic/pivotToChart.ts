@@ -1,4 +1,5 @@
 import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
+import { formatDateFr } from '../utils';
 
 export type { ChartType, ColorPalette, ColorMode };
 
@@ -821,6 +822,11 @@ export const formatChartValue = (
 
   if (!valFormatting) {
     return value.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+  }
+
+  // Support du format DATE
+  if (valFormatting.type === 'date') {
+    return formatDateFr(value);
   }
 
   let formatted = value;

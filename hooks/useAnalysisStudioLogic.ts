@@ -206,6 +206,17 @@ export const useAnalysisStudioLogic = () => {
         batches.find(b => b.id === state.selectedBatchId) || batches[batches.length - 1],
     [batches, state.selectedBatchId]);
 
+    const isDateMetric = useMemo(() => {
+        if (state.metric !== 'sum' || !state.valueField) return false;
+        return currentDataset?.fieldConfigs?.[state.valueField]?.type === 'date';
+    }, [state.metric, state.valueField, currentDataset]);
+
+    const isDateMetric2 = useMemo(() => {
+        if (state.metric2 !== 'none' && (state.metric2 !== 'sum' || !state.valueField2)) return false;
+        if (state.metric2 === 'none') return false;
+        return currentDataset?.fieldConfigs?.[state.valueField2]?.type === 'date';
+    }, [state.metric2, state.valueField2, currentDataset]);
+
     const numericFields = useMemo(() => {
         if (!currentDataset) return [];
         const configuredNumeric = Object.entries(currentDataset.fieldConfigs || {})
@@ -820,6 +831,8 @@ export const useAnalysisStudioLogic = () => {
         insightText,
         companyLogo,
         savedAnalyses,
+        isDateMetric,
+        isDateMetric2,
         handlers: {
             handleExportToDashboard,
             handleSaveAnalysis,

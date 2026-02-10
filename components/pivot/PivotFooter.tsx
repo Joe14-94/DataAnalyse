@@ -32,8 +32,6 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations = false, styleRules = [], conditionalRules = [],
    isSelectionMode = false, selectedItems = [], handleDrilldown, handleTemporalDrilldown
 }) => {
-   if (!pivotData && !temporalColTotals) return null;
-
    const getColWidth = (id: string, isRowField: boolean = false) => {
       return columnWidths[id] || (isRowField ? 150 : 120);
    };
@@ -115,10 +113,10 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return getCellStyle([], col, value, metricLabel, styleRules, conditionalRules, 'grandTotal');
    };
 
-   const formatOutput = (val: string | number, metric?: any) => {
+   const formatOutput = (val: string | number, metric?: any, isDelta: boolean = false) => {
       const field = metric?.field || valField;
       const type = metric?.aggType || aggType;
-      return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
+      return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting, isDelta);
    };
 
    const isItemSelected = (rowKeys: string[], colLabel: string) => {
@@ -129,6 +127,8 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          item.rowPath.every((k: string, i: number) => k === rowKeys[i])
       );
    };
+
+   if (!pivotData && !temporalColTotals) return null;
 
    if (temporalColTotals && temporalConfig) {
       return (
@@ -193,7 +193,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                           >
                                              {temporalConfig.deltaFormat === 'percentage'
                                                 ? (deltaPercentage !== 0 ? formatPercentage(deltaPercentage) : '-')
-                                                : (deltaValue !== 0 ? formatOutput(deltaValue, metric) : '-')}
+                                                : (deltaValue !== 0 ? formatOutput(deltaValue, metric, true) : '-')}
                                           </td>
                                        )}
                                     </React.Fragment>
@@ -230,11 +230,11 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                   ))}
                   {pivotData?.colHeaders.map((col: string) => {
                      const val = pivotData?.colTotals[col];
-                     const { metric, isPct } = metricInfoCache.get(col) || {};
+                     const { metric, isDiff, isPct } = metricInfoCache.get(col) || {};
                      const metricLabel = metric?.label || (metric?.field ? `${metric.field} (${metric.aggType})` : '');
                      const customStyle = getCellFormatting(col, val, metricLabel);
 
-                     let formatted = formatOutput(val, metric);
+                     let formatted = formatOutput(val, metric, isDiff);
                      if (isPct) formatted = val ? `${Number(val).toFixed(1)}%` : '-';
                      const isSelected = isSelectionMode && isItemSelected([], col);
 
