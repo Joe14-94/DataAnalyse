@@ -34,7 +34,9 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Formatage Cond.** | Coloration des cellules selon des règles métiers. | Historique | Core |
 | **Copie Formule** | Bouton de copie rapide du résultat dans le modal de calcul. | 2026-02-18 | Ajustement |
 | **VLOOKUP Intégré** | Enrichissement d'un dataset par jointure avec un autre. | 2026-02-01 | Core |
-
+| **Ordre des colonnes** | Pouvoir changer l'ordre des colonnes | Historique | Core
+| **Renommer une colonne** | Pouvoir renommer le libellé d'une colonne | Historique | Core 
+| **Changer le type de données** | Pouvoir changer le typage des données. Lors du passage d'un type Nombre à Date, calcul et affichage de l'information au fomat JJ/MM/AAAA | Historique | Core
 ---
 
 ## 📥 3. Importation & ETL
