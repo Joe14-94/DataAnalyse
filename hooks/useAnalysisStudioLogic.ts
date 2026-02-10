@@ -1,9 +1,9 @@
-import { useReducer, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useMemo, useEffect, useCallback } from 'react';
 import { useData } from '../context/DataContext';
 import { parseSmartNumber, calculateLinearRegression, formatDateFr, exportView, getSafeLogo } from '../utils';
-import { FilterRule, ColorMode, ColorPalette, ChartType as WidgetChartType } from '../types';
+import { FilterRule, ColorMode, ColorPalette, ChartType as WidgetChartType, DataRow } from '../types';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getChartColors, generateGradient, formatChartValue } from '../logic/pivotToChart';
+import { getChartColors, generateGradient } from '../logic/pivotToChart';
 import * as XLSX from 'xlsx';
 
 export type AnalysisMode = 'snapshot' | 'trend';
@@ -46,7 +46,7 @@ type AnalysisStudioAction =
     | { type: 'SET_BATCH_ID'; payload: string }
     | { type: 'SET_DATES'; payload: { start?: string, end?: string } }
     | { type: 'SET_DIMENSION'; payload: string }
-    | { type: 'SET_METRIC'; payload: { target: 1 | 2, metric: any } }
+    | { type: 'SET_METRIC'; payload: { target: 1 | 2, metric: MetricType | 'none' } }
     | { type: 'SET_VALUE_FIELD'; payload: { target: 1 | 2, field: string } }
     | { type: 'SET_SEGMENT'; payload: string }
     | { type: 'SET_CHART_TYPE'; payload: ChartType }
@@ -61,7 +61,7 @@ type AnalysisStudioAction =
     | { type: 'SET_CHART_TITLE'; payload: string }
     | { type: 'SET_CUSTOM_UNIT'; payload: string }
     | { type: 'SET_COLOR_CONFIG'; payload: Partial<AnalysisStudioState> }
-    | { type: 'LOAD_ANALYSIS'; payload: any };
+    | { type: 'LOAD_ANALYSIS'; payload: Partial<AnalysisStudioState> };
 
 const initialState: AnalysisStudioState = {
     mode: 'snapshot',
@@ -148,14 +148,14 @@ function analysisStudioReducer(state: AnalysisStudioState, action: AnalysisStudi
 export const useAnalysisStudioLogic = () => {
     const [state, dispatch] = useReducer(analysisStudioReducer, initialState);
     const { batches, currentDataset, addDashboardWidget, savedAnalyses, saveAnalysis, companyLogo, datasets, currentDatasetId, switchDataset } = useData();
-    const fields = currentDataset ? currentDataset.fields : [];
+    const fields = useMemo(() => currentDataset ? currentDataset.fields : [], [currentDataset]);
     const navigate = useNavigate();
     const location = useLocation();
 
     useEffect(() => {
         if (location.state?.fromPivotChart) {
             const { pivotConfig, chartType: incomingChartType } = location.state.fromPivotChart;
-            const updates: any = {};
+            const updates: Partial<AnalysisStudioState> = {};
 
             if (pivotConfig.rowFields && pivotConfig.rowFields.length > 0) {
                 updates.dimension = pivotConfig.rowFields[0];
@@ -193,7 +193,7 @@ export const useAnalysisStudioLogic = () => {
         if (fields.length > 0 && (!state.dimension || !fields.includes(state.dimension))) {
             dispatch({ type: 'SET_DIMENSION', payload: fields[0] });
         }
-    }, [batches, fields, location.state]);
+    }, [batches, fields, location.state, state.selectedBatchId, state.startDate, state.endDate, state.dimension]);
 
     useEffect(() => {
         if (state.successMessage) {
@@ -209,8 +209,8 @@ export const useAnalysisStudioLogic = () => {
     const numericFields = useMemo(() => {
         if (!currentDataset) return [];
         const configuredNumeric = Object.entries(currentDataset.fieldConfigs || {})
-            .filter(([_, config]) => (config as any).type === 'number')
-            .map(([name, _]) => name);
+            .filter(([, config]) => config.type === 'number')
+            .map(([name]) => name);
 
         if (configuredNumeric.length > 0) {
             return configuredNumeric.filter(f => fields.includes(f));
@@ -219,7 +219,7 @@ export const useAnalysisStudioLogic = () => {
         if (!currentBatch || currentBatch.rows.length === 0) return [];
         const sample = currentBatch.rows.slice(0, 20);
         return fields.filter(f => {
-            return sample.some((r: any) => {
+            return sample.some((r: DataRow) => {
                 const val = r[f];
                 if (val === undefined || val === '' || val === null) return false;
                 return parseSmartNumber(val) !== 0 || val === '0' || val === 0;
@@ -231,15 +231,15 @@ export const useAnalysisStudioLogic = () => {
         if (state.metric === 'sum' && !state.valueField && numericFields.length > 0) {
             dispatch({ type: 'SET_VALUE_FIELD', payload: { target: 1, field: numericFields[0] } });
         }
-    }, [state.metric, numericFields]);
+    }, [state.metric, numericFields, state.valueField]);
 
     useEffect(() => {
         if (state.metric2 === 'sum' && !state.valueField2 && numericFields.length > 0) {
             dispatch({ type: 'SET_VALUE_FIELD', payload: { target: 2, field: numericFields[0] } });
         }
-    }, [state.metric2, numericFields]);
+    }, [state.metric2, numericFields, state.valueField2]);
 
-    const getValue = useCallback((row: any, fieldName: string): number => {
+    const getValue = useCallback((row: DataRow, fieldName: string): number => {
         const raw = row[fieldName];
         const unit = currentDataset?.fieldConfigs?.[fieldName]?.unit;
         return parseSmartNumber(raw, unit);
@@ -337,7 +337,7 @@ export const useAnalysisStudioLogic = () => {
     const snapshotData = useMemo(() => {
         if (state.mode !== 'snapshot' || !currentBatch || !state.dimension) return { data: [], series: [] };
 
-        const filteredRows = currentBatch.rows.filter((row: any) => {
+        const filteredRows = (currentBatch.rows as DataRow[]).filter((row) => {
             if (state.filters.length === 0) return true;
             return state.filters.every(f => {
                 const rowVal = row[f.field];
@@ -363,8 +363,19 @@ export const useAnalysisStudioLogic = () => {
             });
         });
 
-        const agg: Record<string, any> = {};
-        filteredRows.forEach((row: any) => {
+        interface AggregationItem {
+            name: string;
+            count: number;
+            distinctSet: Set<string>;
+            sum: number;
+            count2: number;
+            distinctSet2: Set<string>;
+            sum2: number;
+            [key: string]: number | string | Set<string>;
+        }
+
+        const agg: Record<string, AggregationItem> = {};
+        filteredRows.forEach((row) => {
             const dimVal = String(row[state.dimension] || 'Non défini');
             if (!agg[dimVal]) agg[dimVal] = {
                 name: dimVal,
@@ -385,12 +396,13 @@ export const useAnalysisStudioLogic = () => {
             if (state.segment) {
                 const segVal = String(row[state.segment] !== undefined ? row[state.segment] : 'N/A');
                 if (!agg[dimVal][segVal]) agg[dimVal][segVal] = 0;
-                if (state.metric === 'sum' && state.valueField) agg[dimVal][segVal] += getValue(row, state.valueField);
-                else agg[dimVal][segVal]++;
+                const currentSegVal = agg[dimVal][segVal] as number;
+                if (state.metric === 'sum' && state.valueField) agg[dimVal][segVal] = currentSegVal + getValue(row, state.valueField);
+                else agg[dimVal][segVal] = currentSegVal + 1;
             }
         });
 
-        let result = Object.values(agg).map((item: any) => {
+        let result = Object.values(agg).map((item) => {
             const { distinctSet, distinctSet2, ...rest } = item;
             let finalVal = 0;
             if (state.metric === 'distinct') finalVal = distinctSet.size;
@@ -437,7 +449,7 @@ export const useAnalysisStudioLogic = () => {
         const globalCounts: Record<string, number> = {};
 
         targetBatches.forEach(batch => {
-            const batchRows = batch.rows.filter((row: any) => {
+            const batchRows = (batch.rows as DataRow[]).filter((row) => {
                 if (state.filters.length === 0) return true;
                 return state.filters.every(f => {
                     const rowVal = row[f.field];
@@ -463,7 +475,7 @@ export const useAnalysisStudioLogic = () => {
                 });
             });
 
-            batchRows.forEach((row: any) => {
+            batchRows.forEach((row) => {
                 const val = String(row[state.dimension] || 'Non défini');
                 let increment = 1;
                 if (state.metric === 'sum' && state.valueField) increment = getValue(row, state.valueField);
@@ -477,7 +489,7 @@ export const useAnalysisStudioLogic = () => {
             .map(e => e[0]);
 
         const timeData = targetBatches.map(batch => {
-            const batchRows = batch.rows.filter((row: any) => {
+            const batchRows = (batch.rows as DataRow[]).filter((row) => {
                 if (state.filters.length === 0) return true;
                 return state.filters.every(f => {
                     const rowVal = row[f.field];
@@ -503,7 +515,16 @@ export const useAnalysisStudioLogic = () => {
                 });
             });
 
-            const point: any = {
+            interface TimePoint {
+                date: string;
+                displayDate: string;
+                total: number | null;
+                total2: number;
+                forecast?: number;
+                [key: string]: number | string | null | undefined;
+            }
+
+            const point: TimePoint = {
                 date: batch.date,
                 displayDate: formatDateFr(batch.date),
                 total: 0,
@@ -515,21 +536,21 @@ export const useAnalysisStudioLogic = () => {
                 if (state.metric2 !== 'none') point[s + '_m2'] = 0;
             });
 
-            batchRows.forEach((row: any) => {
+            batchRows.forEach((row) => {
                 const val = String(row[state.dimension] || 'Non défini');
                 if (topSeries.includes(val)) {
                     let qty = 1;
                     if (state.metric === 'sum' && state.valueField) qty = getValue(row, state.valueField);
-                    point[val] = parseFloat(((point[val] || 0) + qty).toFixed(2));
+                    point[val] = parseFloat((( (point[val] as number) || 0) + qty).toFixed(2));
 
                     if (state.metric2 !== 'none') {
                         let qty2 = 1;
                         if (state.metric2 === 'sum' && state.valueField2) qty2 = getValue(row, state.valueField2);
-                        point[val + '_m2'] = parseFloat(((point[val + '_m2'] || 0) + qty2).toFixed(2));
+                        point[val + '_m2'] = parseFloat((( (point[val + '_m2'] as number) || 0) + qty2).toFixed(2));
                     }
                 }
-                if (state.metric === 'sum' && state.valueField) point.total += getValue(row, state.valueField);
-                else point.total++;
+                if (state.metric === 'sum' && state.valueField) (point.total as number) += getValue(row, state.valueField);
+                else (point.total as number)++;
 
                 if (state.metric2 !== 'none') {
                     if (state.metric2 === 'sum' && state.valueField2) point.total2 += getValue(row, state.valueField2);
@@ -537,7 +558,7 @@ export const useAnalysisStudioLogic = () => {
                 }
             });
 
-            point.total = parseFloat(point.total.toFixed(2));
+            point.total = parseFloat((point.total as number).toFixed(2));
             if (state.metric2 !== 'none') point.total2 = parseFloat(point.total2.toFixed(2));
             return point;
         });
@@ -595,11 +616,11 @@ export const useAnalysisStudioLogic = () => {
             return text;
         } else {
             if (trendData.data.length === 0) return "Aucune donnée sur la période.";
-            const validPoints = trendData.data.filter((d: any) => d.date !== 'prediction');
+            const validPoints = trendData.data.filter((d) => d.date !== 'prediction');
             if (validPoints.length === 0) return "Données insuffisantes.";
             const first = validPoints[0];
             const last = validPoints[validPoints.length - 1];
-            const growth = parseFloat((last.total - first.total).toFixed(2));
+            const growth = parseFloat(((last.total as number) - (first.total as number)).toFixed(2));
             let text = `Sur la période, le volume a évolué de ${growth > 0 ? '+' : ''}${growth.toLocaleString()}${unitLabel}.`;
 
             if (state.metric2 !== 'none') {
@@ -613,39 +634,26 @@ export const useAnalysisStudioLogic = () => {
         }
     }, [state.mode, snapshotData, trendData, currentBatch, state.metric, state.valueField, state.metric2, state.valueField2, currentDataset, state.customUnit]);
 
-    const handleExport = useCallback(async (format: 'pdf' | 'html' | 'png' | 'xlsx', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
-        dispatch({ type: 'SET_EXPORT_MENU', payload: false });
-        const title = state.chartTitle || `${state.mode === 'snapshot' ? 'Analyse' : 'Évolution'} ${state.dimension}`;
-
-        if (format === 'pdf') {
-            exportView(format, 'analytics-export-container', title, companyLogo, pdfMode);
-        } else if (format === 'html') {
-            handleExportInteractiveHTML();
-        } else if (format === 'png') {
-            const element = document.getElementById('analytics-export-container');
-            if (element) {
-                const html2canvas = (await import('html2canvas')).default;
-                const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = `analyse_${new Date().toISOString().split('T')[0]}.png`;
-                link.click();
-            }
-        } else if (format === 'xlsx') {
-            const data = state.mode === 'snapshot' ? snapshotData.data : trendData.data;
-            const worksheet = XLSX.utils.json_to_sheet(data);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
-            XLSX.writeFile(workbook, `analyse_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
-    }, [state, companyLogo, snapshotData, trendData]);
-
     const handleExportInteractiveHTML = useCallback(() => {
         const title = state.chartTitle || `${state.mode === 'snapshot' ? 'Analyse' : 'Évolution'} ${state.dimension}`;
         const unit = state.customUnit || (state.metric === 'sum' && state.valueField ? currentDataset?.fieldConfigs?.[state.valueField]?.unit : '');
 
-        let plotlyData: any[] = [];
-        let layout: any = {
+        interface PlotlyTrace {
+            x: string[];
+            y: (number | null)[];
+            name: string;
+            type: string;
+            fill?: string;
+            orientation?: 'v' | 'h';
+            marker?: { color: string | string[] };
+            mode?: string;
+            yaxis?: string;
+            line?: { color: string; width: number; dash?: string };
+            hole?: number;
+        }
+
+        const plotlyData: PlotlyTrace[] = [];
+        const layout: Record<string, any> = {
             title: title,
             font: { family: 'Inter, system-ui, sans-serif', size: 12 },
             showlegend: true,
@@ -654,12 +662,12 @@ export const useAnalysisStudioLogic = () => {
         };
 
         if (state.mode === 'snapshot') {
-            const labels = snapshotData.data.map((d: any) => d.name);
+            const labels = snapshotData.data.map((d) => d.name);
             if (state.segment && snapshotData.series.length > 0) {
                 snapshotData.series.forEach((s: string, idx: number) => {
                     plotlyData.push({
                         x: labels,
-                        y: snapshotData.data.map((d: any) => d[s] || 0),
+                        y: snapshotData.data.map((d) => (d[s] as number) || 0),
                         name: s,
                         type: state.chartType.includes('bar') ? 'bar' : (state.chartType.includes('area') ? 'scatter' : 'bar'),
                         fill: state.chartType.includes('area') ? 'tonexty' : undefined,
@@ -674,17 +682,17 @@ export const useAnalysisStudioLogic = () => {
             } else {
                 plotlyData.push({
                     x: labels,
-                    y: snapshotData.data.map((d: any) => d.value),
+                    y: snapshotData.data.map((d) => d.value),
                     name: state.metric === 'sum' ? state.valueField : 'Valeur 1',
                     type: state.chartType.includes('bar') ? 'bar' : (state.chartType.includes('area') ? 'scatter' : (state.chartType.includes('pie') || state.chartType.includes('donut') ? 'pie' : 'bar')),
-                    marker: { color: chartColors },
+                    marker: { color: chartColors as string[] },
                     hole: state.chartType === 'donut' ? 0.4 : undefined,
                     orientation: state.chartType.includes('bar') && !state.chartType.includes('column') ? 'h' : 'v'
                 });
                 if (state.metric2 !== 'none') {
                     plotlyData.push({
                         x: labels,
-                        y: snapshotData.data.map((d: any) => d.value2),
+                        y: snapshotData.data.map((d) => d.value2),
                         name: state.metric2 === 'sum' ? state.valueField2 : 'Valeur 2',
                         type: 'scatter',
                         mode: 'lines+markers',
@@ -695,11 +703,11 @@ export const useAnalysisStudioLogic = () => {
                 }
             }
         } else {
-            const dates = trendData.data.map((d: any) => d.displayDate);
+            const dates = trendData.data.map((d) => d.displayDate);
             trendData.series.forEach((s: string, idx: number) => {
                 plotlyData.push({
                     x: dates,
-                    y: trendData.data.map((d: any) => d[s] || 0),
+                    y: trendData.data.map((d) => (d[s] as number) || 0),
                     name: s,
                     type: state.chartType.includes('column') ? 'bar' : 'scatter',
                     mode: 'lines+markers',
@@ -710,7 +718,7 @@ export const useAnalysisStudioLogic = () => {
             if (state.metric2 !== 'none') {
                 plotlyData.push({
                     x: dates,
-                    y: trendData.data.map((d: any) => d.total2 || 0),
+                    y: trendData.data.map((d) => d.total2 || 0),
                     name: state.metric2 === 'sum' ? `Total ${state.valueField2}` : 'Total 2',
                     type: 'scatter',
                     mode: 'lines+markers',
@@ -765,7 +773,34 @@ export const useAnalysisStudioLogic = () => {
         document.body.appendChild(link);
         link.click();
         setTimeout(() => document.body.removeChild(link), 100);
-    }, [state, companyLogo, snapshotData, trendData, currentDataset]);
+    }, [state, companyLogo, snapshotData, trendData, currentDataset, chartColors]);
+
+    const handleExport = useCallback(async (format: 'pdf' | 'html' | 'png' | 'xlsx', pdfMode: 'A4' | 'adaptive' = 'adaptive') => {
+        dispatch({ type: 'SET_EXPORT_MENU', payload: false });
+        const title = state.chartTitle || `${state.mode === 'snapshot' ? 'Analyse' : 'Évolution'} ${state.dimension}`;
+
+        if (format === 'pdf') {
+            exportView(format, 'analytics-export-container', title, companyLogo, pdfMode);
+        } else if (format === 'html') {
+            handleExportInteractiveHTML();
+        } else if (format === 'png') {
+            const element = document.getElementById('analytics-export-container');
+            if (element) {
+                const html2canvas = (await import('html2canvas')).default;
+                const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `analyse_${new Date().toISOString().split('T')[0]}.png`;
+                link.click();
+            }
+        } else if (format === 'xlsx') {
+            const data = state.mode === 'snapshot' ? snapshotData.data : trendData.data;
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
+            XLSX.writeFile(workbook, `analyse_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+    }, [state, companyLogo, snapshotData, trendData, handleExportInteractiveHTML]);
 
     return {
         state,

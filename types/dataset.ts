@@ -51,6 +51,12 @@ export interface EnrichmentConfig {
   newColumnName: string;
 }
 
+export interface BlendingConfig {
+    secondaryDatasetId: string;
+    joinKeyPrimary: string;
+    joinKeySecondary: string;
+}
+
 export interface Dataset {
   id: string;
   name: string;

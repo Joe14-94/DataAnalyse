@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useReducer } from 'react';
+import { useMemo, useEffect, useRef, useReducer } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
@@ -7,10 +7,17 @@ import {
     evaluateFormula,
     generateId,
     parseSmartNumber,
-    formatNumberValue,
     getGroupedLabel
 } from '../utils';
-import { CalculatedField, ConditionalRule, FieldConfig } from '../types';
+import { CalculatedField, ConditionalRule, FieldConfig, DataRow, BlendingConfig } from '../types';
+
+interface VLookupConfig {
+    targetDatasetId: string;
+    primaryKey: string;
+    secondaryKey: string;
+    columnsToAdd: string[];
+    newColumnName: string;
+}
 
 type DataExplorerAction =
     | { type: 'SET_SEARCH_TERM'; payload: string }
@@ -20,7 +27,7 @@ type DataExplorerAction =
     | { type: 'UPDATE_COLUMN_FILTER'; payload: { key: string; value: string } }
     | { type: 'SET_SELECTED_COL'; payload: string | null }
     | { type: 'SET_RENAMING_VALUE'; payload: string }
-    | { type: 'SET_SELECTED_ROW'; payload: any | null }
+    | { type: 'SET_SELECTED_ROW'; payload: DataRow | null }
     | { type: 'SET_DRAWER_OPEN'; payload: boolean }
     | { type: 'SET_TRACKING_KEY'; payload: string }
     | { type: 'SET_CALC_MODAL_OPEN'; payload: boolean }
@@ -28,8 +35,8 @@ type DataExplorerAction =
     | { type: 'SET_FORMAT_DRAWER_OPEN'; payload: boolean }
     | { type: 'SET_SELECTED_FORMAT_COL'; payload: string }
     | { type: 'SET_NEW_RULE'; payload: Partial<ConditionalRule> }
-    | { type: 'SET_DELETE_CONFIRM_ROW'; payload: any | null }
-    | { type: 'SET_BLENDING_CONFIG'; payload: any }
+    | { type: 'SET_DELETE_CONFIRM_ROW'; payload: DataRow | null }
+    | { type: 'SET_BLENDING_CONFIG'; payload: BlendingConfig | null }
     | { type: 'SET_COLUMN_DRAWER_OPEN'; payload: boolean }
     | { type: 'SET_COLUMN_WIDTHS'; payload: Record<string, number> }
     | { type: 'UPDATE_COLUMN_WIDTH'; payload: { key: string; width: number } }
@@ -37,11 +44,11 @@ type DataExplorerAction =
     | { type: 'SET_RESIZE_START'; payload: { x: number; width: number } }
     | { type: 'SET_SHOW_BORDERS'; payload: boolean }
     | { type: 'SET_EDIT_MODE'; payload: boolean }
-    | { type: 'SET_PENDING_CHANGES'; payload: Record<string, Record<string, any>> }
-    | { type: 'UPDATE_PENDING_CHANGE'; payload: { batchId: string; rowId: string; field: string; value: any } }
+    | { type: 'SET_PENDING_CHANGES'; payload: Record<string, Record<string, DataRow>> }
+    | { type: 'UPDATE_PENDING_CHANGE'; payload: { batchId: string; rowId: string; field: string; value: string | number | boolean } }
     | { type: 'SET_VLOOKUP_DRAWER_OPEN'; payload: boolean }
-    | { type: 'SET_VLOOKUP_CONFIG'; payload: any }
-    | { type: 'RESTORE_STATE'; payload: any };
+    | { type: 'SET_VLOOKUP_CONFIG'; payload: VLookupConfig }
+    | { type: 'RESTORE_STATE'; payload: Partial<DataExplorerState> };
 
 interface DataExplorerState {
     searchTerm: string;
@@ -50,7 +57,7 @@ interface DataExplorerState {
     columnFilters: Record<string, string>;
     selectedCol: string | null;
     renamingValue: string;
-    selectedRow: any | null;
+    selectedRow: DataRow | null;
     isDrawerOpen: boolean;
     trackingKey: string;
     isCalcModalOpen: boolean;
@@ -58,8 +65,8 @@ interface DataExplorerState {
     isFormatDrawerOpen: boolean;
     selectedFormatCol: string;
     newRule: Partial<ConditionalRule>;
-    deleteConfirmRow: any | null;
-    blendingConfig: any;
+    deleteConfirmRow: DataRow | null;
+    blendingConfig: BlendingConfig | null;
     isColumnDrawerOpen: boolean;
     columnWidths: Record<string, number>;
     resizingColumn: string | null;
@@ -67,15 +74,9 @@ interface DataExplorerState {
     resizeStartWidth: number;
     showColumnBorders: boolean;
     isEditMode: boolean;
-    pendingChanges: Record<string, Record<string, any>>;
+    pendingChanges: Record<string, Record<string, DataRow>>;
     isVlookupDrawerOpen: boolean;
-    vlookupConfig: {
-        targetDatasetId: string;
-        primaryKey: string;
-        secondaryKey: string;
-        columnsToAdd: string[];
-        newColumnName: string;
-    };
+    vlookupConfig: VLookupConfig;
 }
 
 const initialState: DataExplorerState = {
@@ -143,7 +144,7 @@ function dataExplorerReducer(state: DataExplorerState, action: DataExplorerActio
         case 'UPDATE_PENDING_CHANGE': {
             const { batchId, rowId, field, value } = action.payload;
             const batchChanges = state.pendingChanges[batchId] || {};
-            const rowChanges = batchChanges[rowId] || {};
+            const rowChanges = (batchChanges[rowId] || {}) as DataRow;
             return {
                 ...state,
                 pendingChanges: {
@@ -246,7 +247,7 @@ export function useDataExplorerLogic() {
                 blendingConfig: lastDataExplorerState.blendingConfig || null
             }});
         }
-    }, [currentDataset]);
+    }, [currentDataset, lastDataExplorerState, state.trackingKey]);
 
     // --- Save State ---
     useEffect(() => {
@@ -262,7 +263,7 @@ export function useDataExplorerLogic() {
             trackingKey: state.trackingKey,
             blendingConfig: state.blendingConfig
         });
-    }, [currentDataset, state.searchTerm, state.sortConfig, state.columnFilters, state.showFilters, state.columnWidths, state.showColumnBorders, state.trackingKey, state.blendingConfig]);
+    }, [currentDataset, state.searchTerm, state.sortConfig, state.columnFilters, state.showFilters, state.columnWidths, state.showColumnBorders, state.trackingKey, state.blendingConfig, saveDataExplorerState]);
 
     // --- Handlers ---
     const handleSort = (key: string) => {
@@ -317,13 +318,13 @@ export function useDataExplorerLogic() {
         };
     }, [state.resizingColumn, state.resizeStartX, state.resizeStartWidth]);
 
-    const handleRowClick = (row: any) => {
+    const handleRowClick = (row: DataRow) => {
         if (state.isEditMode) return;
         dispatch({ type: 'SET_SELECTED_ROW', payload: row });
         dispatch({ type: 'SET_DRAWER_OPEN', payload: true });
     };
 
-    const handleCellEdit = (batchId: string, rowId: string, field: string, value: any) => {
+    const handleCellEdit = (batchId: string, rowId: string, field: string, value: string | number | boolean) => {
         dispatch({ type: 'UPDATE_PENDING_CHANGE', payload: { batchId, rowId, field, value } });
     };
 
@@ -384,9 +385,9 @@ export function useDataExplorerLogic() {
         if (!currentDataset || !state.selectedFormatCol) return;
         const rule: ConditionalRule = {
             id: generateId(),
-            operator: state.newRule.operator as any,
-            value: state.newRule.value as any,
-            style: state.newRule.style as any
+            operator: (state.newRule.operator || 'eq') as 'gt' | 'lt' | 'eq' | 'contains' | 'empty',
+            value: state.newRule.value || '',
+            style: (state.newRule.style || {}) as ConditionalRule['style']
         };
         const currentConfig = currentDataset.fieldConfigs?.[state.selectedFormatCol] || { type: 'text' };
         const currentRules = currentConfig.conditionalFormatting || [];
@@ -404,7 +405,7 @@ export function useDataExplorerLogic() {
         });
     };
 
-    const handleFormatChange = (key: keyof FieldConfig, value: any) => {
+    const handleFormatChange = (key: keyof FieldConfig, value: string | number | boolean | ConditionalRule[]) => {
         if (!currentDataset || !state.selectedCol) return;
         const currentConfig = currentDataset.fieldConfigs?.[state.selectedCol] || { type: 'number' };
         updateDatasetConfigs(currentDataset.id, {
@@ -477,7 +478,7 @@ export function useDataExplorerLogic() {
         alert(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
     };
 
-    const handleDeleteRow = (row: any, e: React.MouseEvent) => {
+    const handleDeleteRow = (row: DataRow, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         dispatch({ type: 'SET_DELETE_CONFIRM_ROW', payload: row });
@@ -499,7 +500,7 @@ export function useDataExplorerLogic() {
             .filter(b => b.datasetId === currentDataset.id)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .flatMap(batch => (batch.rows || []).map(r => {
-                const extendedRow: any = { ...r, _importDate: batch.date, _batchId: batch.id };
+                const extendedRow: DataRow = { ...r, _importDate: batch.date, _batchId: batch.id };
                 calcFields.forEach(cf => {
                     const val = evaluateFormula(r, cf.formula, cf.outputType);
                     extendedRow[cf.name] = val;
@@ -513,18 +514,18 @@ export function useDataExplorerLogic() {
                 const secBatches = batches.filter(b => b.datasetId === state.blendingConfig.secondaryDatasetId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 if (secBatches.length > 0) {
                     const secBatch = secBatches[secBatches.length - 1];
-                    const lookup = new Map<string, any>();
+                    const lookup = new Map<string, DataRow>();
                     secBatch.rows.forEach(r => {
-                        const k = String(r[state.blendingConfig.joinKeySecondary]).trim();
+                        const k = String(r[state.blendingConfig!.joinKeySecondary]).trim();
                         if (k) lookup.set(k, r);
                     });
                     rows = (rows || []).map(row => {
-                        const k = String(row[state.blendingConfig.joinKeyPrimary]).trim();
+                        const k = String(row[state.blendingConfig!.joinKeyPrimary]).trim();
                         const match = lookup.get(k);
                         if (match) {
-                           const prefixedMatch: any = {};
+                           const prefixedMatch: Partial<DataRow> = {};
                            Object.keys(match || {}).forEach(key => {
-                              if (key !== 'id') prefixedMatch[`[${secDS.name}] ${key}`] = match[key];
+                              if (key !== 'id') (prefixedMatch as DataRow)[`[${secDS.name}] ${key}`] = match[key];
                            });
                            return { ...row, ...prefixedMatch };
                         }
@@ -567,7 +568,7 @@ export function useDataExplorerLogic() {
         let data = allRows;
 
         const activeFilters = Object.entries(state.columnFilters)
-            .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+            .filter(([, v]) => v !== undefined && v !== null && v !== '')
             .map(([key, value]) => {
                 let targetVal = String(value);
                 let isExact = false;
@@ -680,7 +681,7 @@ export function useDataExplorerLogic() {
         const trackValue = state.selectedRow[state.trackingKey];
         if (trackValue === undefined || trackValue === '') return [state.selectedRow];
         const relevantBatches = batches.filter(b => b.datasetId === currentDataset?.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        const history: any[] = [];
+        const history: DataRow[] = [];
         relevantBatches.forEach(batch => {
             const match = batch.rows.find(r => String(r[state.trackingKey]) === String(trackValue));
             if (match) history.push({ ...match, _importDate: batch.date, _batchId: batch.id });
@@ -688,7 +689,7 @@ export function useDataExplorerLogic() {
         return history;
     }, [state.selectedRow, state.trackingKey, batches, currentDataset]);
 
-    const getCellStyle = (fieldName: string, value: any) => {
+    const getCellStyle = (fieldName: string, value: string | number | boolean) => {
         if (!currentDataset?.fieldConfigs) return '';
         const rules = currentDataset.fieldConfigs[fieldName]?.conditionalFormatting;
         if (!rules || rules.length === 0) return '';
@@ -718,13 +719,13 @@ export function useDataExplorerLogic() {
                 const cols = [
                     row._importDate, row.id,
                     ...displayFields.map(f => {
-                        let val = row[f];
+                        const val = row[f];
                         let stringVal = val !== undefined ? String(val) : '';
                         if (stringVal.includes(';') || stringVal.includes('\n') || stringVal.includes('"')) stringVal = `"${stringVal.replace(/"/g, '""')}"`;
                         return stringVal;
                     }),
                     ...(currentDataset.calculatedFields || []).map(f => {
-                        let val = row[f.name];
+                        const val = row[f.name];
                         return val !== undefined ? String(val) : '';
                     })
                 ];

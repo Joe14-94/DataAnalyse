@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import {
@@ -8,7 +8,8 @@ import * as XLSX from 'xlsx';
 import {
     CalculatedField, PivotStyleRule, ConditionalFormattingRule, FilterRule, FieldConfig,
     TemporalComparisonConfig, TemporalComparisonResult, PivotSourceConfig,
-    AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem
+    AggregationType, SortBy, SortOrder, DateGrouping, PivotMetric, SpecificDashboardItem,
+    DataRow, TemporalComparisonSource
 } from '../types';
 import { usePivotData } from './usePivotData';
 import { formatPivotOutput } from '../logic/pivotEngine';
@@ -72,7 +73,7 @@ export const usePivotLogic = () => {
     const [isFieldsPanelCollapsed, setIsFieldsPanelCollapsed] = useState(false);
 
     // DRILLDOWN STATE
-    const [drilldownData, setDrilldownData] = useState<{ rows: any[], title: string, fields: string[] } | null>(null);
+    const [drilldownData, setDrilldownData] = useState<{ rows: DataRow[], title: string, fields: string[] } | null>(null);
     const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
     // D&D STATE
@@ -134,7 +135,7 @@ export const usePivotLogic = () => {
             ...temporalConfig,
             groupByFields: rowFields,
             valueField: valField,
-            aggType: aggType === 'list' ? 'sum' : aggType as any
+            aggType: aggType === 'list' ? 'sum' : aggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
         } : undefined;
 
         savePivotState({
@@ -149,7 +150,7 @@ export const usePivotLogic = () => {
                 styleRules,
                 conditionalRules,
                 searchTerm
-            } as any
+            }
         });
     }, [sources, rowFields, colFields, colGrouping, valField, aggType, metrics, valFormatting, filters, showSubtotals, showTotalCol, showVariations, sortBy, sortOrder, selectedBatchId, primaryDataset, isInitialized, isTemporalMode, temporalConfig, columnWidths, columnLabels, styleRules, conditionalRules, searchTerm, savePivotState]);
 
@@ -270,12 +271,12 @@ export const usePivotLogic = () => {
         if (zone === 'filter') setFilters(prev => prev.filter(f => f.field !== field));
     };
 
-    const handleExport = (format: 'pdf' | 'html', mode: any = 'adaptive') => {
+    const handleExport = (format: 'pdf' | 'html', mode: 'adaptive' | 'A4' = 'adaptive') => {
         setShowExportMenu(false);
 
         if (format === 'html') {
             const title = `TCD - ${primaryDataset?.name || 'Analyse'}`;
-            const formatOutput = (val: string | number, metric?: any) => {
+            const formatOutput = (val: string | number, metric?: PivotMetric) => {
                 const field = metric?.field || valField;
                 const type = metric?.aggType || aggType;
                 return formatPivotOutput(val, field, type, primaryDataset, undefined, datasets, metric?.formatting || valFormatting);
@@ -321,13 +322,13 @@ export const usePivotLogic = () => {
             return;
         }
 
-        const exportData: any[][] = [];
+        const exportData: (string | number | boolean)[][] = [];
         const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
 
         if (isTemporalMode && temporalConfig) {
             const headers: string[] = [...rowFields];
 
-            temporalConfig.sources.forEach((s: any) => {
+            temporalConfig.sources.forEach((s: TemporalComparisonSource) => {
                 activeMetrics.forEach(m => {
                     const mLabel = m.label || `${m.field} (${m.aggType})`;
                     headers.push(activeMetrics.length > 1 ? `${s.label} - ${mLabel}` : s.label);
@@ -342,7 +343,7 @@ export const usePivotLogic = () => {
             exportData.push(headers);
 
             temporalResults.forEach(result => {
-                const rowData: any[] = [];
+                const rowData: (string | number | boolean)[] = [];
                 const keys = result.groupLabel.split('\x1F');
                 const isSubtotal = result.isSubtotal;
                 const subLevel = result.subtotalLevel || 0;
@@ -357,7 +358,7 @@ export const usePivotLogic = () => {
                     }
                 });
 
-                temporalConfig.sources.forEach((s: any) => {
+                temporalConfig.sources.forEach((s: TemporalComparisonSource) => {
                     activeMetrics.forEach(m => {
                         const mLabel = m.label || `${m.field} (${m.aggType})`;
                         rowData.push(result.values[s.id]?.[mLabel] ?? '');
@@ -378,10 +379,10 @@ export const usePivotLogic = () => {
             });
 
             if (temporalColTotals) {
-                const totalsRow: any[] = ['TOTAL'];
+                const totalsRow: (string | number | boolean)[] = ['TOTAL'];
                 for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
 
-                temporalConfig.sources.forEach((s: any) => {
+                temporalConfig.sources.forEach((s: TemporalComparisonSource) => {
                     activeMetrics.forEach(m => {
                         const mLabel = m.label || `${m.field} (${m.aggType})`;
                         totalsRow.push(temporalColTotals[s.id]?.[mLabel] ?? '');
@@ -399,7 +400,7 @@ export const usePivotLogic = () => {
             exportData.push(headers);
 
             pivotData.displayRows.forEach(row => {
-                const rowData: any[] = [];
+                const rowData: (string | number | boolean)[] = [];
                 rowFields.forEach((field, index) => {
                     if (index < row.keys.length) {
                         const indent = row.type === 'subtotal' && index === row.keys.length - 1
@@ -422,7 +423,7 @@ export const usePivotLogic = () => {
             });
 
             if (pivotData.colTotals) {
-                const totalsRow: any[] = ['Total'];
+                const totalsRow: (string | number | boolean)[] = ['Total'];
                 for (let i = 1; i < rowFields.length; i++) totalsRow.push('');
                 pivotData.colHeaders.forEach(colHeader => totalsRow.push(pivotData.colTotals[colHeader] ?? ''));
                 if (showTotalCol && pivotData.grandTotal !== undefined) totalsRow.push(pivotData.grandTotal);
@@ -491,7 +492,7 @@ export const usePivotLogic = () => {
         navigate('/data', { state: { prefilledFilters } });
     };
 
-    const handleCellClick = (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => {
+    const handleCellClick = (rowKeys: string[], colLabel: string, value: string | number, metricLabel: string) => {
         if (formattingSelectionRule) {
             const targetKey = colLabel === '' ? (rowKeys[rowKeys.length - 1] || '') : (rowKeys.length === 0 ? colLabel : `${rowKeys.join('\x1F')}|${colLabel}`);
 
@@ -688,7 +689,7 @@ export const usePivotLogic = () => {
                 ...temporalConfig,
                 groupByFields: rowFields,
                 valueField: valField,
-                aggType: aggType === 'list' ? 'sum' : aggType as any
+                aggType: aggType === 'list' ? 'sum' : aggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
             } : undefined;
 
             saveAnalysis({
@@ -738,10 +739,10 @@ export const usePivotLogic = () => {
         if (!primaryDataset) return;
 
         let fields: string[] = [];
-        let rows: any[] = [];
+        let rows: DataRow[] = [];
 
         if (isTemporalMode && temporalConfig) {
-            fields = [...(rowFields || []), ...(temporalConfig.sources || []).map((s: any) => s.label)];
+            fields = [...(rowFields || []), ...(temporalConfig.sources || []).map((s: TemporalComparisonSource) => s.label)];
             rows = temporalResultToRows(temporalResults, rowFields, temporalConfig);
 
             const config = {
@@ -757,7 +758,7 @@ export const usePivotLogic = () => {
                     ...temporalConfig,
                     groupByFields: rowFields,
                     valueField: valField,
-                    aggType: aggType as any
+                    aggType: aggType as 'sum' | 'count' | 'avg' | 'min' | 'max'
                 }
             };
 
@@ -782,7 +783,7 @@ export const usePivotLogic = () => {
             const activeMetrics = metrics.length > 0 ? metrics : (valField ? [{ field: valField, aggType }] : []);
             const colHeaders: string[] = [];
 
-            temporalConfig.sources.forEach((s: any) => {
+            temporalConfig.sources.forEach((s: TemporalComparisonSource) => {
                 activeMetrics.forEach(m => {
                     const mLabel = m.label || `${m.field} (${m.aggType})`;
                     colHeaders.push(activeMetrics.length > 1 ? `${s.label} - ${mLabel}` : s.label);
@@ -794,7 +795,7 @@ export const usePivotLogic = () => {
                 const rowMetrics: Record<string, number> = {};
                 let rowTotal = 0;
 
-                temporalConfig.sources.forEach((s: any) => {
+                temporalConfig.sources.forEach((s: TemporalComparisonSource) => {
                     activeMetrics.forEach(m => {
                         const mLabel = m.label || `${m.field} (${m.aggType})`;
                         const val = r.values[s.id]?.[mLabel] || 0;
@@ -808,7 +809,7 @@ export const usePivotLogic = () => {
                     type: (r.isSubtotal ? 'subtotal' : 'data') as 'subtotal' | 'data',
                     keys: keys,
                     level: r.isSubtotal ? (r.subtotalLevel ?? 0) : (keys.length - 1),
-                    label: r.groupLabel.replace(/\x1F/g, ' > '),
+                    label: r.groupLabel.replace(/[\u001f]/g, ' > '),
                     metrics: rowMetrics,
                     rowTotal: rowTotal
                 };
