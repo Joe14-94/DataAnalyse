@@ -236,8 +236,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const colKey = col.key;
                            if (col.isDiff) return <th key={colKey} className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>Δ</th>;
 
-                           const { metricLabel, metric } = metricInfoCache.get(colKey) || {};
-                           const sourceId = colKey.split('_')[0];
+                           const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
                            const source = temporalConfig?.sources.find(s => s.id === sourceId);
                            const displayLabel = metrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
                            const headerStyle = getCellFormatting([], colKey, undefined, metricLabel || '', 'data');
@@ -287,9 +286,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const col = allDataColumns[vCol.index];
                                  const colKey = col.key;
                                  if (col.isDiff) {
-                                    const baseKey = colKey.replace('_DELTA', '');
-                                    const sourceId = baseKey.split('_')[0];
-                                    const mLabel = metricInfoCache.get(baseKey)?.metricLabel || '';
+                                    const { colLabel: sourceId = '', metricLabel: mLabel = '' } = metricInfoCache.get(colKey) || {};
                                     const delta = result.deltas[sourceId]?.[mLabel] || { value: 0, percentage: 0 };
                                     return (
                                        <td key={colKey} className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>
@@ -297,17 +294,17 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                        </td>
                                     );
                                  }
-                                 const { metricLabel, metric } = metricInfoCache.get(colKey) || {};
-                                 const sourceId = colKey.split('_')[0];
-                                 const value = result.values[sourceId]?.[metricLabel || ''] || 0;
-                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, metricLabel || '', isSubtotal ? 'subtotal' : 'data');
-                                 const displayColLabel = effectiveMetrics.length > 1 ? `${temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId} - ${metricLabel}` : (temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId);
+                                 const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
+                                 const value = result.values[sourceId]?.[metricLabel] || 0;
+                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, metricLabel, isSubtotal ? 'subtotal' : 'data');
+                                 const source = temporalConfig?.sources.find(s => s.id === sourceId);
+                                 const displayColLabel = effectiveMetrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
                                  const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), displayColLabel);
 
                                  return (
                                     <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${sourceId === temporalConfig?.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
                                        style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }}
-                                       onClick={() => { if (isSelectionMode) handleDrilldown(result.groupLabel.split('\x1F'), displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId, metricLabel || ''); }}>
+                                       onClick={() => { if (isSelectionMode) handleDrilldown(result.groupLabel.split('\x1F'), displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId || '', metricLabel || ''); }}>
                                        {formatOutput(value, metric || effectiveMetrics[0])}
                                     </td>
                                  );
