@@ -1,7 +1,7 @@
 import { ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from '../types';
 
 // Updated version
-export const APP_VERSION = "2026-02-10-01";
+export const APP_VERSION = "2026-02-11-01";
 
 export const generateId = (): string => {
   return crypto.randomUUID();
@@ -122,7 +122,7 @@ const MAX_DATE_CACHE_SIZE = 10000;
  * Parse une date avec support du format français DD/MM/YYYY et des dates Excel
  */
 export const parseDateValue = (dateValue: any): Date | null => {
-  if (dateValue === undefined || dateValue === null || dateValue === '' || dateValue === 0) return null;
+  if (dateValue === undefined || dateValue === null || dateValue === '' || dateValue === 0 || dateValue === '0' || String(dateValue).trim() === '') return null;
 
   // BOLT OPTIMIZATION: Return cached result if available
   const cached = DATE_CACHE.get(dateValue);
@@ -305,7 +305,8 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
  * Formate un nombre selon la configuration du champ
  */
 export const formatNumberValue = (value: number | string, config?: FieldConfig): string => {
-  if (config?.type === 'date' && value !== undefined && value !== null && value !== '') {
+  if (config?.type === 'date') {
+    if (value === undefined || value === null || value === '' || value === 0 || value === '0') return '-';
     return formatDateFr(value);
   }
 

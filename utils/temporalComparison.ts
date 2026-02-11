@@ -406,14 +406,18 @@ export const detectDateColumn = (headers: string[]): string | undefined => {
   const lowerHeaders = headers.map(h => h.toLowerCase());
 
   const datePatterns = [
-    'date écriture',
+    'date de lancement',
+    'date lancement',
+    'date de fin',
+    'date fin',
+    'date transaction',
+    'transaction date',
     'date',
+    'date écriture',
     'date_ecriture',
     'datecriture',
     'date ecrit',
-    'ecriture',
-    'date transaction',
-    'transaction date'
+    'ecriture'
   ];
 
   for (const pattern of datePatterns) {

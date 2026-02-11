@@ -17,7 +17,3 @@
 ## 2026-02-06 - [Standardizing Interactive Elements]
 **Learning:** Standardizing interactive elements like toolbar buttons using a base `Button` component not only ensures visual consistency but also provides automatic accessibility fallbacks (like title to aria-label) and standardized focus states across the application.
 **Action:** Replace raw `<button>` tags for key actions with the project's `Button` component and ensure all icon-only buttons have descriptive `aria-label` or `title` attributes.
-
-## 2026-02-10 - [Centralized Empty States]
-**Learning:** Inconsistent empty states across an application lead to a fragmented user experience. Centralizing empty state logic into a reusable `EmptyState` component ensures visual consistency, design system compliance, and simplifies the implementation of helpful call-to-actions.
-**Action:** Use a centralized `EmptyState` component for all "no data" views to provide clear feedback and actionable next steps for the user.

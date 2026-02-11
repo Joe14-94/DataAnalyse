@@ -12,14 +12,6 @@ interface OptimizedRow {
   rawVals: any[];
 }
 
-// Interface pour les stats internes pendant l'agrégation
-interface InternalStats {
-    colMetrics: Map<string, (number | Set<string>)[]>;
-    rowTotalMetrics: (number | Set<string>)[];
-    count: number;
-    colCounts: Map<string, number>;
-}
-
 // Interface pour le cache des stats de groupe
 interface GroupStats {
     metrics: Record<string, number | string>;
@@ -145,11 +137,11 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   // --- PHASE 2 : AGREGATION ---
 
-  const initStats = (): InternalStats => ({
+  const initStats = () => ({
       // Map<colKey, any[]> où any[] contient les valeurs cumulées pour chaque métrique
-      colMetrics: new Map<string, (number | Set<string>)[]>(),
+      colMetrics: new Map<string, any[]>(),
       // any[] contient les totaux de ligne pour chaque métrique
-      rowTotalMetrics: metricConfigs.map(mc => (mc.aggType === 'min' ? Infinity : mc.aggType === 'max' ? -Infinity : (mc.aggType === 'list' ? new Set<string>() : 0))),
+      rowTotalMetrics: metricConfigs.map(mc => (mc.aggType === 'min' ? Infinity : mc.aggType === 'max' ? -Infinity : (mc.aggType === 'list' ? new Set() : 0))) as any[],
       count: 0,
       colCounts: new Map<string, number>()
   });
@@ -185,19 +177,19 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               
               // 2.1 Mise à jour Totaux Ligne
               if (aggType === 'sum' || aggType === 'count' || aggType === 'avg') {
-                  (stats.rowTotalMetrics[mIdx] as number) += val;
-                  (colMetricVals[mIdx] as number) += val;
+                  stats.rowTotalMetrics[mIdx] += val;
+                  colMetricVals[mIdx] += val;
               } else if (aggType === 'min') {
-                  if (val < (stats.rowTotalMetrics[mIdx] as number)) stats.rowTotalMetrics[mIdx] = val;
-                  if (val < (colMetricVals[mIdx] as number)) colMetricVals[mIdx] = val;
+                  if (val < stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
+                  if (val < colMetricVals[mIdx]) colMetricVals[mIdx] = val;
               } else if (aggType === 'max') {
-                  if (val > (stats.rowTotalMetrics[mIdx] as number)) stats.rowTotalMetrics[mIdx] = val;
-                  if (val > (colMetricVals[mIdx] as number)) colMetricVals[mIdx] = val;
+                  if (val > stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
+                  if (val > colMetricVals[mIdx]) colMetricVals[mIdx] = val;
               } else if (aggType === 'list') {
                   if (row.rawVals[mIdx]) {
                       const strVal = String(row.rawVals[mIdx]);
-                      (stats.rowTotalMetrics[mIdx] as Set<string>).add(strVal);
-                      (colMetricVals[mIdx] as Set<string>).add(strVal);
+                      stats.rowTotalMetrics[mIdx].add(strVal);
+                      colMetricVals[mIdx].add(strVal);
                   }
               }
           }
@@ -208,7 +200,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       return finalizeStats(stats, sortedColHeaders);
   };
 
-  const finalizeStats = (stats: InternalStats, headers: string[]): GroupStats => {
+  const finalizeStats = (stats: any, headers: string[]): GroupStats => {
       const finalMetrics: Record<string, number | string> = {};
       const rawMetrics = new Map<string, number>(); 
       const finalTotalMetrics: Record<string, number | string> = {};
@@ -222,7 +214,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
       };
 
       metricConfigs.forEach((mc, mIdx) => {
-          let valTotal: number | string | Set<string> = stats.rowTotalMetrics[mIdx];
+          let valTotal = stats.rowTotalMetrics[mIdx];
 
           if (mc.aggType === 'avg') {
              valTotal = stats.count > 0 ? valTotal / stats.count : undefined;
@@ -233,7 +225,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           }
 
           const metricLabel = mc.label || `${mc.field} (${mc.aggType})`;
-          finalTotalMetrics[metricLabel] = valTotal as string | number;
+          finalTotalMetrics[metricLabel] = valTotal;
 
           // Use first metric for row-level sorting if needed
           let rawTotalVal = 0;
@@ -250,19 +242,19 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
           // BOLT OPTIMIZATION: Only iterate over columns that actually have data for this group
           // This changes complexity from O(Groups * TotalColumns) to O(Rows)
-          stats.colMetrics.forEach((colMetricVals: (number | Set<string>)[], h: string) => {
-              let val: number | string | Set<string> | undefined = colMetricVals[mIdx];
+          stats.colMetrics.forEach((colMetricVals: any[], h: string) => {
+              let val = colMetricVals[mIdx];
               const count = stats.colCounts.get(h) || 1;
               let rawColVal = 0;
 
               if (val !== undefined) {
                   if (mc.aggType === 'avg') {
-                      val = (val as number) / count;
+                      val = val / count;
                       rawColVal = val;
                   } else if (mc.aggType === 'list') {
                       rawColVal = (val as Set<string>).size;
-                      val = formatList(val as Set<string>);
-                  } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(val as number)) {
+                      val = formatList(val);
+                  } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(val)) {
                       val = undefined;
                       rawColVal = 0;
                   } else if (typeof val === 'number') {
@@ -276,7 +268,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               const fullKey = colFields.length > 0
                 ? (metricConfigs.length > 1 ? `${h}\x1F${metricLabel}` : h)
                 : metricLabel;
-              if (val !== undefined) finalMetrics[fullKey] = val as string | number;
+              finalMetrics[fullKey] = val;
               rawMetrics.set(fullKey, rawColVal);
 
               if (mIdx === 0) {
