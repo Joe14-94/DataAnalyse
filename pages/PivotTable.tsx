@@ -24,6 +24,7 @@ export const PivotTable: React.FC = () => {
     const {
         batches, datasets, savedAnalyses, primaryDataset, datasetBatches,
         blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, chartPivotData,
+        filteredPivotRows, filteredTemporalResults,
         sources, setSources, selectedBatchId, setSelectedBatchId,
         rowFields, setRowFields, colFields, setColFields, valField, setValField,
         colGrouping, setColGrouping, aggType, setAggType, metrics, setMetrics,
@@ -42,6 +43,7 @@ export const PivotTable: React.FC = () => {
         editingCalcField, setEditingCalcField, columnLabels, setColumnLabels,
         editingColumn, setEditingColumn, columnWidths, setColumnWidths,
         styleRules, setStyleRules, conditionalRules, setConditionalRules,
+        collapsedRows, toggleRowExpansion, setAllExpansion,
         isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed,
         isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed,
         isFieldsPanelCollapsed, setIsFieldsPanelCollapsed,
@@ -76,6 +78,7 @@ export const PivotTable: React.FC = () => {
                searchTerm={searchTerm}
                setSearchTerm={setSearchTerm}
                handleReset={handleReset}
+               setAllExpansion={setAllExpansion}
             />
 
             <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
@@ -107,17 +110,19 @@ export const PivotTable: React.FC = () => {
                         <FormattingOverlay onCancel={() => { setFormattingSelectionRule(null); setIsFormattingModalOpen(true); }} />
                     )}
                     <PivotGrid
-                       {...{ isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, colFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
+                       {...{ isCalculating, isTemporalMode, pivotData, temporalResults: filteredTemporalResults, temporalConfig, rowFields, colFields, columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
                        handleDrilldown: handleCellClick, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics, valFormatting,
                        virtualItems: rowVirtualizer.getVirtualItems(), rowVirtualizer, colVirtualizer, allDataColumns, parentRef,
                        isSelectionMode, isFormattingSelectionMode: !!formattingSelectionRule, selectedItems: specificDashboardItems, isEditMode,
                        sortBy, setSortBy, sortOrder, setSortOrder,
                        columnWidths, setColumnWidths,
                        styleRules, conditionalRules,
+                       collapsedRows, toggleRowExpansion,
                        onRemoveField: removeField,
                        totalColumns: rowFields.length + (pivotData?.colHeaders.length || 0) + (showTotalCol ? 1 : 0),
                        paddingTop: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getVirtualItems()[0].start : 0,
                        paddingBottom: rowVirtualizer.getVirtualItems().length > 0 ? rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end : 0 }}
+                       pivotData={pivotData ? { ...pivotData, displayRows: filteredPivotRows } : null}
                     />
                     <PivotFooter
                        {...{ pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules, conditionalRules,
