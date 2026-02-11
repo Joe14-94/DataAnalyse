@@ -19,7 +19,7 @@ export const compressBatch = (batch: ImportBatch): any => {
   // On convertit les lignes en tableaux de valeurs
   const data = batch.rows.map(row => fields.map(f => row[f]));
 
-  const { rows, ...meta } = batch;
+  const { rows: _, ...meta } = batch;
   return {
     ...meta,
     _c: true, // Flag compressé
@@ -34,7 +34,7 @@ export const compressBatch = (batch: ImportBatch): any => {
 export const decompressBatch = (batch: any): ImportBatch => {
   if (!batch || !batch._c) return batch as ImportBatch;
 
-  const { f, d, _c, ...meta } = batch;
+  const { f, d, _c: _, ...meta } = batch;
   const rows = d.map((rowValues: any[]) => {
     const row: any = {};
     f.forEach((fieldName: string, i: number) => {
@@ -122,7 +122,7 @@ const MAX_DATE_CACHE_SIZE = 10000;
  * Parse une date avec support du format français DD/MM/YYYY et des dates Excel
  */
 export const parseDateValue = (dateValue: any): Date | null => {
-  if (dateValue === undefined || dateValue === null || dateValue === '') return null;
+  if (dateValue === undefined || dateValue === null || dateValue === '' || dateValue === 0) return null;
 
   // BOLT OPTIMIZATION: Return cached result if available
   const cached = DATE_CACHE.get(dateValue);
@@ -194,7 +194,7 @@ export const parseDateValue = (dateValue: any): Date | null => {
 
 export const formatDateFr = (dateStr: string | number): string => {
   const date = parseDateValue(dateStr);
-  if (!date) return dateStr === 0 ? '0' : (String(dateStr || '-'));
+  if (!date) return '-';
 
   try {
     return getCachedDateTimeFormat({
@@ -202,7 +202,7 @@ export const formatDateFr = (dateStr: string | number): string => {
       month: 'long',
       day: 'numeric'
     }).format(date);
-  } catch (e) {
+  } catch {
     return String(dateStr);
   }
 };
@@ -215,7 +215,7 @@ export const getDaysDifference = (dateStr: any): number => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - target.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  } catch (e) {
+  } catch {
     return 999;
   }
 };
@@ -365,7 +365,7 @@ export const getGroupedLabel = (val: string, grouping: 'none' | 'year' | 'quarte
       // ISO format pour le tri correct, formaté ensuite si besoin
       result = d.toISOString().slice(0, 7); // YYYY-MM
     }
-  } catch (e) {
+  } catch {
     result = val;
   }
 
@@ -542,7 +542,7 @@ export const extractDomain = (email: string): string => {
   if (!email || typeof email !== 'string' || !email.includes('@')) return 'Inconnu';
   try {
     return email.split('@')[1].trim().toLowerCase();
-  } catch (e) {
+  } catch {
     return 'Format invalide';
   }
 };
