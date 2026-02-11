@@ -126,9 +126,13 @@ export const parseDateValue = (dateValue: any): Date | null => {
   if (dateValue === undefined || dateValue === null || dateValue === '') return null;
 
   const sVal = String(dateValue).trim();
-  if (sVal === '' || sVal === '0' || sVal === '0.00' || sVal === 'null' || sVal === 'undefined' || sVal === '-') return null;
+  if (sVal === '' || sVal === 'null' || sVal === 'undefined' || sVal === '-' || sVal === '(Vide)') return null;
 
-  if (typeof dateValue === 'number' && (isNaN(dateValue) || !isFinite(dateValue) || dateValue === 0)) return null;
+  // Robust check for numeric zero in any format ("0", "0,00", 0)
+  const numericVal = parseFloat(sVal.replace(',', '.'));
+  if (numericVal === 0) return null;
+
+  if (typeof dateValue === 'number' && (isNaN(dateValue) || !isFinite(dateValue))) return null;
 
   // BOLT OPTIMIZATION: Return cached result if available
   const cached = DATE_CACHE.get(dateValue);

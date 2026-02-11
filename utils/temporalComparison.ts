@@ -202,6 +202,13 @@ export const calculateTemporalComparison = (
       }
 
       includedCount++;
+      if (includedCount <= 5) {
+        console.log(`✅ [Source: ${source.label}] Included row sample:`, {
+          project: row[groupByFields[0]],
+          filterDate: row[dateColumn],
+          metricValues: metrics.map(m => ({ field: m.field, val: row[m.field] }))
+        });
+      }
       return true;
     };
 
@@ -217,9 +224,12 @@ export const calculateTemporalComparison = (
     });
 
     if (totalProcessed > 0 && includedCount === 0) {
-      console.warn(`⚠️ [Source: ${source.label}] NO ROWS PASSED THE FILTERS. Sample raw date value for '${dateColumn}':`,
-        sourceData[0]?.[dateColumn]
-      );
+      console.warn(`⚠️ [Source: ${source.label}] NO ROWS PASSED THE FILTERS.`, {
+        total: totalProcessed,
+        dateColumn,
+        sampleValue: sourceData[0]?.[dateColumn],
+        reasons: exclusionReasons
+      });
     }
   });
 
@@ -444,18 +454,41 @@ export const formatPercentage = (value: number): string => {
 export const detectDateColumn = (headers: string[]): string | undefined => {
   const lowerHeaders = headers.map(h => h.toLowerCase());
 
-  const datePatterns = [
+  // Priorité absolue aux champs métier clés (exact match ou début de chaîne)
+  const businessPatterns = [
     'date de lancement',
     'date lancement',
+    'lancement',
+    'démarrage',
+    'demarrage',
+    'date de début',
+    'date debut',
     'date de fin',
     'date fin',
-    'date de presentation',
+    'échéance',
+    'echeance',
+    'date de présentation',
     'date presentation',
+    'date de signature',
+    'date signature'
+  ];
+
+  for (const pattern of businessPatterns) {
+    const index = lowerHeaders.findIndex(h => h === pattern || h.startsWith(pattern));
+    if (index !== -1) return headers[index];
+  }
+
+  // Second passage : recherche par inclusion pour les champs métier
+  for (const pattern of businessPatterns) {
+    const index = lowerHeaders.findIndex(h => h.includes(pattern));
+    if (index !== -1) return headers[index];
+  }
+
+  // Troisième passage : termes génériques
+  const genericPatterns = [
     'date transaction',
     'transaction date',
-    'date de signature',
-    'date signature',
-    'date de creation',
+    'date de création',
     'date creation',
     'date',
     'date écriture',
@@ -465,11 +498,9 @@ export const detectDateColumn = (headers: string[]): string | undefined => {
     'ecriture'
   ];
 
-  for (const pattern of datePatterns) {
+  for (const pattern of genericPatterns) {
     const index = lowerHeaders.findIndex(h => h.includes(pattern));
-    if (index !== -1) {
-      return headers[index];
-    }
+    if (index !== -1) return headers[index];
   }
 
   return undefined;
