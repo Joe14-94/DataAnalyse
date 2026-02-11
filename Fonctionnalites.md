@@ -2,7 +2,7 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 11-02-2026-05
+**Version de référence** : 11-02-2026-06
 **Dernière mise à jour** : 11/02/2026
 
 ---

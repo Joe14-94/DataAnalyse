@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign, TrendingUp, Workflow } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign, TrendingUp, Workflow, Check } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -19,6 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { datasets, batches, getBackupJson, companyLogo } = useData();
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
+  const [copied, setCopied] = useState(false);
 
   // Sidebar State
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -36,6 +37,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Paramètres', icon: Settings, path: '/settings' },
     { name: 'Aide et informations', icon: HelpCircle, path: '/help' },
   ];
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // CMD/CTRL + K: Focus Search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="recherche"], input[placeholder*="Recherche"], input[placeholder*="search"], input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Calculate Storage Usage
   useEffect(() => {
@@ -178,9 +196,33 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <main className="flex-1 h-full relative overflow-hidden bg-canvas">
         {children}
-        <div className="absolute bottom-1 right-2 text-xs text-txt-muted pointer-events-none z-[60] font-medium bg-surface/50 px-1 rounded shadow-sm border border-border-default">
-           v{APP_VERSION} | 11/02/2026
-        </div>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`DataScope v${APP_VERSION}`);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+          className={`absolute bottom-1 right-2 text-xs z-[60] font-medium px-2 py-0.5 rounded shadow-sm border transition-all flex items-center gap-1.5 active:scale-95
+            ${copied
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-surface/80 text-txt-muted border-border-default hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200'
+            }
+          `}
+          title="Copier la version"
+          aria-label={`Version de l'application ${APP_VERSION}. Cliquer pour copier.`}
+        >
+           {copied ? (
+             <>
+               <Check size={10} className="text-emerald-500" />
+               <span>Copié !</span>
+             </>
+           ) : (
+             <>
+               <span>v{APP_VERSION}</span>
+               <span className="opacity-50">| 11/02/2026</span>
+             </>
+           )}
+        </button>
       </main>
     </div>
   );
