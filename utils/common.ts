@@ -122,7 +122,13 @@ const MAX_DATE_CACHE_SIZE = 10000;
  * Parse une date avec support du format français DD/MM/YYYY et des dates Excel
  */
 export const parseDateValue = (dateValue: any): Date | null => {
-  if (dateValue === undefined || dateValue === null || dateValue === '' || dateValue === 0 || dateValue === '0' || String(dateValue).trim() === '') return null;
+  // Defensive check for all kinds of "falsy" or "empty" date representations
+  if (dateValue === undefined || dateValue === null || dateValue === '') return null;
+
+  const sVal = String(dateValue).trim();
+  if (sVal === '' || sVal === '0' || sVal === '0.00' || sVal === 'null' || sVal === 'undefined' || sVal === '-') return null;
+
+  if (typeof dateValue === 'number' && (isNaN(dateValue) || !isFinite(dateValue) || dateValue === 0)) return null;
 
   // BOLT OPTIMIZATION: Return cached result if available
   const cached = DATE_CACHE.get(dateValue);
@@ -306,7 +312,8 @@ export const parseSmartNumber = (val: any, unit?: string): number => {
  */
 export const formatNumberValue = (value: number | string, config?: FieldConfig): string => {
   if (config?.type === 'date') {
-    if (value === undefined || value === null || value === '' || value === 0 || value === '0') return '-';
+    const parsedDate = parseDateValue(value);
+    if (!parsedDate) return '-';
     return formatDateFr(value);
   }
 
