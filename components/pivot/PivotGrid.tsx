@@ -236,7 +236,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const colKey = col.key;
                            if (col.isDiff) return <th key={colKey} className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>Δ</th>;
 
-                           const { colLabel: sourceId, metricLabel, metric } = metricInfoCache.get(colKey) || {};
+                           const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
                            const source = temporalConfig?.sources.find(s => s.id === sourceId);
                            const displayLabel = metrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
                            const headerStyle = getCellFormatting([], colKey, undefined, metricLabel || '', 'data');
@@ -286,18 +286,19 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                                  const col = allDataColumns[vCol.index];
                                  const colKey = col.key;
                                  if (col.isDiff) {
-                                    const { colLabel: sourceId, metricLabel: mLabel } = metricInfoCache.get(colKey) || {};
-                                    const delta = result.deltas[sourceId || '']?.[mLabel || ''] || { value: 0, percentage: 0 };
+                                    const { colLabel: sourceId = '', metricLabel: mLabel = '' } = metricInfoCache.get(colKey) || {};
+                                    const delta = result.deltas[sourceId]?.[mLabel] || { value: 0, percentage: 0 };
                                     return (
                                        <td key={colKey} className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>
                                           {temporalConfig?.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatOutput(delta.value, metricLabelMap.get(mLabel), true) : '-')}
                                        </td>
                                     );
                                  }
-                                 const { colLabel: sourceId, metricLabel, metric } = metricInfoCache.get(colKey) || {};
-                                 const value = result.values[sourceId || '']?.[metricLabel || ''] || 0;
-                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, metricLabel || '', isSubtotal ? 'subtotal' : 'data');
-                                 const displayColLabel = effectiveMetrics.length > 1 ? `${temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId} - ${metricLabel}` : (temporalConfig?.sources.find(s=>s.id===sourceId)?.label || sourceId);
+                                 const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
+                                 const value = result.values[sourceId]?.[metricLabel] || 0;
+                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, metricLabel, isSubtotal ? 'subtotal' : 'data');
+                                 const source = temporalConfig?.sources.find(s => s.id === sourceId);
+                                 const displayColLabel = effectiveMetrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
                                  const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), displayColLabel);
 
                                  return (
