@@ -65,7 +65,6 @@ interface PivotGridProps {
 
 interface PivotGridRowProps {
    row: any;
-   index: number;
    virtualRow: any;
    rowFields: string[];
    allDataColumns: { key: string; width: number; isDiff?: boolean }[];
@@ -372,7 +371,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const colKey = col.key;
                            if (col.isDiff) return <th key={colKey} className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>Δ</th>;
 
-                           const { colLabel: sourceId = '', metricLabel = '' } = metricInfoCache.get(colKey) || {};
+                           const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
                            const source = temporalConfig?.sources.find(s => s.id === sourceId);
                            const displayLabel = metrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
                            const headerStyle = getCellFormatting([], colKey, undefined, metricLabel || '', 'data');
