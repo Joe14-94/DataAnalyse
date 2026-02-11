@@ -51,20 +51,51 @@ export const aggregateDataByGroup = (
   const numMetrics = metricConfigs.length;
   const numFields = groupByFields.length;
 
+  // BOLT OPTIMIZATION: Cache for group keys to avoid repetitive string concatenation
+  const keyCache = new Map<any, { key: string, label: string }>();
+
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
 
     // BOLT OPTIMIZATION: Single-pass filtering
     if (filterFn && !filterFn(row)) continue;
 
+    // Use the first field as a cache key if there's only one, otherwise use a composite key if possible
+    // For many fields, we still need to build the key, but we can cache the result for the specific combination
     let groupKey = "";
     let groupLabel = "";
-    for (let j = 0; j < numFields; j++) {
-      const field = groupByFields[j];
-      const val = row[field];
-      const sVal = val !== undefined && val !== null ? String(val) : '';
-      groupKey += (j === 0 ? "" : "|") + sVal;
-      groupLabel += (j === 0 ? "" : "\x1F") + (sVal || '(vide)');
+
+    if (numFields === 1) {
+        const val = row[groupByFields[0]];
+        const cached = keyCache.get(val);
+        if (cached) {
+            groupKey = cached.key;
+            groupLabel = cached.label;
+        } else {
+            const sVal = val !== undefined && val !== null ? String(val) : '';
+            groupKey = sVal;
+            groupLabel = sVal || '(vide)';
+            if (keyCache.size < 5000) keyCache.set(val, { key: groupKey, label: groupLabel });
+        }
+    } else {
+        // Multi-fields: use the values as a combined key for cache
+        let combinedVal = "";
+        for (let j = 0; j < numFields; j++) {
+            combinedVal += (j === 0 ? "" : "|") + row[groupByFields[j]];
+        }
+        const cached = keyCache.get(combinedVal);
+        if (cached) {
+            groupKey = cached.key;
+            groupLabel = cached.label;
+        } else {
+            for (let j = 0; j < numFields; j++) {
+                const val = row[groupByFields[j]];
+                const sVal = val !== undefined && val !== null ? String(val) : '';
+                groupKey += (j === 0 ? "" : "|") + sVal;
+                groupLabel += (j === 0 ? "" : "\x1F") + (sVal || '(vide)');
+            }
+            if (keyCache.size < 5000) keyCache.set(combinedVal, { key: groupKey, label: groupLabel });
+        }
     }
 
     let group = groups.get(groupKey);

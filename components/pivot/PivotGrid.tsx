@@ -63,10 +63,146 @@ interface PivotGridProps {
    onRemoveField?: (zone: 'row' | 'col' | 'val' | 'filter', field: string) => void;
 }
 
+interface PivotGridRowProps {
+   row: any;
+   index: number;
+   virtualRow: any;
+   rowFields: string[];
+   allDataColumns: { key: string; width: number; isDiff?: boolean }[];
+   columnWidths: Record<string, number>;
+   rowFieldLeftPositions: number[];
+   metricInfoCache: Map<string, any>;
+   formatOutput: (val: any, metric?: PivotMetric, isDelta?: boolean) => string;
+   getCellFormatting: (rowKeys: string[], col: string, value: any, metricLabel: string, rowType?: 'data' | 'subtotal' | 'grandTotal') => any;
+   handleDrilldown: (rowKeys: string[], colLabel: string, value: any, metricLabel: string) => void;
+   isSelectionMode: boolean;
+   isItemSelected: (rowKeys: string[], colLabel: string) => boolean;
+   showTotalCol: boolean;
+   effectiveMetrics: PivotMetric[];
+   metricLabelMap: Map<string, PivotMetric>;
+   primaryDataset: Dataset | null;
+   virtualCols: any[];
+   measureElement?: (el: HTMLElement | null) => void;
+}
+
+const StandardPivotRow = React.memo<PivotGridRowProps>(({
+   row, virtualRow, rowFields, allDataColumns, columnWidths, rowFieldLeftPositions,
+   metricInfoCache, formatOutput, getCellFormatting, handleDrilldown,
+   isSelectionMode, isItemSelected, showTotalCol, effectiveMetrics, metricLabelMap, primaryDataset, virtualCols,
+   measureElement
+}) => {
+   return (
+      <tr key={virtualRow.key} data-index={virtualRow.index} ref={measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
+         {(rowFields || []).map((field, cIdx) => {
+            const width = columnWidths[`row_${field}`] || 150;
+            const left = rowFieldLeftPositions[cIdx];
+            const headerStyle = getCellFormatting(row.keys, '', undefined, '', row.type);
+            if (row.type === 'subtotal') {
+               if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50 overflow-hidden truncate sticky left-0 z-20" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
+               if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate sticky left-0 z-20 bg-slate-50" style={{ left: `${left}px`, ...headerStyle }}>{row.label?.startsWith('Total ') && primaryDataset?.fieldConfigs?.[rowFields[row.level]]?.type === 'date' ? `Total ${formatDateLabelForDisplay(row.label.substring(6))}` : row.label}</td>;
+               return null;
+            }
+            return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }} onClick={() => handleDrilldown(row.keys.slice(0, cIdx + 1), '', undefined, '')}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
+         })}
+         {virtualCols[0]?.start > 0 && <td />}
+         {virtualCols.map((vCol: any) => {
+            const colKey = allDataColumns[vCol.index].key;
+            const val = row.metrics[colKey];
+            const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(colKey) || {};
+            const customStyle = getCellFormatting(row.keys, colKey, val, metricLabel || '', row.type);
+            let formatted = formatOutput(val, metric, isDiff);
+            let cellClass = "text-slate-600";
+            if (isDiff) {
+               if (Number(val) > 0) {
+                  if (!formatted.startsWith('+')) formatted = `+${formatted}`;
+                  cellClass = "text-green-600 font-bold";
+               }
+               else if (Number(val) < 0) { cellClass = "text-red-600 font-bold"; }
+               else cellClass = "text-slate-400";
+            } else if (isPct) {
+               if (val === 0 || val === undefined) formatted = '-';
+               else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
+            }
+            const isSelected = isSelectionMode && isItemSelected(row.keys, colLabel || colKey);
+            return <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }} onClick={() => handleDrilldown(row.keys, colLabel || colKey, val as string | number | undefined, metricLabel || '')}>{formatted}</td>;
+         })}
+         {showTotalCol && effectiveMetrics.length > 0 && (
+            <td className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`} style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150, ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '', row.type) }} onClick={() => { const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); }}>
+               {typeof row.rowTotal === 'object' ? <div className="flex flex-col gap-0.5">{Object.entries(row.rowTotal).map(([label, v], idx) => { const metric = metricLabelMap.get(label); const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type); return <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}><span className="text-slate-400 font-medium mr-1">{label}:</span><span className="font-bold text-slate-800">{formatOutput(v, metric)}</span></div>; })}</div> : <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, effectiveMetrics[0])}</span>}
+            </td>
+         )}
+      </tr>
+   );
+});
+
+interface TemporalPivotRowProps extends PivotGridRowProps {
+   handleTemporalDrilldown: (result: any, sourceId: string, metricLabel: string) => void;
+   temporalConfig: TemporalComparisonConfig | null;
+}
+
+const TemporalPivotRow = React.memo<TemporalPivotRowProps>(({
+   row: result, virtualRow, rowFields, allDataColumns, columnWidths, rowFieldLeftPositions,
+   metricInfoCache, formatOutput, getCellFormatting, handleDrilldown, handleTemporalDrilldown,
+   isSelectionMode, isItemSelected, effectiveMetrics, metricLabelMap, primaryDataset, virtualCols, temporalConfig,
+   measureElement
+}) => {
+   const isSubtotal = result.isSubtotal || false;
+   const subtotalLevel = result.subtotalLevel || 0;
+   const labels = React.useMemo(() => result.groupLabel.split('\x1F'), [result.groupLabel]);
+
+   return (
+      <tr key={virtualRow.key} ref={measureElement} data-index={virtualRow.index} className={isSubtotal ? `bg-slate-50 font-bold border-t border-slate-200` : 'hover:bg-brand-50/30'}>
+         {Array.from({ length: rowFields.length }, (_, gIdx) => {
+            if (isSubtotal && gIdx > subtotalLevel) return null;
+            const field = rowFields[gIdx];
+            const width = columnWidths[`group_${field}`] || 150;
+            const left = rowFieldLeftPositions[gIdx];
+            const rowStyle = getCellFormatting(labels, '', undefined, '', isSubtotal ? 'subtotal' : 'data');
+            return (
+               <td key={gIdx} className={`px-2 py-1 text-xs border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors ${isSubtotal ? 'font-bold bg-slate-50' : ''}`}
+                  style={isSubtotal && gIdx === subtotalLevel ? { ...rowStyle, left: `${left}px` } : { ...rowStyle, width, minWidth: width, maxWidth: width, left: `${left}px` }}
+                  colSpan={isSubtotal && gIdx === subtotalLevel ? rowFields.length - subtotalLevel : 1}
+                  onClick={() => handleDrilldown(labels.slice(0, gIdx + 1), '', undefined, '')}>
+                  {(!isSubtotal || gIdx <= subtotalLevel) ? (gIdx === subtotalLevel && isSubtotal ? `Total ${primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx]}` : (primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx])) : ''}
+               </td>
+            );
+         })}
+         {virtualCols[0]?.start > 0 && <td />}
+         {virtualCols.map((vCol: any) => {
+            const col = allDataColumns[vCol.index];
+            const colKey = col.key;
+            if (col.isDiff) {
+               const { colLabel: sourceId = '', metricLabel: mLabel = '' } = metricInfoCache.get(colKey) || {};
+               const delta = result.deltas[sourceId]?.[mLabel] || { value: 0, percentage: 0 };
+               return (
+                  <td key={colKey} className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>
+                     {temporalConfig?.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatOutput(delta.value, metricLabelMap.get(mLabel), true) : '-')}
+                  </td>
+               );
+            }
+            const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
+            const value = result.values[sourceId]?.[metricLabel] || 0;
+            const customStyle = getCellFormatting(labels, colKey, value, metricLabel, isSubtotal ? 'subtotal' : 'data');
+            const source = temporalConfig?.sources.find(s => s.id === sourceId);
+            const displayColLabel = effectiveMetrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
+            const isSelected = isSelectionMode && isItemSelected(labels, displayColLabel);
+
+            return (
+               <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${sourceId === temporalConfig?.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
+                  style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }}
+                  onClick={() => { if (isSelectionMode) handleDrilldown(labels, displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId || '', metricLabel || ''); }}>
+                  {formatOutput(value, metric || effectiveMetrics[0])}
+               </td>
+            );
+         })}
+      </tr>
+   );
+});
+
 export const PivotGrid: React.FC<PivotGridProps> = (props) => {
    const {
-      isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields, colFields,
-      columnLabels, editingColumn, setEditingColumn, setColumnLabels, showVariations, showTotalCol,
+      isCalculating, isTemporalMode, pivotData, temporalResults, temporalConfig, rowFields,
+      columnLabels, editingColumn, setEditingColumn, setColumnLabels, showTotalCol,
       handleDrilldown, handleTemporalDrilldown, primaryDataset, datasets, aggType, valField, metrics,
       valFormatting, virtualItems, rowVirtualizer, colVirtualizer, allDataColumns, parentRef, totalColumns, paddingTop, paddingBottom,
       isSelectionMode = false, isEditMode = false, selectedItems = [],
@@ -236,7 +372,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            const colKey = col.key;
                            if (col.isDiff) return <th key={colKey} className="px-2 py-1.5 text-right text-xs font-bold uppercase border-b border-r border-slate-200 bg-purple-50 text-purple-700" style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>Δ</th>;
 
-                           const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
+                           const { colLabel: sourceId = '', metricLabel = '' } = metricInfoCache.get(colKey) || {};
                            const source = temporalConfig?.sources.find(s => s.id === sourceId);
                            const displayLabel = metrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
                            const headerStyle = getCellFormatting([], colKey, undefined, metricLabel || '', 'data');
@@ -257,61 +393,31 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
                      {paddingTop > 0 && <tr><td style={{ height: `${paddingTop}px` }} colSpan={totalColumns} /></tr>}
-                     {virtualItems.map((vRow) => {
-                        const result = temporalResults[vRow.index];
-                        const isSubtotal = result.isSubtotal || false;
-                        const subtotalLevel = result.subtotalLevel || 0;
-                        return (
-                           <tr key={vRow.key} className={isSubtotal ? `bg-slate-50 font-bold border-t border-slate-200` : 'hover:bg-brand-50/30'}>
-                              {(() => {
-                                 const labels = result.groupLabel.split('\x1F');
-                                 return Array.from({ length: rowFields.length }, (_, gIdx) => {
-                                    if (isSubtotal && gIdx > subtotalLevel) return null;
-                                    const field = rowFields[gIdx];
-                                    const width = columnWidths[`group_${field}`] || 150;
-                                    const left = rowFieldLeftPositions[gIdx];
-                                    const rowStyle = getCellFormatting(result.groupLabel.split('\x1F'), '', undefined, '', isSubtotal ? 'subtotal' : 'data');
-                                    return (
-                                       <td key={gIdx} className={`px-2 py-1 text-xs border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors ${isSubtotal ? 'font-bold bg-slate-50' : ''}`}
-                                          style={isSubtotal && gIdx === subtotalLevel ? { ...rowStyle, left: `${left}px` } : { ...rowStyle, width, minWidth: width, maxWidth: width, left: `${left}px` }}
-                                          colSpan={isSubtotal && gIdx === subtotalLevel ? rowFields.length - subtotalLevel : 1}
-                                          onClick={() => handleDrilldown(result.groupLabel.split('\x1F').slice(0, gIdx + 1), '', undefined, '')}>
-                                          {(!isSubtotal || gIdx <= subtotalLevel) ? (gIdx === subtotalLevel && isSubtotal ? `Total ${primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx]}` : (primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx])) : ''}
-                                       </td>
-                                    );
-                                 });
-                              })()}
-                              {virtualCols[0]?.start > 0 && <td />}
-                              {virtualCols.map((vCol: any) => {
-                                 const col = allDataColumns[vCol.index];
-                                 const colKey = col.key;
-                                 if (col.isDiff) {
-                                    const { colLabel: sourceId = '', metricLabel: mLabel = '' } = metricInfoCache.get(colKey) || {};
-                                    const delta = result.deltas[sourceId]?.[mLabel] || { value: 0, percentage: 0 };
-                                    return (
-                                       <td key={colKey} className={`px-2 py-1 text-xs text-right border-r tabular-nums font-bold overflow-hidden truncate ${delta.value > 0 ? 'text-green-600' : delta.value < 0 ? 'text-red-600' : 'text-slate-400'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size }}>
-                                          {temporalConfig?.deltaFormat === 'percentage' ? (delta.percentage !== 0 ? formatPercentage(delta.percentage) : '-') : (delta.value !== 0 ? formatOutput(delta.value, metricLabelMap.get(mLabel), true) : '-')}
-                                       </td>
-                                    );
-                                 }
-                                 const { colLabel: sourceId = '', metricLabel = '', metric } = metricInfoCache.get(colKey) || {};
-                                 const value = result.values[sourceId]?.[metricLabel] || 0;
-                                 const customStyle = getCellFormatting(result.groupLabel.split('\x1F'), colKey, value, metricLabel, isSubtotal ? 'subtotal' : 'data');
-                                 const source = temporalConfig?.sources.find(s => s.id === sourceId);
-                                 const displayColLabel = effectiveMetrics.length > 1 ? `${source?.label || sourceId} - ${metricLabel}` : (source?.label || sourceId);
-                                 const isSelected = isSelectionMode && isItemSelected(result.groupLabel.split('\x1F'), displayColLabel);
-
-                                 return (
-                                    <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${sourceId === temporalConfig?.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
-                                       style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }}
-                                       onClick={() => { if (isSelectionMode) handleDrilldown(result.groupLabel.split('\x1F'), displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId || '', metricLabel || ''); }}>
-                                       {formatOutput(value, metric || effectiveMetrics[0])}
-                                    </td>
-                                 );
-                              })}
-                           </tr>
-                        );
-                     })}
+                     {virtualItems.map((vRow) => (
+                        <TemporalPivotRow
+                           key={vRow.key}
+                           row={temporalResults[vRow.index]}
+                           virtualRow={vRow}
+                           rowFields={rowFields}
+                           allDataColumns={allDataColumns}
+                           columnWidths={columnWidths}
+                           rowFieldLeftPositions={rowFieldLeftPositions}
+                           metricInfoCache={metricInfoCache}
+                           formatOutput={formatOutput}
+                           getCellFormatting={getCellFormatting}
+                           handleDrilldown={handleDrilldown}
+                           handleTemporalDrilldown={handleTemporalDrilldown}
+                           isSelectionMode={isSelectionMode}
+                           isItemSelected={isItemSelected}
+                           showTotalCol={showTotalCol}
+                           effectiveMetrics={effectiveMetrics}
+                           metricLabelMap={metricLabelMap}
+                           primaryDataset={primaryDataset}
+                           virtualCols={virtualCols}
+                           temporalConfig={temporalConfig}
+                           measureElement={rowVirtualizer.measureElement}
+                        />
+                     ))}
                      {paddingBottom > 0 && <tr><td style={{ height: `${paddingBottom}px` }} colSpan={totalColumns} /></tr>}
                   </tbody>
                </table>
@@ -345,7 +451,7 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            {virtualCols.map((vCol: any) => {
                               const col = allDataColumns[vCol.index];
                               const colKey = col.key;
-                              const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(colKey) || {};
+                              const { colLabel, metricLabel, isDiff, isPct } = metricInfoCache.get(colKey) || {};
                               let displayLabel = isDiff ? 'Var.' : isPct ? '%' : formatDateLabelForDisplay(colLabel || colKey);
                               if (metricLabel && !isDiff && !isPct && colLabel === 'ALL') displayLabel = metricLabel;
                               else if (metricLabel && !isDiff && !isPct) displayLabel = `${displayLabel} - ${metricLabel}`;
@@ -372,51 +478,29 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                      </thead>
                      <tbody className="bg-white divide-y divide-slate-200">
                         {paddingTop > 0 && <tr><td style={{ height: `${paddingTop}px` }} colSpan={totalColumns} /></tr>}
-                        {virtualItems.map((vRow) => {
-                           const row = pivotData.displayRows[vRow.index];
-                           return (
-                              <tr key={vRow.key} data-index={vRow.index} ref={rowVirtualizer.measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
-                                 {(rowFields || []).map((field, cIdx) => {
-                                    const width = columnWidths[`row_${field}`] || 150;
-                                    const left = rowFieldLeftPositions[cIdx];
-                                    const headerStyle = getCellFormatting(row.keys, '', undefined, '', row.type);
-                                    if (row.type === 'subtotal') {
-                                       if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50 overflow-hidden truncate sticky left-0 z-20" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
-                                       if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate sticky left-0 z-20 bg-slate-50" style={{ left: `${left}px`, ...headerStyle }}>{row.label?.startsWith('Total ') && primaryDataset?.fieldConfigs?.[rowFields[row.level]]?.type === 'date' ? `Total ${formatDateLabelForDisplay(row.label.substring(6))}` : row.label}</td>;
-                                       return null;
-                                    }
-                                    return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }} onClick={() => handleDrilldown(row.keys.slice(0, cIdx + 1), '', undefined, '')}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
-                                 })}
-                                 {virtualCols[0]?.start > 0 && <td />}
-                                 {virtualCols.map((vCol: any) => {
-                                    const colKey = allDataColumns[vCol.index].key;
-                                    const val = row.metrics[colKey];
-                                    const { colLabel, metricLabel, metric, isDiff, isPct } = metricInfoCache.get(colKey) || {};
-                                    const customStyle = getCellFormatting(row.keys, colKey, val, metricLabel || '', row.type);
-                                 let formatted = formatOutput(val, metric, isDiff);
-                                    let cellClass = "text-slate-600";
-                                    if (isDiff) {
-                                    if (Number(val) > 0) {
-                                        if (!formatted.startsWith('+')) formatted = `+${formatted}`;
-                                        cellClass = "text-green-600 font-bold";
-                                    }
-                                       else if (Number(val) < 0) { cellClass = "text-red-600 font-bold"; }
-                                       else cellClass = "text-slate-400";
-                                    } else if (isPct) {
-                                       if (val === 0 || val === undefined) formatted = '-';
-                                       else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
-                                    }
-                                    const isSelected = isSelectionMode && isItemSelected(row.keys, colLabel || colKey);
-                                    return <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }} onClick={() => handleDrilldown(row.keys, colLabel || colKey, val as string | number | undefined, metricLabel || '')}>{formatted}</td>;
-                                 })}
-                                 {showTotalCol && effectiveMetrics.length > 0 && (
-                                    <td className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`} style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150, ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '', row.type) }} onClick={() => { const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); }}>
-                                       {typeof row.rowTotal === 'object' ? <div className="flex flex-col gap-0.5">{Object.entries(row.rowTotal).map(([label, v], idx) => { const metric = metricLabelMap.get(label); const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type); return <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}><span className="text-slate-400 font-medium mr-1">{label}:</span><span className="font-bold text-slate-800">{formatOutput(v, metric)}</span></div>; })}</div> : <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, effectiveMetrics[0])}</span>}
-                                    </td>
-                                 )}
-                              </tr>
-                           );
-                        })}
+                        {virtualItems.map((vRow) => (
+                           <StandardPivotRow
+                              key={vRow.key}
+                              row={pivotData.displayRows[vRow.index]}
+                              virtualRow={vRow}
+                              rowFields={rowFields}
+                              allDataColumns={allDataColumns}
+                              columnWidths={columnWidths}
+                              rowFieldLeftPositions={rowFieldLeftPositions}
+                              metricInfoCache={metricInfoCache}
+                              formatOutput={formatOutput}
+                              getCellFormatting={getCellFormatting}
+                              handleDrilldown={handleDrilldown}
+                              isSelectionMode={isSelectionMode}
+                              isItemSelected={isItemSelected}
+                              showTotalCol={showTotalCol}
+                              effectiveMetrics={effectiveMetrics}
+                              metricLabelMap={metricLabelMap}
+                              primaryDataset={primaryDataset}
+                              virtualCols={virtualCols}
+                              measureElement={rowVirtualizer.measureElement}
+                           />
+                        ))}
                         {paddingBottom > 0 && <tr><td style={{ height: `${paddingBottom}px` }} colSpan={totalColumns} /></tr>}
                      </tbody>
                   </table>
