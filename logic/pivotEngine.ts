@@ -225,11 +225,11 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           let valTotal: number | string | Set<string> = stats.rowTotalMetrics[mIdx];
 
           if (mc.aggType === 'avg') {
-             valTotal = stats.count > 0 ? (valTotal as number) / stats.count : 0;
+             valTotal = stats.count > 0 ? valTotal / stats.count : undefined;
           } else if (mc.aggType === 'list') {
-             valTotal = formatList(valTotal as Set<string>);
-          } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(valTotal as number)) {
-             valTotal = 0;
+             valTotal = formatList(valTotal);
+          } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(valTotal)) {
+             valTotal = undefined;
           }
 
           const metricLabel = mc.label || `${mc.field} (${mc.aggType})`;
