@@ -166,7 +166,17 @@ export const usePivotData = ({
                }
            });
 
-           const dateColumn = detectDateColumn(primaryDataset?.fields || []) || 'Date écriture';
+           const allAvailableFields = [...(primaryDataset?.fields || []), ...(primaryDataset?.calculatedFields || []).map(cf => cf.name)];
+           let dateColumn = detectDateColumn(allAvailableFields) || 'Date écriture';
+
+           // Hint: if the first metric is a date field, it's likely the one we want to filter on for comparison
+           const firstMetricField = activeMetrics[0]?.field;
+           if (firstMetricField && (
+               primaryDataset?.fieldConfigs?.[firstMetricField]?.type === 'date' ||
+               allAvailableFields.includes(firstMetricField) && firstMetricField.toLowerCase().includes('date')
+           )) {
+               dateColumn = firstMetricField;
+           }
 
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,

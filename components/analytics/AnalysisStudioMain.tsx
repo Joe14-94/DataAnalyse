@@ -8,7 +8,6 @@ import {
 import { Table as TableIcon, Activity, BarChart3 } from 'lucide-react';
 import { AnalysisMode, ChartType } from '../../hooks/useAnalysisStudioLogic';
 import { TreemapContent } from './AnalysisStudioComponents';
-import { EmptyState } from '../ui/EmptyState';
 import { formatChartValue } from '../../logic/pivotToChart';
 import { PivotConfig } from '../../types';
 import { formatDateFr } from '../../utils';
@@ -83,13 +82,7 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
 
     const renderVisuals = () => {
         const data = mode === 'snapshot' ? snapshotData.data : trendData.data;
-        if (!data || data.length === 0) return (
-            <EmptyState
-                icon={<BarChart3 />}
-                title="Aucune donnée disponible"
-                description="Ajustez vos filtres ou changez d'axe d'analyse pour voir les résultats."
-            />
-        );
+        if (!data || data.length === 0) return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée disponible</div>;
 
         if (showTable) {
             if (mode === 'snapshot') {
