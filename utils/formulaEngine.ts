@@ -245,8 +245,9 @@ class FormulaCompiler {
            const search = String(argEvals[1](row) || '');
            const replacement = String(argEvals[2](row) || '');
            try {
+             // Support REGEX pour la recherche (le try/catch protège contre les regex invalides)
              return text.replace(new RegExp(search, 'g'), replacement);
-           } catch (e) { return text; }
+           } catch { return text; }
         };
       case 'SUBSTITUER': case 'SUBSTITUTE':
         return (row) => String(argEvals[0](row) || '').split(String(argEvals[1](row) || '')).join(String(argEvals[2](row) || ''));
