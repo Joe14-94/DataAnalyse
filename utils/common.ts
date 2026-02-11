@@ -1,7 +1,7 @@
 import { ImportBatch, FieldConfig } from '../types';
 
 // Updated version
-export const APP_VERSION = "11-02-2026-02";
+export const APP_VERSION = "11-02-2026-03";
 
 export const generateId = (): string => {
   return crypto.randomUUID();
@@ -54,6 +54,22 @@ export const decompressBatch = (batch: any): ImportBatch => {
   });
 
   return { ...meta, rows } as ImportBatch;
+};
+
+/**
+ * Récupère une valeur d'une ligne en gérant les préfixes de dataset
+ */
+export const getRowValue = (row: any, field: string): any => {
+  if (row[field] !== undefined) return row[field];
+
+  // Si le champ a un préfixe "[Dataset] ", on tente sans le préfixe
+  const prefixMatch = field.match(/^\[.*?\] (.*)$/);
+  if (prefixMatch) {
+    const cleanField = prefixMatch[1];
+    return row[cleanField];
+  }
+
+  return undefined;
 };
 
 /**
@@ -207,6 +223,31 @@ export const parseDateValue = (dateValue: any): Date | null => {
 
   if (DATE_CACHE.size < MAX_DATE_CACHE_SIZE) DATE_CACHE.set(dateValue, date);
   return date;
+};
+
+/**
+ * Prépare une valeur pour l'agrégation numérique (TCD).
+ * Gère les dates (conversion en numéro de série Excel) et les nombres.
+ */
+export const getValueForAggregation = (val: any, fieldConfig?: FieldConfig): number => {
+  if (val === undefined || val === null || val === '') return 0;
+
+  if (fieldConfig?.type === 'date') {
+    const d = parseDateValue(val);
+    if (d) return jsToExcelDate(d);
+    return 0;
+  }
+
+  if (typeof val === 'number') return val;
+
+  // Si c'est une chaîne qui ressemble à une date et que le type n'est pas spécifié,
+  // on tente quand même une détection pour éviter le mangling de parseSmartNumber
+  if (typeof val === 'string' && (val.includes('/') || val.includes('-'))) {
+    const d = parseDateValue(val);
+    if (d) return jsToExcelDate(d);
+  }
+
+  return parseSmartNumber(val, fieldConfig?.unit);
 };
 
 export const formatDateFr = (dateStr: string | number): string => {
@@ -592,7 +633,7 @@ export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean 
   if (preparedFilters.length === 0) return true;
 
   for (const f of preparedFilters) {
-    const rowVal = row[f.field];
+    const rowVal = getRowValue(row, f.field);
 
     if (f.isArrayIn && f.preparedValue instanceof Set) {
       if (f.preparedValue.size > 0 && !f.preparedValue.has(String(rowVal))) {
