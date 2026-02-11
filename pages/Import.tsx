@@ -82,7 +82,7 @@ export const Import: React.FC = () => {
     } else {
       setDetectedDatasetId(null);
       setTargetDatasetId('NEW'); 
-      setNewDatasetName(`Données du ${new Date().toLocaleDateString()}`);
+      setNewDatasetName(`Données du ${new Date().toLocaleDateString('fr-FR')}`);
     }
 
     setStep('mapping');

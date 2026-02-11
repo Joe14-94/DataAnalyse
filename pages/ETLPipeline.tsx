@@ -545,7 +545,7 @@ export const ETLPipeline: React.FC = () => {
                                             <div className="min-w-0">
                                                 <div className="font-bold text-sm text-slate-800 truncate">{p.name}</div>
                                                 <div className="text-xs text-slate-500 mt-0.5">
-                                                    Modifié le {new Date(p.updatedAt).toLocaleDateString()}
+                                                    Modifié le {new Date(p.updatedAt).toLocaleDateString('fr-FR')}
                                                 </div>
                                             </div>
                                             <button

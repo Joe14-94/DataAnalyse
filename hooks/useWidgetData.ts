@@ -170,7 +170,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                if (pivotChart.updateMode === 'latest') {
                   const batch = (batches || []).find(b => b.id === s.batchId);
                   if (batch) {
-                     const dateStr = new Date(batch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                     const dateStr = new Date(batch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
                      return `${s.label.split(' (')[0]} (${dateStr})`;
                   }
                }

@@ -177,7 +177,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                         savedAnalyses.filter(a => a.type === 'pivot').map(a => {
                            const ds = datasets.find(d => d.id === a.datasetId);
                            const dateObj = new Date(a.createdAt);
-                           const dateStr = dateObj.toLocaleDateString();
+                           const dateStr = dateObj.toLocaleDateString('fr-FR');
                            const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                            return (

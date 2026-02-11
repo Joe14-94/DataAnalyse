@@ -209,8 +209,8 @@ export const formatDateFr = (dateStr: string | number): string => {
   try {
     return getCachedDateTimeFormat({
       year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      month: '2-digit',
+      day: '2-digit'
     }).format(date);
   } catch {
     return String(dateStr);
@@ -395,10 +395,7 @@ export const formatDateLabelForDisplay = (label: string): string => {
   // Format YYYY-MM (mois ISO) -> MM/YYYY (français)
   if (/^\d{4}-\d{2}$/.test(label)) {
     const [year, month] = label.split('-');
-    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    const monthIndex = parseInt(month) - 1;
-    return `${monthNames[monthIndex]} ${year}`;
+    return `${month}/${year}`;
   }
 
   // Format YYYY-TQ (trimestre) -> TQ YYYY (français)
