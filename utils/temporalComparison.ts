@@ -210,15 +210,22 @@ export const calculateTemporalComparison = (
       const dateValue = row[dateColumn];
       const date = parseDateValue(dateValue);
 
+      let inPeriod = true;
       if (!date) {
         exclusionReasons.noDate++;
-        return false;
+        // BOLT FIX: If the period is the full year (1 to 12), we include rows with no dates
+        // to maintain consistency with standard pivot tables which show (Vide) labels.
+        if (startMonth === 1 && endMonth === 12) {
+          inPeriod = true;
+        } else {
+          return false;
+        }
+      } else {
+        const month = date.getMonth() + 1;
+        inPeriod = startMonth <= endMonth
+          ? (month >= startMonth && month <= endMonth)
+          : (month >= startMonth || month <= endMonth);
       }
-
-      const month = date.getMonth() + 1;
-      const inPeriod = startMonth <= endMonth
-        ? (month >= startMonth && month <= endMonth)
-        : (month >= startMonth || month <= endMonth);
 
       if (!inPeriod) {
         exclusionReasons.outOfPeriod++;
