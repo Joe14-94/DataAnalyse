@@ -37,6 +37,8 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Ordre des colonnes** | Pouvoir changer l'ordre des colonnes | Historique | Core
 | **Renommer une colonne** | Pouvoir renommer le libellé d'une colonne | Historique | Core 
 | **Changer le type de données** | Pouvoir changer le typage des données. Lors du passage d'un type Nombre à Date, calcul et affichage de l'information au fomat JJ/MM/AAAA | Historique | Core
+| **Barre de titre fixe** | La barre contenant le libellé de toutes les colonnes reste fixe lorsque l'utilisateur fait défiler verticalement le tableau | Historique |Core
+
 ---
 
 ## 📥 3. Importation & ETL
@@ -117,6 +119,8 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Escape Key** | Fermeture systématique des modaux via la touche Echap. | 2026-02-15 | UX |
 | **Cache de Calcul** | Optimisation des performances via `FORMULA_CACHE`. | 2026-01-31 | Performance |
 | **Virtualisation** | Affichage de 100k+ lignes sans latence (Bi-directionnel). | 2026-01-15 | Performance |
+| **Format des dates** | Toutes les dates sont au format Français | Historique | Core
+| **Utilisation des majuscules** | Les majuscules sont utilisées en respectant les règles d'usage en Français |Historique | Core
 
 ---
 
