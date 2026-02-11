@@ -1,7 +1,7 @@
 import { ImportBatch, FieldConfig } from '../types';
 
 // Updated version
-export const APP_VERSION = "11-02-2026-03";
+export const APP_VERSION = "11-02-2026-04";
 
 export const generateId = (): string => {
   return crypto.randomUUID();

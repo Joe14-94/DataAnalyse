@@ -201,30 +201,30 @@ export const calculateTemporalComparison = (
 
     const combinedFilter = (row: DataRow) => {
       totalProcessed++;
-      // 1. Period Filter
-      const dateValue = getRowValue(row, dateColumn);
-      const date = parseDateValue(dateValue);
 
-      let inPeriod = true;
-      if (!date) {
-        exclusionReasons.noDate++;
-        // BOLT FIX: If the period is the full year (1 to 12), we include rows with no dates
-        // to maintain consistency with standard pivot tables which show (Vide) labels.
-        if (startMonth === 1 && endMonth === 12) {
-          inPeriod = true;
+      // 1. Period Filter
+      // BOLT FIX: If the period is the full year (1 to 12), we SKIP the period filter entirely.
+      // This ensures that categories/projects are not excluded based on a date column that
+      // might not be relevant or incorrectly detected, matching Standard mode behavior.
+      if (startMonth !== 1 || endMonth !== 12) {
+        const dateValue = getRowValue(row, dateColumn);
+        const date = parseDateValue(dateValue);
+
+        let inPeriod = true;
+        if (!date) {
+          exclusionReasons.noDate++;
+          return false;
         } else {
+          const month = date.getMonth() + 1;
+          inPeriod = startMonth <= endMonth
+            ? (month >= startMonth && month <= endMonth)
+            : (month >= startMonth || month <= endMonth);
+        }
+
+        if (!inPeriod) {
+          exclusionReasons.outOfPeriod++;
           return false;
         }
-      } else {
-        const month = date.getMonth() + 1;
-        inPeriod = startMonth <= endMonth
-          ? (month >= startMonth && month <= endMonth)
-          : (month >= startMonth || month <= endMonth);
-      }
-
-      if (!inPeriod) {
-        exclusionReasons.outOfPeriod++;
-        return false;
       }
 
       // 2. Prepared Filters

@@ -28,8 +28,8 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
         (currentSources || []).length > 0 ? currentSources[0].id : ''
     );
 
-    const [comparisonMode, setComparisonMode] = useState<'mtd' | 'ytd'>(
-        'mtd'
+    const [comparisonMode, setComparisonMode] = useState<'mtd' | 'ytd' | 'all'>(
+        'all'
     );
 
     const [comparisonMonth, setComparisonMonth] = useState<number>(
@@ -128,9 +128,11 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
         const configUpdates = {
             comparisonMode,
             comparisonMonth,
-            periodFilter: comparisonMode === 'ytd'
-                ? { startMonth: 1, endMonth: comparisonMonth }
-                : { startMonth: comparisonMonth, endMonth: comparisonMonth }
+            periodFilter: comparisonMode === 'all'
+                ? { startMonth: 1, endMonth: 12 }
+                : (comparisonMode === 'ytd'
+                    ? { startMonth: 1, endMonth: comparisonMonth }
+                    : { startMonth: comparisonMonth, endMonth: comparisonMonth })
         };
 
         // We need a way to pass these extra config items.
@@ -169,16 +171,22 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                                 <label className="text-xs font-bold text-slate-500 uppercase">Mode de cumul</label>
                                 <div className="flex bg-slate-100 p-1 rounded-lg">
                                     <button
+                                        onClick={() => setComparisonMode('all')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${comparisonMode === 'all' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Tout
+                                    </button>
+                                    <button
                                         onClick={() => setComparisonMode('mtd')}
                                         className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${comparisonMode === 'mtd' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'}`}
                                     >
-                                        Mois (MTD)
+                                        Mois
                                     </button>
                                     <button
                                         onClick={() => setComparisonMode('ytd')}
                                         className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${comparisonMode === 'ytd' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'}`}
                                     >
-                                        Cumul (YTD)
+                                        YTD
                                     </button>
                                 </div>
                             </div>
@@ -198,9 +206,11 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
                         </div>
 
                         <p className="mt-3 text-xs text-slate-500 italic">
-                            {comparisonMode === 'ytd'
-                                ? "Compare les données du 1er janvier jusqu'au mois sélectionné."
-                                : "Compare uniquement les données du mois sélectionné."}
+                            {comparisonMode === 'all'
+                                ? "Compare les données de l'ensemble de l'exercice (Janvier à Décembre)."
+                                : (comparisonMode === 'ytd'
+                                    ? "Compare les données du 1er janvier jusqu'au mois sélectionné."
+                                    : "Compare uniquement les données du mois sélectionné.")}
                         </p>
                     </div>
 
