@@ -116,7 +116,7 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                 <div className="p-ds-6 border-b border-border-default flex justify-between items-center bg-brand-50/50">
                     <div>
                         <h3 className="text-lg font-bold text-txt-main flex items-center gap-ds-2">
-                            <LinkIcon className="w-5 h-5 text-brand-600" /> RECHERCHEV (VLOOKUP)
+                            <LinkIcon className="w-5 h-5 text-brand-600" /> RechercheV (VLookup)
                         </h3>
                         <p className="text-sm text-txt-secondary">Enrichir avec des données d'une autre source</p>
                     </div>

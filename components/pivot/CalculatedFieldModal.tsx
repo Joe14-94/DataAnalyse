@@ -391,6 +391,19 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                             {previewResult?.error ? <X className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
                             {previewResult?.error ? 'Erreur' : 'Aperçu'}
                         </span>
+                        {previewResult && !previewResult.error && (
+                            <button
+                                onClick={() => {
+                                    const text = previewResult.value === null ? 'null' : String(previewResult.value);
+                                    navigator.clipboard.writeText(text);
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 2000);
+                                }}
+                                className="flex items-center gap-1 text-[10px] font-bold bg-white/50 hover:bg-white px-2 py-0.5 rounded transition-colors text-success-text border border-success-border"
+                            >
+                                {copied ? <><Check className="w-3 h-3" /> Copié !</> : <><Copy className="w-3 h-3" /> Copier</>}
+                            </button>
+                        )}
                     </div>
                     <div className={`text-base font-mono break-all ${previewResult?.error ? 'text-danger-text italic' : 'text-txt-main font-bold'}`}>
                         {previewResult ? (previewResult.error || (previewResult.value === null ? 'null' : String(previewResult.value)) + (unit && outputType === 'number' ? ` ${unit}` : '')) : <span className="text-txt-muted italic">Aperçu...</span>}
