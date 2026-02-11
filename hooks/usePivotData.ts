@@ -193,9 +193,10 @@ export const usePivotData = ({
                hintDateColumn,
                detectedDateColumn,
                finalDateColumn: dateColumn,
-               periodFilter: temporalConfig?.periodFilter
+               periodFilter: temporalConfig?.periodFilter,
+               metrics: activeMetrics
            });
-           console.log('🔍 [Temporal Comparison] Available Fields Sample:', allAvailableFields.slice(0, 20));
+           console.log('🔍 [Temporal Comparison] Available Fields Sample:', allAvailableFields.slice(0, 30));
 
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
