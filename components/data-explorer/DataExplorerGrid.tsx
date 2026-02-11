@@ -199,29 +199,32 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
     };
 
     return (
-        <div ref={tableContainerRef} className="flex-1 overflow-auto custom-scrollbar relative w-full flex flex-col">
-            <div style={{ height: rowVirtualizer.getTotalSize(), width: colVirtualizer.getTotalSize(), position: 'relative' }}>
+        <div ref={tableContainerRef} className="flex-1 overflow-auto custom-scrollbar relative w-full">
+            {/* STICKY HEADER & FILTERS */}
+            <div className="sticky top-0 z-30 bg-slate-50 shadow-sm" style={{ width: colVirtualizer.getTotalSize() }}>
                 {/* Header Row */}
-                <div className="bg-slate-50 sticky top-0 z-20 shadow-sm" style={{ height: 44, width: '100%' }}>
+                <div style={{ height: 44, width: '100%', position: 'relative' }}>
                     {virtualCols.map((virtualCol: any) => renderHeaderCell(virtualCol.index, virtualCol))}
                 </div>
 
                 {/* Filter Row */}
                 {showFilters && (
-                    <div className="bg-slate-50 sticky top-[44px] z-10" style={{ height: 44, width: '100%' }}>
+                    <div style={{ height: 44, width: '100%', position: 'relative' }} className="border-t border-slate-200">
                         {virtualCols.map((virtualCol: any) => renderFilterCell(virtualCol.index, virtualCol))}
                     </div>
                 )}
+            </div>
 
+            {/* DATA CONTAINER */}
+            <div style={{ height: rowVirtualizer.getTotalSize(), width: colVirtualizer.getTotalSize(), position: 'relative' }}>
                 {/* Data Rows */}
                 {virtualRows.map((virtualRow: any) => {
                     const row = processedRows[virtualRow.index] as DataRow & { _importDate: string; _batchId: string };
-                    const isFilterOffset = showFilters ? 44 : 0;
                     return (
                         <div
                             key={virtualRow.key}
                             className="absolute left-0 w-full hover:bg-brand-50 transition-colors cursor-pointer group border-b border-slate-200"
-                            style={{ top: virtualRow.start + 44 + isFilterOffset, height: virtualRow.size }}
+                            style={{ top: virtualRow.start, height: virtualRow.size }}
                             onClick={() => handleRowClick(row)}
                         >
                             {virtualCols.map((virtualCol: any) => renderDataCell(virtualRow.index, virtualCol.index, virtualCol, row))}

@@ -1,4 +1,4 @@
-import { DataRow, FilterCondition, FilterOperator, JoinType, ETLAggregationType } from '../types';
+import { DataRow, FilterCondition, JoinType, ETLAggregationType } from '../types';
 import { generateId, evaluateFormula } from '../utils';
 
 /**
@@ -374,11 +374,81 @@ export const applyCalculate = (
         ...row,
         [newColumn]: result
       };
-    } catch (error) {
+    } catch {
       return {
         ...row,
         [newColumn]: null
       };
     }
   });
+};
+
+/**
+ * Applique un Pivot sur les données
+ */
+export const applyPivot = (
+  data: DataRow[],
+  index: string,
+  columns: string,
+  values: string,
+  aggFunc: ETLAggregationType
+): DataRow[] => {
+  if (!index || !columns || !values) return data;
+
+  const pivotMap = new Map<string, Map<string, any[]>>();
+  const allColumns = new Set<string>();
+
+  data.forEach(row => {
+    const idxVal = String(row[index] ?? '(Vide)');
+    const colVal = String(row[columns] ?? '(Vide)');
+    const val = row[values];
+
+    allColumns.add(colVal);
+
+    if (!pivotMap.has(idxVal)) pivotMap.set(idxVal, new Map());
+    const rowMap = pivotMap.get(idxVal)!;
+    if (!rowMap.has(colVal)) rowMap.set(colVal, []);
+    rowMap.get(colVal)!.push(val);
+  });
+
+  const result: DataRow[] = [];
+  pivotMap.forEach((rowMap, idxVal) => {
+    const newRow: DataRow = { id: generateId(), [index]: idxVal };
+    allColumns.forEach(col => {
+      const vals = rowMap.get(col) || [];
+      newRow[col] = calculateAggregation(vals, aggFunc);
+    });
+    result.push(newRow);
+  });
+
+  return result;
+};
+
+/**
+ * Applique un Unpivot sur les données
+ */
+export const applyUnpivot = (
+  data: DataRow[],
+  idVars: string[],
+  valueVars: string[],
+  varName: string = 'variable',
+  valueName: string = 'value'
+): DataRow[] => {
+  const result: DataRow[] = [];
+
+  data.forEach(row => {
+    valueVars.forEach(vVar => {
+      if (vVar in row) {
+        const newRow: DataRow = { id: generateId() };
+        idVars.forEach(idVar => {
+          newRow[idVar] = row[idVar];
+        });
+        newRow[varName] = vVar;
+        newRow[valueName] = row[vVar];
+        result.push(newRow);
+      }
+    });
+  });
+
+  return result;
 };
