@@ -167,21 +167,35 @@ export const usePivotData = ({
            });
 
            const allAvailableFields = [...(primaryDataset?.fields || []), ...(primaryDataset?.calculatedFields || []).map(cf => cf.name)];
-           let dateColumn = detectDateColumn(allAvailableFields) || 'Date écriture';
 
            // Hint: if the first metric is a date field, it's likely the one we want to filter on for comparison
-           const firstMetricField = activeMetrics[0]?.field;
-           if (firstMetricField && (
-               primaryDataset?.fieldConfigs?.[firstMetricField]?.type === 'date' ||
-               allAvailableFields.includes(firstMetricField) && firstMetricField.toLowerCase().includes('date')
+           let hintDateColumn: string | undefined = undefined;
+           const rawFirstMetricField = activeMetrics[0]?.field;
+
+           // Clean prefix from metric field if present (e.g. "[Dataset] Date" -> "Date")
+           const cleanMetricField = rawFirstMetricField?.startsWith('[')
+               ? rawFirstMetricField.match(/^\[.*?\] (.*)$/)?.[1] || rawFirstMetricField
+               : rawFirstMetricField;
+
+           if (cleanMetricField && (
+               primaryDataset?.fieldConfigs?.[cleanMetricField]?.type === 'date' ||
+               allAvailableFields.includes(cleanMetricField) && cleanMetricField.toLowerCase().includes('date')
            )) {
-               dateColumn = firstMetricField;
+               hintDateColumn = cleanMetricField;
            }
 
-           console.log('🔍 [Temporal Comparison] Detected Date Column:', dateColumn);
-           console.log('🔍 [Temporal Comparison] Active Metrics:', activeMetrics);
-           console.log('🔍 [Temporal Comparison] Available Fields:', allAvailableFields.slice(0, 10));
-           console.log('🔍 [Temporal Comparison] Period Filter:', temporalConfig?.periodFilter);
+           const detectedDateColumn = detectDateColumn(allAvailableFields);
+           const dateColumn = hintDateColumn || detectedDateColumn || 'Date écriture';
+
+           console.log('🔍 [Temporal Comparison] START CALCULATION', {
+               rawMetric: rawFirstMetricField,
+               cleanMetric: cleanMetricField,
+               hintDateColumn,
+               detectedDateColumn,
+               finalDateColumn: dateColumn,
+               periodFilter: temporalConfig?.periodFilter
+           });
+           console.log('🔍 [Temporal Comparison] Available Fields Sample:', allAvailableFields.slice(0, 20));
 
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
