@@ -35,6 +35,7 @@ export const usePivotData = ({
    const [pivotData, setPivotData] = useState<PivotResult | null>(null);
    const [temporalResults, setTemporalResults] = useState<TemporalComparisonResult[]>([]);
    const [temporalColTotals, setTemporalColTotals] = useState<{ [sourceId: string]: { [metricLabel: string]: number } }>({});
+   const [temporalDeltaTotals, setTemporalDeltaTotals] = useState<{ [sourceId: string]: { [metricLabel: string]: number } }>({});
    const [isCalculating, setIsCalculating] = useState(false);
 
    const primarySourceConfig = sources.find(s => s.isPrimary);
@@ -208,9 +209,10 @@ export const usePivotData = ({
                sortOrder
            };
 
-           const { results, colTotals } = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
+           const { results, colTotals, deltaTotals } = calculateTemporalComparison(sourceDataMap, activeConfig, dateColumn, showSubtotals, filters);
            setTemporalResults(results);
            setTemporalColTotals(colTotals);
+           setTemporalDeltaTotals(deltaTotals);
            setIsCalculating(false);
        }, 150);
 
@@ -222,6 +224,7 @@ export const usePivotData = ({
       pivotData,
       temporalResults,
       temporalColTotals,
+      temporalDeltaTotals,
       isCalculating,
       primaryDataset,
       datasetBatches

@@ -8,6 +8,7 @@ import { formatCurrency, formatPercentage } from '../../utils/temporalComparison
 interface PivotFooterProps {
    pivotData: PivotResult | null;
    temporalColTotals?: { [sourceId: string]: { [metricLabel: string]: number } };
+   temporalDeltaTotals?: { [sourceId: string]: { [metricLabel: string]: number } };
    temporalConfig?: any;
    rowFields: string[];
    columnWidths: Record<string, number>;
@@ -29,7 +30,7 @@ interface PivotFooterProps {
 }
 
 export const PivotFooter: React.FC<PivotFooterProps> = ({
-   pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations = false, styleRules = [], conditionalRules = [],
+   pivotData, temporalColTotals, temporalDeltaTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations = false, styleRules = [], conditionalRules = [],
    isSelectionMode = false, selectedItems = [], handleDrilldown, handleTemporalDrilldown
 }) => {
    const getColWidth = (id: string, isRowField: boolean = false) => {
@@ -161,8 +162,12 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                                  const customStyle = getCellStyle([], colKey, val, mLabel, styleRules, conditionalRules, 'grandTotal');
 
                                  const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId]?.[mLabel] || 0;
-                                 const deltaValue = val - referenceTotal;
-                                 const deltaPercentage = referenceTotal !== 0 ? (deltaValue / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
+
+                                 // BOLT FIX: Use pre-calculated deltaTotals (Sum of Deltas) instead of Delta of Totals
+                                 // This matches user expectation for informative footer values (e.g. sum of day differences)
+                                 const deltaValue = temporalDeltaTotals?.[source.id]?.[mLabel] ?? (val - referenceTotal);
+
+                                 const deltaPercentage = referenceTotal !== 0 ? ((val - referenceTotal) / referenceTotal) * 100 : (val !== 0 ? 100 : 0);
 
                                  const displayLabel = effectiveMetrics.length > 1 ? `${source.label} - ${mLabel}` : source.label;
                                  const isSelected = isSelectionMode && isItemSelected([], displayLabel);

@@ -163,7 +163,11 @@ export const calculateTemporalComparison = (
   dateColumn: string = 'Date écriture',
   showSubtotals: boolean = false,
   filters: FilterRule[] = []
-): { results: TemporalComparisonResult[], colTotals: { [sourceId: string]: { [metricLabel: string]: number } } } => {
+): {
+  results: TemporalComparisonResult[],
+  colTotals: { [sourceId: string]: { [metricLabel: string]: number } },
+  deltaTotals: { [sourceId: string]: { [metricLabel: string]: number } }
+} => {
   const { sources, referenceSourceId, periodFilter, groupByFields, valueField, aggType, metrics: configMetrics } = config;
 
   // Use configMetrics if available, otherwise fallback to single metric (backward compatibility)
@@ -273,12 +277,15 @@ export const calculateTemporalComparison = (
 
   const results: TemporalComparisonResult[] = [];
   const colTotals: { [sourceId: string]: { [metricLabel: string]: number } } = {};
+  const deltaTotals: { [sourceId: string]: { [metricLabel: string]: number } } = {};
 
   sources.forEach(s => {
      colTotals[s.id] = {};
+     deltaTotals[s.id] = {};
      metrics.forEach(m => {
         const mLabel = m.label || `${m.field} (${m.aggType})`;
         colTotals[s.id][mLabel] = 0;
+        deltaTotals[s.id][mLabel] = 0;
      });
   });
 
@@ -333,6 +340,10 @@ export const calculateTemporalComparison = (
             value: deltaValue,
             percentage: deltaPercentage
           };
+
+          // BOLT FIX: Sum up row-level differences for the footer "Total of Deltas"
+          // This is more informative than Delta of Totals for Max/Min/Avg aggregations.
+          deltaTotals[source.id][mLabel] += deltaValue;
         }
       });
     });
@@ -451,10 +462,10 @@ export const calculateTemporalComparison = (
       resultsWithSubtotals.push(result);
     });
 
-    return { results: resultsWithSubtotals, colTotals };
+    return { results: resultsWithSubtotals, colTotals, deltaTotals };
   }
 
-  return { results, colTotals };
+  return { results, colTotals, deltaTotals };
 };
 
 /**

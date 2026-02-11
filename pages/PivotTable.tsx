@@ -23,7 +23,7 @@ import { SaveAsDatasetModal } from '../components/pivot/SaveAsDatasetModal';
 export const PivotTable: React.FC = () => {
     const {
         batches, datasets, savedAnalyses, primaryDataset, datasetBatches,
-        blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, chartPivotData,
+        blendedRows, pivotData, temporalResults, temporalColTotals, temporalDeltaTotals, isCalculating, chartPivotData,
         filteredPivotRows, filteredTemporalResults,
         sources, setSources, selectedBatchId, setSelectedBatchId,
         rowFields, setRowFields, colFields, setColFields, valField, setValField,
@@ -125,7 +125,7 @@ export const PivotTable: React.FC = () => {
                        pivotData={pivotData ? { ...pivotData, displayRows: filteredPivotRows } : null}
                     />
                     <PivotFooter
-                       {...{ pivotData, temporalColTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules, conditionalRules,
+                       {...{ pivotData, temporalColTotals, temporalDeltaTotals, temporalConfig, rowFields, columnWidths, footerRef, valField, aggType, metrics, primaryDataset, datasets, valFormatting, showTotalCol, showVariations, styleRules, conditionalRules,
                        isSelectionMode, selectedItems: specificDashboardItems, handleDrilldown: handleCellClick, handleTemporalDrilldown }}
                     />
                 </div>
