@@ -92,7 +92,7 @@ export const usePivotLogic = () => {
 
     // --- HOOKS ---
     const {
-       blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, primaryDataset, datasetBatches
+       blendedRows, pivotData, temporalResults, temporalColTotals, temporalDeltaTotals, isCalculating, primaryDataset, datasetBatches
     } = usePivotData({
        sources, selectedBatchId, rowFields, colFields, colGrouping, valField, aggType, metrics, filters, sortBy, sortOrder, showSubtotals, showVariations, isTemporalMode, temporalConfig, searchTerm
     });
@@ -945,7 +945,7 @@ export const usePivotLogic = () => {
     return {
         // Data & Hooks
         batches, currentDataset, datasets, savedAnalyses, primaryDataset, datasetBatches,
-        blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, chartPivotData,
+        blendedRows, pivotData, temporalResults, temporalColTotals, temporalDeltaTotals, isCalculating, chartPivotData,
         filteredPivotRows, filteredTemporalResults,
         rowVirtualizer, colVirtualizer, allDataColumns,
         // UI State
