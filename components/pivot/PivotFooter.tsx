@@ -156,7 +156,8 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                            <React.Fragment key={mLabel}>
                               {(temporalConfig?.sources || []).map((source: any) => {
                                  const val = temporalColTotals[source.id]?.[mLabel] || 0;
-                                 const colKey = `${source.id}_${mLabel}`;
+                                 // BOLT FIX: Use \x1F separator to avoid confusion with underscores in source.id or mLabel
+                                 const colKey = `${source.id}\x1F${mLabel}`;
                                  const customStyle = getCellStyle([], colKey, val, mLabel, styleRules, conditionalRules, 'grandTotal');
 
                                  const referenceTotal = temporalColTotals[temporalConfig.referenceSourceId]?.[mLabel] || 0;

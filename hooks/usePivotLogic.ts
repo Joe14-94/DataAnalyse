@@ -105,7 +105,8 @@ export const usePivotLogic = () => {
             ms.forEach(m => {
                 const mLabel = m.label || `${m.field} (${m.aggType})`;
                 (temporalConfig?.sources || []).forEach(source => {
-                    const colKey = `${source.id}_${mLabel}`;
+                    // BOLT FIX: Use \x1F separator to avoid confusion with underscores in source.id or mLabel
+                    const colKey = `${source.id}\x1F${mLabel}`;
                     cols.push({ key: colKey, width: columnWidths[colKey] || 120 });
 
                     if (showVariations && source.id !== temporalConfig?.referenceSourceId) {
