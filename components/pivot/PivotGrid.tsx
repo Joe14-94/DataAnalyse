@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Loader2, Table2, ArrowUp, ArrowDown, X } from 'lucide-react';
+import { Loader2, Table2, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown } from 'lucide-react';
 import {
    TemporalComparisonResult, Dataset, PivotResult, SortBy, SortOrder,
    PivotStyleRule, ConditionalFormattingRule, TemporalComparisonConfig,
@@ -60,6 +60,8 @@ interface PivotGridProps {
    setColumnWidths: React.Dispatch<React.SetStateAction<Record<string, number>>>;
    styleRules: PivotStyleRule[];
    conditionalRules: ConditionalFormattingRule[];
+   collapsedRows: Set<string>;
+   toggleRowExpansion: (path: string) => void;
    onRemoveField?: (zone: 'row' | 'col' | 'val' | 'filter', field: string) => void;
 }
 
@@ -81,6 +83,8 @@ interface PivotGridRowProps {
    metricLabelMap: Map<string, PivotMetric>;
    primaryDataset: Dataset | null;
    virtualCols: any[];
+   collapsedRows: Set<string>;
+   toggleRowExpansion: (path: string) => void;
    measureElement?: (el: HTMLElement | null) => void;
 }
 
@@ -88,20 +92,51 @@ const StandardPivotRow = React.memo<PivotGridRowProps>(({
    row, virtualRow, rowFields, allDataColumns, columnWidths, rowFieldLeftPositions,
    metricInfoCache, formatOutput, getCellFormatting, handleDrilldown,
    isSelectionMode, isItemSelected, showTotalCol, effectiveMetrics, metricLabelMap, primaryDataset, virtualCols,
-   measureElement
+   collapsedRows, toggleRowExpansion, measureElement
 }) => {
+   const isSubtotal = row.type === 'subtotal';
+   const currentPath = row.keys.join('\x1F');
+   const isCollapsed = collapsedRows.has(currentPath);
+
    return (
-      <tr key={virtualRow.key} data-index={virtualRow.index} ref={measureElement} className={`${row.type === 'subtotal' ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
+      <tr key={virtualRow.key} data-index={virtualRow.index} ref={measureElement} className={`${isSubtotal ? 'bg-slate-50 font-bold' : 'hover:bg-brand-50/30'}`}>
          {(rowFields || []).map((field, cIdx) => {
             const width = columnWidths[`row_${field}`] || 150;
             const left = rowFieldLeftPositions[cIdx];
             const headerStyle = getCellFormatting(row.keys, '', undefined, '', row.type);
-            if (row.type === 'subtotal') {
+
+            if (isSubtotal) {
                if (cIdx < row.level) return <td key={cIdx} className="px-2 py-1 text-xs text-slate-500 border-r border-slate-200 bg-slate-50 overflow-hidden truncate sticky left-0 z-20" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
-               if (cIdx === row.level) return <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic text-right overflow-hidden truncate sticky left-0 z-20 bg-slate-50" style={{ left: `${left}px`, ...headerStyle }}>{row.label?.startsWith('Total ') && primaryDataset?.fieldConfigs?.[rowFields[row.level]]?.type === 'date' ? `Total ${formatDateLabelForDisplay(row.label.substring(6))}` : row.label}</td>;
+               if (cIdx === row.level) {
+                  const displayLabel = primaryDataset?.fieldConfigs?.[rowFields[row.level]]?.type === 'date' ? formatDateLabelForDisplay(row.label) : row.label;
+                  return (
+                     <td key={cIdx} colSpan={rowFields.length - cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 font-bold italic sticky left-0 z-20 bg-slate-50 cursor-pointer hover:bg-slate-100 outline-none focus:ring-2 focus:ring-brand-500"
+                        style={{ left: `${left}px`, ...headerStyle }}
+                        role="button"
+                        tabIndex={0}
+                        title={isCollapsed ? "Déployer" : "Regrouper"}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRowExpansion(currentPath); } }}
+                        onClick={(e) => { e.stopPropagation(); toggleRowExpansion(currentPath); }}>
+                        <div className="flex items-center gap-1">
+                           <span className="text-brand-600">
+                              {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                           </span>
+                           <span className="truncate">{displayLabel}</span>
+                        </div>
+                     </td>
+                  );
+               }
                return null;
             }
-            return <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors" style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }} onClick={() => handleDrilldown(row.keys.slice(0, cIdx + 1), '', undefined, '')}>{primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}</td>;
+
+            const isLastKey = cIdx === row.level;
+            return (
+               <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors"
+                  style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
+                  onClick={() => handleDrilldown(row.keys.slice(0, cIdx + 1), '', undefined, '')}>
+                  {primaryDataset?.fieldConfigs?.[rowFields[cIdx]]?.type === 'date' ? formatDateLabelForDisplay(row.keys[cIdx]) : row.keys[cIdx]}
+               </td>
+            );
          })}
          {virtualCols[0]?.start > 0 && <td />}
          {virtualCols.map((vCol: any) => {
@@ -143,11 +178,13 @@ const TemporalPivotRow = React.memo<TemporalPivotRowProps>(({
    row: result, virtualRow, rowFields, allDataColumns, columnWidths, rowFieldLeftPositions,
    metricInfoCache, formatOutput, getCellFormatting, handleDrilldown, handleTemporalDrilldown,
    isSelectionMode, isItemSelected, effectiveMetrics, metricLabelMap, primaryDataset, virtualCols, temporalConfig,
-   measureElement
+   collapsedRows, toggleRowExpansion, measureElement
 }) => {
    const isSubtotal = result.isSubtotal || false;
    const subtotalLevel = result.subtotalLevel || 0;
    const labels = React.useMemo(() => result.groupLabel.split('\x1F'), [result.groupLabel]);
+   const currentPath = result.groupLabel;
+   const isCollapsed = collapsedRows.has(currentPath);
 
    return (
       <tr key={virtualRow.key} ref={measureElement} data-index={virtualRow.index} className={isSubtotal ? `bg-slate-50 font-bold border-t border-slate-200` : 'hover:bg-brand-50/30'}>
@@ -157,12 +194,33 @@ const TemporalPivotRow = React.memo<TemporalPivotRowProps>(({
             const width = columnWidths[`group_${field}`] || 150;
             const left = rowFieldLeftPositions[gIdx];
             const rowStyle = getCellFormatting(labels, '', undefined, '', isSubtotal ? 'subtotal' : 'data');
+
+            if (isSubtotal && gIdx === subtotalLevel) {
+               const displayLabel = primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx];
+               return (
+                  <td key={gIdx} className="px-2 py-1 text-xs border-r border-slate-200 whitespace-nowrap sticky left-0 z-20 bg-slate-50 cursor-pointer hover:bg-slate-100 font-bold outline-none focus:ring-2 focus:ring-brand-500"
+                     style={{ ...rowStyle, left: `${left}px` }}
+                     colSpan={rowFields.length - subtotalLevel}
+                     role="button"
+                     tabIndex={0}
+                     title={isCollapsed ? "Déployer" : "Regrouper"}
+                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRowExpansion(currentPath); } }}
+                     onClick={(e) => { e.stopPropagation(); toggleRowExpansion(currentPath); }}>
+                     <div className="flex items-center gap-1">
+                        <span className="text-brand-600">
+                           {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </span>
+                        <span className="truncate">{displayLabel}</span>
+                     </div>
+                  </td>
+               );
+            }
+
             return (
                <td key={gIdx} className={`px-2 py-1 text-xs border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors ${isSubtotal ? 'font-bold bg-slate-50' : ''}`}
-                  style={isSubtotal && gIdx === subtotalLevel ? { ...rowStyle, left: `${left}px` } : { ...rowStyle, width, minWidth: width, maxWidth: width, left: `${left}px` }}
-                  colSpan={isSubtotal && gIdx === subtotalLevel ? rowFields.length - subtotalLevel : 1}
+                  style={{ ...rowStyle, width, minWidth: width, maxWidth: width, left: `${left}px` }}
                   onClick={() => handleDrilldown(labels.slice(0, gIdx + 1), '', undefined, '')}>
-                  {(!isSubtotal || gIdx <= subtotalLevel) ? (gIdx === subtotalLevel && isSubtotal ? `Total ${primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx]}` : (primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx])) : ''}
+                  {(!isSubtotal || gIdx <= subtotalLevel) ? (primaryDataset?.fieldConfigs?.[rowFields[gIdx]]?.type === 'date' ? formatDateLabelForDisplay(labels[gIdx]) : labels[gIdx]) : ''}
                </td>
             );
          })}
@@ -206,7 +264,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
       valFormatting, virtualItems, rowVirtualizer, colVirtualizer, allDataColumns, parentRef, totalColumns, paddingTop, paddingBottom,
       isSelectionMode = false, isEditMode = false, selectedItems = [],
       sortBy, setSortBy, sortOrder, setSortOrder,
-      columnWidths, setColumnWidths, styleRules = [], conditionalRules = [], onRemoveField
+      columnWidths, setColumnWidths, styleRules = [], conditionalRules = [],
+      collapsedRows, toggleRowExpansion, onRemoveField
    } = props;
 
    const virtualCols = colVirtualizer.getVirtualItems();
@@ -414,6 +473,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                            primaryDataset={primaryDataset}
                            virtualCols={virtualCols}
                            temporalConfig={temporalConfig}
+                           collapsedRows={collapsedRows}
+                           toggleRowExpansion={toggleRowExpansion}
                            measureElement={rowVirtualizer.measureElement}
                         />
                      ))}
@@ -497,6 +558,8 @@ export const PivotGrid: React.FC<PivotGridProps> = (props) => {
                               metricLabelMap={metricLabelMap}
                               primaryDataset={primaryDataset}
                               virtualCols={virtualCols}
+                              collapsedRows={collapsedRows}
+                              toggleRowExpansion={toggleRowExpansion}
                               measureElement={rowVirtualizer.measureElement}
                            />
                         ))}

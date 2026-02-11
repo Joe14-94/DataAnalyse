@@ -67,6 +67,7 @@ export const usePivotLogic = () => {
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
     const [styleRules, setStyleRules] = useState<PivotStyleRule[]>([]);
     const [conditionalRules, setConditionalRules] = useState<ConditionalFormattingRule[]>([]);
+    const [collapsedRows, setCollapsedRows] = useState<Set<string>>(new Set());
 
     // PANEL COLLAPSE STATE
     const [isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed] = useState(false);
@@ -124,8 +125,42 @@ export const usePivotLogic = () => {
         return [];
     }, [isTemporalMode, pivotData, metrics, valField, aggType, temporalConfig, showVariations, columnWidths]);
 
+    // BOLT OPTIMIZATION: Filter rows based on collapse state
+    const filteredPivotRows = useMemo(() => {
+        if (!pivotData?.displayRows) return [];
+        if (collapsedRows.size === 0) return pivotData.displayRows;
+
+        return pivotData.displayRows.filter(row => {
+            // A row is hidden if any of its parent paths are collapsed
+            // Standard mode: row.keys contains the path
+            for (let i = 0; i < row.keys.length - (row.type === 'subtotal' ? 1 : 0); i++) {
+                const parentPath = row.keys.slice(0, i + 1).join('\x1F');
+                if (collapsedRows.has(parentPath)) return false;
+            }
+            return true;
+        });
+    }, [pivotData, collapsedRows]);
+
+    const filteredTemporalResults = useMemo(() => {
+        if (!temporalResults) return [];
+        if (collapsedRows.size === 0) return temporalResults;
+
+        return temporalResults.filter(result => {
+            const keys = result.groupLabel.split('\x1F');
+            // Temporal mode: result.groupLabel contains the path
+            // For subtotals, level is subtotalLevel
+            const maxLevelToCheck = result.isSubtotal ? (result.subtotalLevel ?? 0) : keys.length - 1;
+
+            for (let i = 0; i < maxLevelToCheck; i++) {
+                const parentPath = keys.slice(0, i + 1).join('\x1F');
+                if (collapsedRows.has(parentPath)) return false;
+            }
+            return true;
+        });
+    }, [temporalResults, collapsedRows]);
+
     const rowVirtualizer = useVirtualizer({
-        count: isTemporalMode ? temporalResults.length : (pivotData?.displayRows.length || 0),
+        count: isTemporalMode ? filteredTemporalResults.length : filteredPivotRows.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => 32,
         overscan: 10,
@@ -794,6 +829,33 @@ export const usePivotLogic = () => {
         setAnalysisName('');
         setIsEditMode(false);
         setSpecificDashboardItems([]);
+        setCollapsedRows(new Set());
+    };
+
+    const toggleRowExpansion = (path: string) => {
+        setCollapsedRows(prev => {
+            const next = new Set(prev);
+            if (next.has(path)) next.delete(path);
+            else next.add(path);
+            return next;
+        });
+    };
+
+    const setAllExpansion = (expand: boolean) => {
+        if (expand) {
+            setCollapsedRows(new Set());
+        } else {
+            // Collapse all Level 0 groups
+            const allLevel0 = new Set<string>();
+            const rows = isTemporalMode ? temporalResults : (pivotData?.displayRows || []);
+            rows.forEach((row: any) => {
+                const keys = isTemporalMode ? row.groupLabel.split('\x1F') : row.keys;
+                if (keys.length > 0) {
+                    allLevel0.add(keys[0]);
+                }
+            });
+            setCollapsedRows(allLevel0);
+        }
     };
 
     const handleSaveAsDataset = (name: string) => {
@@ -884,6 +946,7 @@ export const usePivotLogic = () => {
         // Data & Hooks
         batches, currentDataset, datasets, savedAnalyses, primaryDataset, datasetBatches,
         blendedRows, pivotData, temporalResults, temporalColTotals, isCalculating, chartPivotData,
+        filteredPivotRows, filteredTemporalResults,
         rowVirtualizer, colVirtualizer, allDataColumns,
         // UI State
         isInitialized, sources, setSources, selectedBatchId, setSelectedBatchId,
@@ -904,6 +967,7 @@ export const usePivotLogic = () => {
         editingCalcField, setEditingCalcField, columnLabels, setColumnLabels,
         editingColumn, setEditingColumn, columnWidths, setColumnWidths,
         styleRules, setStyleRules, conditionalRules, setConditionalRules,
+        collapsedRows, toggleRowExpansion, setAllExpansion,
         isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed,
         isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed,
         isFieldsPanelCollapsed, setIsFieldsPanelCollapsed,

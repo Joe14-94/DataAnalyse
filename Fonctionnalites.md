@@ -69,6 +69,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Sticky Headers** | Colonnes et lignes de titres fixées lors du scroll. | 2026-02-10 | UX |
 | **Calculs de Totaux** | Lignes de total et sous-total automatiques. | Historique | Core |
 | **Sélection Totaux** | Support de la sélection de cellules sur les lignes de Total. | 2026-02-22 | Ajustement |
+| **Déployer/Regrouper** | Expand/Collapse des lignes par niveau de hiérarchie. | 2026-02-24 | Core |
 
 ---
 
@@ -129,6 +130,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-24** : Ajout de la fonctionnalité Déployer/Regrouper les lignes du TCD par niveau.
 - **2026-02-22** : Support de la sélection de cellules sur les lignes de "Total" (standard et temporel).
 - **2026-02-22** : Optimisation du pipeline de comparaison temporelle (passage en boucle unique).
 - **2026-02-20** : Support multi-métriques dans le mode comparaison temporelle du TCD.

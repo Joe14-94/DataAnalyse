@@ -415,8 +415,6 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
         });
       } else {
         // Niveau Nœud
-        processLevel(subgroupRows, level + 1, currentKeys);
-
         if (showSubtotals) {
           displayRows.push({
             type: 'subtotal',
@@ -424,9 +422,11 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
             level,
             metrics: stats.metrics,
             rowTotal: stats.rowTotal,
-            label: `Total ${key}`
+            label: key // En mode header, on affiche juste la clé
           });
         }
+
+        processLevel(subgroupRows, level + 1, currentKeys);
       }
     }
   };

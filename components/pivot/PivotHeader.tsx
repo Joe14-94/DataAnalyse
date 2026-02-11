@@ -33,6 +33,7 @@ interface PivotHeaderProps {
    searchTerm: string;
    setSearchTerm: (v: string) => void;
    handleReset: () => void;
+   setAllExpansion: (expand: boolean) => void;
 }
 
 export const PivotHeader: React.FC<PivotHeaderProps> = ({
@@ -41,7 +42,7 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
    isSaving, setIsSaving, analysisName, setAnalysisName, handleSaveAnalysis,
    isEditMode, setIsEditMode,
    openCalcModal, openFormattingModal, openSpecificDashboardModal, openSaveAsDatasetModal, selectedItemsCount = 0,
-   searchTerm, setSearchTerm, setIsSelectionMode, handleReset
+   searchTerm, setSearchTerm, setIsSelectionMode, handleReset, setAllExpansion
 }) => {
    const [showChartMenu, setShowChartMenu] = useState(false);
 
@@ -59,6 +60,23 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
                </button>
                <button onClick={() => setIsTemporalMode(true)} className={`px-2 py-1 text-xs font-bold rounded transition-all ${isTemporalMode ? 'bg-white text-brand-600 shadow' : 'text-slate-500'}`}>
                   <Calendar className="w-3 h-3 inline mr-1" />Comparaison
+               </button>
+            </div>
+
+            <div className="ml-2 flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+               <button
+                  onClick={() => setAllExpansion(true)}
+                  className="px-2 py-1 text-[10px] font-bold rounded hover:bg-white hover:text-brand-600 transition-all text-slate-500"
+                  title="Déployer tous les niveaux"
+               >
+                  Déployer tout
+               </button>
+               <button
+                  onClick={() => setAllExpansion(false)}
+                  className="px-2 py-1 text-[10px] font-bold rounded hover:bg-white hover:text-brand-600 transition-all text-slate-500"
+                  title="Regrouper tous les niveaux (Niv 1 uniquement)"
+               >
+                  Regrouper tout
                </button>
             </div>
 
