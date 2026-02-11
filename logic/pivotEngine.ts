@@ -1,6 +1,6 @@
 
 import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters } from '../utils';
-import { FieldConfig, Dataset, FilterRule, PivotJoin, PivotConfig, PivotResult, PivotRow, AggregationType, SortBy, SortOrder, DateGrouping } from '../types';
+import { FieldConfig, Dataset, PivotConfig, PivotResult, PivotRow } from '../types';
 
 import { PivotMetric } from '../types/pivot';
 
@@ -31,7 +31,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   } = config;
 
   // Backward compatibility for metrics
-  let activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
+  const activeMetrics: PivotMetric[] = config.metrics && config.metrics.length > 0
     ? config.metrics
     : (config.valField ? [{ field: config.valField, aggType: config.aggType }] : []);
 
@@ -79,6 +79,19 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const optimizedRows: OptimizedRow[] = [];
   const colHeadersSet = new Set<string>();
 
+  // BOLT OPTIMIZATION: Local cache for string conversions to avoid repetitive .trim() and String() calls
+  const localStringCache = new Map<any, string>();
+  const getString = (v: any) => {
+    if (v === undefined || v === null) return '(Vide)';
+    let res = localStringCache.get(v);
+    if (res === undefined) {
+      res = String(v).trim();
+      if (res === '') res = '(Vide)';
+      if (localStringCache.size < 5000) localStringCache.set(v, res);
+    }
+    return res;
+  };
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     
@@ -88,41 +101,34 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
     // 1.2 Extraction Clés Lignes
     const rowKeys = new Array(rowFields.length);
     for(let j=0; j<rowFields.length; j++) {
-        const v = row[rowFields[j]];
-        // Gérer null, undefined ET chaînes vides
-        rowKeys[j] = v !== undefined && v !== null && String(v).trim() !== '' ? String(v) : '(Vide)';
+        rowKeys[j] = getString(row[rowFields[j]]);
     }
 
-    // 1.3 Extraction Clé Colonne (UPDATED FOR MULTI COLS)
-    // BOLT OPTIMIZATION: Reduce array/string allocations by using explicit loop and string building
+    // 1.3 Extraction Clé Colonne
     let colKey = 'ALL';
     if (colFields && colFields.length > 0) {
        if (colFields.length === 1 && colGrouping === 'none') {
-           const v = row[colFields[0]];
-           colKey = v !== undefined && v !== null ? String(v) : '(Vide)';
+           colKey = getString(row[colFields[0]]);
        } else {
            let keyParts = "";
            for (let j = 0; j < colFields.length; j++) {
-               let v = row[colFields[j]];
-               let label = v !== undefined && v !== null ? String(v) : '(Vide)';
+               let label = getString(row[colFields[j]]);
                if (colGrouping !== 'none') label = getGroupedLabel(label, colGrouping);
                keyParts += (j === 0 ? "" : "\x1F") + label;
            }
            colKey = keyParts;
        }
-       colHeadersSet.add(colKey);
-    } else {
-       colHeadersSet.add('ALL');
     }
+    colHeadersSet.add(colKey);
 
     // 1.4 Extraction Métriques
-    // BOLT OPTIMIZATION: Combine metric extraction into single pass and avoid .map()
     const metricVals = new Array(numMetrics);
     const rawVals = new Array(numMetrics);
     for (let j = 0; j < numMetrics; j++) {
         const mc = metricConfigs[j];
-        rawVals[j] = row[mc.field];
-        metricVals[j] = (mc.aggType === 'count' || mc.aggType === 'list') ? 0 : parseSmartNumber(rawVals[j], mc.valUnit);
+        const raw = row[mc.field];
+        rawVals[j] = raw;
+        metricVals[j] = (mc.aggType === 'count' || mc.aggType === 'list') ? 0 : parseSmartNumber(raw, mc.valUnit);
     }
 
     optimizedRows.push({
@@ -137,39 +143,48 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
 
   // --- PHASE 2 : AGREGATION ---
 
-  const initStats = () => ({
-      // Map<colKey, any[]> où any[] contient les valeurs cumulées pour chaque métrique
-      colMetrics: new Map<string, any[]>(),
-      // any[] contient les totaux de ligne pour chaque métrique
-      rowTotalMetrics: metricConfigs.map(mc => (mc.aggType === 'min' ? Infinity : mc.aggType === 'max' ? -Infinity : (mc.aggType === 'list' ? new Set() : 0))) as any[],
-      count: 0,
-      colCounts: new Map<string, number>()
-  });
+  // Pre-calculate baseline stats to avoid .map() in initStats
+  const baseAggValues = metricConfigs.map(mc => (mc.aggType === 'min' ? Infinity : mc.aggType === 'max' ? -Infinity : (mc.aggType === 'list' ? 'SET' : 0)));
+
+  const initStats = () => {
+      const rowTotalMetrics = new Array(numMetrics);
+      for (let j = 0; j < numMetrics; j++) {
+          const base = baseAggValues[j];
+          rowTotalMetrics[j] = base === 'SET' ? new Set() : base;
+      }
+
+      return {
+          colMetrics: new Map<string, any[]>(),
+          rowTotalMetrics,
+          count: 0,
+          colCounts: new Map<string, number>()
+      };
+  };
 
   const computeGroupStats = (groupRows: OptimizedRow[]): GroupStats => {
       const stats = initStats();
+      const colMetrics = stats.colMetrics;
+      const colCounts = stats.colCounts;
+      const rowTotalMetrics = stats.rowTotalMetrics;
 
       for (let i = 0; i < groupRows.length; i++) {
           const row = groupRows[i];
           const colKey = row.colKey;
 
-          // BOLT OPTIMIZATION: Avoid repetitive .some() call inside loop
           if (hasAvgMetric) {
               stats.count++;
           }
 
-          // BOLT OPTIMIZATION: Get colMetricVals once per row instead of once per metric
-          let colMetricVals = stats.colMetrics.get(colKey);
+          let colMetricVals = colMetrics.get(colKey);
           if (!colMetricVals) {
               colMetricVals = new Array(numMetrics);
               for (let j = 0; j < numMetrics; j++) {
-                  const m = metricConfigs[j];
-                  colMetricVals[j] = (m.aggType === 'min' ? Infinity : m.aggType === 'max' ? -Infinity : (m.aggType === 'list' ? new Set() : 0));
+                  const base = baseAggValues[j];
+                  colMetricVals[j] = base === 'SET' ? new Set() : base;
               }
-              stats.colMetrics.set(colKey, colMetricVals);
+              colMetrics.set(colKey, colMetricVals);
           }
 
-          // BOLT OPTIMIZATION: Use standard for loop for metrics aggregation to avoid closure overhead
           for (let mIdx = 0; mIdx < numMetrics; mIdx++) {
               const mc = metricConfigs[mIdx];
               const val = mc.aggType === 'count' ? 1 : row.metricVals[mIdx];
@@ -177,24 +192,24 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               
               // 2.1 Mise à jour Totaux Ligne
               if (aggType === 'sum' || aggType === 'count' || aggType === 'avg') {
-                  stats.rowTotalMetrics[mIdx] += val;
+                  rowTotalMetrics[mIdx] += val;
                   colMetricVals[mIdx] += val;
               } else if (aggType === 'min') {
-                  if (val < stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
+                  if (val < rowTotalMetrics[mIdx]) rowTotalMetrics[mIdx] = val;
                   if (val < colMetricVals[mIdx]) colMetricVals[mIdx] = val;
               } else if (aggType === 'max') {
-                  if (val > stats.rowTotalMetrics[mIdx]) stats.rowTotalMetrics[mIdx] = val;
+                  if (val > rowTotalMetrics[mIdx]) rowTotalMetrics[mIdx] = val;
                   if (val > colMetricVals[mIdx]) colMetricVals[mIdx] = val;
               } else if (aggType === 'list') {
                   if (row.rawVals[mIdx]) {
                       const strVal = String(row.rawVals[mIdx]);
-                      stats.rowTotalMetrics[mIdx].add(strVal);
-                      colMetricVals[mIdx].add(strVal);
+                      (rowTotalMetrics[mIdx] as Set<string>).add(strVal);
+                      (colMetricVals[mIdx] as Set<string>).add(strVal);
                   }
               }
           }
 
-          stats.colCounts.set(colKey, (stats.colCounts.get(colKey) || 0) + 1);
+          colCounts.set(colKey, (colCounts.get(colKey) || 0) + 1);
       }
 
       return finalizeStats(stats, sortedColHeaders);
@@ -435,7 +450,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const grandTotalStats = computeGroupStats(optimizedRows);
 
   // Construction des headers finaux
-  let finalHeaders: string[] = [];
+  const finalHeaders: string[] = [];
   const metricLabels = metricConfigs.map(mc => mc.label || `${mc.field} (${mc.aggType})`);
 
   if (colFields && colFields.length > 0) {
