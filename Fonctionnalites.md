@@ -130,7 +130,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
-- **2026-02-11** : Correction de la disparition de données dans le TCD temporel pour les champs Date vides (inclusion si période 1-12).
+- **2026-02-11** : Correction de la perte de données en mode comparaison (ajout du mode "Tout l'exercice" par défaut, suppression du filtrage restrictif sur les dates et gestion des préfixes de champs).
 - **2026-02-24** : Ajout de la fonctionnalité Déployer/Regrouper les lignes du TCD par niveau.
 - **2026-02-22** : Support de la sélection de cellules sur les lignes de "Total" (standard et temporel).
 - **2026-02-22** : Optimisation du pipeline de comparaison temporelle (passage en boucle unique).
