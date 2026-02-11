@@ -3,7 +3,7 @@
 Ce document détaille le niveau de conformité de l'application par rapport au référentiel `Fonctionnalites.md`.
 
 **Date de l'audit** : 24 Février 2026
-**Version de l'application** : v24-02-2026-01
+**Version de l'application** : v24-02-2026-02
 **Statut Global** : ✅ 100% Conforme
 
 ---
@@ -38,7 +38,7 @@ Ce document détaille le niveau de conformité de l'application par rapport au r
 | **Ordre des colonnes** | Pouvoir changer l'ordre des colonnes. | ✅ | `ColumnManagementDrawer` implémenté. |
 | **Renommer une colonne**| Pouvoir renommer le libellé d'une colonne. | ✅ | Géré dans `useDataExplorerLogic` et `renameDatasetField`. |
 | **Changer le type** | Changement de typage (Nombre -> Date JJ/MM/AAAA).| ✅ | Géré dans `DataExplorerToolbar.tsx` et `formatNumberValue`. |
-| **Barre de titre fixe** | Barre de libellés fixe au scroll vertical. | ✅ | Utilisation de `sticky top-0` dans `DataExplorerGrid.tsx`. |
+| **Barre de titre fixe** | Barre de libellés fixe au scroll vertical. | ✅ | Refactorisation de `DataExplorerGrid.tsx` pour séparer le header sticky du flux virtualisé. |
 
 ---
 
