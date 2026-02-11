@@ -1,7 +1,7 @@
 import { ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from '../types';
 
 // Updated version
-export const APP_VERSION = "2026-02-11-01";
+export const APP_VERSION = "24-02-2026-01";
 
 export const generateId = (): string => {
   return crypto.randomUUID();
