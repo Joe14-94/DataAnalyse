@@ -246,7 +246,7 @@ class FormulaCompiler {
            const replacement = String(argEvals[2](row) || '');
            try {
              return text.replace(new RegExp(search, 'g'), replacement);
-           } catch (e) { return text; }
+           } catch { return text; }
         };
       case 'SUBSTITUER': case 'SUBSTITUTE':
         return (row) => String(argEvals[0](row) || '').split(String(argEvals[1](row) || '')).join(String(argEvals[2](row) || ''));
@@ -377,7 +377,7 @@ export const evaluateFormula = (row: any, formula: string, outputType?: 'number'
       return Math.round(result * 10000) / 10000;
     }
     return result;
-  } catch (e) {
+  } catch {
     return null;
   }
 };

@@ -1,4 +1,4 @@
-import { ImportBatch, FieldConfig, DiagnosticSuite, DiagnosticResult } from '../types';
+import { ImportBatch, FieldConfig } from '../types';
 
 // Updated version
 export const APP_VERSION = "2026-02-11-01";
@@ -19,7 +19,9 @@ export const compressBatch = (batch: ImportBatch): any => {
   // On convertit les lignes en tableaux de valeurs
   const data = batch.rows.map(row => fields.map(f => row[f]));
 
-  const { rows: _, ...meta } = batch;
+  const meta = { ...batch };
+  delete (meta as any).rows;
+
   return {
     ...meta,
     _c: true, // Flag compressé
@@ -34,7 +36,12 @@ export const compressBatch = (batch: ImportBatch): any => {
 export const decompressBatch = (batch: any): ImportBatch => {
   if (!batch || !batch._c) return batch as ImportBatch;
 
-  const { f, d, _c: _, ...meta } = batch;
+  const meta = { ...batch };
+  const { f, d } = batch;
+  delete (meta as any).f;
+  delete (meta as any).d;
+  delete (meta as any)._c;
+
   const rows = d.map((rowValues: any[]) => {
     const row: any = {};
     f.forEach((fieldName: string, i: number) => {
@@ -404,27 +411,10 @@ export const formatDateLabelForDisplay = (label: string): string => {
     return `${quarter} ${year}`;
   }
 
-  // Format YYYY-MM-DD (ISO date) -> DD/MM/YYYY (français)
-  if (/^\d{4}-\d{2}-\d{2}/.test(label)) {
-    const date = new Date(label);
-    if (!isNaN(date.getTime())) {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-  }
-
-  // Support des dates Excel (numéros de série) dans les labels
-  if (/^\d{5}(\.\d+)?$/.test(label)) {
-    const num = parseFloat(label);
-    if (num > 0 && num < 100000) {
-      const date = excelToJSDate(num);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
+  // Utilisation de parseDateValue pour gérer tous les autres formats (ISO, US, Excel...)
+  const date = parseDateValue(label);
+  if (date && !isNaN(date.getTime())) {
+    return formatDateFr(label);
   }
 
   return label;
