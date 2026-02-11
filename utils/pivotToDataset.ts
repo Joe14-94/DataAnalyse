@@ -1,5 +1,5 @@
 
-import { PivotResult, PivotRow, TemporalComparisonResult, TemporalComparisonConfig, DataRow } from '../types';
+import { PivotResult, TemporalComparisonResult, TemporalComparisonConfig, DataRow } from '../types';
 import { generateId } from '../utils';
 
 /**

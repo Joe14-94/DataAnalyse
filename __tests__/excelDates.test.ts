@@ -3,21 +3,19 @@ import { formatDateFr, parseDateValue, getGroupedLabel } from '../utils/common';
 
 describe('Date utilities with Excel dates', () => {
   describe('formatDateFr', () => {
-    it('should convert 46057 to 4 février 2026', () => {
+    it('should convert 46057 to 04/02/2026', () => {
       const result = formatDateFr(46057);
-      expect(result).toContain('février');
-      expect(result).toContain('2026');
-      expect(result).toMatch(/4 février 2026|04 février 2026/);
+      expect(result).toBe('04/02/2026');
     });
 
-    it('should convert "46057" string to 4 février 2026', () => {
+    it('should convert "46057" string to 04/02/2026', () => {
       const result = formatDateFr('46057');
-      expect(result).toMatch(/4 février 2026|04 février 2026/);
+      expect(result).toBe('04/02/2026');
     });
 
     it('should handle standard ISO dates', () => {
       const result = formatDateFr('2025-01-15');
-      expect(result).toMatch(/15 janvier 2025|15 janv. 2025/);
+      expect(result).toBe('15/01/2025');
     });
   });
 

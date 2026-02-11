@@ -1,4 +1,4 @@
-import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, TemporalComparisonSource, AggregationType } from '../types';
+import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, AggregationType } from '../types';
 import { parseSmartNumber, prepareFilters, applyPreparedFilters, getCachedNumberFormat, parseDateValue } from '../utils';
 
 export { parseDateValue };
@@ -171,7 +171,7 @@ export const calculateTemporalComparison = (
 
     let totalProcessed = 0;
     let includedCount = 0;
-    let exclusionReasons = { noDate: 0, outOfPeriod: 0, filtered: 0 };
+    const exclusionReasons = { noDate: 0, outOfPeriod: 0, filtered: 0 };
 
     const combinedFilter = (row: DataRow) => {
       totalProcessed++;
@@ -509,7 +509,7 @@ export const detectDateColumn = (headers: string[]): string | undefined => {
 /**
  * Extrait l'année d'une date
  */
-export const extractYearFromDate = (dateValue: any): number | undefined => {
+export const extractYearFromDate = (dateValue: string | number | Date | null | undefined): number | undefined => {
   const date = parseDateValue(dateValue);
   if (!date) return undefined;
   return date.getFullYear();

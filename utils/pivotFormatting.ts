@@ -11,7 +11,7 @@ export const getCellStyle = (
   conditionalRules: ConditionalFormattingRule[],
   rowType: 'data' | 'subtotal' | 'grandTotal' = 'data'
 ): React.CSSProperties => {
-  let finalStyle: React.CSSProperties = {};
+  const finalStyle: React.CSSProperties = {};
 
   // 1. Manual rules
   styleRules.forEach(rule => {
