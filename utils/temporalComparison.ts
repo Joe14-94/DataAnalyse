@@ -148,6 +148,13 @@ export const calculateTemporalComparison = (
   // Préparer les filtres une seule fois
   const preparedFilters = prepareFilters(filters);
 
+  console.log('🔍 [calculateTemporalComparison] START', {
+    dateColumn,
+    startMonth: periodFilter.startMonth,
+    endMonth: periodFilter.endMonth,
+    numSources: sources.length
+  });
+
   // Filtrer et agréger chaque source
   const aggregatedSources = new Map<string, Map<string, { label: string; metrics: Record<string, number>; details: DataRow[] }>>();
 
@@ -162,26 +169,58 @@ export const calculateTemporalComparison = (
     const startMonth = periodFilter.startMonth;
     const endMonth = periodFilter.endMonth;
 
+    let totalProcessed = 0;
+    let includedCount = 0;
+    let exclusionReasons = { noDate: 0, outOfPeriod: 0, filtered: 0 };
+
     const combinedFilter = (row: DataRow) => {
+      totalProcessed++;
       // 1. Period Filter
       const dateValue = row[dateColumn];
       const date = parseDateValue(dateValue);
-      if (!date) return false;
+
+      if (!date) {
+        exclusionReasons.noDate++;
+        return false;
+      }
 
       const month = date.getMonth() + 1;
       const inPeriod = startMonth <= endMonth
         ? (month >= startMonth && month <= endMonth)
         : (month >= startMonth || month <= endMonth);
 
-      if (!inPeriod) return false;
+      if (!inPeriod) {
+        exclusionReasons.outOfPeriod++;
+        return false;
+      }
 
       // 2. Prepared Filters
-      return applyPreparedFilters(row, preparedFilters);
+      const passesFilters = applyPreparedFilters(row, preparedFilters);
+      if (!passesFilters) {
+        exclusionReasons.filtered++;
+        return false;
+      }
+
+      includedCount++;
+      return true;
     };
 
     // BOLT OPTIMIZATION: Use single-pass aggregation with integrated filtering
     const aggregated = aggregateDataByGroup(sourceData, groupByFields, metrics, combinedFilter);
     aggregatedSources.set(source.id, aggregated);
+
+    console.log(`📊 [Source: ${source.label}] Filter stats:`, {
+      total: totalProcessed,
+      included: includedCount,
+      excluded: totalProcessed - includedCount,
+      reasons: exclusionReasons
+    });
+
+    if (totalProcessed > 0 && includedCount === 0) {
+      console.warn(`⚠️ [Source: ${source.label}] NO ROWS PASSED THE FILTERS. Sample raw date value for '${dateColumn}':`,
+        sourceData[0]?.[dateColumn]
+      );
+    }
   });
 
   const allGroupKeys = new Set<string>();

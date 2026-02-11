@@ -178,6 +178,11 @@ export const usePivotData = ({
                dateColumn = firstMetricField;
            }
 
+           console.log('🔍 [Temporal Comparison] Detected Date Column:', dateColumn);
+           console.log('🔍 [Temporal Comparison] Active Metrics:', activeMetrics);
+           console.log('🔍 [Temporal Comparison] Available Fields:', allAvailableFields.slice(0, 10));
+           console.log('🔍 [Temporal Comparison] Period Filter:', temporalConfig?.periodFilter);
+
            const activeConfig: TemporalComparisonConfig = {
                ...temporalConfig,
                groupByFields: rowFields,
