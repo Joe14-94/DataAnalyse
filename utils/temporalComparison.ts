@@ -1,5 +1,5 @@
 import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, AggregationType } from '../types';
-import { parseSmartNumber, prepareFilters, applyPreparedFilters, getCachedNumberFormat, parseDateValue } from '../utils';
+import { parseSmartNumber, prepareFilters, applyPreparedFilters, getCachedNumberFormat, parseDateValue, getValueForAggregation, getRowValue } from '../utils';
 
 export { parseDateValue };
 
@@ -66,7 +66,7 @@ export const aggregateDataByGroup = (
     let groupLabel = "";
 
     if (numFields === 1) {
-        const val = row[groupByFields[0]];
+        const val = getRowValue(row, groupByFields[0]);
         const cached = keyCache.get(val);
         if (cached) {
             groupKey = cached.key;
@@ -81,7 +81,7 @@ export const aggregateDataByGroup = (
         // Multi-fields: use the values as a combined key for cache
         let combinedVal = "";
         for (let j = 0; j < numFields; j++) {
-            combinedVal += (j === 0 ? "" : "|") + row[groupByFields[j]];
+            combinedVal += (j === 0 ? "" : "|") + getRowValue(row, groupByFields[j]);
         }
         const cached = keyCache.get(combinedVal);
         if (cached) {
@@ -89,7 +89,7 @@ export const aggregateDataByGroup = (
             groupLabel = cached.label;
         } else {
             for (let j = 0; j < numFields; j++) {
-                const val = row[groupByFields[j]];
+                const val = getRowValue(row, groupByFields[j]);
                 const sVal = val !== undefined && val !== null ? String(val) : '';
                 groupKey += (j === 0 ? "" : "|") + sVal;
                 groupLabel += (j === 0 ? "" : "\x1F") + (sVal || '(vide)');
@@ -120,15 +120,10 @@ export const aggregateDataByGroup = (
     for (let j = 0; j < numMetrics; j++) {
        const m = metricConfigs[j];
        const mLabel = m.label;
-       const rawValue = row[m.field];
+       const rawValue = getRowValue(row, m.field);
 
-       let value = 0;
-       if (typeof rawValue === 'number') {
-         value = rawValue;
-       } else if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
-         // parseSmartNumber already handles non-strings by doing String(val) internally if needed
-         value = parseSmartNumber(rawValue);
-       }
+       // BOLT FIX: Use getValueForAggregation to handle dates and numbers correctly
+       const value = getValueForAggregation(rawValue);
 
        const aggType = m.aggType;
        if (aggType === 'sum' || aggType === 'avg') {
@@ -207,7 +202,7 @@ export const calculateTemporalComparison = (
     const combinedFilter = (row: DataRow) => {
       totalProcessed++;
       // 1. Period Filter
-      const dateValue = row[dateColumn];
+      const dateValue = getRowValue(row, dateColumn);
       const date = parseDateValue(dateValue);
 
       let inPeriod = true;

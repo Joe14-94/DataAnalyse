@@ -1,5 +1,5 @@
 
-import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters } from '../utils';
+import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters, getValueForAggregation } from '../utils';
 import { FieldConfig, Dataset, PivotConfig, PivotResult, PivotRow } from '../types';
 
 import { PivotMetric } from '../types/pivot';
@@ -128,7 +128,8 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
         const mc = metricConfigs[j];
         const raw = row[mc.field];
         rawVals[j] = raw;
-        metricVals[j] = (mc.aggType === 'count' || mc.aggType === 'list') ? 0 : parseSmartNumber(raw, mc.valUnit);
+        // BOLT FIX: Use getValueForAggregation to handle dates and numbers correctly
+        metricVals[j] = (mc.aggType === 'count' || mc.aggType === 'list') ? 0 : getValueForAggregation(raw, config.currentDataset?.fieldConfigs?.[mc.field]);
     }
 
     optimizedRows.push({
