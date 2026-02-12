@@ -1,6 +1,6 @@
 import { DiagnosticSuite, DiagnosticResult } from '../types';
 import { parseSmartNumber, getGroupedLabel } from './common';
-import { evaluateFormula } from './formulaEngine';
+import { evaluateFormula } from '../logic/formulaEngine';
 import { calculateLinearRegression } from './mathUtils';
 
 // --- AUDIT SYSTEM ---

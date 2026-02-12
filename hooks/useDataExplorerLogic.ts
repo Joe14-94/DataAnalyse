@@ -506,15 +506,37 @@ export function useDataExplorerLogic() {
     };
 
     // --- Data Processing ---
-    // BOLT OPTIMIZATION: Consolidate data processing into a single pass and avoid expensive pre-indexing
-    const allRows = useMemo(() => {
+    // BOLT OPTIMIZATION: Split data processing to avoid full O(N) re-runs when only config changes
+
+    // 1. Initial extended rows (Metadata only)
+    const rawExtendedRows = useMemo(() => {
         if (!currentDataset) return [];
+        const datasetBatches = (batches || [])
+            .filter(b => b.datasetId === currentDataset.id)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const result: (DataRow & { _importDate: string; _batchId: string })[] = [];
+        for (const batch of datasetBatches) {
+            const batchRows = batch.rows || [];
+            const batchDate = batch.date;
+            const batchId = batch.id;
+            for (let i = 0; i < batchRows.length; i++) {
+                // We use a shallow copy to add metadata
+                result.push({ ...batchRows[i], _importDate: batchDate, _batchId: batchId });
+            }
+        }
+        return result;
+    }, [currentDataset?.id, batches]);
+
+    // 2. Full processed rows (Calculated Fields & Blending)
+    const allRows = useMemo(() => {
+        if (!currentDataset || rawExtendedRows.length === 0) return [];
         const calcFields = currentDataset?.calculatedFields || [];
         const { blendingConfig } = state;
 
-        // 1. Prepare Blending Lookups (O(M) where M is rows in secondary dataset)
+        // Prepare Blending Lookups (O(M) where M is rows in secondary dataset)
         const blendingLookups = new Map<string, { lookup: Map<string, DataRow>, dsName: string }>();
-        if (blendingConfig && blendingConfig.secondaryDatasetId && blendingConfig.joinKeyPrimary && blendingConfig.joinKeySecondary) {
+        if (blendingConfig?.secondaryDatasetId && blendingConfig.joinKeyPrimary && blendingConfig.joinKeySecondary) {
             const secDS = datasets.find(d => d.id === blendingConfig.secondaryDatasetId);
             if (secDS) {
                 const secBatches = batches.filter(b => b.datasetId === blendingConfig.secondaryDatasetId)
@@ -532,49 +554,36 @@ export function useDataExplorerLogic() {
             }
         }
 
-        // 2. Process primary rows in a single pass (O(N * (C + B)))
-        const datasetBatches = (batches || [])
-            .filter(b => b.datasetId === currentDataset.id)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        const result: (DataRow & { _importDate: string; _batchId: string })[] = [];
         const activeLookup = blendingConfig?.secondaryDatasetId ? blendingLookups.get(blendingConfig.secondaryDatasetId) : null;
+        const hasExtraWork = calcFields.length > 0 || activeLookup;
 
-        for (const batch of datasetBatches) {
-            const batchRows = batch.rows || [];
-            const batchDate = batch.date;
-            const batchId = batch.id;
+        if (!hasExtraWork) return rawExtendedRows;
 
-            for (let i = 0; i < batchRows.length; i++) {
-                const r = batchRows[i];
-                // Clone row only once
-                const extendedRow = { ...r, _importDate: batchDate, _batchId: batchId } as DataRow & { _importDate: string; _batchId: string };
+        // Apply transformations in-place on a new array (but rows are still cloned)
+        return rawExtendedRows.map(r => {
+            const extendedRow = { ...r };
 
-                // Calculated Fields
-                if (calcFields.length > 0) {
-                    for (let j = 0; j < calcFields.length; j++) {
-                        const cf = calcFields[j];
-                        extendedRow[cf.name] = evaluateFormula(r, cf.formula, cf.outputType);
-                    }
-                }
-
-                // Blending (O(1) lookup)
-                if (activeLookup && blendingConfig) {
-                    const k = String(extendedRow[blendingConfig.joinKeyPrimary!] || '').trim();
-                    const match = activeLookup.lookup.get(k);
-                    if (match) {
-                       for (const key in match) {
-                          if (key !== 'id') (extendedRow as any)[`[${activeLookup.dsName}] ${key}`] = match[key];
-                       }
-                    }
-                }
-
-                result.push(extendedRow);
+            // Calculated Fields
+            for (let j = 0; j < calcFields.length; j++) {
+                const cf = calcFields[j];
+                extendedRow[cf.name] = evaluateFormula(r, cf.formula, cf.outputType);
             }
-        }
 
-        return result;
-    }, [currentDataset, batches, state.blendingConfig, datasets]);
+            // Blending (O(1) lookup)
+            if (activeLookup && blendingConfig) {
+                const k = String(extendedRow[blendingConfig.joinKeyPrimary!] || '').trim();
+                const match = activeLookup.lookup.get(k);
+                if (match) {
+                    const dsPrefix = `[${activeLookup.dsName}] `;
+                    for (const key in match) {
+                        if (key !== 'id') (extendedRow as any)[dsPrefix + key] = match[key];
+                    }
+                }
+            }
+
+            return extendedRow;
+        });
+    }, [rawExtendedRows, currentDataset?.calculatedFields, state.blendingConfig, datasets]);
 
     const displayFields = useMemo(() => {
         if (!currentDataset) return [];
@@ -604,11 +613,20 @@ export function useDataExplorerLogic() {
                     isExact = true;
                     targetVal = targetVal.substring(1);
                 }
+
+                // Pre-split filter values for exact match
+                const filterValues = isExact ? (
+                    (targetVal.includes(',') || targetVal.includes(';'))
+                    ? targetVal.split(/[;,]+/).map(v => v.trim().toLowerCase()).filter(v => v !== '')
+                    : [targetVal.toLowerCase()]
+                ) : [];
+
                 return {
                     key,
                     targetVal,
                     lowerFilter: targetVal.toLowerCase(),
                     isExact,
+                    filterValues,
                     isEmpty: value === '__EMPTY__'
                 };
             });
@@ -653,24 +671,19 @@ export function useDataExplorerLogic() {
                     const config = currentDataset?.fieldConfigs?.[f.key];
 
                     if (f.isExact) {
-                        // Support multiple values in exact match mode (e.g. =Valeur1, Valeur2)
-                        const filterValues = (f.targetVal.includes(',') || f.targetVal.includes(';'))
-                            ? f.targetVal.split(/[;,]+/).map(v => v.trim().toLowerCase()).filter(v => v !== '')
-                            : [f.lowerFilter];
-
-                        let matched = filterValues.some(fv => valStr === fv);
+                        let matched = f.filterValues.some(fv => valStr === fv);
 
                         if (!matched && (config?.type === 'date' || f.key.toLowerCase().includes('date'))) {
                             const month = getGroupedLabel(valStr, 'month').toLowerCase();
                             const year = getGroupedLabel(valStr, 'year').toLowerCase();
                             const quarter = getGroupedLabel(valStr, 'quarter').toLowerCase();
-                            if (filterValues.some(fv => month === fv || year === fv || quarter === fv)) matched = true;
+                            if (f.filterValues.some(fv => month === fv || year === fv || quarter === fv)) matched = true;
                         }
 
                         if (!matched && f.key === '_importDate') {
                             const dateStr = val as string;
                             const formattedDate = formatDateFr(dateStr).toLowerCase();
-                            if (filterValues.some(fv => dateStr === fv || formattedDate === fv)) matched = true;
+                            if (f.filterValues.some(fv => dateStr === fv || formattedDate === fv)) matched = true;
                         }
 
                         if (!matched) return false;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateFormula } from '../utils/formulaEngine';
+import { evaluateFormula } from '../logic/formulaEngine';
 import { jsToExcelDate } from '../utils/common';
 
 describe('Formula Engine Date Functions', () => {
