@@ -459,8 +459,8 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           metricLabels.forEach(ml => {
               if (showVariations && hIdx > 0) {
                   if (metricConfigs.length > 1) {
-                      finalHeaders.push(`${h} \x1F ${ml}_DIFF`);
-                      finalHeaders.push(`${h} \x1F ${ml}_PCT`);
+                      finalHeaders.push(`${h}\x1F${ml}_DIFF`);
+                      finalHeaders.push(`${h}\x1F${ml}_PCT`);
                   } else {
                       finalHeaders.push(`${h}_DIFF`);
                       finalHeaders.push(`${h}_PCT`);
@@ -468,7 +468,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               }
 
               if (metricConfigs.length > 1) {
-                  finalHeaders.push(`${h} \x1F ${ml}`);
+                  finalHeaders.push(`${h}\x1F${ml}`);
               } else {
                   finalHeaders.push(h);
               }
