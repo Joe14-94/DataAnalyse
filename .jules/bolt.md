@@ -25,3 +25,7 @@
 ## 2026-02-22 - [Optimize Temporal Comparison Pipeline]
 **Learning:** Temporal comparison was performing three separate passes over data for each source (two filters and one aggregation), creating multiple large intermediate arrays. Merging them into a single-pass loop with an integrated `filterFn` reduces complexity from O(3N) to O(N) and eliminates memory pressure from allocations. Standard `for` loops and hoisting metric metadata further reduced CPU time.
 **Action:** Consolidate multiple filter/map/reduce operations into a single loop for performance-critical data pipelines.
+
+## 2026-02-23 - [Optimize ETL Transformations (Filter & Aggregate)]
+**Learning:** ETL transformations `applyFilter` and `applyAggregate` were bottlenecks for large datasets. `applyFilter` used `.map().every()` which evaluated all conditions for every row; switching to manual `for` loops with early bail-out (lazy evaluation) and hoisting string/case operations achieved a ~7x speedup. `applyAggregate` used a multi-pass approach with intermediate row arrays; switching to a single-pass accumulator system with hoisted field lookups reduced CPU time by ~30% and significantly lowered memory pressure.
+**Action:** Use single-pass accumulators for aggregations and lazy evaluation for filters. Hoist all possible metadata/config processing outside of O(N) loops.

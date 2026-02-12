@@ -3,6 +3,7 @@ import { generateId, evaluateFormula } from '../utils';
 
 /**
  * Applique un filtre sur les données
+ * BOLT OPTIMIZATION: Hoisted condition processing and lazy evaluation to avoid O(N*C) overhead.
  */
 export const applyFilter = (
   data: DataRow[],
@@ -11,35 +12,66 @@ export const applyFilter = (
 ): DataRow[] => {
   if (conditions.length === 0) return data;
 
+  // BOLT OPTIMIZATION: Pre-process conditions to avoid redundant string ops and lowercasing inside the loop
+  const prepared = conditions.map(c => {
+    const filterStr = String(c.value || '');
+    return {
+      ...c,
+      preparedFilterStr: c.caseSensitive ? filterStr : filterStr.toLowerCase(),
+      filterNum: Number(c.value)
+    };
+  });
+
   return data.filter(row => {
-    const results = conditions.map(condition => evaluateCondition(row, condition));
-    return combineWith === 'AND'
-      ? results.every(r => r)
-      : results.some(r => r);
+    // BOLT OPTIMIZATION: Use manual loop for early bail-out (lazy evaluation)
+    if (combineWith === 'AND') {
+      for (let i = 0; i < prepared.length; i++) {
+        if (!evaluateConditionOptimized(row, prepared[i])) return false;
+      }
+      return true;
+    } else {
+      for (let i = 0; i < prepared.length; i++) {
+        if (evaluateConditionOptimized(row, prepared[i])) return true;
+      }
+      return false;
+    }
   });
 };
 
 /**
- * Évalue une condition de filtre
+ * Évalue une condition de filtre (version optimisée)
  */
-const evaluateCondition = (row: DataRow, condition: FilterCondition): boolean => {
+const evaluateConditionOptimized = (row: DataRow, condition: any): boolean => {
   const fieldValue = row[condition.field];
-  const filterValue = condition.value;
-
-  // Conversion en string pour comparaisons textuelles
-  let fieldStr = String(fieldValue || '');
-  let filterStr = String(filterValue || '');
-
-  if (!condition.caseSensitive) {
-    fieldStr = fieldStr.toLowerCase();
-    filterStr = filterStr.toLowerCase();
-  }
 
   switch (condition.operator) {
     case 'equals':
-      return fieldValue === filterValue;
+      return fieldValue === condition.value;
     case 'not_equals':
-      return fieldValue !== filterValue;
+      return fieldValue !== condition.value;
+    case 'is_empty':
+      return fieldValue === null || fieldValue === undefined || fieldValue === '';
+    case 'is_not_empty':
+      return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
+    case 'greater_than':
+      return Number(fieldValue) > condition.filterNum;
+    case 'less_than':
+      return Number(fieldValue) < condition.filterNum;
+    case 'greater_or_equal':
+      return Number(fieldValue) >= condition.filterNum;
+    case 'less_or_equal':
+      return Number(fieldValue) <= condition.filterNum;
+  }
+
+  // String-based operators
+  let fieldStr = String(fieldValue || '');
+  if (!condition.caseSensitive) {
+    fieldStr = fieldStr.toLowerCase();
+  }
+
+  const filterStr = condition.preparedFilterStr;
+
+  switch (condition.operator) {
     case 'contains':
       return fieldStr.includes(filterStr);
     case 'not_contains':
@@ -48,22 +80,11 @@ const evaluateCondition = (row: DataRow, condition: FilterCondition): boolean =>
       return fieldStr.startsWith(filterStr);
     case 'ends_with':
       return fieldStr.endsWith(filterStr);
-    case 'greater_than':
-      return Number(fieldValue) > Number(filterValue);
-    case 'less_than':
-      return Number(fieldValue) < Number(filterValue);
-    case 'greater_or_equal':
-      return Number(fieldValue) >= Number(filterValue);
-    case 'less_or_equal':
-      return Number(fieldValue) <= Number(filterValue);
-    case 'is_empty':
-      return fieldValue === null || fieldValue === undefined || fieldValue === '';
-    case 'is_not_empty':
-      return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
     default:
       return true;
   }
 };
+
 
 /**
  * Applique une jointure entre deux datasets
@@ -143,48 +164,118 @@ export const applyJoin = (
 
 /**
  * Applique une agrégation GROUP BY
+ * BOLT OPTIMIZATION: Single-pass aggregation using accumulators to avoid O(N * M) overhead and excessive memory allocation.
  */
 export const applyAggregate = (
   data: DataRow[],
   groupBy: string[],
   aggregations: { field: string; operation: ETLAggregationType; alias?: string }[]
 ): DataRow[] => {
-  if (groupBy.length === 0) {
-    // Agrégation globale
-    const result: DataRow = { id: generateId() };
-    aggregations.forEach(agg => {
-      const values = data.map(row => row[agg.field]).filter(v => v !== null && v !== undefined);
-      result[agg.alias || `${agg.operation}_${agg.field}`] = calculateAggregation(values, agg.operation);
-    });
-    return [result];
+  if (data.length === 0) return [];
+
+  // BOLT OPTIMIZATION: Structure for storing accumulators per group
+  const groupMap = new Map<string, { groupValues: any[], stats: any[] }>();
+
+  // Cache groupBy length and aggregations length
+  const groupByLen = groupBy.length;
+  const aggregationsLen = aggregations.length;
+  const aggFields = aggregations.map(a => a.field);
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    // BOLT OPTIMIZATION: Optimized key generation to avoid array creation
+    let key = '';
+    if (groupByLen > 0) {
+      for (let j = 0; j < groupByLen; j++) {
+        if (j > 0) key += '|||';
+        key += row[groupBy[j]] ?? '';
+      }
+    } else {
+      key = 'GLOBAL';
+    }
+
+    let group = groupMap.get(key);
+    if (!group) {
+      // BOLT OPTIMIZATION: Only create groupValues once per group
+      const groupValues: any[] = [];
+      for (let j = 0; j < groupByLen; j++) {
+        groupValues.push(row[groupBy[j]]);
+      }
+
+      group = {
+        groupValues,
+        stats: aggregations.map(() => ({
+          sum: 0,
+          count: 0,
+          numCount: 0,
+          min: Infinity,
+          max: -Infinity,
+          first: undefined,
+          last: undefined,
+          hasValue: false
+        }))
+      };
+      groupMap.set(key, group);
+    }
+
+    // BOLT OPTIMIZATION: Single-pass update of all accumulators
+    const stats = group.stats;
+    for (let j = 0; j < aggregationsLen; j++) {
+      const stat = stats[j];
+      const val = row[aggFields[j]];
+
+      // To match original behavior, we filter null and undefined
+      if (val !== null && val !== undefined) {
+        if (!stat.hasValue) {
+          stat.first = val;
+          stat.hasValue = true;
+        }
+        stat.last = val;
+        stat.count++;
+
+        const num = Number(val);
+        if (!isNaN(num)) {
+          stat.numCount++;
+          stat.sum += num;
+          if (num < stat.min) stat.min = num;
+          if (num > stat.max) stat.max = num;
+        }
+      }
+    }
   }
 
-  // Group by
-  const groups = new Map<string, DataRow[]>();
-
-  data.forEach(row => {
-    const key = groupBy.map(field => row[field]).join('|||');
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)!.push(row);
-  });
-
   const result: DataRow[] = [];
-  groups.forEach((rows, key) => {
+  groupMap.forEach((group) => {
     const row: DataRow = { id: generateId() };
 
     // Ajouter les colonnes de groupement
-    groupBy.forEach((field, index) => {
-      row[field] = key.split('|||')[index];
-    });
+    if (groupBy.length > 0) {
+      for (let i = 0; i < groupBy.length; i++) {
+        row[groupBy[i]] = group.groupValues[i];
+      }
+    }
 
-    // Calculer les agrégations
-    aggregations.forEach(agg => {
-      const values = rows.map(r => r[agg.field]).filter(v => v !== null && v !== undefined);
-      row[agg.alias || `${agg.operation}_${agg.field}`] = calculateAggregation(values, agg.operation);
-    });
+    // Calculer les résultats finaux des agrégations
+    for (let i = 0; i < aggregations.length; i++) {
+      const agg = aggregations[i];
+      const stat = group.stats[i];
+      const alias = agg.alias || `${agg.operation}_${agg.field}`;
 
+      let finalVal: any = null;
+      if (stat.hasValue || stat.count > 0) {
+        switch (agg.operation) {
+          case 'sum': finalVal = stat.numCount > 0 ? stat.sum : 0; break;
+          case 'avg': finalVal = stat.numCount > 0 ? stat.sum / stat.numCount : null; break;
+          case 'count': finalVal = stat.count; break;
+          case 'min': finalVal = stat.numCount > 0 ? stat.min : null; break;
+          case 'max': finalVal = stat.numCount > 0 ? stat.max : null; break;
+          case 'first': finalVal = stat.first; break;
+          case 'last': finalVal = stat.last; break;
+        }
+      }
+      row[alias] = finalVal;
+    }
     result.push(row);
   });
 
@@ -193,29 +284,42 @@ export const applyAggregate = (
 
 /**
  * Calcule une valeur agrégée
+ * BOLT OPTIMIZATION: Optimized to single-pass and avoid intermediate array creation.
  */
 const calculateAggregation = (values: any[], operation: ETLAggregationType): any => {
-  if (values.length === 0) return null;
+  const len = values.length;
+  if (len === 0) return null;
 
-  const numbers = values.map(v => Number(v)).filter(n => !isNaN(n));
+  if (operation === 'count') return len;
+  if (operation === 'first') return values[0];
+  if (operation === 'last') return values[len - 1];
+
+  let sum = 0;
+  let count = 0;
+  let min = Infinity;
+  let max = -Infinity;
+  let hasNum = false;
+
+  for (let i = 0; i < len; i++) {
+    const val = values[i];
+    if (val === null || val === undefined || val === '') continue;
+
+    const num = Number(val);
+    if (!isNaN(num)) {
+      hasNum = true;
+      sum += num;
+      count++;
+      if (num < min) min = num;
+      if (num > max) max = num;
+    }
+  }
 
   switch (operation) {
-    case 'sum':
-      return numbers.reduce((a, b) => a + b, 0);
-    case 'avg':
-      return numbers.length > 0 ? numbers.reduce((a, b) => a + b, 0) / numbers.length : null;
-    case 'count':
-      return values.length;
-    case 'min':
-      return numbers.length > 0 ? Math.min(...numbers) : null;
-    case 'max':
-      return numbers.length > 0 ? Math.max(...numbers) : null;
-    case 'first':
-      return values[0];
-    case 'last':
-      return values[values.length - 1];
-    default:
-      return null;
+    case 'sum': return hasNum ? sum : 0;
+    case 'avg': return count > 0 ? sum / count : null;
+    case 'min': return count > 0 ? min : null;
+    case 'max': return count > 0 ? max : null;
+    default: return null;
   }
 };
 
