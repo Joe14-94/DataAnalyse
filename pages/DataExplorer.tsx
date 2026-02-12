@@ -98,13 +98,6 @@ export const DataExplorer: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
-            <style>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 3px solid #f8fafc; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-            `}</style>
-
             <DeleteRowModal
                 deleteConfirmRow={state.deleteConfirmRow}
                 onClose={() => dispatch({ type: 'SET_DELETE_CONFIRM_ROW', payload: null })}

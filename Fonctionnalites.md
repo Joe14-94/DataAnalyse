@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 11-02-2026-05
-**Dernière mise à jour** : 11/02/2026
+**Version de référence** : 12-02-2026-02
+**Dernière mise à jour** : 12/02/2026
 
 ---
 
@@ -120,6 +120,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Escape Key** | Fermeture systématique des modaux via la touche Echap. | 2026-02-15 | UX |
 | **Cache de Calcul** | Optimisation des performances via `FORMULA_CACHE`. | 2026-01-31 | Performance |
 | **Virtualisation** | Affichage de 100k+ lignes sans latence (Bi-directionnel). | 2026-01-15 | Performance |
+| **Ascenseurs Fins** | Réduction de la largeur des scrollbars (3px) pour plus de finesse. | 2026-02-12 | UX |
 | **Format des dates** | Toutes les dates sont au format Français | Historique | Core
 | **Utilisation des majuscules** | Les majuscules sont utilisées en respectant les règles d'usage en Français |Historique | Core
 
@@ -130,6 +131,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-12** : Refinement de la finesse des ascenseurs (scrollbars) avec suppression des boutons et renforcement de la priorité CSS pour garantir le format 3px.
 - **2026-02-11** : Affichage du cumul des différences (total des deltas) dans le pied de page du TCD temporel pour une meilleure lisibilité des écarts globaux (ex: total des jours de décalage).
 - **2026-02-11** : Correction de la perte de données en mode comparaison (ajout du mode "Tout l'exercice" par défaut, suppression du filtrage restrictif sur les dates et gestion des préfixes de champs).
 - **2026-02-24** : Ajout de la fonctionnalité Déployer/Regrouper les lignes du TCD par niveau.
