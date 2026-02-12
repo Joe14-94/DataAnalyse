@@ -79,25 +79,25 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
       return cache;
    }, [pivotData?.colHeaders, effectiveMetrics]);
 
-   // BOLT OPTIMIZATION: Pre-calculate sticky positions for row fields to avoid repeated slice().reduce()
-   const rowFieldLeftPositions = React.useMemo(() => {
+   // BOLT OPTIMIZATION: Pre-calculate sticky positions and total width for row fields
+   const { rowFieldLeftPositions, totalRowFieldsWidth } = React.useMemo(() => {
       const positions: number[] = [];
       let currentLeft = 0;
       (rowFields || []).forEach(f => {
          positions.push(currentLeft);
          currentLeft += columnWidths[`row_${f}`] || 150;
       });
-      return positions;
+      return { rowFieldLeftPositions: positions, totalRowFieldsWidth: currentLeft };
    }, [rowFields, columnWidths]);
 
-   const groupFieldLeftPositions = React.useMemo(() => {
+   const { groupFieldLeftPositions, totalGroupFieldsWidth } = React.useMemo(() => {
       const positions: number[] = [];
       let currentLeft = 0;
       (rowFields || []).forEach(f => {
          positions.push(currentLeft);
          currentLeft += columnWidths[`group_${f}`] || 150;
       });
-      return positions;
+      return { groupFieldLeftPositions: positions, totalGroupFieldsWidth: currentLeft };
    }, [rowFields, columnWidths]);
 
    // BOLT OPTIMIZATION: Memoized metric label map for fast lookup
@@ -137,20 +137,17 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
             <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
                <tbody className="font-bold">
                   <tr>
-                     {(rowFields || []).map((field, idx) => (
-                        <td
-                           key={idx}
-                           className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
-                           style={{
-                              left: `${groupFieldLeftPositions[idx]}px`,
-                              width: `${columnWidths[`group_${field}`] || 150}px`,
-                              minWidth: `${columnWidths[`group_${field}`] || 150}px`,
-                              maxWidth: `${columnWidths[`group_${field}`] || 150}px`
-                           }}
-                        >
-                           {idx === rowFields.length - 1 ? 'Total' : ''}
-                        </td>
-                     ))}
+                  <td
+                     colSpan={rowFields.length}
+                     className="px-2 py-2 text-right text-xs uppercase font-bold text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
+                     style={{
+                        width: `${totalGroupFieldsWidth}px`,
+                        minWidth: `${totalGroupFieldsWidth}px`,
+                        maxWidth: `${totalGroupFieldsWidth}px`
+                     }}
+                  >
+                     Total
+                  </td>
                      {(effectiveMetrics).map((metric) => {
                         const mLabel = metric.label || `${metric.field} (${metric.aggType})`;
                         return (
@@ -220,20 +217,17 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
          <table className="min-w-max divide-y divide-slate-200 border-collapse" style={{ tableLayout: 'fixed' }}>
             <tbody className="font-bold">
                <tr>
-                  {(rowFields || []).map((field, idx) => (
-                     <td
-                        key={idx}
-                        className="px-2 py-2 text-right text-xs uppercase text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
-                        style={{
-                           left: `${rowFieldLeftPositions[idx]}px`,
-                           width: `${getColWidth(`row_${field}`, true)}px`,
-                           minWidth: `${getColWidth(`row_${field}`, true)}px`,
-                           maxWidth: `${getColWidth(`row_${field}`, true)}px`
-                        }}
-                     >
-                        {idx === rowFields.length - 1 ? 'Total' : ''}
-                     </td>
-                  ))}
+                  <td
+                     colSpan={rowFields.length}
+                     className="px-2 py-2 text-right text-xs uppercase font-bold text-slate-500 border-r border-slate-200 bg-slate-50 sticky left-0 z-10 truncate"
+                     style={{
+                        width: `${totalRowFieldsWidth}px`,
+                        minWidth: `${totalRowFieldsWidth}px`,
+                        maxWidth: `${totalRowFieldsWidth}px`
+                     }}
+                  >
+                     Total
+                  </td>
                   {pivotData?.colHeaders.map((col: string) => {
                      const val = pivotData?.colTotals[col];
                      const { metric, isDiff, isPct } = metricInfoCache.get(col) || {};

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, ChevronDown, MousePointerClick, RotateCcw } from 'lucide-react';
+import { Layout, Table2, Calendar, PieChart, FileDown, Database, Save, Check, X, Printer, FileType, FileSpreadsheet, FileText, Calculator, MonitorPlay, Search, Edit3, Palette, ChevronDown, MousePointerClick, RotateCcw, ChevronRight } from 'lucide-react';
 import { Dataset, SavedAnalysis } from '../../types';
 
 interface PivotHeaderProps {
@@ -66,17 +66,17 @@ export const PivotHeader: React.FC<PivotHeaderProps> = ({
             <div className="ml-2 flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                <button
                   onClick={() => setAllExpansion(true)}
-                  className="px-2 py-1 text-[10px] font-bold rounded hover:bg-white hover:text-brand-600 transition-all text-slate-500"
+                  className="px-2 py-1 text-xs font-bold rounded transition-all text-slate-500 hover:bg-white hover:text-brand-600 hover:shadow-sm"
                   title="Déployer tous les niveaux"
                >
-                  Déployer tout
+                  <ChevronDown className="w-3 h-3 inline mr-1" />Déployer tout
                </button>
                <button
                   onClick={() => setAllExpansion(false)}
-                  className="px-2 py-1 text-[10px] font-bold rounded hover:bg-white hover:text-brand-600 transition-all text-slate-500"
+                  className="px-2 py-1 text-xs font-bold rounded transition-all text-slate-500 hover:bg-white hover:text-brand-600 hover:shadow-sm"
                   title="Regrouper tous les niveaux (Niv 1 uniquement)"
                >
-                  Regrouper tout
+                  <ChevronRight className="w-3 h-3 inline mr-1" />Regrouper tout
                </button>
             </div>
 

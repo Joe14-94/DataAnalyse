@@ -2,7 +2,7 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 12-02-2026-02
+**Version de référence** : 12-02-2026-03
 **Dernière mise à jour** : 12/02/2026
 
 ---
@@ -135,6 +135,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 - **2026-02-11** : Affichage du cumul des différences (total des deltas) dans le pied de page du TCD temporel pour une meilleure lisibilité des écarts globaux (ex: total des jours de décalage).
 - **2026-02-11** : Correction de la perte de données en mode comparaison (ajout du mode "Tout l'exercice" par défaut, suppression du filtrage restrictif sur les dates et gestion des préfixes de champs).
 - **2026-02-24** : Ajout de la fonctionnalité Déployer/Regrouper les lignes du TCD par niveau.
+- **2026-02-24** : Correction du style des boutons de déploiement, de l'affichage des totaux (0,00) et de l'alignement du pied de page du TCD.
 - **2026-02-22** : Support de la sélection de cellules sur les lignes de "Total" (standard et temporel).
 - **2026-02-22** : Optimisation du pipeline de comparaison temporelle (passage en boucle unique).
 - **2026-02-20** : Support multi-métriques dans le mode comparaison temporelle du TCD.
