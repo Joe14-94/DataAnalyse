@@ -126,16 +126,18 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                             <label className="block text-xs font-black text-slate-600 uppercase">Métrique Principale (Y1)</label>
                             <div className="grid grid-cols-5 gap-1">
                                 {[
-                                    { id: 'count', label: 'Cpt' },
-                                    { id: 'distinct', label: 'Dist' },
-                                    { id: 'sum', label: 'Σ' },
-                                    { id: 'min', label: 'Min' },
-                                    { id: 'max', label: 'Max' }
+                                    { id: 'count', label: 'Cpt', aria: 'Nombre' },
+                                    { id: 'distinct', label: 'Dist', aria: 'Valeurs distinctes' },
+                                    { id: 'sum', label: 'Σ', aria: 'Somme' },
+                                    { id: 'min', label: 'Min', aria: 'Minimum' },
+                                    { id: 'max', label: 'Max', aria: 'Maximum' }
                                 ].map(m => (
                                     <button
                                         key={m.id}
                                         onClick={() => onSetMetric(m.id as MetricType)}
-                                        className={`py-1.5 text-[10px] font-bold rounded border transition-all ${metric === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                        className={`py-1.5 text-xs font-bold rounded border transition-all ${metric === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                        aria-label={m.aria}
+                                        title={m.aria}
                                     >
                                         {m.label}
                                     </button>
@@ -172,17 +174,19 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                             </div>
                             <div className="grid grid-cols-6 gap-1">
                                 {[
-                                    { id: 'none', label: 'Off' },
-                                    { id: 'count', label: 'Cpt' },
-                                    { id: 'distinct', label: 'Dist' },
-                                    { id: 'sum', label: 'Σ' },
-                                    { id: 'min', label: 'Min' },
-                                    { id: 'max', label: 'Max' }
+                                    { id: 'none', label: 'Off', aria: 'Désactivé' },
+                                    { id: 'count', label: 'Cpt', aria: 'Nombre' },
+                                    { id: 'distinct', label: 'Dist', aria: 'Valeurs distinctes' },
+                                    { id: 'sum', label: 'Σ', aria: 'Somme' },
+                                    { id: 'min', label: 'Min', aria: 'Minimum' },
+                                    { id: 'max', label: 'Max', aria: 'Maximum' }
                                 ].map(m => (
                                     <button
                                         key={m.id}
                                         onClick={() => onSetMetric2(m.id as any)}
-                                        className={`py-1 text-[10px] font-black rounded border transition-all ${metric2 === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                        className={`py-1 text-xs font-black rounded border transition-all ${metric2 === m.id ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-brand-300'}`}
+                                        aria-label={m.aria}
+                                        title={m.aria}
                                     >
                                         {m.label}
                                     </button>
@@ -278,27 +282,27 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
 
                     <div className="space-y-2">
                         {mode === 'snapshot' && (
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isCumulative ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" className="sr-only peer" checked={isCumulative} onChange={onToggleCumulative} />
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-1 ${isCumulative ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
                                     {isCumulative && <Check className="w-3 h-3" />}
                                 </div>
-                                <input type="checkbox" className="hidden" checked={isCumulative} onChange={onToggleCumulative} />
                                 <span className="text-xs text-slate-700">Mode Cumulatif</span>
                             </label>
                         )}
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${showTable ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" className="sr-only peer" checked={showTable} onChange={onToggleTable} />
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-1 ${showTable ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
                                 {showTable && <Check className="w-3 h-3" />}
                             </div>
-                            <input type="checkbox" className="hidden" checked={showTable} onChange={onToggleTable} />
                             <span className="text-xs text-slate-700">Afficher Tableau</span>
                         </label>
                         {mode === 'trend' && (
-                            <label className="flex items-center gap-2 cursor-pointer animate-in fade-in">
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${showForecast ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 bg-white'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer animate-in fade-in group">
+                                <input type="checkbox" className="sr-only peer" checked={showForecast} onChange={onToggleForecast} />
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-1 ${showForecast ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 bg-white group-hover:border-brand-400'}`}>
                                     {showForecast && <Check className="w-3 h-3" />}
                                 </div>
-                                <input type="checkbox" className="hidden" checked={showForecast} onChange={onToggleForecast} />
                                 <span className="text-xs text-indigo-700 font-bold">Projection (Tendance)</span>
                             </label>
                         )}

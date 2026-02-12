@@ -399,7 +399,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                                     setCopied(true);
                                     setTimeout(() => setCopied(false), 2000);
                                 }}
-                                className="flex items-center gap-1 text-[10px] font-bold bg-white/50 hover:bg-white px-2 py-0.5 rounded transition-colors text-success-text border border-success-border"
+                                className="flex items-center gap-1 text-xs font-bold bg-white/50 hover:bg-white px-2 py-0.5 rounded transition-colors text-success-text border border-success-border"
                             >
                                 {copied ? <><Check className="w-3 h-3" /> Copié !</> : <><Copy className="w-3 h-3" /> Copier</>}
                             </button>

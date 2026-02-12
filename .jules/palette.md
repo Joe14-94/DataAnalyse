@@ -15,3 +15,7 @@
 ## 2026-02-14 - [Enhanced Button Patterns]
 **Learning:** Adding an `isLoading` state to core button components significantly improves perceived performance and prevents duplicate form submissions. Using `focus-visible` instead of `focus` for focus rings provides a cleaner experience for mouse users while maintaining high accessibility for keyboard-only users.
 **Action:** Always implement `isLoading` states in primary action buttons and prefer `focus-visible` for all interactive elements to follow modern UX standards.
+
+## 2026-02-12 - [Accessible Custom Checkboxes]
+**Learning:** Using `hidden` on native inputs to implement custom-styled checkboxes completely removes them from the tab order and makes them invisible to screen readers.
+**Action:** Always use `sr-only` for the native input and the `peer` class on the input with `peer-focus-visible` on the custom visual element to ensure both accessibility and visible focus states.
