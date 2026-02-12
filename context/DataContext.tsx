@@ -864,10 +864,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  if (isLoading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Chargement des données...</div>;
-  }
-
   // --- MEMOIZED CONTEXT VALUES ---
   const persistenceValue = useMemo(() => ({
     isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding
@@ -888,6 +884,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const analyticsValue = useMemo(() => ({
     savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState
   }), [savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState]);
+
+  if (isLoading) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Chargement des données...</div>;
+  }
 
   return (
     <PersistenceContext.Provider value={persistenceValue}>
