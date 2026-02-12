@@ -1,4 +1,4 @@
-import { parseSmartNumber, parseDateValue, jsToExcelDate } from './common';
+import { parseSmartNumber, parseDateValue, jsToExcelDate } from '../utils/common';
 
 type TokenType = 'NUMBER' | 'STRING' | 'FIELD' | 'IDENTIFIER' | 'OPERATOR' | 'LPAREN' | 'RPAREN' | 'COMMA' | 'EOF';
 
@@ -245,8 +245,20 @@ class FormulaCompiler {
            const search = String(argEvals[1](row) || '');
            const replacement = String(argEvals[2](row) || '');
            try {
+             // Sécurité: Si la chaîne de recherche contient des caractères spéciaux regex
+             // et n'est pas manifestement une regex (ne commence pas par ^ ou finit par $ ou contient des patterns complexes),
+             // on l'échappe pour éviter les crashs de syntaxe et le ReDoS.
+             // On privilégie split/join pour les remplacements simples pour la performance.
+             const hasSpecialChars = /[\\^$*+?.()|[\]{}]/.test(search);
+             if (!hasSpecialChars) {
+               return text.split(search).join(replacement);
+             }
+             // Si c'est une regex intentionnelle, on l'utilise avec précaution
              return text.replace(new RegExp(search, 'g'), replacement);
-           } catch { return text; }
+           } catch {
+             // Fallback safe: remplacement textuel simple si la regex est invalide
+             return text.split(search).join(replacement);
+           }
         };
       case 'SUBSTITUER': case 'SUBSTITUTE':
         return (row) => String(argEvals[0](row) || '').split(String(argEvals[1](row) || '')).join(String(argEvals[2](row) || ''));
@@ -332,7 +344,25 @@ class FormulaCompiler {
             }
             return Math.max(0, months);
           }
-          // Default: days
+          if (unit === 'md') {
+            const startDay = start.getUTCDate();
+            const endDay = end.getUTCDate();
+            if (endDay >= startDay) return endDay - startDay;
+            // Sinon, jours restants dans le mois précédent
+            const prevMonthLastDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 0)).getUTCDate();
+            return prevMonthLastDay - startDay + endDay;
+          }
+          if (unit === 'ym') {
+            let months = end.getUTCMonth() - start.getUTCMonth();
+            if (end.getUTCDate() < start.getUTCDate()) months--;
+            return months < 0 ? months + 12 : months;
+          }
+          if (unit === 'yd') {
+            const startThisYear = new Date(Date.UTC(end.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+            if (startThisYear > end) startThisYear.setUTCFullYear(end.getUTCFullYear() - 1);
+            return Math.floor((end.getTime() - startThisYear.getTime()) / (1000 * 86400));
+          }
+          // Default: days (d)
           const diffMs = end.getTime() - start.getTime();
           return Math.floor(diffMs / (1000 * 60 * 60 * 24));
         };

@@ -1,5 +1,5 @@
 import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, AggregationType } from '../types';
-import { parseSmartNumber, prepareFilters, applyPreparedFilters, getCachedNumberFormat, parseDateValue, getValueForAggregation, getRowValue } from '../utils';
+import { prepareFilters, applyPreparedFilters, getCachedNumberFormat, parseDateValue, getValueForAggregation, getRowValue } from '../utils';
 
 export { parseDateValue };
 

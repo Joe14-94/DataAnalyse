@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } 
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, generateId, decompressBatch } from '../utils/common';
 import { db } from '../utils/db';
-import { evaluateFormula } from '../utils/formulaEngine';
+import { evaluateFormula } from '../logic/formulaEngine';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
@@ -868,17 +868,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Chargement des données...</div>;
   }
 
+  // --- MEMOIZED CONTEXT VALUES ---
+  const persistenceValue = useMemo(() => ({
+    isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding
+  }), [isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding]);
+
+  const datasetValue = useMemo(() => ({
+    datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset
+  }), [datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset]);
+
+  const batchValue = useMemo(() => ({
+    batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup
+  }), [batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup]);
+
+  const widgetValue = useMemo(() => ({
+    dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters
+  }), [dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters]);
+
+  const analyticsValue = useMemo(() => ({
+    savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState
+  }), [savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState]);
+
   return (
-    <PersistenceContext.Provider value={{ isLoading, savedMappings, companyLogo, updateCompanyLogo, importBackup, getBackupJson, clearAll, loadDemoData, updateSavedMappings, hasSeenOnboarding, completeOnboarding }}>
+    <PersistenceContext.Provider value={persistenceValue}>
       <SettingsProvider initialPrefs={uiPrefs} onPrefsChange={setUiPrefs}>
         <ReferentialProvider referentials={financeReferentials} onUpdate={updateFinanceReferentials}>
           <BudgetProvider budgetModule={budgetModule} onUpdate={updateBudgetModule}>
             <ForecastProvider forecastModule={forecastModule} onUpdate={updateForecastModule}>
               <PipelineProvider pipelineModule={pipelineModule} onUpdate={updatePipelineModule}>
-                <DatasetContext.Provider value={{ datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset }}>
-                <BatchContext.Provider value={{ batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup }}>
-                  <WidgetContext.Provider value={{ dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters }}>
-                    <AnalyticsContext.Provider value={{ savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState }}>
+                <DatasetContext.Provider value={datasetValue}>
+                <BatchContext.Provider value={batchValue}>
+                  <WidgetContext.Provider value={widgetValue}>
+                    <AnalyticsContext.Provider value={analyticsValue}>
                       {children}
                     </AnalyticsContext.Provider>
                   </WidgetContext.Provider>
