@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
 import { APP_VERSION, generateId, decompressBatch } from '../utils/common';
-import { db } from '../utils/db';
+import { persistenceManager } from '../services/persistenceManager';
 import { evaluateFormula } from '../logic/formulaEngine';
 import { getDemoData, createBackupJson } from '../logic/dataService';
 import { calculatePivotData } from '../logic/pivotEngine';
@@ -23,9 +23,6 @@ import { PipelineProvider, usePipeline } from './PipelineContext';
 
 // Explicitly export hooks to avoid re-export issues
 export { useDatasets, useBatches, useWidgets, useAnalytics, usePersistence, useReferentials, useBudget, useForecast, useSettings, usePipeline };
-
-// OLD KEY for migration (keep for fallback)
-const LEGACY_STORAGE_KEY = 'app_data_v4_global';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // --- GLOBAL STATE ---
@@ -65,7 +62,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const init = async () => {
       try {
-        const dbData = await db.load();
+        const dbData = await persistenceManager.load();
 
         if (dbData) {
           setDatasets(dbData.datasets || []);
@@ -76,40 +73,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLastPivotState(dbData.lastPivotState || null);
           setLastAnalyticsState(dbData.lastAnalyticsState || null);
           setLastDataExplorerState(dbData.lastDataExplorerState || null);
-          setCompanyLogo(dbData.companyLogo); // NEW
-          setHasSeenOnboarding(!!dbData.hasSeenOnboarding); // NEW
-          setFinanceReferentials(dbData.financeReferentials || {}); // NEW
-          setBudgetModule(dbData.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
-          setForecastModule(dbData.forecastModule || { forecasts: [], reconciliationReports: [] }); // NEW - Forecast Module
-          setPipelineModule(dbData.pipelineModule || { pipelines: [], executionResults: {} }); // NEW - Pipeline Module
-          if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs); // NEW
+          setCompanyLogo(dbData.companyLogo);
+          setHasSeenOnboarding(!!dbData.hasSeenOnboarding);
+          setFinanceReferentials(dbData.financeReferentials || {});
+          setBudgetModule(dbData.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] });
+          setForecastModule(dbData.forecastModule || { forecasts: [], reconciliationReports: [] });
+          setPipelineModule(dbData.pipelineModule || { pipelines: [], executionResults: {} });
+          if (dbData.uiPrefs) setUiPrefs(dbData.uiPrefs);
 
           if (dbData.currentDatasetId) {
             setCurrentDatasetId(dbData.currentDatasetId);
           } else if (dbData.datasets && dbData.datasets.length > 0) {
             setCurrentDatasetId(dbData.datasets[0].id);
-          }
-        } else {
-          const stored = localStorage.getItem(LEGACY_STORAGE_KEY);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            setDatasets(parsed.datasets || []);
-            setAllBatches(parsed.batches || []);
-            setSavedMappings(parsed.savedMappings || {});
-            setDashboardWidgets(parsed.dashboardWidgets || []);
-            setSavedAnalyses(parsed.savedAnalyses || []);
-            setLastPivotState(parsed.lastPivotState || null);
-            setLastAnalyticsState(parsed.lastAnalyticsState || null);
-            setLastDataExplorerState(parsed.lastDataExplorerState || null);
-            setCompanyLogo(parsed.companyLogo); // NEW
-            setHasSeenOnboarding(!!parsed.hasSeenOnboarding); // NEW
-            setFinanceReferentials(parsed.financeReferentials || {}); // NEW
-            setBudgetModule(parsed.budgetModule || { budgets: [], templates: [], comments: [], notifications: [] }); // NEW - Budget Module
-            if (parsed.uiPrefs) setUiPrefs(parsed.uiPrefs); // NEW
-            setCurrentDatasetId(parsed.currentDatasetId || (parsed.datasets?.[0]?.id) || null);
-
-            await db.save(parsed);
-            localStorage.removeItem(LEGACY_STORAGE_KEY);
           }
         }
       } catch (e) {
@@ -129,7 +104,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(saveTimeoutRef.current);
     }
 
-    saveTimeoutRef.current = setTimeout(() => {
+    const performSave = () => {
       const state: AppState = {
         datasets,
         batches,
@@ -150,13 +125,58 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uiPrefs
       };
 
-      db.save(state).catch(e => console.error("Failed to save to DB", e));
-    }, 1000);
+      persistenceManager.save(state).catch(() => {});
+    };
+
+    saveTimeoutRef.current = setTimeout(performSave, 1000);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, pipelineModule, uiPrefs, isLoading]);
+
+  // Forcer la sauvegarde lors de la fermeture de la page ou changement de visibilité
+  useEffect(() => {
+    const handleSaveTrigger = () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        const state: AppState = {
+          datasets,
+          batches,
+          dashboardWidgets,
+          savedAnalyses,
+          version: APP_VERSION,
+          savedMappings,
+          currentDatasetId,
+          lastPivotState,
+          lastAnalyticsState,
+          lastDataExplorerState,
+          companyLogo,
+          hasSeenOnboarding,
+          financeReferentials,
+          budgetModule,
+          forecastModule,
+          pipelineModule,
+          uiPrefs
+        };
+        persistenceManager.save(state).catch(() => {});
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleSaveTrigger();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleSaveTrigger);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleSaveTrigger);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [datasets, batches, savedMappings, currentDatasetId, dashboardWidgets, savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, companyLogo, hasSeenOnboarding, financeReferentials, budgetModule, forecastModule, pipelineModule, uiPrefs]);
 
   // --- DATASET ACTIONS ---
   const switchDataset = useCallback((id: string) => {
@@ -248,7 +268,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         ...b,
         rows: b.rows.map(r => {
-          const { [fieldName]: deleted, ...rest } = r;
+          const rest = { ...r };
+          delete rest[fieldName];
           return rest as DataRow;
         })
       };
@@ -424,7 +445,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setAllBatches(prevAllBatches => {
-        let finalBatches = [...prevAllBatches, newBatch];
+        const finalBatches = [...prevAllBatches, newBatch];
 
         // --- AUTO-REFRESH DERIVED DATASETS (RECURSIVE) ---
         let changedDatasetIds = new Set<string>([datasetId]);
@@ -482,7 +503,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         const dateColumn = primaryDS ? (detectDateColumn(primaryDS.fields) || 'Date écriture') : 'Date écriture';
 
                         // Update comparison month if MTD/YTD based on the latest batch
-                        let activeConfig = { ...tConfig };
+                        const activeConfig = { ...tConfig };
                         if (tConfig.comparisonMode === 'mtd' || tConfig.comparisonMode === 'ytd') {
                             const latestBatch = finalBatches.filter(b => b.datasetId === primaryDS?.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                             if (latestBatch) {
@@ -750,13 +771,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDashboardWidgets([]);
     setDashboardFilters({});
     setSavedAnalyses([]);
-    setCompanyLogo(undefined); // NEW
+    setCompanyLogo(undefined);
     setCurrentDatasetId(null);
     setLastPivotState(null);
     setLastAnalyticsState(null);
     setHasSeenOnboarding(false);
-    await db.clear();
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    await persistenceManager.clear();
   }, []);
 
   const loadDemoData = useCallback(() => {
@@ -851,11 +871,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // To persist accurately, we should really load the current state, merge with parsed, then save.
-      // But db.save(parsed) might overwrite everything if parsed is partial.
+      // But persistenceManager.save(parsed) might overwrite everything if parsed is partial.
       // Let's fix that.
-      const currentState = await db.load();
+      const currentState = await persistenceManager.load();
       const mergedState = { ...currentState, ...parsed };
-      await db.save(mergedState);
+      await persistenceManager.save(mergedState);
 
       return true;
     } catch (e) {

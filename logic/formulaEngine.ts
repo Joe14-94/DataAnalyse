@@ -246,13 +246,19 @@ class FormulaCompiler {
            const replacement = String(argEvals[2](row) || '');
            try {
              // Sécurité: Si la chaîne de recherche contient des caractères spéciaux regex
-             // et n'est pas manifestement une regex (ne commence pas par ^ ou finit par $ ou contient des patterns complexes),
-             // on l'échappe pour éviter les crashs de syntaxe et le ReDoS.
-             // On privilégie split/join pour les remplacements simples pour la performance.
+             // on l'échappe ou on limite son usage pour éviter le ReDoS.
              const hasSpecialChars = /[\\^$*+?.()|[\]{}]/.test(search);
              if (!hasSpecialChars) {
                return text.split(search).join(replacement);
              }
+
+             // Limitation ReDoS: On évite les regex trop complexes
+             // Si la chaîne contient des répétitions imbriquées ou est trop longue, on refuse l'exécution regex
+             const isSuspicious = search.length > 50 || /(\*|\+).?(\*|\+)/.test(search) || (search.match(/\(/g) || []).length > 3;
+             if (isSuspicious) {
+                return text.split(search).join(replacement);
+             }
+
              // Si c'est une regex intentionnelle, on l'utilise avec précaution
              return text.replace(new RegExp(search, 'g'), replacement);
            } catch {

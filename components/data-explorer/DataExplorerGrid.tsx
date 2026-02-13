@@ -45,13 +45,13 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         if (field === '_actions') {
             return (
-                <div key={virtualCol.key} className="bg-slate-50 border-b border-slate-200" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}></div>
+                <div key={virtualCol.key} role="columnheader" className="bg-slate-50 border-b border-slate-200" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}></div>
             );
         }
 
         if (field === '_importDate') {
             return (
-                <div key={virtualCol.key} className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r border-slate-200' : ''}`}
+                <div key={virtualCol.key} role="columnheader" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r border-slate-200' : ''}`}
                     style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}
                     onClick={() => handleHeaderClick('_importDate')}>
                     <div className="flex items-center gap-2 justify-between h-full">
@@ -67,7 +67,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         if (field === 'id') {
              return (
-                <div key={virtualCol.key} className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group ${showColumnBorders ? 'border-r border-slate-200' : ''}`}
+                <div key={virtualCol.key} role="columnheader" className={`px-6 py-3 text-left text-xs font-bold text-slate-500 tracking-wider whitespace-nowrap bg-slate-50 border-b border-slate-200 relative group ${showColumnBorders ? 'border-r border-slate-200' : ''}`}
                     style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                     <div className="flex items-center gap-2 justify-between h-full">
                         <span>Id</span>
@@ -85,7 +85,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         if (isCalculated) {
             return (
-                <div key={virtualCol.key} title={`Champ calculé: ${field}`} className={`px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`}
+                <div key={virtualCol.key} role="columnheader" title={`Champ calculé: ${field}`} className={`px-6 py-3 text-left text-xs font-bold text-indigo-600 tracking-wider whitespace-nowrap bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors select-none group relative ${showColumnBorders ? 'border-r' : ''}`}
                     style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}
                     onClick={() => handleHeaderClick(field)}>
                     <div className="flex items-center gap-2 justify-between h-full">
@@ -101,7 +101,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
         }
 
         return (
-            <div key={virtualCol.key} className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isSelected ? 'bg-brand-50 text-brand-900 border-brand-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100')} ${showColumnBorders ? 'border-r' : ''}`}
+            <div key={virtualCol.key} role="columnheader" className={`px-6 py-3 text-left text-xs font-bold tracking-wider whitespace-nowrap border-b cursor-pointer transition-colors select-none group relative ${isSelected ? 'bg-brand-50 text-brand-900 border-brand-300' : (isBlended ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100')} ${showColumnBorders ? 'border-r' : ''}`}
                 style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}
                 onClick={() => handleHeaderClick(field)}>
                 <div className="flex items-center gap-2 justify-between h-full">
@@ -119,13 +119,13 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
     const renderFilterCell = (colIndex: number, virtualCol: any) => {
         const column = allColumns[colIndex];
         const field = column.key;
-        if (field === '_actions') return <div key={`filter-${virtualCol.key}`} className="bg-slate-50 border-b border-slate-200" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}></div>;
+        if (field === '_actions') return <div key={`filter-${virtualCol.key}`} role="gridcell" className="bg-slate-50 border-b border-slate-200" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}></div>;
 
         const isCalculated = currentDataset.calculatedFields?.some(cf => cf.name === field);
         const placeholder = field === '_importDate' ? "Filtre date..." : field === 'id' ? "Filtre Id..." : `Filtre ${field}...`;
 
         return (
-            <div key={`filter-${virtualCol.key}`} className={`px-2 py-2 border-b border-slate-200 bg-slate-50 ${isCalculated ? 'bg-indigo-50 border-indigo-200' : ''} ${showColumnBorders ? 'border-r' : ''}`} style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
+            <div key={`filter-${virtualCol.key}`} role="gridcell" className={`px-2 py-2 border-b border-slate-200 bg-slate-50 ${isCalculated ? 'bg-indigo-50 border-indigo-200' : ''} ${showColumnBorders ? 'border-r' : ''}`} style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                 <input
                     type="text"
                     className={`w-full px-2 py-1 text-xs border rounded bg-white focus:ring-1 font-normal ${isCalculated ? 'border-indigo-200 focus:ring-indigo-500' : 'border-slate-300 focus:ring-brand-500'}`}
@@ -143,7 +143,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         if (field === '_actions') {
             return (
-                <div key={`${rowIndex}-${virtualCol.key}`} className="px-3 py-2 text-right" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
+                <div key={`${rowIndex}-${virtualCol.key}`} role="gridcell" className="px-3 py-2 text-right" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                     <button type="button" onClick={(e) => handleDeleteRow(row, e)} className="text-slate-300 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
                 </div>
             );
@@ -151,7 +151,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         if (field === '_importDate') {
             return (
-                <div key={`${rowIndex}-${virtualCol.key}`} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-500 font-mono group-hover:text-brand-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
+                <div key={`${rowIndex}-${virtualCol.key}`} role="gridcell" className={`px-6 py-2 whitespace-nowrap text-sm text-slate-500 font-mono group-hover:text-brand-600 ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                     {formatDateFr(row._importDate)}
                 </div>
             );
@@ -159,7 +159,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         if (field === 'id') {
             return (
-                <div key={`${rowIndex}-${virtualCol.key}`} className={`px-6 py-2 whitespace-nowrap text-sm text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
+                <div key={`${rowIndex}-${virtualCol.key}`} role="gridcell" className={`px-6 py-2 whitespace-nowrap text-sm text-slate-600 font-mono ${showColumnBorders ? 'border-r border-slate-200' : ''}`} style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                     {row.id}
                 </div>
             );
@@ -182,6 +182,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
 
         return (
             <div key={`${rowIndex}-${virtualCol.key}`}
+                role="gridcell"
                 className={`px-3 py-1 whitespace-nowrap text-sm truncate ${cellStyle} ${isNumeric ? 'text-right font-mono' : 'text-slate-700'} ${isBlended ? 'text-purple-700 bg-purple-50/10' : ''} ${isCalculated ? 'text-indigo-700 font-medium bg-indigo-50/10' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`}
                 title={String(val)}
                 style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
@@ -199,24 +200,46 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
     };
 
     return (
-        <div ref={tableContainerRef} className="flex-1 overflow-auto custom-scrollbar relative w-full">
+        <div
+            ref={tableContainerRef}
+            className="flex-1 overflow-auto custom-scrollbar relative w-full"
+            role="grid"
+            aria-rowcount={processedRows.length + 1}
+            aria-colcount={allColumns.length}
+            aria-label="Explorateur de données"
+            tabIndex={0}
+        >
             {/* STICKY HEADER & FILTERS */}
-            <div className="sticky top-0 z-30 bg-slate-50 shadow-sm" style={{ width: colVirtualizer.getTotalSize() }}>
+            <div
+                className="sticky top-0 z-30 bg-slate-50 shadow-sm"
+                style={{ width: colVirtualizer.getTotalSize() }}
+                role="rowgroup"
+            >
                 {/* Header Row */}
-                <div style={{ height: 44, width: '100%', position: 'relative' }}>
+                <div
+                    style={{ height: 44, width: '100%', position: 'relative' }}
+                    role="row"
+                >
                     {virtualCols.map((virtualCol: any) => renderHeaderCell(virtualCol.index, virtualCol))}
                 </div>
 
                 {/* Filter Row */}
                 {showFilters && (
-                    <div style={{ height: 44, width: '100%', position: 'relative' }} className="border-t border-slate-200">
+                    <div
+                        style={{ height: 44, width: '100%', position: 'relative' }}
+                        className="border-t border-slate-200"
+                        role="row"
+                    >
                         {virtualCols.map((virtualCol: any) => renderFilterCell(virtualCol.index, virtualCol))}
                     </div>
                 )}
             </div>
 
             {/* DATA CONTAINER */}
-            <div style={{ height: rowVirtualizer.getTotalSize(), width: colVirtualizer.getTotalSize(), position: 'relative' }}>
+            <div
+                style={{ height: rowVirtualizer.getTotalSize(), width: colVirtualizer.getTotalSize(), position: 'relative' }}
+                role="rowgroup"
+            >
                 {/* Data Rows */}
                 {virtualRows.map((virtualRow: any) => {
                     const row = processedRows[virtualRow.index] as DataRow & { _importDate: string; _batchId: string };
@@ -226,6 +249,8 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
                             className="absolute left-0 w-full hover:bg-brand-50 transition-colors cursor-pointer group border-b border-slate-200"
                             style={{ top: virtualRow.start, height: virtualRow.size }}
                             onClick={() => handleRowClick(row)}
+                            role="row"
+                            aria-rowindex={virtualRow.index + 2}
                         >
                             {virtualCols.map((virtualCol: any) => renderDataCell(virtualRow.index, virtualCol.index, virtualCol, row))}
                         </div>
