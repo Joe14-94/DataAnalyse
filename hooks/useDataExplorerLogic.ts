@@ -506,33 +506,47 @@ export function useDataExplorerLogic() {
     };
 
     // --- Data Processing ---
-    // BOLT OPTIMIZATION: Split data processing to avoid full O(N) re-runs when only config changes
+    // BOLT OPTIMIZATION: Cache for row-level processing to avoid O(N) re-calculation of formulas
+    // We use WeakMap with the original row reference to ensure perfect cache invalidation and no memory leaks.
+    const rowProcessCacheRef = useRef<WeakMap<object, any>>(new WeakMap());
+    const lastFormulasKeyRef = useRef<string>('');
+
+    // BOLT OPTIMIZATION: Separate filtered batches to prevent rawExtendedRows from changing when unrelated datasets change
+    const currentDatasetBatches = useMemo(() => {
+        if (!currentDatasetId) return [];
+        return batches.filter(b => b.datasetId === currentDatasetId)
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [batches, currentDatasetId]);
 
     // 1. Initial extended rows (Metadata only)
     const rawExtendedRows = useMemo(() => {
         if (!currentDataset) return [];
-        const datasetBatches = (batches || [])
-            .filter(b => b.datasetId === currentDataset.id)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        const result: (DataRow & { _importDate: string; _batchId: string })[] = [];
-        for (const batch of datasetBatches) {
+        const result: (DataRow & { _importDate: string; _batchId: string; _raw: DataRow })[] = [];
+        for (const batch of currentDatasetBatches) {
             const batchRows = batch.rows || [];
             const batchDate = batch.date;
             const batchId = batch.id;
             for (let i = 0; i < batchRows.length; i++) {
-                // We use a shallow copy to add metadata
-                result.push({ ...batchRows[i], _importDate: batchDate, _batchId: batchId });
+                // We keep a reference to the original row for the cache
+                result.push({ ...batchRows[i], _importDate: batchDate, _batchId: batchId, _raw: batchRows[i] });
             }
         }
         return result;
-    }, [currentDataset?.id, batches]);
+    }, [currentDataset?.id, currentDatasetBatches]);
 
     // 2. Full processed rows (Calculated Fields & Blending)
     const allRows = useMemo(() => {
         if (!currentDataset || rawExtendedRows.length === 0) return [];
         const calcFields = currentDataset?.calculatedFields || [];
         const { blendingConfig } = state;
+
+        // Invalidate cache if formulas or blending config changed
+        const formulasKey = JSON.stringify(calcFields) + JSON.stringify(blendingConfig);
+        if (lastFormulasKeyRef.current !== formulasKey) {
+            rowProcessCacheRef.current = new WeakMap();
+            lastFormulasKeyRef.current = formulasKey;
+        }
 
         // Prepare Blending Lookups (O(M) where M is rows in secondary dataset)
         const blendingLookups = new Map<string, { lookup: Map<string, DataRow>, dsName: string }>();
@@ -559,8 +573,11 @@ export function useDataExplorerLogic() {
 
         if (!hasExtraWork) return rawExtendedRows;
 
-        // Apply transformations in-place on a new array (but rows are still cloned)
+        // Apply transformations using cache
         return rawExtendedRows.map(r => {
+            const cached = rowProcessCacheRef.current.get(r._raw);
+            if (cached) return cached;
+
             const extendedRow = { ...r };
 
             // Calculated Fields
@@ -581,6 +598,7 @@ export function useDataExplorerLogic() {
                 }
             }
 
+            rowProcessCacheRef.current.set(r._raw, extendedRow);
             return extendedRow;
         });
     }, [rawExtendedRows, currentDataset?.calculatedFields, state.blendingConfig, datasets]);
@@ -634,9 +652,9 @@ export function useDataExplorerLogic() {
         const lowerSearchTerm = state.searchTerm.trim().toLowerCase();
 
         if (lowerSearchTerm || activeFilters.length > 0) {
-            // BOLT OPTIMIZATION: Cache searchable keys once per filter run
+            // BOLT OPTIMIZATION: Limit search to visible columns and metadata
             const searchableKeys = (lowerSearchTerm && data.length > 0)
-                ? Object.keys(data[0]).filter(k => !k.startsWith('_') || k === '_importDate')
+                ? ['id', '_importDate', ...displayFields]
                 : [];
 
             data = data.filter(row => {
