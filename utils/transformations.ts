@@ -332,46 +332,63 @@ export const applyUnion = (data1: DataRow[], data2: DataRow[]): DataRow[] => {
 
 /**
  * Sélectionne ou exclut des colonnes
+ * BOLT OPTIMIZATION: Avoided slow 'delete' operator and optimized column selection loop.
  */
 export const applySelect = (
   data: DataRow[],
   columns: string[],
   exclude: boolean = false
 ): DataRow[] => {
+  if (columns.length === 0 && !exclude) return data.map(row => ({ id: row.id || generateId() }));
+
+  const colSet = new Set(columns);
+
   return data.map(row => {
-    const newRow: DataRow = { ...row };
     if (exclude) {
-      // Exclure les colonnes
-      columns.forEach(col => delete newRow[col]);
+      // BOLT OPTIMIZATION: Construct new object instead of using 'delete'
+      const filtered: DataRow = { id: row.id || generateId() };
+      for (const key in row) {
+        if (key !== 'id' && !colSet.has(key)) {
+          filtered[key] = row[key];
+        }
+      }
+      return filtered;
     } else {
       // Garder seulement les colonnes spécifiées
-      const filtered: DataRow = { id: newRow.id || generateId() };
-      columns.forEach(col => {
-        if (col in newRow) {
-          filtered[col] = newRow[col];
+      const filtered: DataRow = { id: row.id || generateId() };
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        if (col in row) {
+          filtered[col] = row[col];
         }
-      });
+      }
       return filtered;
     }
-    return newRow;
   });
 };
 
 /**
  * Renomme des colonnes
+ * BOLT OPTIMIZATION: Hoisted mappings to a Map and avoided slow 'delete' operator by constructing new objects.
  */
 export const applyRename = (
   data: DataRow[],
   mappings: { oldName: string; newName: string }[]
 ): DataRow[] => {
+  if (mappings.length === 0) return data;
+
+  const renameMap = new Map<string, string>();
+  for (let i = 0; i < mappings.length; i++) {
+    renameMap.set(mappings[i].oldName, mappings[i].newName);
+  }
+
   return data.map(row => {
-    const newRow: DataRow = { ...row };
-    mappings.forEach(({ oldName, newName }) => {
-      if (oldName in newRow) {
-        newRow[newName] = newRow[oldName];
-        delete newRow[oldName];
-      }
-    });
+    const newRow: DataRow = { id: row.id };
+    for (const key in row) {
+      if (key === 'id') continue;
+      const targetKey = renameMap.get(key) || key;
+      newRow[targetKey] = row[key];
+    }
     return newRow;
   });
 };
