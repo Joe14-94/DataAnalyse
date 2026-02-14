@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign, TrendingUp, Workflow } from 'lucide-react';
+import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign, TrendingUp, Workflow, Check } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
@@ -22,6 +22,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Sidebar State
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const navItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/', id: 'tour-nav-dashboard' },
@@ -178,9 +179,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <main className="flex-1 h-full relative overflow-hidden bg-canvas">
         {children}
-        <div className="absolute bottom-1 right-2 text-xs text-txt-muted pointer-events-none z-[60] font-medium bg-surface/50 px-1 rounded shadow-sm border border-border-default">
-           v{APP_VERSION} | 12/02/2026
-        </div>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`DataScope v${APP_VERSION}`);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+          className="absolute bottom-1 right-2 text-xs text-txt-muted z-[60] font-medium bg-surface/50 hover:bg-surface hover:text-brand-600 px-1.5 py-0.5 rounded shadow-sm border border-border-default transition-all flex items-center gap-1 group pointer-events-auto"
+          title="Cliquer pour copier la version"
+          aria-label={`Version ${APP_VERSION}. Cliquer pour copier.`}
+        >
+          {copied ? (
+            <Check size={10} className="text-green-500" />
+          ) : (
+            <span className="w-1 h-1 rounded-full bg-txt-muted group-hover:bg-brand-500 transition-colors" />
+          )}
+          v{APP_VERSION} | 14/02/2026
+        </button>
       </main>
     </div>
   );

@@ -583,7 +583,7 @@ export const Import: React.FC = () => {
                        {targetDatasetId === 'NEW' && (
                           <input 
                             type="text" 
-                            placeholder="Nom du tableau (ex: Ventes 2025)"
+                            placeholder="Nom du tableau (ex: Ventes 2026)"
                             className="mt-2 block w-full rounded-md border-slate-300 bg-white shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2"
                             value={newDatasetName}
                             onChange={(e) => setNewDatasetName(e.target.value)}
