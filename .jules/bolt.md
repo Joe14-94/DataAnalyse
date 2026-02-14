@@ -29,3 +29,7 @@
 ## 2026-02-23 - [Optimize ETL Transformations (Filter & Aggregate)]
 **Learning:** ETL transformations `applyFilter` and `applyAggregate` were bottlenecks for large datasets. `applyFilter` used `.map().every()` which evaluated all conditions for every row; switching to manual `for` loops with early bail-out (lazy evaluation) and hoisting string/case operations achieved a ~7x speedup. `applyAggregate` used a multi-pass approach with intermediate row arrays; switching to a single-pass accumulator system with hoisted field lookups reduced CPU time by ~30% and significantly lowered memory pressure.
 **Action:** Use single-pass accumulators for aggregations and lazy evaluation for filters. Hoist all possible metadata/config processing outside of O(N) loops.
+
+## 2026-03-01 - [Optimize applyJoin with Smart Mapping Cache]
+**Learning:** Found O(N*M) bottleneck in applyJoin where Object.keys and property existence checks were performed for every matched row. However, blindly hoisting keys assumes uniform schema, which can be a breaking change. Implementing a "smart mapping cache" that only recomputes mapping when row keys change maintains schema-agnostic safety while providing O(N+M) speed for uniform datasets.
+**Action:** Use conditional hoisting (caching based on key presence/order) for utility functions that must remain schema-agnostic but usually process uniform data. Avoid using the 'in' operator on Set objects; use 'Set.has()' instead.

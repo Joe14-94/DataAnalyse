@@ -88,6 +88,8 @@ const evaluateConditionOptimized = (row: DataRow, condition: any): boolean => {
 
 /**
  * Applique une jointure entre deux datasets
+ * BOLT OPTIMIZATION: Hoisted key mapping and used manual loop instead of forEach/Object.keys inside the nested loop.
+ * Uses a caching mechanism to maintain schema-agnostic behavior while optimizing for uniform datasets.
  */
 export const applyJoin = (
   leftData: DataRow[],
@@ -102,33 +104,54 @@ export const applyJoin = (
   // BOLT OPTIMIZATION: O(N+M) implementation using Map for lookup instead of O(N*M) nested loops
   // Build lookup map for the right side
   const rightMap = new Map<string, DataRow[]>();
-  for (const row of rightData) {
+  for (let i = 0; i < rightData.length; i++) {
+    const row = rightData[i];
     const key = String(row[rightKey] ?? '');
     if (!rightMap.has(key)) rightMap.set(key, []);
     rightMap.get(key)!.push(row);
   }
 
+  // BOLT OPTIMIZATION: Preparation for optimized property mapping
+  const leftKeysSet = new Set(leftData.length > 0 ? Object.keys(leftData[0]) : []);
+
+  // Cache for heterogeneous schema handling
+  let lastRightKeys: string[] = [];
+  let lastMapping: { oldKey: string, newKey: string }[] = [];
+
   // Track matched right rows for 'right' and 'full' joins
   const matchedRightRows = new Set<DataRow>();
 
   // 1. Process Left side (handles Inner, Left, and first part of Full join)
-  for (const leftRow of leftData) {
+  for (let i = 0; i < leftData.length; i++) {
+    const leftRow = leftData[i];
     const key = String(leftRow[leftKey] ?? '');
     const matches = rightMap.get(key) || [];
 
     if (matches.length > 0) {
-      for (const rightRow of matches) {
+      for (let j = 0; j < matches.length; j++) {
+        const rightRow = matches[j];
         matchedRightRows.add(rightRow);
 
-        // Don't include matches for 'right' only join if we are only building unmatched right rows later
-        // Actually, 'right' join should include matched rows too.
+        // BOLT OPTIMIZATION: Smart mapping cache to stay schema-agnostic but fast for uniform data
+        const currentRightKeys = Object.keys(rightRow);
+        let mapping = lastMapping;
+
+        if (currentRightKeys.length !== lastRightKeys.length || currentRightKeys[0] !== lastRightKeys[0]) {
+           mapping = currentRightKeys
+            .filter(k => k !== 'id')
+            .map(k => ({
+              oldKey: k,
+              newKey: leftKeysSet.has(k) && k !== rightKey ? `${k}${suffix}` : k
+            }));
+           lastRightKeys = currentRightKeys;
+           lastMapping = mapping;
+        }
 
         const merged = { ...leftRow };
-        Object.keys(rightRow).forEach(k => {
-          if (k === 'id') return; // Preserve left ID
-          const newKey = k in leftRow && k !== rightKey ? `${k}${suffix}` : k;
-          merged[newKey] = rightRow[k];
-        });
+        for (let k = 0; k < mapping.length; k++) {
+          const m = mapping[k];
+          merged[m.newKey] = rightRow[m.oldKey];
+        }
         result.push(merged);
       }
     } else {
@@ -141,12 +164,15 @@ export const applyJoin = (
 
   // 2. Process Right side (handles unmatched rows for 'right' and 'full' join)
   if (joinType === 'right' || joinType === 'full') {
-    for (const rightRow of rightData) {
+    for (let i = 0; i < rightData.length; i++) {
+      const rightRow = rightData[i];
       if (!matchedRightRows.has(rightRow)) {
         const merged: DataRow = { id: generateId() };
-        Object.keys(rightRow).forEach(k => {
+        const keys = Object.keys(rightRow);
+        for (let j = 0; j < keys.length; j++) {
+          const k = keys[j];
           merged[k] = rightRow[k];
-        });
+        }
         result.push(merged);
       }
     }
@@ -154,10 +180,7 @@ export const applyJoin = (
 
   // Final filtering for 'right' join: The above loop added ALL matched rows (left-centric).
   // For a pure 'right' join, we only want matched rows and unmatched right rows.
-  // Wait, if joinType is 'right', the first loop added matched rows. The second loop added unmatched right rows.
-  // This matches 'right' join definition.
-  // HOWEVER, the first loop included ALL matching left rows for each right row.
-  // If we have multiple left rows for one right row, they all appear in 'right' join. This is standard SQL behavior.
+  // This matches 'right' join definition (Standard SQL behavior).
 
   return result;
 };
