@@ -72,18 +72,18 @@ export const parseDateValue = (dateValue: any): Date | null => {
             const day = part1;
             const month = part2;
             const year = part3 < 100 ? 2000 + part3 : part3;
-            date = new Date(year, month - 1, day);
+            date = new Date(Date.UTC(year, month - 1, day));
           } else if (part2 > 12) {
             const month = part1;
             const day = part2;
             const year = part3 < 100 ? 2000 + part3 : part3;
-            date = new Date(year, month - 1, day);
+            date = new Date(Date.UTC(year, month - 1, day));
           } else {
             // Ambigu : on privilégie le format français DD/MM/YYYY
             const day = part1;
             const month = part2;
             const year = part3 < 100 ? 2000 + part3 : part3;
-            date = new Date(year, month - 1, day);
+            date = new Date(Date.UTC(year, month - 1, day));
           }
         }
       }

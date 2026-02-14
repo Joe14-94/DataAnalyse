@@ -158,10 +158,28 @@ const StandardPivotRow = React.memo<PivotGridRowProps>(({
                else { formatted = `${Number(val).toFixed(1)}%`; if (Number(val) > 0) cellClass = "text-green-600 font-bold"; else if (Number(val) < 0) cellClass = "text-red-600 font-bold"; }
             }
             const isSelected = isSelectionMode && isItemSelected(row.keys, colLabel || colKey);
-            return <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`} style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }} onClick={() => handleDrilldown(row.keys, colLabel || colKey, val as string | number | undefined, metricLabel || '')}>{formatted}</td>;
+            return (
+               <td key={colKey}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Détails pour ${colLabel || colKey}`}
+                  className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer transition-all overflow-hidden truncate outline-none focus:ring-2 focus:ring-brand-500 focus:z-10 ${cellClass} ${isDiff || isPct ? 'bg-brand-50/20' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-brand-100'}`}
+                  style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDrilldown(row.keys, colLabel || colKey, val as string | number | undefined, metricLabel || ''); } }}
+                  onClick={() => handleDrilldown(row.keys, colLabel || colKey, val as string | number | undefined, metricLabel || '')}>
+                  {formatted}
+               </td>
+            );
          })}
          {showTotalCol && effectiveMetrics.length > 0 && (
-            <td className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`} style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150, ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '', row.type) }} onClick={() => { const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); }}>
+            <td
+               tabIndex={0}
+               role="button"
+               aria-label="Détails du total ligne"
+               className={`px-2 py-1 text-right border-l border-slate-200 cursor-pointer transition-all outline-none focus:ring-2 focus:ring-brand-500 focus:z-10 ${isSelectionMode ? (isItemSelected(row.keys, 'Total') ? 'bg-blue-100 ring-1 ring-blue-400' : 'bg-slate-50 hover:bg-blue-50 hover:ring-1 hover:ring-blue-300') : 'bg-slate-50 hover:bg-blue-100'}`}
+               style={{ width: columnWidths['Grand Total'] || 150, minWidth: 150, maxWidth: 150, ...getCellFormatting(row.keys, 'Total', typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal, '', row.type) }}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); } }}
+               onClick={() => { const value = typeof row.rowTotal === 'object' ? Object.values(row.rowTotal)[0] : row.rowTotal; handleDrilldown(row.keys, 'Total', value, ''); }}>
                {typeof row.rowTotal === 'object' ? <div className="flex flex-col gap-0.5">{Object.entries(row.rowTotal).map(([label, v], idx) => { const metric = metricLabelMap.get(label); const metricStyle = getCellFormatting(row.keys, 'Total', v, label, row.type); return <div key={idx} className="text-xs whitespace-nowrap" style={metricStyle}><span className="text-slate-400 font-medium mr-1">{label}:</span><span className="font-bold text-slate-800">{formatOutput(v, metric)}</span></div>; })}</div> : <span className="text-xs font-bold text-slate-800">{formatOutput(row.rowTotal, effectiveMetrics[0])}</span>}
             </td>
          )}
@@ -245,8 +263,13 @@ const TemporalPivotRow = React.memo<TemporalPivotRowProps>(({
             const isSelected = isSelectionMode && isItemSelected(labels, displayColLabel);
 
             return (
-               <td key={colKey} className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate ${sourceId === temporalConfig?.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
+               <td key={colKey}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Détails pour ${displayColLabel}`}
+                  className={`px-2 py-1 text-xs text-right border-r border-slate-200 tabular-nums cursor-pointer overflow-hidden truncate outline-none focus:ring-2 focus:ring-brand-500 focus:z-10 ${sourceId === temporalConfig?.referenceSourceId ? 'bg-blue-50/30' : ''} ${isSelectionMode ? (isSelected ? 'bg-brand-100 ring-1 ring-brand-400' : 'hover:bg-brand-50 hover:ring-1 hover:ring-brand-300') : 'hover:bg-blue-100'}`}
                   style={{ width: vCol.size, minWidth: vCol.size, maxWidth: vCol.size, ...customStyle }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (isSelectionMode) handleDrilldown(labels, displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId || '', metricLabel || ''); } }}
                   onClick={() => { if (isSelectionMode) handleDrilldown(labels, displayColLabel, value, metricLabel || ''); else if (!isSubtotal) handleTemporalDrilldown(result, sourceId || '', metricLabel || ''); }}>
                   {formatOutput(value, metric || effectiveMetrics[0])}
                </td>

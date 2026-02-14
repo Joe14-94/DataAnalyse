@@ -427,7 +427,14 @@ export const applyDistinct = (data: DataRow[]): DataRow[] => {
   const result: DataRow[] = [];
 
   data.forEach(row => {
-    const key = JSON.stringify(row);
+    // BOLT OPTIMIZATION: Avoid JSON.stringify for distinct.
+    // We build a key from values. We use row.id if available.
+    let key = '';
+    for (const k in row) {
+      if (k === 'id') continue;
+      key += (row[k] ?? '') + '|';
+    }
+
     if (!seen.has(key)) {
       seen.add(key);
       result.push(row);
