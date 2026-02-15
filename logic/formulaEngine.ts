@@ -310,17 +310,17 @@ class FormulaCompiler {
       case 'ANNEE': case 'YEAR':
         return (row) => {
           const d = parseDateValue(argEvals[0](row));
-          return d ? d.getUTCFullYear() : (d ? (d as Date).getFullYear() : 0);
+          return d ? d.getUTCFullYear() : 0;
         };
       case 'MOIS': case 'MONTH':
         return (row) => {
           const d = parseDateValue(argEvals[0](row));
-          return d ? d.getUTCMonth() + 1 : (d ? (d as Date).getMonth() + 1 : 0);
+          return d ? d.getUTCMonth() + 1 : 0;
         };
       case 'JOUR': case 'DAY':
         return (row) => {
           const d = parseDateValue(argEvals[0](row));
-          return d ? d.getUTCDate() : (d ? (d as Date).getDate() : 0);
+          return d ? d.getUTCDate() : 0;
         };
       case 'DATE':
         return (row) => {
