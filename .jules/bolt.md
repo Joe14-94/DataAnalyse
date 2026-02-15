@@ -29,3 +29,7 @@
 ## 2026-02-23 - [Optimize ETL Transformations (Filter & Aggregate)]
 **Learning:** ETL transformations `applyFilter` and `applyAggregate` were bottlenecks for large datasets. `applyFilter` used `.map().every()` which evaluated all conditions for every row; switching to manual `for` loops with early bail-out (lazy evaluation) and hoisting string/case operations achieved a ~7x speedup. `applyAggregate` used a multi-pass approach with intermediate row arrays; switching to a single-pass accumulator system with hoisted field lookups reduced CPU time by ~30% and significantly lowered memory pressure.
 **Action:** Use single-pass accumulators for aggregations and lazy evaluation for filters. Hoist all possible metadata/config processing outside of O(N) loops.
+
+## 2026-02-15 - [Optimize ETL Join Key Mapping]
+**Learning:** `applyJoin` was re-calculating the mapping between right-side and left-side keys for every single match. For datasets with many matches (e.g. O(10k) left and O(1k) right), this added O(Matches * M) overhead. Implementing a smart hoisting cache that only recomputes when the row schema changes (rare) significantly reduces CPU time. Replaced `.forEach` with manual `for` loops to further reduce object property lookup overhead.
+**Action:** Always hoist schema/key mapping logic outside of the innermost match loops in data enrichment or join operations.

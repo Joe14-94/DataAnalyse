@@ -111,24 +111,41 @@ export const applyJoin = (
   // Track matched right rows for 'right' and 'full' joins
   const matchedRightRows = new Set<DataRow>();
 
+  // BOLT OPTIMIZATION: Smart hoisting of key mapping to avoid repeated Object.keys and collision checks.
+  // Reduces complexity overhead from O(N * M) to O(N + M) for schema processing in the join loop.
+  let lastRightKeys: string[] | null = null;
+  let keyMapping: Record<string, string> = {};
+
   // 1. Process Left side (handles Inner, Left, and first part of Full join)
-  for (const leftRow of leftData) {
+  for (let i = 0; i < leftData.length; i++) {
+    const leftRow = leftData[i];
     const key = String(leftRow[leftKey] ?? '');
     const matches = rightMap.get(key) || [];
 
     if (matches.length > 0) {
-      for (const rightRow of matches) {
+      for (let j = 0; j < matches.length; j++) {
+        const rightRow = matches[j];
         matchedRightRows.add(rightRow);
 
-        // Don't include matches for 'right' only join if we are only building unmatched right rows later
-        // Actually, 'right' join should include matched rows too.
+        // BOLT OPTIMIZATION: Hoist right-side key mapping calculation.
+        // Only re-runs if the right-side row schema actually changes (rare in a single dataset).
+        const currentRightKeys = Object.keys(rightRow);
+        if (!lastRightKeys || currentRightKeys.length !== lastRightKeys.length || currentRightKeys[0] !== lastRightKeys[0]) {
+           keyMapping = {};
+           for (let kIdx = 0; kIdx < currentRightKeys.length; kIdx++) {
+             const k = currentRightKeys[kIdx];
+             if (k === 'id') continue;
+             // Collision detection with suffixing
+             const newKey = (k in leftRow && k !== rightKey) ? `${k}${suffix}` : k;
+             keyMapping[k] = newKey;
+           }
+           lastRightKeys = currentRightKeys;
+        }
 
         const merged = { ...leftRow };
-        Object.keys(rightRow).forEach(k => {
-          if (k === 'id') return; // Preserve left ID
-          const newKey = k in leftRow && k !== rightKey ? `${k}${suffix}` : k;
-          merged[newKey] = rightRow[k];
-        });
+        for (const k in keyMapping) {
+          merged[keyMapping[k]] = rightRow[k];
+        }
         result.push(merged);
       }
     } else {
@@ -141,12 +158,15 @@ export const applyJoin = (
 
   // 2. Process Right side (handles unmatched rows for 'right' and 'full' join)
   if (joinType === 'right' || joinType === 'full') {
-    for (const rightRow of rightData) {
+    for (let i = 0; i < rightData.length; i++) {
+      const rightRow = rightData[i];
       if (!matchedRightRows.has(rightRow)) {
         const merged: DataRow = { id: generateId() };
-        Object.keys(rightRow).forEach(k => {
+        const rightKeys = Object.keys(rightRow);
+        for (let j = 0; j < rightKeys.length; j++) {
+          const k = rightKeys[j];
           merged[k] = rightRow[k];
-        });
+        }
         result.push(merged);
       }
     }
