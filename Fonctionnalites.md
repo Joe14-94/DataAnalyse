@@ -53,6 +53,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Sécurité Formules** | Remplacement de `eval()` par `FormulaParser` sécurisé. | 2026-02-14 | Sécurité |
 | **Gestion Doublons** | Détection sur clé unique lors de l'importation. | Historique | Core |
 | **Compression** | Stockage colonnaire compressé dans IndexedDB. | 2026-02-05 | Optimisation |
+| **Optimisation Jointure** | Hoisting des mappings de clés dans `applyJoin` (O(N+M)). | 2026-02-15 | Performance |
 
 ---
 
@@ -131,6 +132,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-15** : Optimisation de la performance des jointures ETL (`applyJoin`) via le hoisting des mappings de clés.
 - **2026-02-12** : Audit technique complet et optimisations (Sécurité ReDoS, Persistance beforeunload, Cache de calcul O(N) et Accessibilité ARIA).
 - **2026-02-12** : Refinement de la finesse des ascenseurs (scrollbars) avec suppression des boutons et renforcement de la priorité CSS pour garantir le format 3px.
 - **2026-02-11** : Affichage du cumul des différences (total des deltas) dans le pied de page du TCD temporel pour une meilleure lisibilité des écarts globaux (ex: total des jours de décalage).
