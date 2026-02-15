@@ -88,7 +88,7 @@ const evaluateConditionOptimized = (row: DataRow, condition: any): boolean => {
 
 /**
  * Applique une jointure entre deux datasets
- * BOLT OPTIMIZATION: Hoisted key mapping and used manual loop instead of forEach/Object.keys inside the nested loop.
+ * BOLT OPTIMIZATION: O(N+M) implementation using Map for lookup and "smart hoisting" of key mapping.
  * Uses a caching mechanism to maintain schema-agnostic behavior while optimizing for uniform datasets.
  */
 export const applyJoin = (
@@ -101,8 +101,7 @@ export const applyJoin = (
 ): DataRow[] => {
   const result: DataRow[] = [];
 
-  // BOLT OPTIMIZATION: O(N+M) implementation using Map for lookup instead of O(N*M) nested loops
-  // Build lookup map for the right side
+  // BOLT OPTIMIZATION: Build lookup map for the right side (O(M))
   const rightMap = new Map<string, DataRow[]>();
   for (let i = 0; i < rightData.length; i++) {
     const row = rightData[i];
@@ -111,11 +110,18 @@ export const applyJoin = (
     rightMap.get(key)!.push(row);
   }
 
-  // BOLT OPTIMIZATION: Preparation for optimized property mapping
-  const leftKeysSet = new Set(leftData.length > 0 ? Object.keys(leftData[0]) : []);
+  // BOLT OPTIMIZATION: Collect all keys from left side to stay schema-agnostic AND fast for collision detection.
+  // This avoids calling 'in' on individual rows and handles heterogeneous schemas safely.
+  const allLeftKeys = new Set<string>();
+  for (let i = 0; i < leftData.length; i++) {
+    const row = leftData[i];
+    for (const k in row) {
+      allLeftKeys.add(k);
+    }
+  }
 
-  // Cache for heterogeneous schema handling
-  let lastRightKeys: string[] = [];
+  // Cache for heterogeneous right-side schema handling
+  let lastRightKeys: string[] | null = null;
   let lastMapping: { oldKey: string, newKey: string }[] = [];
 
   // Track matched right rows for 'right' and 'full' joins
@@ -134,22 +140,31 @@ export const applyJoin = (
 
         // BOLT OPTIMIZATION: Smart mapping cache to stay schema-agnostic but fast for uniform data
         const currentRightKeys = Object.keys(rightRow);
-        let mapping = lastMapping;
 
-        if (currentRightKeys.length !== lastRightKeys.length || currentRightKeys[0] !== lastRightKeys[0]) {
-           mapping = currentRightKeys
+        // Better schema comparison heuristic
+        let sameSchema = lastRightKeys !== null && currentRightKeys.length === lastRightKeys.length;
+        if (sameSchema) {
+          for (let kIdx = 0; kIdx < currentRightKeys.length; kIdx++) {
+            if (currentRightKeys[kIdx] !== lastRightKeys![kIdx]) {
+              sameSchema = false;
+              break;
+            }
+          }
+        }
+
+        if (!sameSchema) {
+           lastMapping = currentRightKeys
             .filter(k => k !== 'id')
             .map(k => ({
               oldKey: k,
-              newKey: leftKeysSet.has(k) && k !== rightKey ? `${k}${suffix}` : k
+              newKey: allLeftKeys.has(k) && k !== rightKey ? `${k}${suffix}` : k
             }));
            lastRightKeys = currentRightKeys;
-           lastMapping = mapping;
         }
 
         const merged = { ...leftRow };
-        for (let k = 0; k < mapping.length; k++) {
-          const m = mapping[k];
+        for (let k = 0; k < lastMapping.length; k++) {
+          const m = lastMapping[k];
           merged[m.newKey] = rightRow[m.oldKey];
         }
         result.push(merged);
