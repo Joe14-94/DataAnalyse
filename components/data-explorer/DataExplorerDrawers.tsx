@@ -27,7 +27,7 @@ export const ConditionalFormattingDrawer: React.FC<ConditionalFormattingDrawerPr
             <div className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-surface shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300 border-l border-border-default">
                 <div className="p-ds-6 border-b border-border-default flex justify-between items-center bg-purple-50/50">
                     <div><h3 className="text-lg font-bold text-txt-main flex items-center gap-ds-2"><Palette className="w-5 h-5 text-purple-600" /> Formatage Conditionnel</h3><p className="text-sm text-txt-secondary">Appliquez des styles selon des règles</p></div>
-                    <button onClick={onClose} className="text-txt-muted hover:text-txt-secondary p-ds-2 hover:bg-surface rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} aria-label="Fermer" title="Fermer" className="text-txt-muted hover:text-txt-secondary p-ds-2 hover:bg-surface rounded-full transition-colors"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="p-ds-6 flex-1 overflow-y-auto custom-scrollbar space-y-8">
                     <div>
@@ -42,7 +42,7 @@ export const ConditionalFormattingDrawer: React.FC<ConditionalFormattingDrawerPr
                             {(currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).length === 0 ? <div className="text-xs text-txt-muted italic text-center py-4">Aucune règle définie pour cette colonne.</div> : (currentDataset.fieldConfigs?.[selectedFormatCol]?.conditionalFormatting || []).map((rule) => (
                                 <div key={rule.id} className="flex items-center justify-between bg-surface p-ds-2 rounded border border-border-default shadow-sm text-xs">
                                     <div className="flex items-center gap-ds-2 flex-wrap"><span className="font-mono bg-slate-100 px-1 rounded text-txt-secondary">{rule.operator === 'gt' ? '>' : rule.operator === 'lt' ? '<' : rule.operator === 'contains' ? 'contient' : '='} {rule.value}</span><ArrowRight className="w-3 h-3 text-txt-muted" /><span className={`px-2 py-0.5 rounded ${rule.style.color} ${rule.style.backgroundColor} ${rule.style.fontWeight}`}>Exemple</span></div>
-                                    <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} className="text-txt-muted hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
+                                    <button onClick={() => handleRemoveConditionalRule(selectedFormatCol, rule.id)} aria-label="Supprimer la règle" title="Supprimer la règle" className="text-txt-muted hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
                                 </div>
                             ))}
                         </div>
@@ -120,7 +120,7 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                         </h3>
                         <p className="text-sm text-txt-secondary">Enrichir avec des données d'une autre source</p>
                     </div>
-                    <button onClick={onClose} className="text-txt-muted hover:text-txt-secondary p-ds-2 hover:bg-surface rounded-full transition-colors">
+                    <button onClick={onClose} aria-label="Fermer" title="Fermer" className="text-txt-muted hover:text-txt-secondary p-ds-2 hover:bg-surface rounded-full transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -265,7 +265,7 @@ export const DetailsDrawer: React.FC<DetailsDrawerProps> = ({
         <div className="fixed inset-y-0 right-0 w-full md:w-[600px] bg-surface shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-border-default">
             <div className="p-ds-6 bg-canvas border-b border-border-default flex justify-between items-start">
                 <div><div className="flex items-center gap-ds-2 mb-1"><History className="w-5 h-5 text-brand-600" /><h3 className="text-lg font-bold text-txt-main">Fiche Détail & Historique</h3></div><p className="text-xs text-txt-secondary">Suivi de l'entité via la clé : <strong className="text-txt-secondary">{trackingKey}</strong></p></div>
-                <button onClick={onClose} className="text-txt-muted hover:text-txt-secondary bg-surface rounded-full p-1 shadow-sm border border-border-default"><X className="w-5 h-5" /></button>
+                <button onClick={onClose} aria-label="Fermer" title="Fermer" className="text-txt-muted hover:text-txt-secondary bg-surface rounded-full p-1 shadow-sm border border-border-default"><X className="w-5 h-5" /></button>
             </div>
             <div className="px-6 py-3 bg-canvas border-b border-border-default flex items-center gap-ds-3"><span className="text-xs font-bold text-txt-secondary uppercase">Clé de réconciliation :</span><select className="text-xs bg-surface border-border-default rounded py-1 px-2 focus:ring-brand-500 focus:border-brand-500" value={trackingKey} onChange={(e) => setTrackingKey(e.target.value)}>{(currentDataset.fields || []).map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
             <div className="flex-1 overflow-y-auto p-ds-6 custom-scrollbar bg-canvas/50 space-y-8">
@@ -338,7 +338,7 @@ export const ColumnManagementDrawer: React.FC<ColumnManagementDrawerProps> = ({
                         </h3>
                         <p className="text-sm text-txt-secondary">Réorganisez l'ordre d'affichage</p>
                     </div>
-                    <button onClick={onClose} className="text-txt-muted hover:text-txt-secondary p-ds-2 hover:bg-surface rounded-full transition-colors">
+                    <button onClick={onClose} aria-label="Fermer" title="Fermer" className="text-txt-muted hover:text-txt-secondary p-ds-2 hover:bg-surface rounded-full transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -364,6 +364,8 @@ export const ColumnManagementDrawer: React.FC<ColumnManagementDrawerProps> = ({
                                         [newFields[idx], newFields[idx-1]] = [newFields[idx-1], newFields[idx]];
                                         reorderDatasetFields(currentDataset.id, newFields);
                                     }}
+                                    aria-label="Monter la colonne"
+                                    title="Monter"
                                     className="text-txt-muted hover:text-brand-600 disabled:opacity-20"
                                 >
                                     <ArrowUp className="w-3.5 h-3.5" />
@@ -375,6 +377,8 @@ export const ColumnManagementDrawer: React.FC<ColumnManagementDrawerProps> = ({
                                         [newFields[idx], newFields[idx+1]] = [newFields[idx+1], newFields[idx]];
                                         reorderDatasetFields(currentDataset.id, newFields);
                                     }}
+                                    aria-label="Descendre la colonne"
+                                    title="Descendre"
                                     className="text-txt-muted hover:text-brand-600 disabled:opacity-20"
                                 >
                                     <ArrowDown className="w-3.5 h-3.5" />
