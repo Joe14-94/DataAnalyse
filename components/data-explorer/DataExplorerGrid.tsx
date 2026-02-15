@@ -39,6 +39,43 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
     const virtualRows = rowVirtualizer.getVirtualItems();
     const virtualCols = colVirtualizer.getVirtualItems();
 
+    const [focusedCell, setFocusedCell] = React.useState<{ row: number, col: number } | null>(null);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (!focusedCell) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                setFocusedCell({ row: 0, col: 0 });
+            }
+            return;
+        }
+
+        let { row, col } = focusedCell;
+        const rowCount = processedRows.length;
+        const colCount = allColumns.length;
+
+        if (e.key === 'ArrowUp') row = Math.max(0, row - 1);
+        else if (e.key === 'ArrowDown') row = Math.min(rowCount - 1, row + 1);
+        else if (e.key === 'ArrowLeft') col = Math.max(0, col - 1);
+        else if (e.key === 'ArrowRight') col = Math.min(colCount - 1, col + 1);
+        else if (e.key === 'Home') col = 0;
+        else if (e.key === 'End') col = colCount - 1;
+        else if (e.key === 'PageUp') row = Math.max(0, row - 20);
+        else if (e.key === 'PageDown') row = Math.min(rowCount - 1, row + 20);
+        else if (e.key === 'Enter') {
+            if (row >= 0 && row < rowCount) {
+                 handleRowClick(processedRows[row] as any);
+            }
+            return;
+        } else return;
+
+        e.preventDefault();
+        setFocusedCell({ row, col });
+
+        // Ensure the new focused cell is visible
+        rowVirtualizer.scrollToIndex(row, { align: 'smart' });
+        colVirtualizer.scrollToIndex(col, { align: 'smart' });
+    };
+
     const renderHeaderCell = (colIndex: number, virtualCol: any) => {
         const column = allColumns[colIndex];
         const field = column.key;
@@ -180,10 +217,15 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
             else if (!val && val !== 0) displayVal = <span className={isCalculated ? "text-indigo-200" : "text-slate-300"}>-</span>;
         }
 
+        const isFocused = focusedCell?.row === rowIndex && focusedCell?.col === colIndex;
+
         return (
             <div key={`${rowIndex}-${virtualCol.key}`}
                 role="gridcell"
-                className={`px-3 py-1 whitespace-nowrap text-sm truncate ${cellStyle} ${isNumeric ? 'text-right font-mono' : 'text-slate-700'} ${isBlended ? 'text-purple-700 bg-purple-50/10' : ''} ${isCalculated ? 'text-indigo-700 font-medium bg-indigo-50/10' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''}`}
+                aria-selected={isFocused}
+                tabIndex={isFocused ? 0 : -1}
+                onFocus={() => setFocusedCell({ row: rowIndex, col: colIndex })}
+                className={`px-3 py-1 whitespace-nowrap text-sm truncate ${cellStyle} ${isNumeric ? 'text-right font-mono' : 'text-slate-700'} ${isBlended ? 'text-purple-700 bg-purple-50/10' : ''} ${isCalculated ? 'text-indigo-700 font-medium bg-indigo-50/10' : ''} ${showColumnBorders ? 'border-r border-slate-200' : ''} ${isFocused ? 'ring-2 ring-inset ring-brand-500 bg-brand-50/50 z-10' : ''}`}
                 title={String(val)}
                 style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
                 {isEditMode && !isBlended && !isCalculated ? (
@@ -202,12 +244,13 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
     return (
         <div
             ref={tableContainerRef}
-            className="flex-1 overflow-auto custom-scrollbar relative w-full"
+            className="flex-1 overflow-auto custom-scrollbar relative w-full outline-none focus-visible:ring-1 focus-visible:ring-brand-200"
             role="grid"
             aria-rowcount={processedRows.length + 1}
             aria-colcount={allColumns.length}
             aria-label="Explorateur de données"
             tabIndex={0}
+            onKeyDown={handleKeyDown}
         >
             {/* STICKY HEADER & FILTERS */}
             <div

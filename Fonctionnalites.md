@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 12-02-2026-04
-**Dernière mise à jour** : 12/02/2026
+**Version de référence** : 14-02-2026-01
+**Dernière mise à jour** : 14/02/2026
 
 ---
 
@@ -37,7 +37,8 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Ordre des colonnes** | Pouvoir changer l'ordre des colonnes | Historique | Core
 | **Renommer une colonne** | Pouvoir renommer le libellé d'une colonne | Historique | Core 
 | **Changer le type de données** | Pouvoir changer le typage des données. Lors du passage d'un type Nombre à Date, calcul et affichage de l'information au fomat JJ/MM/AAAA | Historique | Core
-| **Barre de titre fixe** | La barre contenant le libellé de toutes les colonnes reste fixe lorsque l'utilisateur fait défiler verticalement le tableau | Historique |Core
+| **Barre de titre fixe** | La barre contenant le libellé de toutes les colonnes reste fixe lorsque l'utilisateur fait défiler verticalement le tableau | Historique | Core |
+| **Navigation Clavier** | Déplacement entre les cellules de la grille via les flèches directionnelles (WCAG Grid). | 2026-02-14 | Accessibilité |
 
 ---
 
@@ -131,6 +132,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-14** : Audit technique Senior et optimisations critiques : Fix du bug d'initialisation drilldown, optimisation de `applyDistinct` (retrait de JSON.stringify), décomposition de `useDataExplorerLogic` en hooks spécialisés et implémentation de la navigation clavier dans la grille.
 - **2026-02-12** : Audit technique complet et optimisations (Sécurité ReDoS, Persistance beforeunload, Cache de calcul O(N) et Accessibilité ARIA).
 - **2026-02-12** : Refinement de la finesse des ascenseurs (scrollbars) avec suppression des boutons et renforcement de la priorité CSS pour garantir le format 3px.
 - **2026-02-11** : Affichage du cumul des différences (total des deltas) dans le pied de page du TCD temporel pour une meilleure lisibilité des écarts globaux (ex: total des jours de décalage).
