@@ -3,6 +3,7 @@ import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { BudgetVersion } from '../types';
 import { notify } from '../utils/common';
+import { useConfirm } from './useConfirm';
 import {
     readBudgetExcelFile,
     readBudgetCSVFile,
@@ -153,6 +154,8 @@ function budgetReducer(state: BudgetState, action: BudgetAction): BudgetState {
 
 export const useBudgetLogic = () => {
     const [state, dispatch] = useReducer(budgetReducer, initialState);
+    const confirmProps = useConfirm();
+    const { confirm } = confirmProps;
     const {
         budgets, templates,
         addBudget, updateBudget, deleteBudget,
@@ -261,12 +264,17 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'SET_EDITING_CELL', payload: { id: null, value: '' } });
     }, []);
 
-    const handleDeleteLine = useCallback((lineId: string) => {
+    const handleDeleteLine = useCallback(async (lineId: string) => {
         if (!state.selectedBudgetId || !state.selectedVersionId) return;
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?')) {
+        const ok = await confirm({
+            title: 'Supprimer la ligne',
+            message: 'Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?',
+            variant: 'danger'
+        });
+        if (ok) {
             deleteLine(state.selectedBudgetId, state.selectedVersionId, lineId);
         }
-    }, [state.selectedBudgetId, state.selectedVersionId, deleteLine]);
+    }, [state.selectedBudgetId, state.selectedVersionId, deleteLine, confirm]);
 
     const handleImportFile = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -361,11 +369,16 @@ export const useBudgetLogic = () => {
         notify.success('Modèle créé avec succès !');
     }, [state.templateName, state.templateDescription, state.templateCategory, state.templateSourceBudgetId, budgets, addTemplate]);
 
-    const handleDeleteTemplate = useCallback((templateId: string, templateName: string) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`)) {
+    const handleDeleteTemplate = useCallback(async (templateId: string, templateName: string) => {
+        const ok = await confirm({
+            title: 'Supprimer le modèle',
+            message: `Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`,
+            variant: 'danger'
+        });
+        if (ok) {
             deleteTemplate(templateId);
         }
-    }, [deleteTemplate]);
+    }, [deleteTemplate, confirm]);
 
     const handleUseTemplate = useCallback((templateId: string) => {
         const template = templates.find(t => t.id === templateId);
@@ -544,11 +557,16 @@ export const useBudgetLogic = () => {
         exportAxisValuesToExcel(values, axis.name);
     }, [analyticalAxes, getAxisValues]);
 
-    const handleDeleteAxisValue = useCallback((valueId: string, valueName: string) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer la valeur "${valueName}" ?`)) {
+    const handleDeleteAxisValue = useCallback(async (valueId: string, valueName: string) => {
+        const ok = await confirm({
+            title: 'Supprimer la valeur',
+            message: `Êtes-vous sûr de vouloir supprimer la valeur "${valueName}" ?`,
+            variant: 'danger'
+        });
+        if (ok) {
             deleteAxisValue(valueId);
         }
-    }, [deleteAxisValue]);
+    }, [deleteAxisValue, confirm]);
 
     return {
         state,
@@ -594,6 +612,7 @@ export const useBudgetLogic = () => {
             unlockBudget,
             deleteBudget,
             compareVersions
-        }
+        },
+        confirmProps
     };
 };

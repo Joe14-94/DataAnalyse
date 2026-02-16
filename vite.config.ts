@@ -13,13 +13,15 @@ export default defineConfig({
       policy: {
         'default-src': ["'self'"],
         'script-src': ["'self'"],
+        'script-src-elem': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        'style-src-elem': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         'font-src': ["'self'", "https://fonts.gstatic.com"],
         'img-src': ["'self'", "data:", "blob:"],
         'connect-src': ["'self'", "https://graph.microsoft.com", "https://login.microsoftonline.com"],
       },
       build: {
-        sri: true
+        sri: false
       }
     })
   ],

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useData, usePipeline } from '../context/DataContext';
 import { DataRow, TransformationType, PipelineNode } from '../types';
 import { generateId, notify } from '../utils/common';
+import { useConfirm } from './useConfirm';
 import {
     applyFilter, applyJoin, applyAggregate, applyUnion, applySelect,
     applyRename, applySort, applyDistinct, applySplit, applyMerge, applyCalculate,
@@ -18,6 +19,7 @@ export interface TransformationStep {
 
 export const useETLPipelineLogic = () => {
     const { datasets, batches } = useData();
+    const { confirm, ...confirmProps } = useConfirm();
     const { pipelineModule, addPipeline, updatePipeline, deletePipeline } = usePipeline();
 
     // UI state
@@ -97,15 +99,20 @@ export const useETLPipelineLogic = () => {
         setShowPipelineList(false);
     }, []);
 
-    const handleDeletePipeline = useCallback((id: string) => {
-        if (window.confirm('Supprimer ce pipeline ?')) {
+    const handleDeletePipeline = useCallback(async (id: string) => {
+        const ok = await confirm({
+            title: 'Supprimer le pipeline',
+            message: 'Voulez-vous vraiment supprimer ce pipeline ?',
+            variant: 'danger'
+        });
+        if (ok) {
             deletePipeline(id);
             if (activePipelineId === id) {
                 handleNewPipeline();
             }
             notify.success('Pipeline supprimé');
         }
-    }, [deletePipeline, activePipelineId, handleNewPipeline]);
+    }, [deletePipeline, activePipelineId, handleNewPipeline, confirm]);
 
     // Get source data
     const sourceData = useMemo(() => {
@@ -278,6 +285,7 @@ export const useETLPipelineLogic = () => {
         // Handlers
         handleSavePipeline, handleNewPipeline, handleDeletePipeline,
         addStep, updateStepConfig, deleteStep, toggleStepExpanded, moveStep,
-        getColumns
+        getColumns,
+        confirmProps
     };
 };

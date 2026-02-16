@@ -1,6 +1,8 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette, Pencil, RotateCcw } from 'lucide-react';
+import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, Palette, Pencil, RotateCcw } from 'lucide-react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { useConfirm } from '../../hooks/useConfirm';
 import {
    PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig,
    AggregationType, DateGrouping, TemporalComparisonConfig, PivotMetric,
@@ -136,6 +138,7 @@ const FieldChip: React.FC<{
 };
 
 export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
+   const { confirm, ...confirmProps } = useConfirm();
    const [fieldsZoneHeight, setFieldsZoneHeight] = useState(240);
    const [dropZonesHeight, setDropZonesHeight] = useState<number | null>(null);
    const [fieldSearchTerm, setFieldSearchTerm] = useState('');
@@ -208,6 +211,12 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
    return (
       <div ref={panelRef} className="w-72 flex-shrink-0 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
+         <ConfirmDialog
+             isOpen={confirmProps.isOpen}
+             onClose={confirmProps.handleCancel}
+             onConfirm={confirmProps.handleConfirm}
+             {...confirmProps.options}
+         />
          {/* 1. DATA SOURCES STACK */}
          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
             <div className="p-2 bg-gradient-to-r from-brand-50 to-indigo-50 border-b border-brand-200">
@@ -340,9 +349,13 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                           isCalculated={!!calcField}
                                           onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
                                           onDelete={calcField && removeCalculatedField ? () => {
-                                             if (confirm(`Supprimer le champ calculé "${f}" ?`)) {
-                                                removeCalculatedField(calcField.id);
-                                             }
+                                             confirm({
+                                                title: 'Supprimer le champ calculé',
+                                                message: `Supprimer le champ calculé "${f}" ?`,
+                                                variant: 'danger'
+                                             }).then(ok => {
+                                                if (ok) removeCalculatedField?.(f);
+                                             });
                                           } : undefined}
                                        />
                                     );
@@ -547,8 +560,13 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                   Mise en forme
                </button>
                <button
-                  onClick={() => {
-                     if (confirm("Réinitialiser toute la configuration du TCD ?")) {
+                     onClick={async () => {
+                        const ok = await confirm({
+                           title: 'Réinitialiser le TCD',
+                           message: "Réinitialiser toute la configuration du TCD ?",
+                           variant: 'warning'
+                        });
+                        if (ok) {
                         handleReset();
                      }
                   }}

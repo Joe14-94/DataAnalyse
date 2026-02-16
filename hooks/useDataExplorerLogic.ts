@@ -1,7 +1,9 @@
-import { useMemo, useEffect, useRef, useReducer } from 'react';
+import { useMemo, useEffect, useRef, useReducer, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
+import { useConfirm } from './useConfirm';
+import { notify } from '../utils/common';
 import {
     formatDateFr,
     evaluateFormula,
@@ -192,6 +194,8 @@ export function useDataExplorerLogic() {
     const location = useLocation();
     const navigate = useNavigate();
     const [state, dispatch] = useReducer(dataExplorerReducer, initialState);
+    const confirmProps = useConfirm();
+    const { confirm } = confirmProps;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const isInitializedRef = useRef<string | null>(null);
@@ -447,16 +451,26 @@ export function useDataExplorerLogic() {
         dispatch({ type: 'SET_SELECTED_COL', payload: state.renamingValue });
     };
 
-    const handleDeleteColumn = () => {
+    const handleDeleteColumn = async () => {
         if (!currentDataset || !state.selectedCol) return;
         const isCalculated = currentDataset.calculatedFields?.find(f => f.name === state.selectedCol);
         if (isCalculated) {
-            if (window.confirm(`Supprimer le champ calculé "${state.selectedCol}" ?`)) {
+            const ok = await confirm({
+                title: 'Supprimer le champ calculé',
+                message: `Supprimer le champ calculé "${state.selectedCol}" ?`,
+                variant: 'danger'
+            });
+            if (ok) {
                 removeCalculatedField(currentDataset.id, isCalculated.id);
                 dispatch({ type: 'SET_SELECTED_COL', payload: null });
             }
         } else {
-            if (window.confirm(`ATTENTION : Supprimer la colonne "${state.selectedCol}" effacera définitivement cette donnée. Continuer ?`)) {
+            const ok = await confirm({
+                title: 'Supprimer la colonne',
+                message: `ATTENTION : Supprimer la colonne "${state.selectedCol}" effacera définitivement cette donnée. Continuer ?`,
+                variant: 'danger'
+            });
+            if (ok) {
                 deleteDatasetField(currentDataset.id, state.selectedCol);
                 dispatch({ type: 'SET_SELECTED_COL', payload: null });
             }
@@ -466,7 +480,7 @@ export function useDataExplorerLogic() {
     const handleApplyVlookup = () => {
         const { vlookupConfig } = state;
         if (!currentDataset || !vlookupConfig.targetDatasetId || !vlookupConfig.primaryKey || !vlookupConfig.secondaryKey || vlookupConfig.columnsToAdd.length === 0 || !vlookupConfig.newColumnName.trim()) {
-            alert("Veuillez remplir tous les champs requis");
+            notify.warning("Veuillez remplir tous les champs requis");
             return;
         }
 
@@ -480,7 +494,7 @@ export function useDataExplorerLogic() {
         );
 
         if (!success) {
-            alert("Le dataset cible n'a pas de données");
+            notify.error("Le dataset cible n'a pas de données");
             return;
         }
 
@@ -489,7 +503,7 @@ export function useDataExplorerLogic() {
         dispatch({ type: 'SET_VLOOKUP_CONFIG', payload: initialState.vlookupConfig });
         dispatch({ type: 'SET_VLOOKUP_DRAWER_OPEN', payload: false });
 
-        alert(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
+        notify.success(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
     };
 
     const handleDeleteRow = (row: DataRow, e: React.MouseEvent) => {
@@ -904,6 +918,7 @@ export function useDataExplorerLogic() {
         deleteBatch,
         reorderDatasetFields,
         navigate,
-        getCellStyle
+        getCellStyle,
+        confirmProps
     };
 }

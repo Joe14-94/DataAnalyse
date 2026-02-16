@@ -7,6 +7,7 @@ import { DataExplorerGrid } from '../components/data-explorer/DataExplorerGrid';
 import { ConditionalFormattingDrawer, VlookupDrawer, DetailsDrawer, ColumnManagementDrawer } from '../components/data-explorer/DataExplorerDrawers';
 import { DeleteRowModal, EditModeToolbar } from '../components/data-explorer/DataExplorerModals';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export const DataExplorer: React.FC = () => {
     const {
@@ -47,11 +48,24 @@ export const DataExplorer: React.FC = () => {
         deleteBatch,
         reorderDatasetFields,
         navigate,
-        getCellStyle
+        getCellStyle,
+        confirmProps
     } = useDataExplorerLogic();
 
     const activeBatchFilter = state.columnFilters['_batchId'] ? state.columnFilters['_batchId'].replace(/^=/, '') : null;
     const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
+
+    const handleDeleteBatch = async (batchId: string) => {
+        const ok = await confirmProps.confirm({
+            title: 'Supprimer l\'import',
+            message: "Êtes-vous sûr de vouloir supprimer définitivement cet import ? Cette action est irréversible.",
+            variant: 'danger'
+        });
+        if (ok) {
+            deleteBatch(batchId);
+            clearFilters();
+        }
+    };
 
     const selectedConfig = useMemo(() => {
         if (!state.selectedCol || !currentDataset) return null;
@@ -98,6 +112,12 @@ export const DataExplorer: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col p-4 md:p-8 gap-4 relative">
+            <ConfirmDialog
+                isOpen={confirmProps.isOpen}
+                onClose={confirmProps.handleCancel}
+                onConfirm={confirmProps.handleConfirm}
+                {...confirmProps.options}
+            />
             <DeleteRowModal
                 deleteConfirmRow={state.deleteConfirmRow}
                 onClose={() => dispatch({ type: 'SET_DELETE_CONFIRM_ROW', payload: null })}
@@ -134,7 +154,7 @@ export const DataExplorer: React.FC = () => {
                 clearFilters={clearFilters}
                 activeBatchFilter={activeBatchFilter || null}
                 handleColumnFilterChange={handleColumnFilterChange}
-                deleteBatch={deleteBatch}
+                deleteBatch={handleDeleteBatch}
                 handleExportFullCSV={handleExportFullCSV}
                 navigate={navigate}
             />

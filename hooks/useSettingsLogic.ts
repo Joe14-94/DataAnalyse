@@ -6,6 +6,7 @@ import { useReferentials } from '../context/ReferentialContext';
 import { runSelfDiagnostics } from '../utils';
 import { AppState, DiagnosticSuite, CalculatedField, Dataset, MasterDataItem, MasterDataType } from '../types';
 import { notify } from '../utils/common';
+import { useConfirm } from './useConfirm';
 
 type SettingsAction =
     | { type: 'SET_DIAG_RESULTS'; payload: DiagnosticSuite[] | null }
@@ -110,6 +111,7 @@ function settingsReducer(state: SettingsState, action: SettingsAction): Settings
 }
 
 export function useSettingsLogic() {
+    const { confirm, ...confirmProps } = useConfirm();
     const {
         getBackupJson,
         importBackup,
@@ -224,24 +226,38 @@ export function useSettingsLogic() {
         }
     };
 
-    const handleLoadDemo = () => {
+    const handleLoadDemo = async () => {
         if (batches.length > 0) {
-            if (!window.confirm("Cette action va remplacer vos données actuelles par des données de test. Continuer ?")) {
-                return;
-            }
+            const ok = await confirm({
+                title: 'Charger les données de test',
+                message: "Cette action va remplacer vos données actuelles par des données de test. Continuer ?",
+                variant: 'warning'
+            });
+            if (!ok) return;
         }
         loadDemoData();
         navigate('/');
     };
 
-    const handleReset = () => {
-        if (window.confirm("ATTENTION : Cette action va effacer TOUTES les données de l'application localement. Êtes-vous sûr ?")) {
+    const handleReset = async () => {
+        const ok = await confirm({
+            title: 'Réinitialisation complète',
+            message: "ATTENTION : Cette action va effacer TOUTES les données de l'application localement. Êtes-vous sûr ?",
+            variant: 'danger',
+            confirmLabel: 'Tout effacer'
+        });
+        if (ok) {
             clearAll();
         }
     };
 
-    const handleDeleteDataset = (id: string, name: string) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement la typologie "${name}" et tout son historique d'imports ? Cette action est irréversible.`)) {
+    const handleDeleteDataset = async (id: string, name: string) => {
+        const ok = await confirm({
+            title: 'Supprimer la typologie',
+            message: `Êtes-vous sûr de vouloir supprimer définitivement la typologie "${name}" et tout son historique d'imports ? Cette action est irréversible.`,
+            variant: 'danger'
+        });
+        if (ok) {
             deleteDataset(id);
         }
     };
@@ -272,19 +288,29 @@ export function useSettingsLogic() {
         }
     };
 
-    const handleDeleteAnalysis = (id: string, name: string) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'analyse "${name}" ?`)) {
+    const handleDeleteAnalysis = async (id: string, name: string) => {
+        const ok = await confirm({
+            title: 'Supprimer l\'analyse',
+            message: `Êtes-vous sûr de vouloir supprimer définitivement l'analyse "${name}" ?`,
+            variant: 'danger'
+        });
+        if (ok) {
             deleteAnalysis(id);
         }
     };
 
-    const handleDeleteChart = (id: string, name: string) => {
+    const handleDeleteChart = async (id: string, name: string) => {
         const chart = chartsOfAccounts.find(c => c.id === id);
         if (chart?.isDefault && chartsOfAccounts.length > 1) {
             notify.warning('Impossible de supprimer le plan comptable par défaut');
             return;
         }
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`)) {
+        const ok = await confirm({
+            title: 'Supprimer le plan comptable',
+            message: `Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`,
+            variant: 'danger'
+        });
+        if (ok) {
             deleteChartOfAccounts(id);
         }
     };
@@ -421,6 +447,7 @@ export function useSettingsLogic() {
         deleteBatch,
         updateDatasetName,
         updateAnalysis,
-        updateChartOfAccounts
+        updateChartOfAccounts,
+        confirmProps
     };
 }

@@ -8,6 +8,7 @@ import { ETLPipelineSidebar } from '../components/etl/ETLPipelineSidebar';
 import { ETLStepItem } from '../components/etl/ETLStepItem';
 import { ETLAddStepMenu } from '../components/etl/ETLAddStepMenu';
 import { ETLDataPreview } from '../components/etl/ETLDataPreview';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export const ETLPipeline: React.FC = () => {
     const {
@@ -26,11 +27,18 @@ export const ETLPipeline: React.FC = () => {
         // Handlers
         handleSavePipeline, handleNewPipeline, handleDeletePipeline,
         addStep, updateStepConfig, deleteStep, toggleStepExpanded, moveStep,
-        getColumns
+        getColumns,
+        confirmProps
     } = useETLPipelineLogic();
 
     return (
         <div className="p-4 md:p-8 w-full max-w-[1600px] mx-auto min-h-screen pb-24">
+            <ConfirmDialog
+                isOpen={confirmProps.isOpen}
+                onClose={confirmProps.handleCancel}
+                onConfirm={confirmProps.handleConfirm}
+                {...confirmProps.options}
+            />
             <ETLPipelineHeader
                 pipelineName={pipelineName}
                 onPipelineNameChange={setPipelineName}
