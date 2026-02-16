@@ -74,9 +74,9 @@ export const SavedAnalysesSection: React.FC<SavedAnalysesSectionProps> = ({
                                 <div className="flex-1 min-w-0">
                                     {editingAnalysisId === analysis.id ? (
                                         <div className="flex items-center gap-2">
-                                            <input type="text" className="border rounded px-2 py-1 text-sm font-bold flex-1" value={editAnalysisName} onChange={(e) => setEditAnalysisName(e.target.value)} autoFocus />
-                                            <button onClick={saveEditingAnalysis} className="bg-brand-100 p-1.5 rounded"><Check className="w-4 h-4" /></button>
-                                            <button onClick={cancelEditingAnalysis} className="bg-slate-100 p-1.5 rounded"><X className="w-4 h-4" /></button>
+                                            <input type="text" className="border rounded px-2 py-1 text-sm font-bold flex-1" value={editAnalysisName} onChange={(e) => setEditAnalysisName(e.target.value)} autoFocus aria-label="Nom de l'analyse" />
+                                            <button onClick={saveEditingAnalysis} className="bg-brand-100 p-1.5 rounded" title="Enregistrer" aria-label="Enregistrer le nouveau nom"><Check className="w-4 h-4" /></button>
+                                            <button onClick={cancelEditingAnalysis} className="bg-slate-100 p-1.5 rounded" title="Annuler" aria-label="Annuler la modification du nom"><X className="w-4 h-4" /></button>
                                         </div>
                                     ) : (
                                         <h4 className="font-bold text-slate-800 truncate">{analysis.name}</h4>
@@ -128,9 +128,9 @@ export const DatasetsSection: React.FC<DatasetsSectionProps> = ({
                             <div className="flex-1">
                                 {editingDatasetId === ds.id ? (
                                     <div className="flex items-center gap-2">
-                                        <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm font-bold flex-1" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
-                                        <button onClick={saveEditing} className="bg-brand-100 p-1.5 rounded"><Check className="w-4 h-4" /></button>
-                                        <button onClick={cancelEditing} className="bg-slate-100 p-1.5 rounded"><X className="w-4 h-4" /></button>
+                                        <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm font-bold flex-1" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus aria-label="Nom de la typologie" />
+                                        <button onClick={saveEditing} className="bg-brand-100 p-1.5 rounded" title="Enregistrer" aria-label="Enregistrer le nouveau nom"><Check className="w-4 h-4" /></button>
+                                        <button onClick={cancelEditing} className="bg-slate-100 p-1.5 rounded" title="Annuler" aria-label="Annuler la modification du nom"><X className="w-4 h-4" /></button>
                                     </div>
                                 ) : (
                                     <h4 className="font-bold text-slate-800">{ds.name}</h4>
