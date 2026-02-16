@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Trash2, X, Check, FileText } from 'lucide-react';
+import { History, Trash2, X, Check } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { formatDateFr } from '../../utils';

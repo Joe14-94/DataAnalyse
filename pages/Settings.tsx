@@ -15,7 +15,6 @@ export const Settings: React.FC = () => {
         state,
         dispatch,
         fileInputRef,
-        navigate,
         batches,
         datasets,
         savedAnalyses,

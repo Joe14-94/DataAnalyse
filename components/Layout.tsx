@@ -1,11 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, History, Settings, Database, PieChart, ChevronDown, Plus, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Menu, Palette, DollarSign, TrendingUp, Workflow } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Upload, Settings, Database, PieChart, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Palette, DollarSign, TrendingUp, Workflow } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
-import { Badge } from './ui/Badge';
-import { Text } from './ui/Typography';
 import { OnboardingTour } from './OnboardingTour';
 
 interface LayoutProps {
@@ -14,7 +12,6 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const path = location.pathname;
   const { datasets, batches, getBackupJson, companyLogo } = useData();
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
