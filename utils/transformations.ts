@@ -3,7 +3,7 @@ import { generateId, evaluateFormula } from '../utils';
 
 /**
  * Applique un filtre sur les données
- * BOLT OPTIMIZATION: Hoisted condition processing and lazy evaluation to avoid O(N*C) overhead.
+ * BOLT OPTIMIZATION: Hoisted condition processing and function compilation to avoid O(N*C) overhead.
  */
 export const applyFilter = (
   data: DataRow[],
@@ -12,77 +12,53 @@ export const applyFilter = (
 ): DataRow[] => {
   if (conditions.length === 0) return data;
 
-  // BOLT OPTIMIZATION: Pre-process conditions to avoid redundant string ops and lowercasing inside the loop
-  const prepared = conditions.map(c => {
-    const filterStr = String(c.value || '');
-    return {
-      ...c,
-      preparedFilterStr: c.caseSensitive ? filterStr : filterStr.toLowerCase(),
-      filterNum: Number(c.value)
-    };
+  // BOLT OPTIMIZATION: Compile filter functions for each condition once to avoid switch/if inside the loop
+  const fns = conditions.map(c => {
+    const { field, operator, value, caseSensitive } = c;
+    const filterStr = String(value ?? '');
+    const preparedFilterStr = caseSensitive ? filterStr : filterStr.toLowerCase();
+    const filterNum = Number(value);
+
+    switch (operator) {
+      case 'equals': return (row: DataRow) => row[field] === value;
+      case 'not_equals': return (row: DataRow) => row[field] !== value;
+      case 'is_empty': return (row: DataRow) => row[field] === null || row[field] === undefined || row[field] === '';
+      case 'is_not_empty': return (row: DataRow) => row[field] !== null && row[field] !== undefined && row[field] !== '';
+      case 'greater_than': return (row: DataRow) => Number(row[field]) > filterNum;
+      case 'less_than': return (row: DataRow) => Number(row[field]) < filterNum;
+      case 'greater_or_equal': return (row: DataRow) => Number(row[field]) >= filterNum;
+      case 'less_or_equal': return (row: DataRow) => Number(row[field]) <= filterNum;
+      case 'contains':
+        if (caseSensitive) return (row: DataRow) => String(row[field] ?? '').includes(preparedFilterStr);
+        return (row: DataRow) => String(row[field] ?? '').toLowerCase().includes(preparedFilterStr);
+      case 'not_contains':
+        if (caseSensitive) return (row: DataRow) => !String(row[field] ?? '').includes(preparedFilterStr);
+        return (row: DataRow) => !String(row[field] ?? '').toLowerCase().includes(preparedFilterStr);
+      case 'starts_with':
+        if (caseSensitive) return (row: DataRow) => String(row[field] ?? '').startsWith(preparedFilterStr);
+        return (row: DataRow) => String(row[field] ?? '').toLowerCase().startsWith(preparedFilterStr);
+      case 'ends_with':
+        if (caseSensitive) return (row: DataRow) => String(row[field] ?? '').endsWith(preparedFilterStr);
+        return (row: DataRow) => String(row[field] ?? '').toLowerCase().endsWith(preparedFilterStr);
+      default: return () => true;
+    }
   });
 
+  const numFns = fns.length;
+
   return data.filter(row => {
-    // BOLT OPTIMIZATION: Use manual loop for early bail-out (lazy evaluation)
     if (combineWith === 'AND') {
-      for (let i = 0; i < prepared.length; i++) {
-        if (!evaluateConditionOptimized(row, prepared[i])) return false;
+      for (let i = 0; i < numFns; i++) {
+        if (!fns[i](row)) return false;
       }
       return true;
     } else {
-      for (let i = 0; i < prepared.length; i++) {
-        if (evaluateConditionOptimized(row, prepared[i])) return true;
+      for (let i = 0; i < numFns; i++) {
+        if (fns[i](row)) return true;
       }
       return false;
     }
   });
-};
-
-/**
- * Évalue une condition de filtre (version optimisée)
- */
-const evaluateConditionOptimized = (row: DataRow, condition: any): boolean => {
-  const fieldValue = row[condition.field];
-
-  switch (condition.operator) {
-    case 'equals':
-      return fieldValue === condition.value;
-    case 'not_equals':
-      return fieldValue !== condition.value;
-    case 'is_empty':
-      return fieldValue === null || fieldValue === undefined || fieldValue === '';
-    case 'is_not_empty':
-      return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
-    case 'greater_than':
-      return Number(fieldValue) > condition.filterNum;
-    case 'less_than':
-      return Number(fieldValue) < condition.filterNum;
-    case 'greater_or_equal':
-      return Number(fieldValue) >= condition.filterNum;
-    case 'less_or_equal':
-      return Number(fieldValue) <= condition.filterNum;
-  }
-
-  // String-based operators
-  let fieldStr = String(fieldValue || '');
-  if (!condition.caseSensitive) {
-    fieldStr = fieldStr.toLowerCase();
-  }
-
-  const filterStr = condition.preparedFilterStr;
-
-  switch (condition.operator) {
-    case 'contains':
-      return fieldStr.includes(filterStr);
-    case 'not_contains':
-      return !fieldStr.includes(filterStr);
-    case 'starts_with':
-      return fieldStr.startsWith(filterStr);
-    case 'ends_with':
-      return fieldStr.endsWith(filterStr);
-    default:
-      return true;
-  }
 };
 
 
@@ -415,24 +391,47 @@ export const applyRename = (
 
 /**
  * Tri des données
+ * BOLT OPTIMIZATION: Pre-compiled sort multipliers and optimized single-field sort case.
  */
 export const applySort = (
   data: DataRow[],
   fields: { field: string; direction: 'asc' | 'desc' }[]
 ): DataRow[] => {
+  if (fields.length === 0) return [...data];
+
   const sorted = [...data];
+  const numFields = fields.length;
+
+  // BOLT OPTIMIZATION: Pre-calculate multipliers to avoid 'direction === "asc"' checks in the loop
+  const multipliers = new Int8Array(numFields);
+  const fieldNames = new Array(numFields);
+  for (let i = 0; i < numFields; i++) {
+    multipliers[i] = fields[i].direction === 'asc' ? 1 : -1;
+    fieldNames[i] = fields[i].field;
+  }
+
+  // BOLT OPTIMIZATION: Fast path for the most common case (single field sort)
+  if (numFields === 1) {
+    const f = fieldNames[0];
+    const m = multipliers[0];
+    sorted.sort((a, b) => {
+      const aVal = a[f];
+      const bVal = b[f];
+      if (aVal < bVal) return -m;
+      if (aVal > bVal) return m;
+      return 0;
+    });
+    return sorted;
+  }
+
   sorted.sort((a, b) => {
-    for (const { field, direction } of fields) {
-      const aVal = a[field];
-      const bVal = b[field];
+    for (let i = 0; i < numFields; i++) {
+      const f = fieldNames[i];
+      const aVal = a[f];
+      const bVal = b[f];
 
-      let comparison = 0;
-      if (aVal < bVal) comparison = -1;
-      else if (aVal > bVal) comparison = 1;
-
-      if (comparison !== 0) {
-        return direction === 'asc' ? comparison : -comparison;
-      }
+      if (aVal < bVal) return -multipliers[i];
+      if (aVal > bVal) return multipliers[i];
     }
     return 0;
   });
@@ -441,25 +440,34 @@ export const applySort = (
 
 /**
  * Dédoublonnage
+ * BOLT OPTIMIZATION: Optimized key building using join('\x1F').
+ * Correctly handles non-uniform schemas by using all keys for each row.
  */
 export const applyDistinct = (data: DataRow[]): DataRow[] => {
   const seen = new Set<string>();
   const result: DataRow[] = [];
+  const dataLen = data.length;
+  if (dataLen === 0) return [];
 
-  data.forEach(row => {
-    // BOLT OPTIMIZATION: Avoid JSON.stringify for distinct.
-    // We build a key from values. We use row.id if available.
-    let key = '';
+  for (let i = 0; i < dataLen; i++) {
+    const row = data[i];
+    const vals: (string | number | boolean | null | undefined)[] = [];
+
+    // BOLT OPTIMIZATION: Use for...in but optimize the key generation using join
+    // We must include all keys to correctly handle non-uniform datasets
     for (const k in row) {
-      if (k === 'id') continue;
-      key += (row[k] ?? '') + '|';
+        if (k === 'id') continue;
+        vals.push(row[k] ?? '');
     }
+
+    // BOLT OPTIMIZATION: Array.join() is faster than manual concatenation in modern engines
+    const key = vals.join('\x1f');
 
     if (!seen.has(key)) {
       seen.add(key);
       result.push(row);
     }
-  });
+  }
 
   return result;
 };

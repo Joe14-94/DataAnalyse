@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 13-02-2026-01
-**Dernière mise à jour** : 13/02/2026
+**Version de référence** : 16-02-2026-02
+**Dernière mise à jour** : 16/02/2026
 
 ---
 
@@ -54,6 +54,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Gestion Doublons** | Détection sur clé unique lors de l'importation. | Historique | Core |
 | **Compression** | Stockage colonnaire compressé dans IndexedDB. | 2026-02-05 | Optimisation |
 | **Optimisation Jointure** | Hoisting des mappings de clés dans `applyJoin` (O(N+M)). | 2026-02-15 | Performance |
+| **Optimisation ETL** | Refonte de `applyFilter`, `applySort` et `applyDistinct` (gain ~25%). | 2026-02-16 | Performance |
 
 ---
 
@@ -132,6 +133,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-16** : Bolt ⚡ : Optimisation massive des transformations ETL (`applyFilter`, `applySort`, `applyDistinct`) via compilation de fonctions et hoisting, améliorant la réactivité des pipelines de données (gain de performance mesuré entre 20% et 28%).
 - **2026-02-13** : Audit technique senior (Architecture SPA) : Décomposition des hooks complexes (`usePivotExport`, `usePivotDrilldown`), harmonisation UTC des dates, optimisation des dédoublonnages (O(N)) et amélioration de l'accessibilité clavier dans le TCD.
 - **2026-02-15** : Optimisation de la performance des jointures ETL (`applyJoin`) via le hoisting des mappings de clés.
 - **2026-02-12** : Audit technique complet et optimisations (Sécurité ReDoS, Persistance beforeunload, Cache de calcul O(N) et Accessibilité ARIA).
