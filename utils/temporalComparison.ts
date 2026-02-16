@@ -1,3 +1,4 @@
+import { logger } from "./common";
 import { DataRow, FilterRule, TemporalComparisonConfig, TemporalComparisonResult, AggregationType } from '../types';
 import { prepareFilters, applyPreparedFilters, getCachedNumberFormat, parseDateValue, getValueForAggregation, getRowValue } from '../utils';
 
@@ -178,7 +179,7 @@ export const calculateTemporalComparison = (
   // Préparer les filtres une seule fois
   const preparedFilters = prepareFilters(filters);
 
-  console.log('🔍 [calculateTemporalComparison] START', {
+  logger.log('🔍 [calculateTemporalComparison] START', {
     dateColumn,
     startMonth: periodFilter.startMonth,
     endMonth: periodFilter.endMonth,
@@ -240,7 +241,7 @@ export const calculateTemporalComparison = (
 
       includedCount++;
       if (includedCount <= 5) {
-        console.log(`✅ [Source: ${source.label}] Included row sample:`, {
+        logger.log(`✅ [Source: ${source.label}] Included row sample:`, {
           project: row[groupByFields[0]],
           filterDate: row[dateColumn],
           metricValues: metrics.map(m => ({ field: m.field, val: row[m.field] }))
@@ -253,7 +254,7 @@ export const calculateTemporalComparison = (
     const aggregated = aggregateDataByGroup(sourceData, groupByFields, metrics, combinedFilter);
     aggregatedSources.set(source.id, aggregated);
 
-    console.log(`📊 [Source: ${source.label}] Filter stats:`, {
+    logger.log(`📊 [Source: ${source.label}] Filter stats:`, {
       total: totalProcessed,
       included: includedCount,
       excluded: totalProcessed - includedCount,

@@ -1,3 +1,4 @@
+import { logger } from "../utils/common";
 import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
 import { formatDateFr } from '../utils';
 
@@ -208,7 +209,7 @@ export const transformPivotToChartData = (
 
   // DEBUG: Log pour vérifier la détection
   if (dataRows.length > 0) {
-    console.log('📊 transformPivotToChartData:', {
+    logger.log('📊 transformPivotToChartData:', {
       colHeadersCount: result.colHeaders.length,
       seriesHeadersCount: seriesHeaders.length,
       seriesHeaders: seriesHeaders,
@@ -308,7 +309,7 @@ export const transformPivotToTreemapData = (
     dataRows = (result.displayRows || []).filter(r => r.type === 'data');
   }
 
-  console.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
+  logger.log('🌳 transformPivotToTreemapData - dataRows:', dataRows.length);
 
   // Convertir en format plat pour Recharts Treemap
   const flatData = dataRows.map(row => {
@@ -331,9 +332,9 @@ export const transformPivotToTreemapData = (
   // Limiter aux top 10 pour la lisibilité
   const topData = flatData.slice(0, 10);
 
-  console.log('🌳 Données treemap (top 10):', topData);
-  console.log('🌳 Premier élément:', topData[0]);
-  console.log('🌳 Format correct pour Recharts:', topData.every(d => d.name && typeof d.size === 'number'));
+  logger.log('🌳 Données treemap (top 10):', topData);
+  logger.log('🌳 Premier élément:', topData[0]);
+  logger.log('🌳 Format correct pour Recharts:', topData.every(d => d.name && typeof d.size === 'number'));
 
   return topData;
 };
@@ -380,7 +381,7 @@ export const buildHierarchicalTree = (
   const seriesHeaders = result.colHeaders.filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
   const hasMultiCols = seriesHeaders.length > 1;
 
-  console.log('🌞🌞🌞 buildHierarchicalTree START:', {
+  logger.log('🌞🌞🌞 buildHierarchicalTree START:', {
     dataRowsCount: dataRows.length,
     seriesHeadersCount: seriesHeaders.length,
     seriesHeaders,
@@ -430,7 +431,7 @@ export const buildHierarchicalTree = (
       })).filter(item => item.value! > 0);
 
       if (dataRows.indexOf(row) < 2) {
-        console.log(`🌞 LEAF row ${dataRows.indexOf(row)}:`, {
+        logger.log(`🌞 LEAF row ${dataRows.indexOf(row)}:`, {
           keys: row.keys,
           hasMultiCols,
           metricsKeys: Object.keys(row.metrics || {}),
@@ -448,7 +449,7 @@ export const buildHierarchicalTree = (
         // Pas de métriques valides, utiliser rowTotal
         leafNode.value = (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
         if (dataRows.indexOf(row) < 2) {
-          console.log(`🌞 Using rowTotal fallback: ${leafNode.value}`);
+          logger.log(`🌞 Using rowTotal fallback: ${leafNode.value}`);
         }
       }
     } else {
@@ -456,7 +457,7 @@ export const buildHierarchicalTree = (
       leafNode.value = (leafNode.value || 0) + (typeof row.rowTotal === 'number' ? row.rowTotal : 0);
       // IMPORTANT: Dans une hiérarchie ragged, on ne vide pas les enfants
       if (dataRows.indexOf(row) < 2) {
-        console.log(`🌞 No multiCols, adding to rowTotal: ${leafNode.value}`);
+        logger.log(`🌞 No multiCols, adding to rowTotal: ${leafNode.value}`);
       }
     }
   }
@@ -479,7 +480,7 @@ export const buildHierarchicalTree = (
     }
   }
 
-  console.log('🌞🌞🌞 buildHierarchicalTree END:', {
+  logger.log('🌞🌞🌞 buildHierarchicalTree END:', {
     treeLength: tree.length,
     tree: tree.slice(0, 3),
     firstNodeChildren: tree[0]?.children?.length,
@@ -500,7 +501,7 @@ export const treeToSunburstRings = (
   const rings: SunburstRingItem[][] = [];
   const grandTotal = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
 
-  console.log('🌞🌞🌞 treeToSunburstRings START:', {
+  logger.log('🌞🌞🌞 treeToSunburstRings START:', {
     treeLength: tree.length,
     grandTotal,
     baseColorsLength: baseColors.length,
@@ -519,7 +520,7 @@ export const treeToSunburstRings = (
   ) {
     if (!rings[level]) rings[level] = [];
 
-    console.log(`🌞 Traversing level ${level}, nodes count: ${nodes.length}`);
+    logger.log(`🌞 Traversing level ${level}, nodes count: ${nodes.length}`);
 
     nodes.forEach((node, idx) => {
       const path = [...parentPath, node.name];
@@ -552,7 +553,7 @@ export const treeToSunburstRings = (
         });
 
         if (level === 0 && idx < 2) {
-          console.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
+          logger.log(`🌞 ITEM level=${level} idx=${idx}: name="${node.name}", value=${nodeValue}, fill="${fill}", path=${JSON.stringify(path)}, nodeValue=${node.value}, hasChildren=${!!node.children}, childrenCount=${node.children?.length}`);
         }
       }
 
@@ -565,7 +566,7 @@ export const treeToSunburstRings = (
 
   traverse(tree, 0, [], baseColors[0], grandTotal);
 
-  console.log('🌞🌞🌞 treeToSunburstRings END:', {
+  logger.log('🌞🌞🌞 treeToSunburstRings END:', {
     ringsLength: rings.length,
     ringsItemCounts: rings.map(r => r.length),
     firstRing: rings[0]?.slice(0, 3)
@@ -583,13 +584,13 @@ export const transformPivotToSunburstData = (
   baseColors: string[],
   options?: { limit?: number; showOthers?: boolean }
 ): SunburstData => {
-  console.log('🌞🌞🌞 transformPivotToSunburstData START');
+  logger.log('🌞🌞🌞 transformPivotToSunburstData START');
 
   const tree = buildHierarchicalTree(result, config, options);
   const rings = treeToSunburstRings(tree, baseColors);
   const totalValue = tree.reduce((sum, n) => sum + getNodeValue(n), 0);
 
-  console.log('🌞🌞🌞 transformPivotToSunburstData END:', {
+  logger.log('🌞🌞🌞 transformPivotToSunburstData END:', {
     treeLength: tree.length,
     ringsLength: rings.length,
     totalValue,

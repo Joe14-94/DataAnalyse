@@ -1,3 +1,4 @@
+import { logger } from "../utils/common";
 
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
@@ -77,7 +78,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
-         console.log('📊 BEFORE CALCULATED FIELDS:', {
+         logger.log('📊 BEFORE CALCULATED FIELDS:', {
             rowCount: baseRows.length,
             hasCalculatedFields: !!dataset?.calculatedFields && dataset.calculatedFields.length > 0,
             calculatedFieldsCount: dataset?.calculatedFields?.length || 0,
@@ -94,14 +95,14 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                return enriched;
             });
 
-            console.log('📊 AFTER CALCULATED FIELDS:', {
+            logger.log('📊 AFTER CALCULATED FIELDS:', {
                sampleRowAfter: baseRows[0],
                portefeuilleField: baseRows[0]?.['Portefeuille']
             });
          }
 
          // Appliquer les filtres du TCD
-         console.log('📊 WIDGET FILTERS DEBUG:', {
+         logger.log('📊 WIDGET FILTERS DEBUG:', {
             hasFilters: !!pc.filters && pc.filters.length > 0,
             filterCount: pc.filters?.length || 0,
             filters: pc.filters,
@@ -112,7 +113,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
 
-         console.log('📊 WIDGET AFTER FILTERS:', {
+         logger.log('📊 WIDGET AFTER FILTERS:', {
             workingRowsCount: workingRows.length,
             firstRow: workingRows[0],
             sampleFilteredOut: baseRows.find(r => !workingRows.includes(r))

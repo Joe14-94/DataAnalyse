@@ -26,6 +26,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Modal } from '../ui/Modal';
 import { o365Service } from '../../services/o365Service';
+import { logger } from '../../utils/common';
 import type { O365User, BackupMetadata } from '../../types/o365';
 import type { AppState } from '../../types';
 
@@ -67,7 +68,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
         setCurrentUser(user);
       }
     } catch (err) {
-      console.error('[O365Section] Check auth failed:', err);
+      logger.error('[O365Section] Check auth failed:', err);
     }
   };
 
@@ -82,7 +83,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setIsAuthenticated(true);
     } catch (err: any) {
       setError(err.message || 'Échec de la connexion');
-      console.error('[O365Section] Login failed:', err);
+      logger.error('[O365Section] Login failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +101,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setBackups([]);
     } catch (err: any) {
       setError(err.message || 'Échec de la déconnexion');
-      console.error('[O365Section] Logout failed:', err);
+      logger.error('[O365Section] Logout failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -133,7 +134,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       alert('✅ Sauvegarde OneDrive réussie !');
     } catch (err: any) {
       setError(err.message || 'Échec de la sauvegarde');
-      console.error('[O365Section] Save failed:', err);
+      logger.error('[O365Section] Save failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +151,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setShowBackupsModal(true);
     } catch (err: any) {
       setError(err.message || 'Échec du chargement de la liste');
-      console.error('[O365Section] List backups failed:', err);
+      logger.error('[O365Section] List backups failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -177,7 +178,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       window.location.reload();
     } catch (err: any) {
       setError(err.message || 'Échec de la restauration');
-      console.error('[O365Section] Restore failed:', err);
+      logger.error('[O365Section] Restore failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +201,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       alert('✅ Backup supprimé');
     } catch (err: any) {
       setError(err.message || 'Échec de la suppression');
-      console.error('[O365Section] Delete failed:', err);
+      logger.error('[O365Section] Delete failed:', err);
     } finally {
       setIsLoading(false);
     }

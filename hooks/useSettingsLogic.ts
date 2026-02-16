@@ -5,6 +5,7 @@ import { useSettings as useUISettings } from '../context/SettingsContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { runSelfDiagnostics } from '../utils';
 import { AppState, DiagnosticSuite, CalculatedField, Dataset, MasterDataItem, MasterDataType } from '../types';
+import { notify } from '../utils/common';
 
 type SettingsAction =
     | { type: 'SET_DIAG_RESULTS'; payload: DiagnosticSuite[] | null }
@@ -182,7 +183,7 @@ export function useSettingsLogic() {
                         .then(m => m.o365Service.isSharePackage(content));
 
                     if (isSharePackage) {
-                        alert(`📤 Import de contenu partagé détecté !\n\nType: ${parsed.type}\nNom: ${parsed.name}\nPartagé par: ${parsed.sharedBy}\nDate: ${new Date(parsed.sharedAt).toLocaleString('fr-FR')}\n\nLe contenu va être importé.`);
+                        notify.info(`Import de contenu partagé détecté`, `Type: ${parsed.type} | Nom: ${parsed.name}`);
                         const shareContent = parsed.content;
                         dispatch({ type: 'SET_RESTORE_FILE_CONTENT', payload: JSON.stringify(shareContent) });
                         dispatch({ type: 'SET_RESTORE_AVAILABLE_DATA', payload: shareContent });
@@ -193,7 +194,7 @@ export function useSettingsLogic() {
                         dispatch({ type: 'SET_BACKUP_MODAL_MODE', payload: 'restore' });
                     }
                 } catch (err) {
-                    alert('Fichier invalide');
+                    notify.error('Fichier invalide');
                 }
             }
         };
@@ -205,11 +206,11 @@ export function useSettingsLogic() {
         if (!state.restoreFileContent) return;
         const success = await importBackup(state.restoreFileContent, keys);
         if (success) {
-            alert('Restauration effectuée avec succès !');
+            notify.success('Restauration effectuée avec succès !');
             dispatch({ type: 'SET_BACKUP_MODAL_MODE', payload: null });
             dispatch({ type: 'SET_RESTORE_FILE_CONTENT', payload: null });
         } else {
-            alert('Erreur lors de la restauration.');
+            notify.error('Erreur lors de la restauration.');
         }
     };
 
@@ -217,7 +218,9 @@ export function useSettingsLogic() {
         const jsonContent = JSON.stringify(data);
         const success = await importBackup(jsonContent, Object.keys(data) as (keyof AppState)[]);
         if (!success) {
-            alert('Erreur lors de la restauration depuis OneDrive.');
+            notify.error('Erreur lors de la restauration depuis OneDrive.');
+        } else {
+            notify.success('Restauration depuis OneDrive effectuée !');
         }
     };
 
@@ -278,7 +281,7 @@ export function useSettingsLogic() {
     const handleDeleteChart = (id: string, name: string) => {
         const chart = chartsOfAccounts.find(c => c.id === id);
         if (chart?.isDefault && chartsOfAccounts.length > 1) {
-            alert('Impossible de supprimer le plan comptable par défaut. Veuillez d\'abord définir un autre plan comme par défaut.');
+            notify.warning('Impossible de supprimer le plan comptable par défaut');
             return;
         }
         if (window.confirm(`Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`)) {
@@ -296,7 +299,7 @@ export function useSettingsLogic() {
 
     const handleCreateAxis = () => {
         if (!state.axisForm.code || !state.axisForm.name) {
-            alert('Veuillez remplir le code et le nom de l\'axe');
+            notify.warning('Veuillez remplir le code et le nom de l\'axe');
             return;
         }
         addAnalyticalAxis({
@@ -313,7 +316,7 @@ export function useSettingsLogic() {
 
     const handleCreateCalendar = () => {
         if (!state.calendarForm.startDate || !state.calendarForm.endDate) {
-            alert('Veuillez remplir les dates de début et fin');
+            notify.warning('Veuillez remplir les dates de début et fin');
             return;
         }
 
@@ -358,7 +361,7 @@ export function useSettingsLogic() {
 
     const handleCreateMasterData = () => {
         if (!state.masterDataForm.code || !state.masterDataForm.name) {
-            alert('Veuillez remplir le code et le nom');
+            notify.warning('Veuillez remplir le code et le nom');
             return;
         }
 
