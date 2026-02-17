@@ -314,7 +314,7 @@ const parsePeriodHeader = (header: string): { periodId: string; periodName: stri
  */
 export const convertImportToBudgetLines = (
   importData: BudgetImportData,
-  chartOfAccountsId: string
+  _chartOfAccountsId: string
 ): BudgetLine[] => {
   const lines: BudgetLine[] = [];
 
@@ -420,7 +420,7 @@ export const downloadBudgetTemplate = (fiscalYear: number): void => {
   const headers = [
     'Code Compte',
     'Libellé',
-    ...months.map((m, i) => `${m} ${fiscalYear}`)
+    ...months.map((m) => `${m} ${fiscalYear}`)
   ];
 
   // Ajouter quelques lignes d'exemple

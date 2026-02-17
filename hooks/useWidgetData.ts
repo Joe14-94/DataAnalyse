@@ -2,7 +2,7 @@ import { logger } from "../utils/common";
 
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
-import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
+import { DashboardWidget, Dataset, PivotConfig } from '../types';
 import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { transformPivotToChartData, transformPivotToTreemapData, transformPivotToSunburstData, transformPivotToHierarchicalTreemap, getChartColors, generateGradient } from '../logic/pivotToChart';
@@ -111,7 +111,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             datasetName: dataset?.name
          });
 
-         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
+         const workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
 
          logger.log('📊 WIDGET AFTER FILTERS:', {
             workingRowsCount: workingRows.length,
@@ -284,8 +284,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             };
          }
 
-         let chartData;
-         chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
+         const chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
             chartType: pivotChart.chartType,
             hierarchyLevel: pivotChart.hierarchyLevel,
             limit: pivotChart.limit,
@@ -327,7 +326,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
       let targetBatch = dsBatches[dsBatches.length - 1];
-      let prevBatch = dsBatches.length > 1 ? dsBatches[dsBatches.length - 2] : null;
+      const prevBatch = dsBatches.length > 1 ? dsBatches[dsBatches.length - 2] : null;
 
       if (source.mode === 'specific' && source.batchId) {
          const specific = dsBatches.find(b => b.id === source.batchId);
@@ -395,7 +394,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             if (metric === 'count' || metric === 'distinct') counts[key] = (counts[key] || 0) + 1;
             else if (metric === 'sum' && valueField) counts[key] = (counts[key] || 0) + parseVal(row, valueField);
          });
-         let sorted = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, limit || 10);
+         const sorted = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, limit || 10);
          return { current: sorted, max: sorted.length > 0 ? sorted[0].value : 0, unit: currentUnit, colors: standardColors };
       }
 

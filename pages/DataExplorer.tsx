@@ -187,12 +187,10 @@ export const DataExplorer: React.FC = () => {
                     rowVirtualizer={rowVirtualizer}
                     colVirtualizer={colVirtualizer}
                     processedRows={processedRows}
-                    displayFields={displayFields}
                     allColumns={allColumns}
                     currentDataset={currentDataset}
                     sortConfig={state.sortConfig}
                     handleHeaderClick={handleHeaderClick}
-                    columnWidths={state.columnWidths}
                     handleResizeStart={handleResizeStart}
                     showColumnBorders={state.showColumnBorders}
                     showFilters={state.showFilters}

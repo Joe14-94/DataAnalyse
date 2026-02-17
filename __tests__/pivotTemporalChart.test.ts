@@ -96,7 +96,6 @@ describe('Conversion TCD Temporel vers Graphiques - Tests de Fiabilité', () => 
 
     it('devrait retourner null si temporalConfig est null', () => {
       const temporalConfig = null;
-      const temporalResults: any[] = [];
 
       // Simuler la logique du useMemo
       const pivotResult = temporalConfig === null ? null : {};
@@ -105,18 +104,6 @@ describe('Conversion TCD Temporel vers Graphiques - Tests de Fiabilité', () => 
     });
 
     it('devrait retourner null si temporalResults est vide', () => {
-      const temporalConfig = {
-        sources: [
-          { id: 'src1', label: '2023', datasetId: 'ds1', batchId: 'b1', color: '#blue' }
-        ],
-        referenceSourceId: 'src1',
-        periodFilter: { startMonth: 1, endMonth: 12 },
-        deltaFormat: 'value' as const,
-        groupByFields: ['Region'],
-        valueField: 'Ventes',
-        aggType: 'sum' as const
-      };
-
       const temporalResults: any[] = [];
 
       // Simuler la logique du useMemo
@@ -126,18 +113,6 @@ describe('Conversion TCD Temporel vers Graphiques - Tests de Fiabilité', () => 
     });
 
     it('devrait exclure les sous-totaux lors de la conversion', () => {
-      const temporalConfig = {
-        sources: [
-          { id: 'src1', label: '2023', datasetId: 'ds1', batchId: 'b1', color: '#blue' }
-        ],
-        referenceSourceId: 'src1',
-        periodFilter: { startMonth: 1, endMonth: 12 },
-        deltaFormat: 'value' as const,
-        groupByFields: ['Region', 'Ville'],
-        valueField: 'Ventes',
-        aggType: 'sum' as const
-      };
-
       const temporalResults = [
         {
           groupKey: 'Nord|Paris',
@@ -344,34 +319,12 @@ describe('Conversion TCD Temporel vers Graphiques - Tests de Fiabilité', () => 
         aggType: 'sum' as const
       };
 
-      const temporalResults = [
-        {
-          groupKey: 'Nord',
-          groupLabel: 'Nord',
-          values: { 'src1': 1000 },
-          deltas: {},
-          isSubtotal: false
-        }
-      ];
-
       const colHeaders = temporalConfig.sources.map(source => source.label);
       expect(colHeaders).toEqual(['2024']);
       expect(colHeaders).toHaveLength(1);
     });
 
     it('devrait gérer des groupByFields multiples', () => {
-      const temporalConfig = {
-        sources: [
-          { id: 'src1', label: '2023', datasetId: 'ds1', batchId: 'b1', color: '#blue' }
-        ],
-        referenceSourceId: 'src1',
-        periodFilter: { startMonth: 1, endMonth: 12 },
-        deltaFormat: 'value' as const,
-        groupByFields: ['Region', 'Ville', 'Produit'], // 3 niveaux
-        valueField: 'Ventes',
-        aggType: 'sum' as const
-      };
-
       const temporalResults = [
         {
           groupKey: 'Nord|Paris|ProduitA',

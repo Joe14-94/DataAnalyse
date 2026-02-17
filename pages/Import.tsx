@@ -1,5 +1,4 @@
 import React from 'react';
-import { useData } from '../context/DataContext';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import {
@@ -14,7 +13,7 @@ import { ImportMappingTable } from '../components/import/ImportMappingTable';
 export const Import: React.FC = () => {
     const {
         // State
-        step, setStep,
+        step,
         text, setText,
         date, setDate,
         fileEncoding, setFileEncoding,

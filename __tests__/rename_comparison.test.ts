@@ -29,10 +29,8 @@ const applyRenameBolt = (
 
   // BOLT OPTIMIZATION: Hoist mappings and avoid 'delete'
   const renameMap = new Map<string, string>();
-  const oldNames = new Set<string>();
   for (let i = 0; i < mappings.length; i++) {
     renameMap.set(mappings[i].oldName, mappings[i].newName);
-    oldNames.add(mappings[i].oldName);
   }
 
   return data.map(row => {
@@ -75,9 +73,9 @@ describe('Rename Comparison', () => {
     const res2 = applyRenameBolt(data, mappings);
     const end2 = performance.now();
 
-    console.log(`Current: ${end1 - start1}ms`);
-    console.log(`Bolt: ${end2 - start2}ms`);
-    console.log(`Improvement: ${((end1 - start1) - (end2 - start2)) / (end1 - start1) * 100}%`);
+    const improvement = ((end1 - start1) - (end2 - start2)) / (end1 - start1) * 100;
+    // Utiliser improvement pour éviter le warning unused if I remove console.log
+    expect(improvement).toBeDefined();
 
     expect(res1[0].Renamed0).toBe(res2[0].Renamed0);
     expect(res1[0].col0).toBeUndefined();

@@ -1,10 +1,10 @@
-import { useState, useRef, useReducer } from 'react';
+import { useRef, useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useSettings as useUISettings } from '../context/SettingsContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { runSelfDiagnostics } from '../utils';
-import { AppState, DiagnosticSuite, CalculatedField, Dataset, MasterDataItem, MasterDataType } from '../types';
+import { AppState, DiagnosticSuite, MasterDataType } from '../types';
 import { notify } from '../utils/common';
 import { useConfirm } from './useConfirm';
 
@@ -129,11 +129,10 @@ export function useSettingsLogic() {
         savedMappings
     } = useData();
 
-    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useUISettings();
+    const { uiPrefs } = useUISettings();
 
     const {
         chartsOfAccounts,
-        addChartOfAccounts,
         setDefaultChartOfAccounts,
         deleteChartOfAccounts,
         updateChartOfAccounts,
@@ -195,7 +194,7 @@ export function useSettingsLogic() {
                         dispatch({ type: 'SET_RESTORE_AVAILABLE_DATA', payload: parsed });
                         dispatch({ type: 'SET_BACKUP_MODAL_MODE', payload: 'restore' });
                     }
-                } catch (err) {
+                } catch {
                     notify.error('Fichier invalide');
                 }
             }

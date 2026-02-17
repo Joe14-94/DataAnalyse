@@ -1,5 +1,5 @@
 import { logger } from "../utils/common";
-import { PivotResult, PivotConfig, PivotRow, DateGrouping, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
+import { PivotResult, PivotConfig, PivotRow, AggregationType, ChartType, ColorPalette, ColorMode } from '../types';
 import { formatDateFr } from '../utils';
 
 export type { ChartType, ColorPalette, ColorMode };
@@ -130,7 +130,7 @@ export const generateChartMetadata = (
   config: PivotConfig,
   result: PivotResult
 ): ChartMetadata => {
-  const { rowFields, colFields, colGrouping, valField, aggType } = config;
+  const { rowFields, colGrouping, valField, aggType } = config;
 
   // Utiliser result.colHeaders pour détecter multi-séries (fonctionne en mode temporel)
   const seriesHeaders = (result?.colHeaders || []).filter(h => !h.endsWith('_DIFF') && !h.endsWith('_PCT'));
@@ -180,7 +180,6 @@ export const transformPivotToChartData = (
   options: ChartTransformOptions
 ): ChartDataPoint[] => {
   const {
-    chartType,
     limit = 0,
     excludeSubtotals = true,
     sortBy = 'value',
@@ -190,7 +189,7 @@ export const transformPivotToChartData = (
   } = options;
 
   // Filtrer les lignes de données (exclure sous-totaux et grand total)
-  let dataRows = (result.displayRows || []).filter(row => {
+  const dataRows = (result.displayRows || []).filter(row => {
     // Si on filtre par niveau de hiérarchie, inclure aussi les sous-totals du niveau demandé
     if (hierarchyLevel !== undefined && hierarchyLevel >= 0) {
       return row.type !== 'grandTotal' && row.level === hierarchyLevel;
@@ -374,7 +373,7 @@ const getNodeValue = (node: HierarchicalNode): number => {
  */
 export const buildHierarchicalTree = (
   result: PivotResult,
-  config: PivotConfig,
+  _config: PivotConfig,
   options?: { limit?: number; showOthers?: boolean }
 ): HierarchicalNode[] => {
   const dataRows = (result.displayRows || []).filter(r => r.type === 'data');
@@ -605,11 +604,11 @@ export const transformPivotToSunburstData = (
  */
 export const transformPivotToHierarchicalTreemap = (
   result: PivotResult,
-  config: PivotConfig,
+  _config: PivotConfig,
   baseColors: string[],
   options?: { limit?: number; showOthers?: boolean }
 ): any[] => {
-  const tree = buildHierarchicalTree(result, config, options);
+  const tree = buildHierarchicalTree(result, _config, options);
 
   // Assigner des couleurs et la propriété 'size' pour Recharts Treemap
   let colorIdx = 0;

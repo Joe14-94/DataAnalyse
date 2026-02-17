@@ -15,8 +15,7 @@ import {
     readAnalyticalAxisExcelFile,
     readAnalyticalAxisCSVFile,
     convertImportToAxisValues,
-    exportAxisValuesToExcel,
-    downloadAnalyticalAxisTemplate
+    exportAxisValuesToExcel
 } from '../utils/analyticalAxisImport';
 
 export type BudgetTab = 'list' | 'editor' | 'comparison' | 'workflow' | 'templates' | 'referentials';
@@ -158,9 +157,9 @@ export const useBudgetLogic = () => {
     const { confirm } = confirmProps;
     const {
         budgets, templates,
-        addBudget, updateBudget, deleteBudget,
-        addVersion, updateVersion, deleteVersion, setActiveVersion, duplicateVersion,
-        addLine, updateLine, deleteLine, updateLineValue,
+        addBudget, deleteBudget,
+        addVersion, updateVersion,
+        addLine, deleteLine, updateLineValue,
         submitVersion, validateVersion, rejectVersion,
         lockBudget, unlockBudget,
         compareVersions,

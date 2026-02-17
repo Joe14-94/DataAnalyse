@@ -15,11 +15,11 @@ interface SpecificDashboardModalProps {
 export const SpecificDashboardModal: React.FC<SpecificDashboardModalProps> = ({
     isOpen, onClose, items, setItems, onStartSelection, onSave
 }) => {
-    if (!isOpen) return null;
-
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editLabel, setEditLabel] = useState('');
     const [dashboardTitle, setDashboardTitle] = useState('Nouveau Rapport TCD');
+
+    if (!isOpen) return null;
 
     const removeItem = (id: string) => {
         setItems(items.filter(item => item.id !== id));

@@ -6,7 +6,7 @@ import {
     detectUnit, detectColumnType, readExcelFile, readTextFile,
     notify
 } from '../utils';
-import { RawImportData, FieldConfig, Dataset } from '../types';
+import { RawImportData, FieldConfig } from '../types';
 
 export const useImportLogic = () => {
     const {
@@ -162,7 +162,7 @@ export const useImportLogic = () => {
         try {
             const result = parseRawData(text);
             processImportData(result);
-        } catch (err) {
+        } catch {
             notify.error("Erreur lors de l'analyse du texte.");
         }
     }, [text, processImportData]);
@@ -306,7 +306,7 @@ export const useImportLogic = () => {
         }
 
         const fieldsToProcess = Object.entries(mapping)
-            .filter(([_, name]) => name !== 'ignore')
+        .filter(([, name]) => name !== 'ignore')
             .map(([idx, name]) => ({ name: name as string, idx: parseInt(idx) }));
 
         const uniqueFieldNames = Array.from(new Set(fieldsToProcess.map(f => f.name)));

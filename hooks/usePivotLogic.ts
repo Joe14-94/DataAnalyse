@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
 import {
-    detectColumnType, generateId, formatDateLabelForDisplay, notify
+    detectColumnType, generateId, notify
 } from '../utils/common';
 import {
     CalculatedField, PivotStyleRule, ConditionalFormattingRule, FilterRule, FieldConfig,

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
-import { X, Maximize2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { DashboardWidget } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -27,7 +27,7 @@ export const Dashboard: React.FC = () => {
       dashboardFilters, clearDashboardFilters, setDashboardFilter
    } = useWidgets();
 
-   const { datasets, currentDatasetId, switchDataset } = useDatasets();
+   const { datasets } = useDatasets();
    const [isEditMode, setIsEditMode] = useState(false);
    const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
    const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
@@ -101,7 +101,7 @@ export const Dashboard: React.FC = () => {
    const openEditWidget = (w: DashboardWidget) => {
       setEditingWidgetId(w.id);
       // Initialize default color values for pivotChart widgets if they don't exist
-      let updatedWidget = { ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } };
+      const updatedWidget = { ...w, style: w.style || { borderColor: 'border-slate-200', borderWidth: '1' } };
       if (updatedWidget.config?.pivotChart) {
          updatedWidget.config.pivotChart = {
             ...updatedWidget.config.pivotChart,

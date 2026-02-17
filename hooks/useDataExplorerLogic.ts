@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useReducer, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useReducer } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
@@ -522,7 +522,7 @@ export function useDataExplorerLogic() {
     // --- Data Processing ---
     // BOLT OPTIMIZATION: Cache for row-level processing to avoid O(N) re-calculation of formulas
     // We use WeakMap with the original row reference to ensure perfect cache invalidation and no memory leaks.
-    const rowProcessCacheRef = useRef<WeakMap<object, any>>(new WeakMap());
+    const rowProcessCacheRef = useRef<WeakMap<object, DataRow>>(new WeakMap());
     const lastFormulasKeyRef = useRef<string>('');
 
     // BOLT OPTIMIZATION: Separate filtered batches to prevent rawExtendedRows from changing when unrelated datasets change
@@ -547,7 +547,7 @@ export function useDataExplorerLogic() {
             }
         }
         return result;
-    }, [currentDataset?.id, currentDatasetBatches]);
+    }, [currentDataset, currentDatasetBatches]);
 
     // 2. Full processed rows (Calculated Fields & Blending)
     const allRows = useMemo(() => {
@@ -615,7 +615,7 @@ export function useDataExplorerLogic() {
             rowProcessCacheRef.current.set(r._raw, extendedRow);
             return extendedRow;
         });
-    }, [rawExtendedRows, currentDataset?.calculatedFields, state.blendingConfig, datasets]);
+    }, [rawExtendedRows, currentDataset, state.blendingConfig, datasets, batches, state]);
 
     const displayFields = useMemo(() => {
         if (!currentDataset) return [];
@@ -630,7 +630,7 @@ export function useDataExplorerLogic() {
             }
         }
         return primFields;
-    }, [currentDataset, state.blendingConfig, datasets]);
+    }, [currentDataset, state, datasets]);
 
     const processedRows = useMemo(() => {
         if (!currentDataset) return [];
@@ -783,7 +783,7 @@ export function useDataExplorerLogic() {
 
         cols.push({ key: '_actions', width: 60 });
         return cols;
-    }, [displayFields, currentDataset, state.columnWidths]);
+    }, [displayFields, currentDataset, state]);
 
     const rowVirtualizer = useVirtualizer({
         count: processedRows.length,

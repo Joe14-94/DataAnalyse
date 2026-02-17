@@ -1,6 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { evaluateFormula } from '../logic/formulaEngine';
+import { logger } from '../utils/common';
 
 describe('Performance Optimization Benchmarks', () => {
     it('should evaluate 100,000 formulas efficiently', () => {
@@ -19,7 +20,7 @@ describe('Performance Optimization Benchmarks', () => {
         const end = performance.now();
 
         const duration = end - start;
-        console.log(`⏱️ Evaluation de 100,000 formules : ${duration.toFixed(2)}ms`);
+        logger.log(`⏱️ Evaluation de 100,000 formules : ${duration.toFixed(2)}ms`);
 
         // On s'attend à ce que 100k évaluations simples prennent moins de 500ms sur une machine standard
         // (En réalité c'est souvent < 100ms grâce au cache de compilation)
@@ -54,8 +55,8 @@ describe('Performance Optimization Benchmarks', () => {
         const endOptimized = performance.now();
         const durationOptimized = endOptimized - startOptimized;
 
-        console.log(`⏱️ Recherche Legacy (toutes colonnes) : ${durationLegacy.toFixed(2)}ms`);
-        console.log(`⏱️ Recherche Optimisée (colonnes visibles) : ${durationOptimized.toFixed(2)}ms`);
+        logger.log(`⏱️ Recherche Legacy (toutes colonnes) : ${durationLegacy.toFixed(2)}ms`);
+        logger.log(`⏱️ Recherche Optimisée (colonnes visibles) : ${durationOptimized.toFixed(2)}ms`);
 
         expect(resultsOptimized.length).toBe(resultsLegacy.length);
         expect(durationOptimized).toBeLessThan(durationLegacy);
