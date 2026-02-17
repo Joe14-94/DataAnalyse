@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
+import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
@@ -27,6 +28,7 @@ const LoadingPage = () => (
 const App: React.FC = () => {
   return (
     <DataProvider>
+      <Toaster position="top-right" expand={false} richColors closeButton />
       <HashRouter>
         <Layout>
           <ErrorBoundary name="Application">

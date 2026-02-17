@@ -8,6 +8,8 @@ interface HelpModalProps {
 }
 
 export const CalculatedFieldHelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+    const [activeTab, setActiveTab] = useState<'functions' | 'regex' | 'examples' | 'advanced'>('functions');
+
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -19,8 +21,6 @@ export const CalculatedFieldHelpModal: React.FC<HelpModalProps> = ({ isOpen, onC
     }, [isOpen, onClose]);
 
     if (!isOpen) return null;
-
-    const [activeTab, setActiveTab] = useState<'functions' | 'regex' | 'examples' | 'advanced'>('functions');
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4">

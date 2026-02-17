@@ -4,6 +4,7 @@ import { Check, Download, Upload, Database, Table2, Layout, Settings as Settings
 import { Button } from '../ui/Button';
 import { AppState } from '../../types';
 import { Modal } from '../ui/Modal';
+import { notify } from '../../utils/common';
 
 interface BackupRestoreModalProps {
   mode: 'backup' | 'restore';
@@ -41,7 +42,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
 
   const handleConfirm = () => {
     if (selectedKeys.length === 0) {
-      alert("Veuillez sélectionner au moins un type de données.");
+      notify.warning("Veuillez sélectionner au moins un type de données.");
       return;
     }
     onConfirm(selectedKeys);

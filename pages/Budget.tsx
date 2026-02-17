@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBudgetLogic } from '../hooks/useBudgetLogic';
+import { notify } from '../utils/common';
 import { BudgetHeader } from '../components/budget/BudgetHeader';
 import { BudgetTabs } from '../components/budget/BudgetTabs';
 import { BudgetList } from '../components/budget/BudgetList';
@@ -9,6 +10,7 @@ import { BudgetWorkflow } from '../components/budget/BudgetWorkflow';
 import { BudgetTemplates } from '../components/budget/BudgetTemplates';
 import { BudgetReferentials } from '../components/budget/BudgetReferentials';
 import { BudgetModals } from '../components/budget/BudgetModals';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export const Budget: React.FC = () => {
     const {
@@ -26,18 +28,25 @@ export const Budget: React.FC = () => {
         getAxisValues,
         fileInputRef,
         axisFileInputRef,
-        handlers
+        handlers,
+        confirmProps
     } = useBudgetLogic();
 
     return (
         <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
+            <ConfirmDialog
+                isOpen={confirmProps.isOpen}
+                onClose={confirmProps.handleCancel}
+                onConfirm={confirmProps.handleConfirm}
+                {...confirmProps.options}
+            />
             <div className="pb-10 space-y-6">
                 <BudgetHeader
                     onCreateBudget={() => {
                         const year = new Date().getFullYear();
                         const defaultChart = chartsOfAccounts[0];
                         if (!defaultChart) {
-                            alert('Veuillez d\'abord créer un plan comptable dans les paramètres.');
+                            notify.warning('Veuillez d\'abord créer un plan comptable dans les paramètres.');
                             return;
                         }
                         const budgetName = prompt('Nom du budget:', `Budget ${year}`);
@@ -58,8 +67,13 @@ export const Budget: React.FC = () => {
                             budgets={budgets}
                             templatesCount={templates.length}
                             onSelectBudget={handlers.handleSelectBudget}
-                            onDeleteBudget={(id, name) => {
-                                if (window.confirm(`Êtes-vous sûr de vouloir supprimer le budget "${name}" ?`)) {
+                            onDeleteBudget={async (id, name) => {
+                                const ok = await confirmProps.confirm({
+                                    title: 'Supprimer le budget',
+                                    message: `Êtes-vous sûr de vouloir supprimer le budget "${name}" ?`,
+                                    variant: 'danger'
+                                });
+                                if (ok) {
                                     handlers.deleteBudget(id);
                                 }
                             }}
@@ -67,7 +81,7 @@ export const Budget: React.FC = () => {
                                 const year = new Date().getFullYear();
                                 const defaultChart = chartsOfAccounts[0];
                                 if (!defaultChart) {
-                                    alert('Veuillez d\'abord créer un plan comptable dans les paramètres.');
+                                    notify.warning('Veuillez d\'abord créer un plan comptable dans les paramètres.');
                                     return;
                                 }
                                 const budgetName = prompt('Nom du budget:', `Budget ${year}`);
@@ -128,8 +142,13 @@ export const Budget: React.FC = () => {
                         <BudgetWorkflow
                             budgets={budgets}
                             onSelectBudget={handlers.handleSelectBudget}
-                            onValidateVersion={(bid, vid) => {
-                                if (window.confirm(`Valider la version du budget ?`)) {
+                            onValidateVersion={async (bid, vid) => {
+                                const ok = await confirmProps.confirm({
+                                    title: 'Valider la version',
+                                    message: `Valider la version du budget ?`,
+                                    variant: 'info'
+                                });
+                                if (ok) {
                                     handlers.validateVersion(bid, vid, 'Current User');
                                 }
                             }}
@@ -139,19 +158,29 @@ export const Budget: React.FC = () => {
                                     handlers.rejectVersion(bid, vid, 'Current User', reason);
                                 }
                             }}
-                            onSubmitVersion={(bid, vid) => {
+                            onSubmitVersion={async (bid, vid) => {
                                 const budget = budgets.find(b => b.id === bid);
                                 const version = budget?.versions.find(v => v.id === vid);
                                 if (version?.lines.length === 0) {
-                                    alert('Impossible de soumettre un budget vide.');
+                                    notify.warning('Impossible de soumettre un budget vide.');
                                     return;
                                 }
-                                if (window.confirm(`Soumettre pour validation ?`)) {
+                                const ok = await confirmProps.confirm({
+                                    title: 'Soumettre pour validation',
+                                    message: `Soumettre pour validation ?`,
+                                    variant: 'info'
+                                });
+                                if (ok) {
                                     handlers.submitVersion(bid, vid, 'Current User');
                                 }
                             }}
-                            onLockBudget={(bid) => {
-                                if (window.confirm(`Verrouiller le budget ?`)) {
+                            onLockBudget={async (bid) => {
+                                const ok = await confirmProps.confirm({
+                                    title: 'Verrouiller le budget',
+                                    message: `Verrouiller le budget ?`,
+                                    variant: 'warning'
+                                });
+                                if (ok) {
                                     handlers.lockBudget(bid);
                                 }
                             }}

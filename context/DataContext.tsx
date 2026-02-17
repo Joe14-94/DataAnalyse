@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { ImportBatch, AppState, DataRow, Dataset, FieldConfig, DashboardWidget, CalculatedField, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule, PipelineModule, DataExplorerState } from '../types';
-import { APP_VERSION, generateId, decompressBatch } from '../utils/common';
+import { APP_VERSION, generateId, decompressBatch, validateLogoUri, logger } from '../utils/common';
 import { persistenceManager } from '../services/persistenceManager';
 import { evaluateFormula } from '../logic/formulaEngine';
 import { getDemoData, createBackupJson } from '../logic/dataService';
@@ -88,7 +88,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch (e) {
-        console.error("Failed to load data", e);
+        logger.error("Failed to load data", e);
       } finally {
         setIsLoading(false);
       }
@@ -562,7 +562,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     }
                 } catch (err) {
-                    console.error(`Failed to auto-refresh derived dataset ${derivedDataset.name}`, err);
+                    logger.error(`Failed to auto-refresh derived dataset ${derivedDataset.name}`, err);
                 }
             });
 
@@ -854,7 +854,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (shouldImport('lastPivotState') && parsed.lastPivotState) setLastPivotState(parsed.lastPivotState);
       if (shouldImport('lastAnalyticsState') && parsed.lastAnalyticsState) setLastAnalyticsState(parsed.lastAnalyticsState);
       if (shouldImport('lastDataExplorerState') && parsed.lastDataExplorerState) setLastDataExplorerState(parsed.lastDataExplorerState);
-      if (shouldImport('companyLogo') && parsed.companyLogo) setCompanyLogo(parsed.companyLogo);
+      if (shouldImport('companyLogo') && parsed.companyLogo) {
+        setCompanyLogo(validateLogoUri(parsed.companyLogo));
+      }
       if (shouldImport('hasSeenOnboarding') && parsed.hasSeenOnboarding !== undefined) setHasSeenOnboarding(!!parsed.hasSeenOnboarding);
       if (shouldImport('financeReferentials') && parsed.financeReferentials) setFinanceReferentials(parsed.financeReferentials);
       if (shouldImport('budgetModule') && parsed.budgetModule) setBudgetModule(parsed.budgetModule);
@@ -879,7 +881,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return true;
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       return false;
     }
   }, []);
