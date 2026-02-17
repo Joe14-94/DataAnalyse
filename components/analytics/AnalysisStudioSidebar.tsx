@@ -226,7 +226,7 @@ export const AnalysisStudioSidebar: React.FC<AnalysisStudioSidebarProps> = ({
                     <div className="space-y-3 mb-3">
                         {filters.map((filter, idx) => (
                             <div key={idx} className="bg-slate-50 p-2 rounded border border-slate-200 text-xs space-y-2 relative group">
-                                <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500" aria-label="Supprimer le filtre">
+                                <button onClick={() => removeFilter(idx)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500" aria-label="Supprimer le filtre" title="Supprimer le filtre">
                                     <X className="w-3 h-3" />
                                 </button>
                                 <select className="w-full bg-white border border-slate-200 rounded px-1 py-1" value={filter.field} onChange={(e) => updateFilter(idx, { field: e.target.value })}>

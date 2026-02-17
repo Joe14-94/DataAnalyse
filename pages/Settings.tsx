@@ -223,7 +223,7 @@ export const Settings: React.FC = () => {
 
                 <div className="text-center text-xs text-slate-400 pt-8">
                     <p>DataScope v{APP_VERSION}</p>
-                    <p>© 2025 - Application interne</p>
+                    <p>© 2026 - Application interne</p>
                 </div>
             </div>
         </div>

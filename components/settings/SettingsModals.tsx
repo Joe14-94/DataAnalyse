@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Trash2, X, Check, FileText } from 'lucide-react';
+import { History, Trash2, X, Check } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { formatDateFr } from '../../utils';
@@ -39,7 +39,7 @@ export const VersionsModal: React.FC<VersionsModalProps> = ({ isOpen, onClose, d
                                     <td className="px-4 py-3 font-medium">{formatDateFr(batch.date)}</td>
                                     <td className="px-4 py-3">{batch.rows.length}</td>
                                     <td className="px-4 py-3 text-right">
-                                        <button onClick={() => { if (window.confirm(`Supprimer l'import du ${formatDateFr(batch.date)} ?`)) deleteBatch(batch.id); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded"><Trash2 className="w-4 h-4" /></button>
+                                        <button onClick={() => { if (window.confirm(`Supprimer l'import du ${formatDateFr(batch.date)} ?`)) deleteBatch(batch.id); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded" title="Supprimer cet import" aria-label={`Supprimer l'import du ${formatDateFr(batch.date)}`}><Trash2 className="w-4 h-4" /></button>
                                     </td>
                                 </tr>
                             ))}
