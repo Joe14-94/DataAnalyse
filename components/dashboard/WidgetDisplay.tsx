@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,9 +13,29 @@ import { TreemapContent } from '../ui/TreemapContent';
 import { SunburstD3 } from '../charts/SunburstD3';
 import { ErrorBoundary } from '../ErrorBoundary';
 
+interface WidgetData {
+    data?: any[];
+    error?: string;
+    isSelective?: boolean;
+    colors?: string[];
+    unit?: string;
+    seriesName?: string;
+    sunburstData?: any;
+    hierarchicalData?: any;
+    current?: any;
+    trend?: number;
+    progress?: number;
+    target?: number;
+    max?: number;
+    items?: any[];
+    text?: string;
+    style?: any;
+    [key: string]: any;
+}
+
 interface WidgetDisplayProps {
    widget: DashboardWidget;
-   data: any;
+   data: WidgetData | null;
 }
 
 const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
@@ -26,7 +45,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
 
    // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
    if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
-      const { colors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
+      const { colors = CHART_COLORS, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
       const chartType = widget.config.pivotChart ? widget.config.pivotChart.chartType : widget.config.chartType;
 
       // Pour Sunburst et Treemap, les données sont dans sunburstData/hierarchicalData, pas chartData
@@ -34,15 +53,13 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
 
       if (!chartData || chartData.length === 0) {
          // Si c'est un graphique hiérarchique, vérifier les données hiérarchiques au lieu de chartData
-         if (hasHierarchicalData) {
-            // Continue pour afficher le graphique hiérarchique
-         } else {
+         if (!hasHierarchicalData) {
             return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
          }
       }
 
       // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
-      const seriesKeys = Array.from(new Set(chartData.flatMap((d: any) =>
+      const seriesKeys = Array.from(new Set((chartData || []).flatMap((d: any) =>
          Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')
       ))) as string[];
 
@@ -74,7 +91,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                         labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                         isAnimationActive={false}
                      >
-                        {chartData.map((entry: any, index: number) => (
+                        {(chartData || []).map((_entry: any, index: number) => (
                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="#fff" strokeWidth={2} />
                         ))}
                      </Pie>
@@ -140,7 +157,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                      <YAxis type={isHorizontal ? 'category' : 'number'} dataKey={isHorizontal ? 'name' : undefined} fontSize={10} stroke="#94a3b8" hide={!isHorizontal && isPercent} domain={!isHorizontal && isPercent ? [0, 100] : [0, 'auto']} width={isHorizontal ? 100 : 30} />
                      <Tooltip
                         contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '10px' }}
-                        formatter={(val: any) => isPercent ? `${Number(val).toFixed(1)}%` : val}
+                        formatter={(val: any) => isPercent ? `${Number(val).toFixed(1)}%` : String(val)}
                      />
                      {(isMultiSeries || isStacked) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', bottom: 0 }} />}
                      {isMultiSeries || isStacked ? (
@@ -149,7 +166,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                         ))
                      ) : (
                         <Bar dataKey={seriesKeys[0] || 'value'} name={displaySeriesNames[seriesKeys[0]] || seriesKeys[0]} fill={colors[0]} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false}>
-                           {chartData.map((entry: any, index: number) => (
+                           {(chartData || []).map((_entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                            ))}
                         </Bar>
@@ -167,7 +184,6 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                return <div className="flex items-center justify-center h-full text-slate-400 italic text-xs">Aucune donnée hiérarchique</div>;
             }
 
-            // Convert sunburst data to D3 hierarchy format
             const d3HierarchyData = sunburstDataToD3Hierarchy(sbData);
 
             if (!d3HierarchyData) {
@@ -195,7 +211,6 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                </div>
             );
          } else if (chartType === 'treemap') {
-            // Utiliser les données hiérarchiques si disponibles
             const treemapDisplayData = data.hierarchicalData || chartData;
             return (
                <ResponsiveContainer width="100%" height="100%">
@@ -240,7 +255,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
    }
 
    if (widget.type === 'report') {
-      const items = data.items || [];
+      const items = (data as any).items || [];
       return (
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1 h-full overflow-y-auto custom-scrollbar">
             {items.map((item: any) => (
@@ -267,35 +282,34 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       return <div className={`h-full w-full p-1.5 overflow-y-auto custom-scrollbar whitespace-pre-wrap ${size} ${color}`} style={{ textAlign: align }}>{widget.config.textContent || '...'}</div>;
    }
 
-   const { unit } = data;
    const handleChartClick = (e: any) => {
       if (!e || !e.activePayload || !e.activePayload.length) return;
       if (widget.config.dimension && e.activePayload[0].payload.name) setDashboardFilter(widget.config.dimension, e.activePayload[0].payload.name);
    };
 
    if (widget.type === 'kpi') {
-      const { current, trend, progress, target } = data;
-      const isPositive = trend >= 0;
+      const { current, trend, progress, target, unit } = data;
+      const isPositive = (trend || 0) >= 0;
       const style = widget.config.kpiStyle || 'simple';
       const showTrend = widget.config.showTrend && !widget.config.secondarySource;
 
       return (
          <div className="flex flex-col h-full justify-center">
             <div className="flex items-end gap-1.5 mb-1.5">
-               <span className="text-2xl font-bold text-slate-800">{current.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+               <span className="text-2xl font-bold text-slate-800">{(current || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                <span className="text-sm text-slate-500 mb-1 font-medium">{unit}</span>
             </div>
             {style === 'progress' && target ? (
                <div className="w-full space-y-1">
                   <div className="flex justify-between text-sm text-slate-500">
                      <span>Objectif</span>
-                     <span>{Math.round(progress)}% / {target.toLocaleString()}</span>
+                     <span>{Math.round(progress || 0)}% / {target.toLocaleString()}</span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                     <div className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-brand-600'}`} style={{ width: `${progress}%` }} />
+                     <div className={`h-full rounded-full transition-all duration-500 ${(progress || 0) >= 100 ? 'bg-green-500' : 'bg-brand-600'}`} style={{ width: `${progress || 0}%` }} />
                   </div>
                </div>
-            ) : (style === 'trend' || showTrend) && (
+            ) : (style === 'trend' || showTrend) && trend !== undefined && (
                <div className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                   {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingUp className="w-3 h-3 mr-1 transform rotate-180" />}
                   {Math.abs(trend).toFixed(1)}% vs préc.
@@ -307,7 +321,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
    }
 
    if (widget.type === 'list') {
-      const { current, max } = data;
+      const { current = [], max = 1, unit } = data;
       return (
          <div className="h-full overflow-y-auto custom-scrollbar pr-2 space-y-3">
             {current.map((item: any, idx: number) => (
@@ -326,11 +340,11 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
    }
 
    const chartData = data.data || [];
+   const { unit } = data;
    const { chartType, colorMode, colorPalette, singleColor, gradientStart, gradientEnd } = widget.config;
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
    const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
 
-   // Calculer les couleurs à utiliser
    const colors = React.useMemo(() => {
       const count = Math.max(chartData.length, 1);
       if (colorMode === 'single') {
@@ -347,7 +361,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
          <ResponsiveContainer width="100%" height="100%">
             <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="100%" barSize={10} data={chartData}>
                <RadialBar background dataKey="value" cornerRadius={10} onClick={handleChartClick} className="cursor-pointer">
-                  {chartData.map((entry: any, index: number) => (
+                  {chartData.map((_entry: any, index: number) => (
                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                   ))}
                </RadialBar>
@@ -373,7 +387,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                   onClick={handleChartClick}
                   className="cursor-pointer"
                >
-                  {chartData.map((entry: any, index: number) => (
+                  {chartData.map((_entry: any, index: number) => (
                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                   ))}
                </Pie>
@@ -447,7 +461,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
             <YAxis type={isVertical ? 'category' : 'number'} dataKey={isVertical ? 'name' : undefined} fontSize={10} stroke="#94a3b8" width={isVertical ? 80 : 30} />
             <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
             <Bar dataKey="value" radius={isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0]} className="cursor-pointer">
-               {chartData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />)}
+               {chartData.map((_entry: any, index: number) => <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />)}
             </Bar>
          </BarChart>
       </ResponsiveContainer>

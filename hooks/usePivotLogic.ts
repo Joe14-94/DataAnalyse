@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
 import {
-    detectColumnType, generateId, formatDateLabelForDisplay
-} from '../utils';
+    detectColumnType, generateId, notify
+} from '../utils/common';
 import {
     CalculatedField, PivotStyleRule, ConditionalFormattingRule, FilterRule, FieldConfig,
     TemporalComparisonConfig, TemporalComparisonResult, PivotSourceConfig,
@@ -350,7 +350,7 @@ export const usePivotLogic = () => {
                     setAggType(agg);
                 }
             } else {
-                alert("Limite de 15 métriques atteinte");
+                notify.warning("Limite de 15 métriques atteinte");
             }
         }
         else if (targetZone === 'filter' && !filters.some(f => f.field === field)) setFilters(prev => [...prev, { field, operator: 'in', value: [] }]);
@@ -568,7 +568,7 @@ export const usePivotLogic = () => {
         });
         setIsSpecificDashboardModalOpen(false);
         setSpecificDashboardItems([]);
-        alert("Rapport ajouté à votre tableau de bord !");
+        notify.success("Rapport ajouté à votre tableau de bord !");
         navigate('/dashboard');
     };
 
@@ -690,7 +690,7 @@ export const usePivotLogic = () => {
             createDerivedDataset(name, false, config, fields, rows);
         }
 
-        alert(`Le Dataset "${name}" a été créé avec succès.`);
+        notify.success(`Le Dataset "${name}" a été créé avec succès.`);
         navigate('/data');
     };
 

@@ -68,7 +68,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
       group.size = group.value;
     });
 
-    let data = Array.from(groups.values());
+    const data = Array.from(groups.values());
 
 
     return data;

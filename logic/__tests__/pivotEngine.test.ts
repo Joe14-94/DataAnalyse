@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculatePivotData, AggregationType } from '../pivotEngine';
+import { calculatePivotData } from '../pivotEngine';
 
 describe('Moteur de Calcul TCD - Tests de Fiabilité', () => {
   // Dataset de test réaliste

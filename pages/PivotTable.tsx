@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { usePivotLogic } from '../hooks/usePivotLogic';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { PivotResult } from '../types';
 
 import { PivotHeader } from '../components/pivot/PivotHeader';
@@ -23,7 +22,7 @@ import { SaveAsDatasetModal } from '../components/pivot/SaveAsDatasetModal';
 export const PivotTable: React.FC = () => {
     const {
         batches, datasets, savedAnalyses, primaryDataset, datasetBatches,
-        blendedRows, pivotData, temporalResults, temporalColTotals, temporalDeltaTotals, isCalculating, chartPivotData,
+        blendedRows, pivotData, temporalColTotals, temporalDeltaTotals, isCalculating, chartPivotData,
         filteredPivotRows, filteredTemporalResults,
         sources, setSources, selectedBatchId, setSelectedBatchId,
         rowFields, setRowFields, colFields, setColFields, valField, setValField,

@@ -6,6 +6,7 @@ import { BackupRestoreSection, DemoDataSection, DangerZoneSection } from '../com
 import { VersionsModal, AxisModal, CalendarModal, MasterDataModal, ChartViewerModal } from '../components/settings/SettingsModals';
 import { BackupRestoreModal } from '../components/settings/BackupRestoreModal';
 import { O365Section } from '../components/settings/O365Section';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { APP_VERSION } from '../utils';
 
 const ENABLE_O365_POC = true;
@@ -44,11 +45,18 @@ export const Settings: React.FC = () => {
         setDefaultChartOfAccounts,
         importPCGTemplate,
         importIFRSTemplate,
-        deleteBatch
+        deleteBatch,
+        confirmProps
     } = useSettingsLogic();
 
     return (
         <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
+            <ConfirmDialog
+                isOpen={confirmProps.isOpen}
+                onClose={confirmProps.handleCancel}
+                onConfirm={confirmProps.handleConfirm}
+                {...confirmProps.options}
+            />
             <div className="w-full pb-10 space-y-6">
                 <h2 className="text-2xl font-bold text-slate-800">Paramètres et maintenance</h2>
 

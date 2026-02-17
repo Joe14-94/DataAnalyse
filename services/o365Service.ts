@@ -1,3 +1,4 @@
+import { logger } from "../utils/common";
 /**
  * Service d'intégration Microsoft 365 (OneDrive / SharePoint)
  *
@@ -111,7 +112,7 @@ class O365Service {
           await this.initializeGraphClient();
         }
       } catch (error) {
-        console.error('[O365Service] Initialization failed:', error);
+        logger.error('[O365Service] Initialization failed:', error);
         throw new Error('Impossible d\'initialiser le service Microsoft 365');
       }
     })();
@@ -214,7 +215,7 @@ class O365Service {
         id: response.account.localAccountId,
       };
     } catch (error) {
-      console.error('[O365Service] Login failed:', error);
+      logger.error('[O365Service] Login failed:', error);
       throw new Error('Échec de la connexion Microsoft 365');
     }
   }
@@ -234,7 +235,7 @@ class O365Service {
       this.currentAccount = null;
       this.graphClient = null;
     } catch (error) {
-      console.error('[O365Service] Logout failed:', error);
+      logger.error('[O365Service] Logout failed:', error);
       throw new Error('Échec de la déconnexion');
     }
   }
@@ -302,7 +303,7 @@ class O365Service {
         throw new Error('Fichier trop volumineux (max 4MB pour le POC)');
       }
     } catch (error) {
-      console.error('[O365Service] Save backup failed:', error);
+      logger.error('[O365Service] Save backup failed:', error);
       throw new Error('Échec de la sauvegarde sur OneDrive');
     }
   }
@@ -336,7 +337,7 @@ class O365Service {
         downloadUrl: (item as any)['@microsoft.graph.downloadUrl'],
       }));
     } catch (error) {
-      console.error('[O365Service] List backups failed:', error);
+      logger.error('[O365Service] List backups failed:', error);
       throw new Error('Impossible de lister les backups OneDrive');
     }
   }
@@ -358,7 +359,7 @@ class O365Service {
       // Le contenu est retourné directement comme objet JSON
       return response as Partial<AppState>;
     } catch (error) {
-      console.error('[O365Service] Load backup failed:', error);
+      logger.error('[O365Service] Load backup failed:', error);
       throw new Error('Échec du chargement du backup depuis OneDrive');
     }
   }
@@ -376,7 +377,7 @@ class O365Service {
         .api(`/me/drive/items/${fileId}`)
         .delete();
     } catch (error) {
-      console.error('[O365Service] Delete backup failed:', error);
+      logger.error('[O365Service] Delete backup failed:', error);
       throw new Error('Échec de la suppression du backup');
     }
   }
@@ -399,7 +400,7 @@ class O365Service {
 
       return response.link.webUrl;
     } catch (error) {
-      console.error('[O365Service] Create share link failed:', error);
+      logger.error('[O365Service] Create share link failed:', error);
       throw new Error('Échec de la création du lien de partage');
     }
   }
@@ -480,7 +481,7 @@ class O365Service {
 
       return shareMetadata;
     } catch (error) {
-      console.error('[O365Service] Share content failed:', error);
+      logger.error('[O365Service] Share content failed:', error);
       throw new Error('Échec du partage du contenu');
     }
   }
@@ -525,7 +526,7 @@ class O365Service {
 
       return sharePackage;
     } catch (error) {
-      console.error('[O365Service] Load shared content failed:', error);
+      logger.error('[O365Service] Load shared content failed:', error);
       throw new Error('Échec du chargement du contenu partagé');
     }
   }

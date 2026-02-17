@@ -30,7 +30,7 @@ export const generateFormulaFromActions = (actions: CalculatedFieldAction[], ava
     currentFormula = `[${sourceField}]`;
 
     // Appliquer chaque action séquentiellement
-    actions.forEach((action, idx) => {
+    actions.forEach((action) => {
         // Ignorer l'action source si elle est présente (déjà initialisée)
         if (action.type === 'source') return;
 
@@ -51,23 +51,26 @@ export const generateFormulaFromActions = (actions: CalculatedFieldAction[], ava
             case 'proper':
                 currentFormula = `CAPITALISEMOTS(${currentFormula})`;
                 break;
-            case 'replace':
+            case 'replace': {
                 const search = escapeString(action.params.search || '');
                 const replacement = escapeString(action.params.replacement || '');
                 currentFormula = `SUBSTITUER(${currentFormula}, "${search}", "${replacement}")`;
                 break;
-            case 'regex':
+            }
+            case 'regex': {
                 const pattern = escapeString(action.params.pattern || '');
                 const regexRepl = escapeString(action.params.replacement || '');
                 currentFormula = `REMPLACER(${currentFormula}, "${pattern}", "${regexRepl}")`;
                 break;
-            case 'concat':
+            }
+            case 'concat': {
                 const others = action.params.otherFields || [];
                 const sep = escapeString(action.params.separator || '');
                 if (others.length > 0) {
                     currentFormula = `CONCAT(${currentFormula}, ${others.map((f: string) => `[${f}]`).join(', ')}, "${sep}")`;
                 }
                 break;
+            }
             case 'left':
                 currentFormula = `GAUCHE(${currentFormula}, ${action.params.count || 1})`;
                 break;

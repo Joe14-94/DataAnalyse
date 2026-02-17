@@ -133,6 +133,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 
 ### Février 2026
 - **2026-02-16** : Amélioration de l'accessibilité (Palette) : Ajout systématique de `title` et `aria-label` sur les boutons icon-only dans les paramètres et le studio d'analyse. Mise à jour de la version et du copyright 2026.
+- **2026-02-15** : Mise en œuvre des actions P0/P1 du plan d'action : Sécurisation de l'import de logo (validation URI), renforcement de la CSP (hashes dynamiques), intégration d'un système de notifications moderne (`sonner`), et décomposition modulaire des pages complexes (ETL et Import).
 - **2026-02-13** : Audit technique senior (Architecture SPA) : Décomposition des hooks complexes (`usePivotExport`, `usePivotDrilldown`), harmonisation UTC des dates, optimisation des dédoublonnages (O(N)) et amélioration de l'accessibilité clavier dans le TCD.
 - **2026-02-15** : Optimisation de la performance des jointures ETL (`applyJoin`) via le hoisting des mappings de clés.
 - **2026-02-12** : Audit technique complet et optimisations (Sécurité ReDoS, Persistance beforeunload, Cache de calcul O(N) et Accessibilité ARIA).
