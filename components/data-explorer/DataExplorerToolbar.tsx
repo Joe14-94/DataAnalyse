@@ -1,5 +1,5 @@
 import React from 'react';
-import { Columns, Calculator, Trash2, BarChart2 } from 'lucide-react';
+import { Columns, Calculator, Trash2, BarChart2, Minus, Plus } from 'lucide-react';
 import { BarChart, Bar, Tooltip, ResponsiveContainer } from 'recharts';
 import { Button } from '../ui/Button';
 
@@ -64,10 +64,26 @@ export const DataExplorerToolbar: React.FC<DataExplorerToolbarProps> = ({
                             <>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-slate-600 font-medium">Décimales :</span>
-                                    <div className="flex bg-white rounded border border-slate-200">
-                                        <button onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))} className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-r border-slate-100">-</button>
-                                        <span className="px-2 py-1 text-xs font-mono w-6 text-center">{selectedConfig?.decimalPlaces ?? 2}</span>
-                                        <button onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))} className="px-2 py-1 text-xs hover:bg-slate-50 text-slate-600 border-l border-slate-100">+</button>
+                                    <div className="flex bg-white rounded border border-slate-200 overflow-hidden">
+                                        <button
+                                            onClick={() => handleFormatChange('decimalPlaces', Math.max(0, (selectedConfig?.decimalPlaces ?? 2) - 1))}
+                                            className="px-2 py-1 hover:bg-brand-50 hover:text-brand-600 text-slate-600 border-r border-slate-100 transition-colors"
+                                            title="Diminuer les décimales"
+                                            aria-label="Diminuer les décimales"
+                                        >
+                                            <Minus className="w-3 h-3" />
+                                        </button>
+                                        <span className="px-2 py-1 text-xs font-mono w-6 text-center flex items-center justify-center bg-slate-50/50">
+                                            {selectedConfig?.decimalPlaces ?? 2}
+                                        </span>
+                                        <button
+                                            onClick={() => handleFormatChange('decimalPlaces', Math.min(5, (selectedConfig?.decimalPlaces ?? 2) + 1))}
+                                            className="px-2 py-1 hover:bg-brand-50 hover:text-brand-600 text-slate-600 border-l border-slate-100 transition-colors"
+                                            title="Augmenter les décimales"
+                                            aria-label="Augmenter les décimales"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
