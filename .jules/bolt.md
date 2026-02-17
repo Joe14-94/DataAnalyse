@@ -33,3 +33,7 @@
 ## 2026-02-15 - [Optimize ETL Join Key Mapping]
 **Learning:** `applyJoin` was re-calculating the mapping between right-side and left-side keys for every single match. For datasets with many matches (e.g. O(10k) left and O(1k) right), this added O(Matches * M) overhead. Implementing a smart hoisting cache that only recomputes when the row schema changes (rare) significantly reduces CPU time. Replaced `.forEach` with manual `for` loops to further reduce object property lookup overhead.
 **Action:** Always hoist schema/key mapping logic outside of the innermost match loops in data enrichment or join operations.
+
+## 2026-02-23 - [Optimize ETL Transformations (Sort & Distinct)]
+**Learning:** Sorting 100k rows with multiple fields in a generic ETL tool is a bottleneck due to object destructuring and property access inside the comparator (O(N log N * M)). Hoisting field names and multipliers to specialized arrays (Int8Array) and adding a fast-path for single-field sorting significantly reduces overhead. For deduplication, using Array.join with a unique separator (\x1F) is safer and more consistent than loop-based string concatenation for composite keys.
+**Action:** Always hoist metadata and use fast-paths for common cases in O(N log N) operations like sorting. Use specialized TypedArrays when possible for metadata.
