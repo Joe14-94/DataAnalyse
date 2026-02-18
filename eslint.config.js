@@ -25,6 +25,14 @@ export default tseslint.config(
       'no-control-regex': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'no-console': ["warn", { allow: ["error", "warn"] }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 )

@@ -30,8 +30,7 @@ import type { AppState, SharePackage, ShareableContentType, ShareLinkScope, Shar
 // Configuration MSAL
 // IMPORTANT: Ces valeurs doivent être configurées dans les variables d'environnement
 const getClientId = (): string => {
-  // @ts-ignore - Vite env types
-  return import.meta.env?.VITE_O365_CLIENT_ID || 'YOUR_CLIENT_ID_HERE';
+  return (import.meta as any).env?.VITE_O365_CLIENT_ID || 'YOUR_CLIENT_ID_HERE';
 };
 
 const MSAL_CONFIG = {

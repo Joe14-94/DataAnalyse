@@ -7,8 +7,6 @@ import {
     BudgetComment,
     BudgetNotification,
     BudgetModule,
-    BudgetStatus,
-    BudgetScenario,
     BudgetVersionComparison
 } from '../types';
 import { generateId } from '../utils';
@@ -387,7 +385,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({
         });
     };
 
-    const createBudgetFromTemplate = (templateId: string, name: string, fiscalYear: number): Budget | null => {
+    const createBudgetFromTemplate = (templateId: string, _name: string, _fiscalYear: number): Budget | null => {
         const template = templates.find(t => t.id === templateId);
         if (!template) return null;
 

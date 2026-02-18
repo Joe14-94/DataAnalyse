@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useRef } from 'react';
-import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info, Download, FileSpreadsheet, FileText, Image as ImageIcon, Plus, ChevronDown } from 'lucide-react';
+import { X, BarChart3, Download, FileSpreadsheet, FileText, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as ReLineChart, Line,
@@ -12,7 +12,7 @@ import { Button } from '../ui/Button';
 import { useData } from '../../context/DataContext';
 import { exportView } from '../../utils';
 import * as XLSX from 'xlsx';
-import { getChartColors, generateGradient, getChartTypeConfig } from '../../logic/pivotToChart';
+import { getChartColors, generateGradient } from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
 
 interface QuickChartModalProps {

@@ -2,7 +2,7 @@ import React from 'react';
 import {
    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
    Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList
+   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap
 } from 'recharts';
 import { TrendingUp, Link as LinkIcon } from 'lucide-react';
 import { DashboardWidget } from '../../types';
@@ -40,6 +40,22 @@ interface WidgetDisplayProps {
 
 const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
    const { setDashboardFilter } = useWidgets();
+
+   // Hooks must be at the top level
+   const chartDataRaw = data?.data || [];
+   const { colorMode, colorPalette, singleColor, gradientStart, gradientEnd } = widget.config;
+
+   const colors = React.useMemo(() => {
+      const count = Math.max(chartDataRaw.length, 1);
+      if (colorMode === 'single') {
+         return Array(count).fill(singleColor || '#3b82f6');
+      } else if (colorMode === 'gradient') {
+         return generateGradient(gradientStart || '#3b82f6', gradientEnd || '#ef4444', count);
+      } else {
+         return getChartColors(count, colorPalette || 'default');
+      }
+   }, [chartDataRaw.length, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-sm">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-500 text-sm text-center p-1">{data.error}</div>;
 
@@ -341,20 +357,9 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
 
    const chartData = data.data || [];
    const { unit } = data;
-   const { chartType, colorMode, colorPalette, singleColor, gradientStart, gradientEnd } = widget.config;
+   const { chartType } = widget.config;
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
    const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
-
-   const colors = React.useMemo(() => {
-      const count = Math.max(chartData.length, 1);
-      if (colorMode === 'single') {
-         return Array(count).fill(singleColor || '#3b82f6');
-      } else if (colorMode === 'gradient') {
-         return generateGradient(gradientStart || '#3b82f6', gradientEnd || '#ef4444', count);
-      } else {
-         return getChartColors(count, colorPalette || 'default');
-      }
-   }, [chartData.length, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
 
    if (chartType === 'radial') {
       return (

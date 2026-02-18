@@ -314,7 +314,7 @@ const parsePeriodHeader = (header: string): { periodId: string; periodName: stri
  */
 export const convertImportToBudgetLines = (
   importData: BudgetImportData,
-  _chartOfAccountsId: string
+  _chartOfAccountsId?: string
 ): BudgetLine[] => {
   const lines: BudgetLine[] = [];
 
