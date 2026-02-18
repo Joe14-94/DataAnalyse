@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Edit2, ArrowLeft, Plus, Calendar, Download, Upload, FileText, Trash2, X, AlertCircle } from 'lucide-react';
+import { Edit2, ArrowLeft, Plus, Calendar, Download, Upload, FileText, Trash2 } from 'lucide-react';
 import { Budget, BudgetVersion, ChartOfAccounts, FiscalCalendar } from '../../types';
 
 interface BudgetEditorProps {

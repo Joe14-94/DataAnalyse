@@ -1,9 +1,9 @@
 
 import React, { useMemo, useState, useRef } from 'react';
-import { X, PieChart as PieIcon, BarChart3, LineChart, LayoutGrid, Info, Download, FileSpreadsheet, FileText, Image as ImageIcon, Plus, ChevronDown } from 'lucide-react';
+import { X, PieChart as BarChart3, Download, FileSpreadsheet, FileText, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as ReLineChart, Line,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart as ReLine, Line,
   Treemap, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   LabelList
 } from 'recharts';
@@ -12,7 +12,7 @@ import { Button } from '../ui/Button';
 import { useData } from '../../context/DataContext';
 import { exportView } from '../../utils';
 import * as XLSX from 'xlsx';
-import { getChartColors, generateGradient, getChartTypeConfig } from '../../logic/pivotToChart';
+import { getChartColors, generateGradient } from '../../logic/pivotToChart';
 import { TreemapContent } from '../ui/TreemapContent';
 
 interface QuickChartModalProps {
@@ -68,7 +68,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
       group.size = group.value;
     });
 
-    let data = Array.from(groups.values());
+    const data = Array.from(groups.values());
 
 
     return data;
@@ -297,7 +297,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
 
                 if (chartType === 'line') {
                    return (
-                      <ReLineChart data={chartData} margin={margin}>
+                      <ReLine data={chartData} margin={margin}>
                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} angle={-45} textAnchor="end" height={80} interval={0} />
                          <YAxis stroke="#94a3b8" fontSize={10} />
@@ -312,7 +312,7 @@ export const QuickChartModal: React.FC<QuickChartModalProps> = ({ isOpen, onClos
                          ) : (
                             <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={3} dot={{ r: 4, fill: colors[0], stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                          )}
-                      </ReLineChart>
+                      </ReLine>
                    );
                 }
 

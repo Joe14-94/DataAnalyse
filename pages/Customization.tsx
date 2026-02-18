@@ -2,26 +2,35 @@ import React from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Trash2, Image as ImageIcon, Palette, UploadCloud, AlertCircle, CheckCircle2, Check, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
+import { Trash2, Image as ImageIcon, Palette, UploadCloud, AlertCircle, Check, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { validateLogoUri, notify } from '../utils/common';
+import { useConfirm } from '../hooks/useConfirm';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export const Customization: React.FC = () => {
   const { companyLogo, updateCompanyLogo } = useData();
   const { uiPrefs, updateUIPrefs, resetUIPrefs } = useSettings();
+  const { confirm, ...confirmProps } = useConfirm();
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
           // Validation de taille (1Mo max)
           if (file.size > 1024 * 1024) { 
-              alert("Le fichier est trop volumineux. La taille maximum est de 1 Mo.");
+              notify.error("Le fichier est trop volumineux", "La taille maximum est de 1 Mo.");
               return;
           }
 
           const reader = new FileReader();
           reader.onload = (ev) => {
               if (ev.target?.result) {
-                  updateCompanyLogo(ev.target.result as string);
+                  const validated = validateLogoUri(ev.target.result as string);
+                  if (validated) {
+                      updateCompanyLogo(validated);
+                  } else {
+                      notify.error("Le format du fichier image n'est pas supporté ou est invalide.");
+                  }
               }
           };
           reader.readAsDataURL(file);
@@ -30,14 +39,25 @@ export const Customization: React.FC = () => {
       e.target.value = '';
   };
 
-  const handleRemoveLogo = () => {
-      if (window.confirm("Voulez-vous vraiment supprimer le logo et revenir à l'affichage par défaut ?")) {
+  const handleRemoveLogo = async () => {
+      const ok = await confirm({
+          title: 'Supprimer le logo',
+          message: "Voulez-vous vraiment supprimer le logo et revenir à l'affichage par défaut ?",
+          variant: 'danger'
+      });
+      if (ok) {
           updateCompanyLogo(undefined);
       }
   };
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
+       <ConfirmDialog
+           isOpen={confirmProps.isOpen}
+           onClose={confirmProps.handleCancel}
+           onConfirm={confirmProps.handleConfirm}
+           {...confirmProps.options}
+       />
        <div className="w-full space-y-6 pb-12">
          
          <div className="flex items-center gap-3 mb-6">

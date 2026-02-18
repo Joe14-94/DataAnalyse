@@ -1,9 +1,11 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, ArrowUp, ArrowDown, Palette, Pencil, RotateCcw } from 'lucide-react';
+import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, Calendar, Filter, Table2, Layers, Calculator, GripVertical, X, Palette, Pencil, RotateCcw } from 'lucide-react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { useConfirm } from '../../hooks/useConfirm';
 import {
-   PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig,
-   AggregationType, DateGrouping, TemporalComparisonConfig, PivotMetric,
+   PivotSourceConfig, Dataset, FilterRule, ImportBatch,
+   DateGrouping, PivotMetric,
    CalculatedField
 } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
@@ -22,24 +24,13 @@ interface PivotSidePanelProps {
    isDataSourcesPanelCollapsed: boolean;
    setIsDataSourcesPanelCollapsed: (v: boolean) => void;
    isTemporalMode: boolean;
-   isTemporalConfigPanelCollapsed: boolean;
-   setIsTemporalConfigPanelCollapsed: (v: boolean) => void;
    setIsTemporalSourceModalOpen: (v: boolean) => void;
-   temporalConfig: TemporalComparisonConfig | null;
-   setTemporalConfig: (c: TemporalComparisonConfig | null) => void;
    rowFields: string[];
-   setRowFields: (f: string[]) => void;
    colFields: string[];
-   setColFields: (f: string[]) => void;
    valField: string;
-   handleValFieldChange: (f: string) => void;
    setValField: (f: string) => void;
-   aggType: AggregationType;
-   setAggType: (t: AggregationType) => void;
    metrics: PivotMetric[];
    setMetrics: (m: PivotMetric[]) => void;
-   valFormatting: Partial<FieldConfig>;
-   setValFormatting: (f: Partial<FieldConfig>) => void;
    filters: FilterRule[];
    setFilters: (f: FilterRule[]) => void;
    isFieldsPanelCollapsed: boolean;
@@ -48,7 +39,6 @@ interface PivotSidePanelProps {
    expandedSections: Record<string, boolean>;
    toggleSection: (id: string) => void;
    usedFields: Set<string>;
-   allAvailableFields: string[];
    primaryDataset: Dataset | null;
    colGrouping: DateGrouping;
    setColGrouping: (g: DateGrouping) => void;
@@ -136,6 +126,7 @@ const FieldChip: React.FC<{
 };
 
 export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
+   const { confirm, ...confirmProps } = useConfirm();
    const [fieldsZoneHeight, setFieldsZoneHeight] = useState(240);
    const [dropZonesHeight, setDropZonesHeight] = useState<number | null>(null);
    const [fieldSearchTerm, setFieldSearchTerm] = useState('');
@@ -143,6 +134,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
    const isResizingDropZones = useRef(false);
    const panelRef = useRef<HTMLDivElement>(null);
    const dropZonesRef = useRef<HTMLDivElement>(null);
+
+   const mouseUpRef = useRef<(() => void) | null>(null);
 
    const handleMouseMove = useCallback((e: MouseEvent) => {
       if (!panelRef.current) return;
@@ -164,23 +157,37 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isResizing.current = false;
       isResizingDropZones.current = false;
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+
+      if (mouseUpRef.current) {
+         document.removeEventListener('mouseup', mouseUpRef.current);
+      }
+
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
    }, [handleMouseMove]);
 
-   const handleMouseDown = (e: React.MouseEvent) => {
+   useEffect(() => {
+      mouseUpRef.current = handleMouseUp;
+   }, [handleMouseUp]);
+
+   const handleMouseDown = () => {
       isResizing.current = true;
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.addEventListener('mouseup', mouseUpRef.current);
+      }
+
       document.body.style.cursor = 'row-resize';
       document.body.style.userSelect = 'none';
    };
 
-   const handleDropZonesMouseDown = (e: React.MouseEvent) => {
+   const handleDropZonesMouseDown = () => {
       isResizingDropZones.current = true;
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.addEventListener('mouseup', mouseUpRef.current);
+      }
+
       document.body.style.cursor = 'row-resize';
       document.body.style.userSelect = 'none';
    };
@@ -195,12 +202,12 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
    const {
       sources, datasets, datasetBatches, selectedBatchId, setSelectedBatchId, startAddSource, removeSource,
-      isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed,
-      setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
-      rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField,
-      aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
+      isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode,
+      setIsTemporalSourceModalOpen,
+      rowFields, colFields, valField, setValField,
+      metrics, setMetrics, filters, setFilters,
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
-      allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
+      primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
       handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal,
       removeCalculatedField, openEditCalcModal, handleReset
@@ -208,6 +215,12 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
    return (
       <div ref={panelRef} className="w-72 flex-shrink-0 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
+         <ConfirmDialog
+             isOpen={confirmProps.isOpen}
+             onClose={confirmProps.handleCancel}
+             onConfirm={confirmProps.handleConfirm}
+             {...confirmProps.options}
+         />
          {/* 1. DATA SOURCES STACK */}
          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[40px]" style={{ maxHeight: isDataSourcesPanelCollapsed ? '40px' : '220px' }}>
             <div className="p-2 bg-gradient-to-r from-brand-50 to-indigo-50 border-b border-brand-200">
@@ -340,9 +353,13 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                           isCalculated={!!calcField}
                                           onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
                                           onDelete={calcField && removeCalculatedField ? () => {
-                                             if (confirm(`Supprimer le champ calculé "${f}" ?`)) {
-                                                removeCalculatedField(calcField.id);
-                                             }
+                                             confirm({
+                                                title: 'Supprimer le champ calculé',
+                                                message: `Supprimer le champ calculé "${f}" ?`,
+                                                variant: 'danger'
+                                             }).then(ok => {
+                                                if (ok) removeCalculatedField?.(f);
+                                             });
                                           } : undefined}
                                        />
                                     );
@@ -547,8 +564,13 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                   Mise en forme
                </button>
                <button
-                  onClick={() => {
-                     if (confirm("Réinitialiser toute la configuration du TCD ?")) {
+                     onClick={async () => {
+                        const ok = await confirm({
+                           title: 'Réinitialiser le TCD',
+                           message: "Réinitialiser toute la configuration du TCD ?",
+                           variant: 'warning'
+                        });
+                        if (ok) {
                         handleReset();
                      }
                   }}

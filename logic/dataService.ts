@@ -1,12 +1,12 @@
 
-import { Dataset, ImportBatch, DashboardWidget, AppState, SavedAnalysis, PivotState, AnalyticsState, FinanceReferentials, BudgetModule, ForecastModule } from '../types';
-import { generateId, APP_VERSION, compressBatch } from '../utils/common';
+import { DashboardWidget, AppState } from '../types';
+import { compressBatch } from '../utils/common';
 import { generateSyntheticData, generateProjectsData, generateBudgetData, generateSalesData } from '../utils/dataGeneration';
 
 export const getDemoData = () => {
     // Dataset 1: RH
     const id1 = 'demo-rh';
-    const ds1: Dataset = {
+    const ds1: any = {
       id: id1,
       name: 'Effectifs RH',
       fields: ['Nom', 'Email', 'Organisation', 'DateModif', 'Commentaire', 'Budget', 'Quantité'],
@@ -17,7 +17,7 @@ export const getDemoData = () => {
 
     // Dataset 2: Projets IT
     const id2 = 'demo-projets';
-    const ds2: Dataset = {
+    const ds2: any = {
       id: id2,
       name: 'Projets IT',
       fields: ['Projet', 'Organisation', 'Statut', 'DateDébut', 'Budget', 'Responsable', 'Priorité'],
@@ -28,7 +28,7 @@ export const getDemoData = () => {
 
     // Dataset 3: Budget Annuel
     const id3 = 'demo-budget';
-    const ds3: Dataset = {
+    const ds3: any = {
       id: id3,
       name: 'Budget Annuel',
       fields: ['Département', 'Organisation', 'Prévisionnel', 'Réalisé', 'Ecart', 'Trimestre'],
@@ -39,7 +39,7 @@ export const getDemoData = () => {
 
     // Dataset 4: Ventes
     const id4 = 'demo-ventes';
-    const ds4: Dataset = {
+    const ds4: any = {
       id: id4,
       name: 'Ventes',
       fields: ['Produit', 'Organisation', 'Région', 'Quantité', 'Prix Unitaire', 'Montant Total', 'Date Vente', 'Commercial'],

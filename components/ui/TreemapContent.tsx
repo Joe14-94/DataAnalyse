@@ -2,12 +2,12 @@
 import React from 'react';
 
 interface TreemapContentProps {
-   x: number;
-   y: number;
-   width: number;
-   height: number;
-   name: string;
-   index: number;
+   x?: number;
+   y?: number;
+   width?: number;
+   height?: number;
+   name?: string;
+   index?: number;
    value?: number;
    colors: string[];
    fontSize?: number;
@@ -17,21 +17,20 @@ interface TreemapContentProps {
    path?: string[];
 }
 
-export const TreemapContent: React.FC<any> = (props) => {
+export const TreemapContent: React.FC<TreemapContentProps> = (props) => {
    const { x, y, width, height, name, index, colors, fontSize = 10, depth = 0, fill, onClick, path } = props;
 
    // Si pas de dimensions valides, ne rien afficher
-   if (!width || !height || width <= 0 || height <= 0) {
+   if (x === undefined || y === undefined || !width || !height || width <= 0 || height <= 0) {
       return null;
    }
 
    const displayName = name || 'Sans nom';
 
    // Couleur: utiliser fill du node si disponible (mode hierarchique), sinon palette
-   const rectFill = fill || colors[index % colors.length];
+   const rectFill = fill || colors[(index || 0) % colors.length];
 
    // Style adapte a la profondeur
-   const isParent = depth === 0 && props.children;
    const strokeWidth = depth === 0 ? 2 : 1;
    const textFontSize = depth === 0 ? Math.min(fontSize + 2, 14) : fontSize;
    const fontWeight = depth === 0 ? 'bold' : 'normal';

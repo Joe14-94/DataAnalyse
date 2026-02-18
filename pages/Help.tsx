@@ -2,10 +2,7 @@ import React from 'react';
 import {
   HelpCircle,
   Database,
-  BarChart3,
   Table as TableIcon,
-  Settings,
-  FileJson,
   LayoutDashboard,
   Filter,
   ArrowRightLeft,
@@ -15,7 +12,6 @@ import {
   FileBarChart,
   History,
   PencilLine,
-  Search,
   Zap,
   CheckCircle2,
   ChevronRight,

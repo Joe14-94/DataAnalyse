@@ -129,7 +129,6 @@ const StandardPivotRow = React.memo<PivotGridRowProps>(({
                return null;
             }
 
-            const isLastKey = cIdx === row.level;
             return (
                <td key={cIdx} className="px-2 py-1 text-xs text-slate-700 border-r border-slate-200 whitespace-nowrap overflow-hidden truncate sticky left-0 z-20 bg-white cursor-pointer hover:bg-brand-50 transition-colors"
                   style={{ width, minWidth: width, maxWidth: width, left: `${left}px`, ...headerStyle }}
