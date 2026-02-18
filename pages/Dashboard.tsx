@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
 import { X } from 'lucide-react';
 import { DashboardWidget } from '../types';
-import { useNavigate } from 'react-router-dom';
 
 import { WidgetCard } from '../components/dashboard/WidgetCard';
 import { WidgetDisplay } from '../components/dashboard/WidgetDisplay';
@@ -36,7 +35,6 @@ export const Dashboard: React.FC = () => {
       style: { borderColor: 'border-slate-200', borderWidth: '1' },
       config: { metric: 'count' }
    });
-   const navigate = useNavigate();
    const { handleExportImage: exportImage, handleExportCSV: exportCSV } = useExport();
 
    // D&D State
@@ -198,7 +196,6 @@ export const Dashboard: React.FC = () => {
                setIsEditMode={setIsEditMode}
                openNewWidget={openNewWidget}
                handlePresentationMode={handlePresentationMode}
-               navigate={navigate}
                onShareDashboard={() => setShowShareModal(true)}
                canShare={isO365Authenticated && dashboardWidgets.length > 0}
             />
