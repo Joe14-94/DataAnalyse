@@ -646,7 +646,7 @@ export const transformPivotToHierarchicalTreemap = (
 /**
  * Formate le label d'une ligne TCD pour le graphique
  */
-const formatRowLabel = (row: PivotRow, config: PivotConfig): string => {
+const formatRowLabel = (row: PivotRow, _config: PivotConfig): string => {
   if (row.label) return row.label;
 
   if (row.keys.length === 1) {

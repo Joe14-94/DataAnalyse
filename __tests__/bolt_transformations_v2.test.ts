@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { applyPivot, applySplit, applyMerge } from '../utils/transformations';
-import { DataRow, ETLAggregationType } from '../types';
+import { DataRow } from '../types';
 
 describe('Baseline tests for ETL transformations', () => {
   const data: DataRow[] = [
@@ -52,7 +52,6 @@ describe('Baseline tests for ETL transformations', () => {
             { id: '2', group: 'G', val: 'Actual First' },
             { id: '3', group: 'G', val: 'Last' },
         ];
-        const result = applyPivot(dataWithNulls, 'group', 'group', 'val', 'first');
         // Wait, pivot uses the same column as the group in this case?
         // Let's use a different column for pivot.
         const result2 = applyPivot(dataWithNulls, 'id', 'group', 'val', 'first');

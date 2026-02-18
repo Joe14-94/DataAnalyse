@@ -225,7 +225,7 @@ describe('Précision et Arrondis', () => {
   });
 
   it('devrait gérer les grands nombres', () => {
-    const large = 999999999.123456789;
+    const large = 999999999.123456;
     const result = parseSmartNumber(String(large));
     expect(result).toBeCloseTo(large, 2);
   });

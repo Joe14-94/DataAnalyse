@@ -16,7 +16,6 @@ export const DataExplorer: React.FC = () => {
         batches,
         currentDatasetId,
         processedRows,
-        displayFields,
         allColumns,
         distributionData,
         historyData,
