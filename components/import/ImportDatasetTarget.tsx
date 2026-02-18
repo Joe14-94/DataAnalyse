@@ -26,10 +26,6 @@ export const ImportDatasetTarget: React.FC<ImportDatasetTargetProps> = ({
 }) => {
     const selectedDS = datasets.find(d => d.id === targetDatasetId);
 
-    // Simple check for structure changes could be passed as prop if needed,
-    // but here we just render the conflict resolution if it's not a new dataset
-    const hasStructureChanges = targetDatasetId !== 'NEW'; // Simplified for component
-
     return (
         <div className="space-y-6">
             <Card className="p-6 border-brand-200 bg-brand-50">

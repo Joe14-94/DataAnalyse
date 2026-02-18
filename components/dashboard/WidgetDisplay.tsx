@@ -2,7 +2,7 @@ import React from 'react';
 import {
    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
    Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList
+   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap
 } from 'recharts';
 import { TrendingUp, Link as LinkIcon } from 'lucide-react';
 import { DashboardWidget } from '../../types';
@@ -40,25 +40,39 @@ interface WidgetDisplayProps {
 
 const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data }) => {
    const { setDashboardFilter } = useWidgets();
+
+   // Standard chart data and config - HOISTED to follow Rules of Hooks
+   const chartDataRaw = data?.data || [];
+   const { chartType: configChartType, colorMode, colorPalette, singleColor, gradientStart, gradientEnd } = widget.config;
+
+   const memoizedColors = React.useMemo(() => {
+      const count = Math.max(chartDataRaw.length, 1);
+      if (colorMode === 'single') {
+         return Array(count).fill(singleColor || '#3b82f6');
+      } else if (colorMode === 'gradient') {
+         return generateGradient(gradientStart || '#3b82f6', gradientEnd || '#ef4444', count);
+      } else {
+         return getChartColors(count, colorPalette || 'default');
+      }
+   }, [chartDataRaw.length, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+
    if (!data) return <div className="flex items-center justify-center h-full text-slate-400 text-sm">Chargement...</div>;
    if (data.error) return <div className="flex items-center justify-center h-full text-red-500 text-sm text-center p-1">{data.error}</div>;
 
-   // NOUVEAU : Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
+   // 1. Gestion des widgets de graphiques TCD (Pivot) ou Sélectifs
    if ((widget.config.pivotChart || data.isSelective) && widget.type === 'chart') {
-      const { colors = CHART_COLORS, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
+      const { colors: dataColors, data: chartData, unit, seriesName, sunburstData, hierarchicalData } = data;
       const chartType = widget.config.pivotChart ? widget.config.pivotChart.chartType : widget.config.chartType;
+      const colors = dataColors || memoizedColors || CHART_COLORS;
 
-      // Pour Sunburst et Treemap, les données sont dans sunburstData/hierarchicalData, pas chartData
       const hasHierarchicalData = chartType === 'sunburst' ? sunburstData : chartType === 'treemap' ? hierarchicalData : null;
 
       if (!chartData || chartData.length === 0) {
-         // Si c'est un graphique hiérarchique, vérifier les données hiérarchiques au lieu de chartData
          if (!hasHierarchicalData) {
             return <div className="flex items-center justify-center h-full text-slate-400 italic">Aucune donnée</div>;
          }
       }
 
-      // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
       const seriesKeys = Array.from(new Set((chartData || []).flatMap((d: any) =>
          Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')
       ))) as string[];
@@ -254,6 +268,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       }
    }
 
+   // 2. Gestion des rapports
    if (widget.type === 'report') {
       const items = (data as any).items || [];
       return (
@@ -274,6 +289,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       );
    }
 
+   // 3. Gestion du texte
    if (widget.type === 'text') {
       const style = widget.config.textStyle || {};
       const align = style.align || 'left';
@@ -287,6 +303,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       if (widget.config.dimension && e.activePayload[0].payload.name) setDashboardFilter(widget.config.dimension, e.activePayload[0].payload.name);
    };
 
+   // 4. Gestion des KPI
    if (widget.type === 'kpi') {
       const { current, trend, progress, target, unit } = data;
       const isPositive = (trend || 0) >= 0;
@@ -320,6 +337,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       );
    }
 
+   // 5. Gestion des listes
    if (widget.type === 'list') {
       const { current = [], max = 1, unit } = data;
       return (
@@ -339,22 +357,13 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       );
    }
 
+   // 6. Gestion des graphiques standard
    const chartData = data.data || [];
    const { unit } = data;
-   const { chartType, colorMode, colorPalette, singleColor, gradientStart, gradientEnd } = widget.config;
+   const chartType = configChartType;
    const tooltipFormatter = (val: any) => [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
    const tooltipStyle = { backgroundColor: '#ffffff', color: '#1e293b', borderRadius: '6px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' };
-
-   const colors = React.useMemo(() => {
-      const count = Math.max(chartData.length, 1);
-      if (colorMode === 'single') {
-         return Array(count).fill(singleColor || '#3b82f6');
-      } else if (colorMode === 'gradient') {
-         return generateGradient(gradientStart || '#3b82f6', gradientEnd || '#ef4444', count);
-      } else {
-         return getChartColors(count, colorPalette || 'default');
-      }
-   }, [chartData.length, colorMode, colorPalette, singleColor, gradientStart, gradientEnd]);
+   const currentColors = memoizedColors || CHART_COLORS;
 
    if (chartType === 'radial') {
       return (
@@ -362,7 +371,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
             <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="100%" barSize={10} data={chartData}>
                <RadialBar background dataKey="value" cornerRadius={10} onClick={handleChartClick} className="cursor-pointer">
                   {chartData.map((_entry: any, index: number) => (
-                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                     <Cell key={`cell-${index}`} fill={currentColors[index % currentColors.length]} />
                   ))}
                </RadialBar>
                <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ fontSize: '10px' }} align="right" />
@@ -388,7 +397,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                   className="cursor-pointer"
                >
                   {chartData.map((_entry: any, index: number) => (
-                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                     <Cell key={`cell-${index}`} fill={currentColors[index % currentColors.length]} />
                   ))}
                </Pie>
                <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
@@ -405,7 +414,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
                <YAxis fontSize={10} stroke="#94a3b8" />
                <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-               <Line type="monotone" dataKey="value" stroke={colors[0]} strokeWidth={2} dot={{ r: 2 }} />
+               <Line type="monotone" dataKey="value" stroke={currentColors[0]} strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
          </ResponsiveContainer>
       );
@@ -419,7 +428,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
                <YAxis fontSize={10} stroke="#94a3b8" />
                <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
-               <Area type="monotone" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.3} strokeWidth={2} />
+               <Area type="monotone" dataKey="value" stroke={currentColors[0]} fill={currentColors[0]} fillOpacity={0.3} strokeWidth={2} />
             </AreaChart>
          </ResponsiveContainer>
       );
@@ -433,7 +442,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
                <PolarRadiusAxis tick={{ fontSize: 10 }} />
                <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
-               <Radar name="Valeur" dataKey="value" stroke={colors[0]} fill={colors[0]} fillOpacity={0.6} />
+               <Radar name="Valeur" dataKey="value" stroke={currentColors[0]} fill={currentColors[0]} fillOpacity={0.6} />
             </RadarChart>
          </ResponsiveContainer>
       );
@@ -446,7 +455,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                data={chartData}
                dataKey="value"
                stroke="#fff"
-               content={<TreemapContent colors={colors} />}
+               content={<TreemapContent colors={currentColors} />}
             />
          </ResponsiveContainer>
       );
@@ -461,7 +470,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
             <YAxis type={isVertical ? 'category' : 'number'} dataKey={isVertical ? 'name' : undefined} fontSize={10} stroke="#94a3b8" width={isVertical ? 80 : 30} />
             <Tooltip formatter={tooltipFormatter} cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
             <Bar dataKey="value" radius={isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0]} className="cursor-pointer">
-               {chartData.map((_entry: any, index: number) => <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />)}
+               {chartData.map((_entry: any, index: number) => <Cell key={`cell-${index}`} fill={currentColors[index % currentColors.length]} />)}
             </Bar>
          </BarChart>
       </ResponsiveContainer>

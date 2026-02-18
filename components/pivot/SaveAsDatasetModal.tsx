@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Database, X, AlertCircle } from 'lucide-react';
+import { Database, AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 

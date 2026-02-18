@@ -4,8 +4,8 @@ import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, 
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useConfirm } from '../../hooks/useConfirm';
 import {
-   PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig,
-   AggregationType, DateGrouping, TemporalComparisonConfig, PivotMetric,
+   PivotSourceConfig, Dataset, FilterRule, ImportBatch,
+   DateGrouping, PivotMetric,
    CalculatedField
 } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
@@ -24,24 +24,13 @@ interface PivotSidePanelProps {
    isDataSourcesPanelCollapsed: boolean;
    setIsDataSourcesPanelCollapsed: (v: boolean) => void;
    isTemporalMode: boolean;
-   isTemporalConfigPanelCollapsed: boolean;
-   setIsTemporalConfigPanelCollapsed: (v: boolean) => void;
    setIsTemporalSourceModalOpen: (v: boolean) => void;
-   temporalConfig: TemporalComparisonConfig | null;
-   setTemporalConfig: (c: TemporalComparisonConfig | null) => void;
    rowFields: string[];
-   setRowFields: (f: string[]) => void;
    colFields: string[];
-   setColFields: (f: string[]) => void;
    valField: string;
-   handleValFieldChange: (f: string) => void;
    setValField: (f: string) => void;
-   aggType: AggregationType;
-   setAggType: (t: AggregationType) => void;
    metrics: PivotMetric[];
    setMetrics: (m: PivotMetric[]) => void;
-   valFormatting: Partial<FieldConfig>;
-   setValFormatting: (f: Partial<FieldConfig>) => void;
    filters: FilterRule[];
    setFilters: (f: FilterRule[]) => void;
    isFieldsPanelCollapsed: boolean;
@@ -50,7 +39,6 @@ interface PivotSidePanelProps {
    expandedSections: Record<string, boolean>;
    toggleSection: (id: string) => void;
    usedFields: Set<string>;
-   allAvailableFields: string[];
    primaryDataset: Dataset | null;
    colGrouping: DateGrouping;
    setColGrouping: (g: DateGrouping) => void;
@@ -147,6 +135,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
    const panelRef = useRef<HTMLDivElement>(null);
    const dropZonesRef = useRef<HTMLDivElement>(null);
 
+   const mouseUpRef = useRef<(() => void) | null>(null);
+
    const handleMouseMove = useCallback((e: MouseEvent) => {
       if (!panelRef.current) return;
       const rect = panelRef.current.getBoundingClientRect();
@@ -167,23 +157,37 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isResizing.current = false;
       isResizingDropZones.current = false;
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+
+      if (mouseUpRef.current) {
+         document.removeEventListener('mouseup', mouseUpRef.current);
+      }
+
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
    }, [handleMouseMove]);
 
-   const handleMouseDown = (e: React.MouseEvent) => {
+   useEffect(() => {
+      mouseUpRef.current = handleMouseUp;
+   }, [handleMouseUp]);
+
+   const handleMouseDown = () => {
       isResizing.current = true;
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.addEventListener('mouseup', mouseUpRef.current);
+      }
+
       document.body.style.cursor = 'row-resize';
       document.body.style.userSelect = 'none';
    };
 
-   const handleDropZonesMouseDown = (e: React.MouseEvent) => {
+   const handleDropZonesMouseDown = () => {
       isResizingDropZones.current = true;
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.addEventListener('mouseup', mouseUpRef.current);
+      }
+
       document.body.style.cursor = 'row-resize';
       document.body.style.userSelect = 'none';
    };
@@ -198,12 +202,12 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
    const {
       sources, datasets, datasetBatches, selectedBatchId, setSelectedBatchId, startAddSource, removeSource,
-      isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed,
-      setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
-      rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField,
-      aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
+      isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode,
+      setIsTemporalSourceModalOpen,
+      rowFields, colFields, valField, setValField,
+      metrics, setMetrics, filters, setFilters,
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
-      allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
+      primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
       handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal,
       removeCalculatedField, openEditCalcModal, handleReset

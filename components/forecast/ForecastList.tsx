@@ -2,7 +2,6 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { TrendingUp, Plus, Calendar, Eye, Edit2, Trash2, RefreshCw } from 'lucide-react';
-import { ForecastLine } from '../../types';
 import { notify } from '../../utils/common';
 import { useConfirm } from '../../hooks/useConfirm';
 import { ConfirmDialog } from '../ui/ConfirmDialog';

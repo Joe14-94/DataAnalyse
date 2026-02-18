@@ -294,7 +294,7 @@ export const useBudgetLogic = () => {
                 throw new Error('Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv');
             }
 
-            const newLines = convertImportToBudgetLines(importData, selectedBudget.chartOfAccountsId);
+            const newLines = convertImportToBudgetLines(importData);
 
             if (newLines.length === 0) {
                 throw new Error('Aucune ligne budgétaire trouvée dans le fichier');

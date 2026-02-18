@@ -2,7 +2,7 @@
  * Account Templates for French PCG (Plan Comptable Général) and IFRS
  */
 
-import { Account, ChartOfAccounts, AccountNature, PLCategory } from '../types';
+import { Account, ChartOfAccounts } from '../types';
 
 // Helper to create properly typed account data
 type AccountData = Omit<Account, 'id' | 'createdAt'>;

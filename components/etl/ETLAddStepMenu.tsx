@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Filter, Table2, ArrowLeftRight, BarChart3, Settings,
-    Scissors, Merge, Copy, Plus, Workflow
+    Scissors, Merge, Copy, Plus
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TransformationType } from '../../types';
