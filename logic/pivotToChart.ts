@@ -221,7 +221,7 @@ export const transformPivotToChartData = (
   // Transformer en ChartDataPoint
   let chartData: ChartDataPoint[] = dataRows.map(row => {
     const dataPoint: ChartDataPoint = {
-      name: formatRowLabel(row, config)
+      name: formatRowLabel(row)
     };
 
     // Pour graphiques multi-séries : ajouter toutes les métriques
@@ -646,7 +646,7 @@ export const transformPivotToHierarchicalTreemap = (
 /**
  * Formate le label d'une ligne TCD pour le graphique
  */
-const formatRowLabel = (row: PivotRow, _config: PivotConfig): string => {
+const formatRowLabel = (row: PivotRow): string => {
   if (row.label) return row.label;
 
   if (row.keys.length === 1) {

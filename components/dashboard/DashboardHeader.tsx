@@ -3,20 +3,18 @@ import React from 'react';
 import { Layout, Maximize2, Plus, Check, Edit3, Share2 } from 'lucide-react';
 import { Heading, Text } from '../ui/Typography';
 import { Button } from '../ui/Button';
-import { Dataset } from '../../types';
 
 interface DashboardHeaderProps {
    isEditMode: boolean;
    setIsEditMode: (mode: boolean) => void;
    openNewWidget: () => void;
    handlePresentationMode: () => void;
-   navigate: (path: string) => void;
    onShareDashboard?: () => void; // Phase 1 - Partage collaboratif
    canShare?: boolean; // Si O365 activé et authentifié
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
-   isEditMode, setIsEditMode, openNewWidget, handlePresentationMode, navigate,
+   isEditMode, setIsEditMode, openNewWidget, handlePresentationMode,
    onShareDashboard, canShare = false
 }) => {
    return (

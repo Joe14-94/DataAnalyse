@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from 'react';
 
 // --- Treemap Content ---
 export const TreemapContent = (props: any) => {
