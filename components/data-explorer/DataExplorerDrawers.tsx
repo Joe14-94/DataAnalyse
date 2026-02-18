@@ -1,6 +1,7 @@
-import React from 'react';
-import { Palette, X, Plus, Trash2, ArrowRight, Link as LinkIcon, AlertTriangle, History, GitCommit, Columns, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Palette, X, Plus, Trash2, ArrowRight, Link as LinkIcon, AlertTriangle, History, GitCommit, Columns, ArrowUp, ArrowDown, Info, Search } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Checkbox } from '../ui/Checkbox';
 import { formatDateFr } from '../../utils';
 import { Dataset, ConditionalRule, DataRow } from '../../types';
 
@@ -108,6 +109,36 @@ interface VlookupDrawerProps {
 export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
     isOpen, onClose, vlookupConfig, setVlookupConfig, datasets, currentDataset, handleApplyVlookup
 }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const targetDataset = useMemo(() =>
+        datasets.find(d => d.id === vlookupConfig.targetDatasetId),
+    [datasets, vlookupConfig.targetDatasetId]);
+
+    const filteredFields = useMemo(() => {
+        if (!targetDataset) return [];
+        return targetDataset.fields.filter(f =>
+            f.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [targetDataset, searchTerm]);
+
+    const handleToggleAll = () => {
+        if (!targetDataset) return;
+        const allSelected = filteredFields.every(f => vlookupConfig.columnsToAdd.includes(f));
+        if (allSelected) {
+            setVlookupConfig({
+                ...vlookupConfig,
+                columnsToAdd: vlookupConfig.columnsToAdd.filter(f => !filteredFields.includes(f))
+            });
+        } else {
+            const newColumns = Array.from(new Set([...vlookupConfig.columnsToAdd, ...filteredFields]));
+            setVlookupConfig({
+                ...vlookupConfig,
+                columnsToAdd: newColumns
+            });
+        }
+    };
+
     if (!isOpen) return null;
     return (
         <>
@@ -180,28 +211,50 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
 
                     {vlookupConfig.secondaryKey && (
                         <>
-                            <div>
-                                <label className="block text-xs font-bold text-txt-secondary uppercase mb-ds-2">
-                                    4. Colonnes à récupérer
-                                </label>
-                                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-canvas p-ds-3 rounded border border-border-default">
-                                    {datasets.find(d => d.id === vlookupConfig.targetDatasetId)?.fields.map((f) => (
-                                        <label key={f} className="flex items-center gap-ds-2 cursor-pointer hover:bg-surface p-ds-2 rounded transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                checked={vlookupConfig.columnsToAdd.includes(f)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setVlookupConfig({ ...vlookupConfig, columnsToAdd: [...vlookupConfig.columnsToAdd, f] });
-                                                    } else {
-                                                        setVlookupConfig({ ...vlookupConfig, columnsToAdd: vlookupConfig.columnsToAdd.filter((c) => c !== f) });
-                                                    }
-                                                }}
-                                                className="rounded border-border-default text-brand-600 focus:ring-brand-500"
-                                            />
-                                            <span className="text-sm text-txt-secondary">{f}</span>
-                                        </label>
-                                    ))}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <label className="block text-xs font-bold text-txt-secondary uppercase">
+                                        4. Colonnes à récupérer
+                                    </label>
+                                    <button
+                                        onClick={handleToggleAll}
+                                        className="text-[10px] font-bold text-brand-600 hover:text-brand-700 uppercase tracking-tight"
+                                    >
+                                        {filteredFields.every(f => vlookupConfig.columnsToAdd.includes(f)) ? 'Tout décocher' : 'Tout cocher'}
+                                    </button>
+                                </div>
+                                <div className="relative group">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-txt-muted group-focus-within:text-brand-500 transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Rechercher une colonne..."
+                                        className="w-full pl-8 pr-3 py-1.5 text-xs border border-border-default rounded bg-canvas focus:ring-1 focus:ring-brand-500 outline-none"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar bg-canvas p-ds-2 rounded border border-border-default min-h-[100px]">
+                                    {filteredFields.length === 0 ? (
+                                        <div className="text-center py-8 text-xs text-txt-muted italic">
+                                            Aucune colonne trouvée
+                                        </div>
+                                    ) : (
+                                        filteredFields.map((f) => (
+                                            <div key={f} className="hover:bg-brand-50/50 p-1.5 rounded transition-colors">
+                                                <Checkbox
+                                                    label={f}
+                                                    checked={vlookupConfig.columnsToAdd.includes(f)}
+                                                    onChange={() => {
+                                                        if (vlookupConfig.columnsToAdd.includes(f)) {
+                                                            setVlookupConfig({ ...vlookupConfig, columnsToAdd: vlookupConfig.columnsToAdd.filter((c) => c !== f) });
+                                                        } else {
+                                                            setVlookupConfig({ ...vlookupConfig, columnsToAdd: [...vlookupConfig.columnsToAdd, f] });
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 

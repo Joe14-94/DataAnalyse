@@ -33,7 +33,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Recherche Globale** | Recherche plein texte optimisée (O(N)). | 2026-01-29 | Ajustement |
 | **Formatage Cond.** | Coloration des cellules selon des règles métiers. | Historique | Core |
 | **Copie Formule** | Bouton de copie rapide du résultat dans le modal de calcul. | 2026-02-18 | Ajustement |
-| **VLOOKUP Intégré** | Enrichissement d'un dataset par jointure avec un autre. | 2026-02-01 | Core |
+| **VLOOKUP Intégré** | Enrichissement d'un dataset par jointure avec un autre (recherche & bulk select). | 2026-02-15 | UX |
 | **Ordre des colonnes** | Pouvoir changer l'ordre des colonnes | Historique | Core
 | **Renommer une colonne** | Pouvoir renommer le libellé d'une colonne | Historique | Core 
 | **Changer le type de données** | Pouvoir changer le typage des données. Lors du passage d'un type Nombre à Date, calcul et affichage de l'information au fomat JJ/MM/AAAA | Historique | Core
@@ -132,6 +132,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-15** : Amélioration de l'UX du drawer VLOOKUP (ajout d'une barre de recherche de colonnes, bouton de sélection/désélection groupée et uniformisation des composants Checkbox).
 - **2026-02-13** : Audit technique senior (Architecture SPA) : Décomposition des hooks complexes (`usePivotExport`, `usePivotDrilldown`), harmonisation UTC des dates, optimisation des dédoublonnages (O(N)) et amélioration de l'accessibilité clavier dans le TCD.
 - **2026-02-15** : Optimisation de la performance des jointures ETL (`applyJoin`) via le hoisting des mappings de clés.
 - **2026-02-12** : Audit technique complet et optimisations (Sécurité ReDoS, Persistance beforeunload, Cache de calcul O(N) et Accessibilité ARIA).
