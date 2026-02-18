@@ -13,10 +13,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Cloud,
   CloudOff,
-  RefreshCw,
   Download,
   Upload,
-  Link2,
   Trash2,
   CheckCircle,
   AlertCircle,

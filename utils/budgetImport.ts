@@ -313,8 +313,7 @@ const parsePeriodHeader = (header: string): { periodId: string; periodName: stri
  * Convertit les données importées en lignes budgétaires
  */
 export const convertImportToBudgetLines = (
-  importData: BudgetImportData,
-  _chartOfAccountsId: string
+  importData: BudgetImportData
 ): BudgetLine[] => {
   const lines: BudgetLine[] = [];
 

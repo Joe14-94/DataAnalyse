@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 13-02-2026-01
-**Dernière mise à jour** : 13/02/2026
+**Version de référence** : 17-02-2026-01
+**Dernière mise à jour** : 17/02/2026
 
 ---
 
@@ -132,7 +132,9 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
-- **2026-02-15** : Mise en œuvre des actions P0/P1 du plan d'action : Sécurisation de l'import de logo (validation URI), renforcement de la CSP (hashes dynamiques), intégration d'un système de notifications moderne (`sonner`), et décomposition modulaire des pages complexes (ETL et Import).
+- **2026-02-17** : Sprint Finalisation Qualité : Nettoyage exhaustif du lint (zéro erreur), correction des circularités de dépendances, fiabilisation des types `any`, et conformité stricte au `react-hooks/rules-of-hooks`.
+- **2026-02-16** : Sprint UX & Architecture (P1) : Modularisation de la logique métier (`useETLPipelineLogic`, `useImportLogic`). Remplacement des alertes natives par un système de dialogue asynchrone (`ConfirmDialog`) et notifications `sonner`.
+- **2026-02-15** : Sprint Sécurité & Production (P0) : Durcissement de la CSP (retrait de `unsafe-inline`), validation sécurisée des logos (`validateLogoUri`), et automatisation de la synchronisation CSP/Headers pour le déploiement Cloudflare.
 - **2026-02-13** : Audit technique senior (Architecture SPA) : Décomposition des hooks complexes (`usePivotExport`, `usePivotDrilldown`), harmonisation UTC des dates, optimisation des dédoublonnages (O(N)) et amélioration de l'accessibilité clavier dans le TCD.
 - **2026-02-15** : Optimisation de la performance des jointures ETL (`applyJoin`) via le hoisting des mappings de clés.
 - **2026-02-12** : Audit technique complet et optimisations (Sécurité ReDoS, Persistance beforeunload, Cache de calcul O(N) et Accessibilité ARIA).

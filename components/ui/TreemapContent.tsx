@@ -31,7 +31,6 @@ export const TreemapContent: React.FC<any> = (props) => {
    const rectFill = fill || colors[index % colors.length];
 
    // Style adapte a la profondeur
-   const isParent = depth === 0 && props.children;
    const strokeWidth = depth === 0 ? 2 : 1;
    const textFontSize = depth === 0 ? Math.min(fontSize + 2, 14) : fontSize;
    const fontWeight = depth === 0 ? 'bold' : 'normal';

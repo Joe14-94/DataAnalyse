@@ -2,7 +2,7 @@ import React from 'react';
 import { useData } from '../context/DataContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Trash2, Image as ImageIcon, Palette, UploadCloud, AlertCircle, CheckCircle2, Check, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
+import { Trash2, Image as ImageIcon, Palette, UploadCloud, AlertCircle, Check, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { validateLogoUri, notify } from '../utils/common';
 import { useConfirm } from '../hooks/useConfirm';

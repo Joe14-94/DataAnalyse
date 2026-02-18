@@ -24,24 +24,13 @@ interface PivotSidePanelProps {
    isDataSourcesPanelCollapsed: boolean;
    setIsDataSourcesPanelCollapsed: (v: boolean) => void;
    isTemporalMode: boolean;
-   isTemporalConfigPanelCollapsed: boolean;
-   setIsTemporalConfigPanelCollapsed: (v: boolean) => void;
    setIsTemporalSourceModalOpen: (v: boolean) => void;
-   temporalConfig: TemporalComparisonConfig | null;
-   setTemporalConfig: (c: TemporalComparisonConfig | null) => void;
    rowFields: string[];
-   setRowFields: (f: string[]) => void;
    colFields: string[];
-   setColFields: (f: string[]) => void;
    valField: string;
-   handleValFieldChange: (f: string) => void;
    setValField: (f: string) => void;
-   aggType: AggregationType;
-   setAggType: (t: AggregationType) => void;
    metrics: PivotMetric[];
    setMetrics: (m: PivotMetric[]) => void;
-   valFormatting: Partial<FieldConfig>;
-   setValFormatting: (f: Partial<FieldConfig>) => void;
    filters: FilterRule[];
    setFilters: (f: FilterRule[]) => void;
    isFieldsPanelCollapsed: boolean;
@@ -50,7 +39,6 @@ interface PivotSidePanelProps {
    expandedSections: Record<string, boolean>;
    toggleSection: (id: string) => void;
    usedFields: Set<string>;
-   allAvailableFields: string[];
    primaryDataset: Dataset | null;
    colGrouping: DateGrouping;
    setColGrouping: (g: DateGrouping) => void;
@@ -167,24 +155,31 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isResizing.current = false;
       isResizingDropZones.current = false;
       document.removeEventListener('mousemove', handleMouseMove);
+
       document.removeEventListener('mouseup', handleMouseUp);
+
       document.body.style.cursor = '';
+
       document.body.style.userSelect = '';
    }, [handleMouseMove]);
 
-   const handleMouseDown = (e: React.MouseEvent) => {
+   const handleMouseDown = () => {
       isResizing.current = true;
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+
       document.body.style.cursor = 'row-resize';
+
       document.body.style.userSelect = 'none';
    };
 
-   const handleDropZonesMouseDown = (e: React.MouseEvent) => {
+   const handleDropZonesMouseDown = () => {
       isResizingDropZones.current = true;
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+
       document.body.style.cursor = 'row-resize';
+
       document.body.style.userSelect = 'none';
    };
 
@@ -198,12 +193,12 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
 
    const {
       sources, datasets, datasetBatches, selectedBatchId, setSelectedBatchId, startAddSource, removeSource,
-      isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed,
-      setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
-      rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField,
-      aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
+      isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode,
+      setIsTemporalSourceModalOpen,
+      rowFields, colFields, valField, setValField,
+      metrics, setMetrics, filters, setFilters,
       isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection, usedFields,
-      allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate,
+      primaryDataset, colGrouping, setColGrouping, isColFieldDate,
       showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
       handleDragStart, handleDragOver, handleDrop, removeField, draggedField, openCalcModal,
       removeCalculatedField, openEditCalcModal, handleReset

@@ -1,5 +1,5 @@
 
-import { parseSmartNumber, getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters, getValueForAggregation } from '../utils';
+import { getGroupedLabel, formatNumberValue, prepareFilters, applyPreparedFilters, getValueForAggregation } from '../utils';
 import { FieldConfig, Dataset, PivotConfig, PivotResult, PivotRow } from '../types';
 
 import { PivotMetric } from '../types/pivot';
