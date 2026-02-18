@@ -198,7 +198,6 @@ export const Dashboard: React.FC = () => {
                setIsEditMode={setIsEditMode}
                openNewWidget={openNewWidget}
                handlePresentationMode={handlePresentationMode}
-               navigate={navigate}
                onShareDashboard={() => setShowShareModal(true)}
                canShare={isO365Authenticated && dashboardWidgets.length > 0}
             />

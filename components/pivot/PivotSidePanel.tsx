@@ -4,8 +4,8 @@ import { Database, Plus, ChevronDown, ChevronRight as ChevronRightIcon, Trash2, 
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useConfirm } from '../../hooks/useConfirm';
 import {
-   PivotSourceConfig, Dataset, FilterRule, ImportBatch, FieldConfig,
-   AggregationType, DateGrouping, TemporalComparisonConfig, PivotMetric,
+   PivotSourceConfig, Dataset, FilterRule, ImportBatch,
+   DateGrouping, PivotMetric,
    CalculatedField
 } from '../../types';
 import { SOURCE_COLOR_CLASSES } from '../../utils/constants';
@@ -135,6 +135,8 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
    const panelRef = useRef<HTMLDivElement>(null);
    const dropZonesRef = useRef<HTMLDivElement>(null);
 
+   const mouseUpRef = useRef<(() => void) | null>(null);
+
    const handleMouseMove = useCallback((e: MouseEvent) => {
       if (!panelRef.current) return;
       const rect = panelRef.current.getBoundingClientRect();
@@ -156,30 +158,37 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
       isResizingDropZones.current = false;
       document.removeEventListener('mousemove', handleMouseMove);
 
-      document.removeEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.removeEventListener('mouseup', mouseUpRef.current);
+      }
 
       document.body.style.cursor = '';
-
       document.body.style.userSelect = '';
    }, [handleMouseMove]);
+
+   useEffect(() => {
+      mouseUpRef.current = handleMouseUp;
+   }, [handleMouseUp]);
 
    const handleMouseDown = () => {
       isResizing.current = true;
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.addEventListener('mouseup', mouseUpRef.current);
+      }
 
       document.body.style.cursor = 'row-resize';
-
       document.body.style.userSelect = 'none';
    };
 
    const handleDropZonesMouseDown = () => {
       isResizingDropZones.current = true;
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      if (mouseUpRef.current) {
+         document.addEventListener('mouseup', mouseUpRef.current);
+      }
 
       document.body.style.cursor = 'row-resize';
-
       document.body.style.userSelect = 'none';
    };
 

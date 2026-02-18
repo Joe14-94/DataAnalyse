@@ -1,4 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
+import { logger } from '../utils/common';
 import {
     Budget,
     BudgetVersion,
@@ -7,8 +8,6 @@ import {
     BudgetComment,
     BudgetNotification,
     BudgetModule,
-    BudgetStatus,
-    BudgetScenario,
     BudgetVersionComparison
 } from '../types';
 import { generateId } from '../utils';
@@ -387,7 +386,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({
         });
     };
 
-    const createBudgetFromTemplate = (templateId: string, name: string, fiscalYear: number): Budget | null => {
+    const createBudgetFromTemplate = (templateId: string, _name: string, _fiscalYear: number): Budget | null => {
         const template = templates.find(t => t.id === templateId);
         if (!template) return null;
 
@@ -453,12 +452,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({
     // --- IMPORT/EXPORT ---
     const exportBudgetToExcel = (budgetId: string, versionId: string) => {
         // To be implemented
-        console.log('Export budget to Excel:', budgetId, versionId);
+        logger.log('Export budget to Excel:', budgetId, versionId);
     };
 
     const importBudgetFromExcel = (budgetId: string, versionId: string, data: any) => {
         // To be implemented
-        console.log('Import budget from Excel:', budgetId, versionId, data);
+        logger.log('Import budget from Excel:', budgetId, versionId, data);
     };
 
     const value: BudgetContextType = {

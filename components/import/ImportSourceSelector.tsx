@@ -1,5 +1,5 @@
 import React from 'react';
-import { UploadCloud, Settings2, ArrowRight, FileSpreadsheet, FileText } from 'lucide-react';
+import { UploadCloud, Settings2, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 

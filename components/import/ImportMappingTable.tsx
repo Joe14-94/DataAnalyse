@@ -1,10 +1,9 @@
 import React from 'react';
 import {
     Trash2, FileSpreadsheet, FileText, Zap, Wand2,
-    ChevronLeft, ChevronRight, AlertTriangle
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { RawImportData, FieldConfig, Dataset } from '../../types';
 
 interface ImportMappingTableProps {

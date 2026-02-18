@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 17-02-2026-01
-**Dernière mise à jour** : 17/02/2026
+**Version de référence** : 18-02-2026-01
+**Dernière mise à jour** : 18/02/2026
 
 ---
 
@@ -132,6 +132,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-18** : Sprint Finalisation Qualité (Fixes) : Résolution de 55 erreurs de lint, suppression des imports/variables inutilisés, correction du TDZ dans le TCD, et validation du build TypeScript strict.
 - **2026-02-17** : Sprint Finalisation Qualité : Nettoyage exhaustif du lint (zéro erreur), correction des circularités de dépendances, fiabilisation des types `any`, et conformité stricte au `react-hooks/rules-of-hooks`.
 - **2026-02-16** : Sprint UX & Architecture (P1) : Modularisation de la logique métier (`useETLPipelineLogic`, `useImportLogic`). Remplacement des alertes natives par un système de dialogue asynchrone (`ConfirmDialog`) et notifications `sonner`.
 - **2026-02-15** : Sprint Sécurité & Production (P0) : Durcissement de la CSP (retrait de `unsafe-inline`), validation sécurisée des logos (`validateLogoUri`), et automatisation de la synchronisation CSP/Headers pour le déploiement Cloudflare.
