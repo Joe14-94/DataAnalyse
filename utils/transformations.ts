@@ -302,46 +302,6 @@ export const applyAggregate = (
   return result;
 };
 
-/**
- * Calcule une valeur agrégée
- * BOLT OPTIMIZATION: Optimized to single-pass and avoid intermediate array creation.
- */
-const calculateAggregation = (values: any[], operation: ETLAggregationType): any => {
-  const len = values.length;
-  if (len === 0) return null;
-
-  if (operation === 'count') return len;
-  if (operation === 'first') return values[0];
-  if (operation === 'last') return values[len - 1];
-
-  let sum = 0;
-  let count = 0;
-  let min = Infinity;
-  let max = -Infinity;
-  let hasNum = false;
-
-  for (let i = 0; i < len; i++) {
-    const val = values[i];
-    if (val === null || val === undefined || val === '') continue;
-
-    const num = Number(val);
-    if (!isNaN(num)) {
-      hasNum = true;
-      sum += num;
-      count++;
-      if (num < min) min = num;
-      if (num > max) max = num;
-    }
-  }
-
-  switch (operation) {
-    case 'sum': return hasNum ? sum : 0;
-    case 'avg': return count > 0 ? sum / count : null;
-    case 'min': return count > 0 ? min : null;
-    case 'max': return count > 0 ? max : null;
-    default: return null;
-  }
-};
 
 /**
  * Union de deux datasets
@@ -500,14 +460,16 @@ export const applySplit = (
   newColumns: string[],
   limit?: number
 ): DataRow[] => {
+  const newColsLen = newColumns.length;
   return data.map(row => {
     const value = String(row[column] || '');
     const parts = limit ? value.split(separator, limit) : value.split(separator);
 
     const newRow: DataRow = { ...row };
-    newColumns.forEach((colName, index) => {
-      newRow[colName] = parts[index] || '';
-    });
+    // BOLT OPTIMIZATION: Replace forEach with standard for loop to reduce iteration overhead per row.
+    for (let i = 0; i < newColsLen; i++) {
+      newRow[newColumns[i]] = parts[i] || '';
+    }
 
     return newRow;
   });
@@ -522,12 +484,18 @@ export const applyMerge = (
   newColumn: string,
   separator: string
 ): DataRow[] => {
+  const colLen = columns.length;
   return data.map(row => {
-    const values = columns.map(col => row[col] || '');
-    return {
-      ...row,
-      [newColumn]: values.join(separator)
-    };
+    // BOLT OPTIMIZATION: Use explicit string concatenation in a for loop to avoid intermediate array creation.
+    let mergedValue = '';
+    for (let i = 0; i < colLen; i++) {
+      if (i > 0) mergedValue += separator;
+      mergedValue += row[columns[i]] || '';
+    }
+
+    const newRow = { ...row };
+    newRow[newColumn] = mergedValue;
+    return newRow;
   });
 };
 
@@ -559,6 +527,8 @@ export const applyCalculate = (
 
 /**
  * Applique un Pivot sur les données
+ * BOLT OPTIMIZATION: Use a single-pass accumulator system instead of collecting all values in arrays.
+ * This significantly reduces memory pressure (O(Rows) -> O(Groups * Columns)) and avoids a second pass over all values.
  */
 export const applyPivot = (
   data: DataRow[],
@@ -569,29 +539,79 @@ export const applyPivot = (
 ): DataRow[] => {
   if (!index || !columns || !values) return data;
 
-  const pivotMap = new Map<string, Map<string, any[]>>();
+  const pivotMap = new Map<string, Map<string, any>>();
   const allColumns = new Set<string>();
+  const dataLen = data.length;
 
-  data.forEach(row => {
+  for (let i = 0; i < dataLen; i++) {
+    const row = data[i];
     const idxVal = String(row[index] ?? '(Vide)');
     const colVal = String(row[columns] ?? '(Vide)');
     const val = row[values];
 
     allColumns.add(colVal);
 
-    if (!pivotMap.has(idxVal)) pivotMap.set(idxVal, new Map());
-    const rowMap = pivotMap.get(idxVal)!;
-    if (!rowMap.has(colVal)) rowMap.set(colVal, []);
-    rowMap.get(colVal)!.push(val);
-  });
+    let rowMap = pivotMap.get(idxVal);
+    if (!rowMap) {
+      rowMap = new Map<string, any>();
+      pivotMap.set(idxVal, rowMap);
+    }
+
+    let acc = rowMap.get(colVal);
+    if (!acc) {
+      acc = {
+        sum: 0,
+        count: 0,
+        numCount: 0,
+        min: Infinity,
+        max: -Infinity,
+        first: val,
+        last: val,
+        hasNum: false
+      };
+      rowMap.set(colVal, acc);
+    } else {
+      acc.last = val;
+    }
+
+    acc.count++;
+
+    if (val !== null && val !== undefined && val !== '') {
+      const num = Number(val);
+      if (!isNaN(num)) {
+        acc.hasNum = true;
+        acc.sum += num;
+        acc.numCount++;
+        if (num < acc.min) acc.min = num;
+        if (num > acc.max) acc.max = num;
+      }
+    }
+  }
 
   const result: DataRow[] = [];
+  const colList = Array.from(allColumns);
+  const colLen = colList.length;
+
   pivotMap.forEach((rowMap, idxVal) => {
     const newRow: DataRow = { id: generateId(), [index]: idxVal };
-    allColumns.forEach(col => {
-      const vals = rowMap.get(col) || [];
-      newRow[col] = calculateAggregation(vals, aggFunc);
-    });
+    for (let j = 0; j < colLen; j++) {
+      const col = colList[j];
+      const acc = rowMap.get(col);
+
+      let finalVal: any = null;
+      if (acc) {
+        switch (aggFunc) {
+          case 'sum': finalVal = acc.hasNum ? acc.sum : 0; break;
+          case 'avg': finalVal = acc.numCount > 0 ? acc.sum / acc.numCount : null; break;
+          case 'count': finalVal = acc.count; break;
+          case 'min': finalVal = acc.numCount > 0 ? acc.min : null; break;
+          case 'max': finalVal = acc.numCount > 0 ? acc.max : null; break;
+          case 'first': finalVal = acc.first; break;
+          case 'last': finalVal = acc.last; break;
+        }
+      }
+      newRow[col] = finalVal;
+    }
     result.push(newRow);
   });
 

@@ -37,3 +37,7 @@
 ## 2026-02-23 - [Optimize ETL Transformations (Sort & Distinct)]
 **Learning:** Sorting 100k rows with multiple fields in a generic ETL tool is a bottleneck due to object destructuring and property access inside the comparator (O(N log N * M)). Hoisting field names and multipliers to specialized arrays (Int8Array) and adding a fast-path for single-field sorting significantly reduces overhead. For deduplication, using Array.join with a unique separator (\x1F) is safer and more consistent than loop-based string concatenation for composite keys.
 **Action:** Always hoist metadata and use fast-paths for common cases in O(N log N) operations like sorting. Use specialized TypedArrays when possible for metadata.
+
+## 2026-02-23 - [Optimize ETL Pivot with Single-Pass Accumulator]
+**Learning:** The `applyPivot` transformation was a major memory bottleneck because it collected all values in arrays before aggregation (O(N) memory). Implementing a single-pass accumulator system reduces memory pressure to O(Groups * Columns) and avoids a second pass over all values. Careful attention is needed to match legacy behavior for `first`/`last` (not skipping leading nulls) and `sum` (returning null for empty groups).
+**Action:** Always prefer single-pass accumulators for any grouping/pivoting operation on large datasets. Use standard for loops in hot paths to avoid higher-order function overhead.
