@@ -36,7 +36,6 @@ export const Dashboard: React.FC = () => {
       style: { borderColor: 'border-slate-200', borderWidth: '1' },
       config: { metric: 'count' }
    });
-   const navigate = useNavigate();
    const { handleExportImage: exportImage, handleExportCSV: exportCSV } = useExport();
 
    // D&D State
