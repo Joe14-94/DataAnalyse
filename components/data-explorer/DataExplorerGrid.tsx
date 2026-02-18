@@ -6,20 +6,15 @@ import { DataRow } from '../../types/common';
 
 interface DataExplorerGridProps {
     tableContainerRef: React.RefObject<HTMLDivElement>;
-    rowVirtualizer: {
-        getVirtualItems: () => any[];
-        getTotalSize: () => number;
-    };
-    colVirtualizer: {
-        getVirtualItems: () => any[];
-        getTotalSize: () => number;
-        measure: () => void;
-    };
+    rowVirtualizer: any;
+    colVirtualizer: any;
     processedRows: DataRow[];
+    displayFields: string[];
     allColumns: { key: string; width: number }[];
     currentDataset: Dataset;
     sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
     handleHeaderClick: (field: string) => void;
+    columnWidths: Record<string, number>;
     handleResizeStart: (e: React.MouseEvent, columnKey: string, currentWidth: number) => void;
     showColumnBorders: boolean;
     showFilters: boolean;
@@ -35,8 +30,8 @@ interface DataExplorerGridProps {
 }
 
 export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
-    tableContainerRef, rowVirtualizer, colVirtualizer, processedRows, allColumns, currentDataset,
-    sortConfig, handleHeaderClick, handleResizeStart,
+    tableContainerRef, rowVirtualizer, colVirtualizer, processedRows, displayFields, allColumns, currentDataset,
+    sortConfig, handleHeaderClick, columnWidths, handleResizeStart,
     showColumnBorders, showFilters, columnFilters, handleColumnFilterChange,
     isEditMode, pendingChanges, handleCellEdit, handleRowClick, handleDeleteRow,
     getCellStyle, selectedCol

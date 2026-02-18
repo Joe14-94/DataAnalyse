@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { usePivotLogic } from '../hooks/usePivotLogic';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { PivotResult } from '../types';
 
 import { PivotHeader } from '../components/pivot/PivotHeader';
@@ -22,12 +23,12 @@ import { SaveAsDatasetModal } from '../components/pivot/SaveAsDatasetModal';
 export const PivotTable: React.FC = () => {
     const {
         batches, datasets, savedAnalyses, primaryDataset, datasetBatches,
-        blendedRows, pivotData, temporalColTotals, temporalDeltaTotals, isCalculating, chartPivotData,
+        blendedRows, pivotData, temporalResults, temporalColTotals, temporalDeltaTotals, isCalculating, chartPivotData,
         filteredPivotRows, filteredTemporalResults,
         sources, setSources, selectedBatchId, setSelectedBatchId,
-        rowFields, colFields, valField, setValField,
-        colGrouping, setColGrouping, aggType, metrics, setMetrics,
-        valFormatting, filters, setFilters,
+        rowFields, setRowFields, colFields, setColFields, valField, setValField,
+        colGrouping, setColGrouping, aggType, setAggType, metrics, setMetrics,
+        valFormatting, setValFormatting, filters, setFilters,
         showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
         sortBy, setSortBy, sortOrder, setSortOrder, searchTerm, setSearchTerm,
         isSaving, setIsSaving, isEditMode, setIsEditMode, analysisName, setAnalysisName,
@@ -44,6 +45,7 @@ export const PivotTable: React.FC = () => {
         styleRules, setStyleRules, conditionalRules, setConditionalRules,
         collapsedRows, toggleRowExpansion, setAllExpansion,
         isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed,
+        isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed,
         isFieldsPanelCollapsed, setIsFieldsPanelCollapsed,
         drilldownData, setDrilldownData, isChartModalOpen, setIsChartModalOpen,
         draggedField, isTemporalMode, setIsTemporalMode,
@@ -51,7 +53,7 @@ export const PivotTable: React.FC = () => {
         parentRef, footerRef,
         rowVirtualizer, colVirtualizer, allDataColumns,
         allAvailableFields, usedFields, groupedFields, isColFieldDate,
-        handleDragStart, handleDrop, removeField,
+        handleValFieldChange, handleDragStart, handleDrop, removeField,
         handleExport, handleExportSpreadsheet, handleCellClick,
         handleTemporalDrilldown, handleLoadAnalysis, handleSaveCalculatedField,
         handleRemoveCalculatedField, handleSaveSpecificDashboard, handleSaveAnalysis,
@@ -82,10 +84,10 @@ export const PivotTable: React.FC = () => {
             <div className="flex flex-col xl:flex-row gap-2 flex-1 min-h-0">
                 <PivotSidePanel
                    {...{ sources, datasets, datasetBatches, selectedBatchId, setSelectedBatchId, startAddSource: () => setIsSourceModalOpen(true), removeSource: (id) => setSources(s => s.filter(x => x.id !== id)),
-                   isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, setIsTemporalSourceModalOpen,
-                   rowFields, colFields, valField, setValField, metrics, setMetrics, filters, setFilters,
+                   isDataSourcesPanelCollapsed, setIsDataSourcesPanelCollapsed, isTemporalMode, isTemporalConfigPanelCollapsed, setIsTemporalConfigPanelCollapsed, setIsTemporalSourceModalOpen, temporalConfig, setTemporalConfig,
+                   rowFields, setRowFields, colFields, setColFields, valField, handleValFieldChange, setValField, aggType, setAggType, metrics, setMetrics, valFormatting, setValFormatting, filters, setFilters,
                    isFieldsPanelCollapsed, setIsFieldsPanelCollapsed, groupedFields, expandedSections, toggleSection: (id) => setExpandedSections(p => ({ ...p, [id]: !p[id] })), usedFields,
-                   primaryDataset, colGrouping, setColGrouping, isColFieldDate, showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
+                   allAvailableFields, primaryDataset, colGrouping, setColGrouping, isColFieldDate, showSubtotals, setShowSubtotals, showTotalCol, setShowTotalCol, showVariations, setShowVariations,
                    handleDragStart, handleDragOver: (e) => e.preventDefault(), handleDrop, removeField, draggedField,
                    openCalcModal: () => { setEditingCalcField(null); setIsCalcModalOpen(true); },
                    removeCalculatedField: handleRemoveCalculatedField,

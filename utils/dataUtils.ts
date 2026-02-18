@@ -3,7 +3,7 @@ import { parseSmartNumber } from './numberUtils';
 import { parseDateValue, jsToExcelDate } from './dateUtils';
 
 // Updated version
-export const APP_VERSION = "18-02-2026-01";
+export const APP_VERSION = "15-02-2026-02";
 
 /**
  * Compresse un batch de données en format colonnaire pour économiser de l'espace
@@ -299,32 +299,9 @@ export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean 
 
 /**
  * Valide qu'un logo est sécurisé (data URL ou blob)
- * Accepte uniquement : data:image/png, data:image/jpeg, data:image/gif, data:image/svg+xml, data:image/webp, blob:
- */
-export const validateLogoUri = (uri: string | undefined): string | undefined => {
-  if (!uri) return undefined;
-
-  if (uri.startsWith('blob:')) return uri;
-
-  const allowedTypes = [
-    'data:image/png;base64,',
-    'data:image/jpeg;base64,',
-    'data:image/gif;base64,',
-    'data:image/svg+xml;base64,',
-    'data:image/webp;base64,',
-    'data:image/svg+xml,' // For non-base64 SVGs
-  ];
-
-  if (allowedTypes.some(prefix => uri.startsWith(prefix))) {
-    return uri;
-  }
-
-  return undefined;
-};
-
-/**
- * Version simplifiée pour compatibilité ascendante si nécessaire
  */
 export const getSafeLogo = (logo?: string): string => {
-  return validateLogoUri(logo) || '';
+  if (!logo) return '';
+  if (logo.startsWith('data:image/') || logo.startsWith('blob:')) return logo;
+  return '';
 };

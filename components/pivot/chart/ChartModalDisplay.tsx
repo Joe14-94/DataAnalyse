@@ -10,18 +10,13 @@ import { TreemapContent } from '../../ui/TreemapContent';
 import { SunburstD3 } from '../../charts/SunburstD3';
 import { formatChartValue } from '../../../logic/pivotToChart';
 import { formatDateFr } from '../../../utils';
-import { PivotConfig } from '../../../types';
 
 interface ChartModalDisplayProps {
-    selectedChartType: string;
+    selectedChartType: any;
     chartData: any[];
-    metadata: {
-        isMultiSeries?: boolean;
-        seriesNames?: string[];
-        [key: string]: any;
-    };
+    metadata: any;
     colors: string[];
-    pivotConfig: PivotConfig;
+    pivotConfig: any;
     sunburstData: any;
     d3HierarchyData: any;
     sunburstColors: string[];
@@ -49,13 +44,13 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
     };
 
-    const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+    const CustomTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || !payload.length) return null;
         const title = label || payload[0].payload.name || '';
         return (
             <div style={tooltipStyle}>
                 {title && <p className="font-semibold text-slate-800 mb-1">{title}</p>}
-                {payload.map((entry, index) => (
+                {payload.map((entry: any, index: number) => (
                     <p key={index} style={{ color: entry.color }} className="text-xs">
                         {entry.name === 'value' || entry.name === 'size' ? 'Valeur' : entry.name}: <span className="font-bold">{formatChartValue(entry.value, pivotConfig)}</span>
                     </p>
@@ -64,7 +59,7 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
         );
     };
 
-    const TreemapTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+    const TreemapTooltip = ({ active, payload }: any) => {
         if (!active || !payload || !payload.length) return null;
         const data = payload[0].payload;
         const path = data.path || (treemapDrillPath.length > 0 ? [...treemapDrillPath, data.name] : [data.name]);
@@ -104,14 +99,14 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                             <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 10 }} stroke="#94a3b8" />
                             <Tooltip content={<CustomTooltip />} />
                             {metadata.isMultiSeries || isStacked ? (
-                                (metadata.seriesNames || []).map((series: string, idx: number) => (
+                                metadata.seriesNames.map((series: string, idx: number) => (
                                     <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [0, 4, 4, 0] : 0}>
-                                        {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? formatChartValue(val as number, pivotConfig) : ''} style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none' }} />}
+                                        {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? formatChartValue(val, pivotConfig) : ''} style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none' }} />}
                                     </Bar>
                                 ))
                             ) : (
                                 <Bar dataKey="value" fill={colors[0]} radius={[0, 4, 4, 0]}>
-                                    {chartData.map((_entry: any, index: number) => (
+                                    {chartData.map((entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                                     ))}
                                 </Bar>
@@ -143,14 +138,14 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                             />
                             <Tooltip content={<CustomTooltip />} />
                             {metadata.isMultiSeries || isStacked ? (
-                                (metadata.seriesNames || []).map((series: string, idx: number) => (
+                                metadata.seriesNames.map((series: string, idx: number) => (
                                     <Bar key={series} dataKey={series} stackId={isStacked ? 'a' : undefined} fill={colors[idx % colors.length]} radius={!isStacked ? [4, 4, 0, 0] : 0}>
-                                        {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? formatChartValue(val as number, pivotConfig) : ''} style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none' }} />}
+                                        {isStacked && <LabelList dataKey={series} position="center" formatter={(val: any) => val !== 0 ? formatChartValue(val, pivotConfig) : ''} style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none' }} />}
                                     </Bar>
                                 ))
                             ) : (
                                 <Bar dataKey="value" fill={colors[0]} radius={[4, 4, 0, 0]}>
-                                    {chartData.map((_entry: any, index: number) => (
+                                    {chartData.map((entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                                     ))}
                                 </Bar>
@@ -178,8 +173,8 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                             {metadata.isMultiSeries ? (
                                 <>
                                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                                    {(metadata.seriesNames || []).map((series: string, idx: number) => (
-                                        <Line key={series} type="monotone" dataKey={series} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                                    {metadata.seriesNames.map((series: string, idx: number) => (
+                                        <Line key={series} type="monotone" dataKey={series} stroke={colors[idx]} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                                     ))}
                                 </>
                             ) : (
@@ -207,8 +202,8 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                             {metadata.isMultiSeries ? (
                                 <>
                                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                                    {(metadata.seriesNames || []).map((series: string, idx: number) => (
-                                        <Area key={series} type="monotone" dataKey={series} stackId={selectedChartType === 'stacked-area' ? 'a' : undefined} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.6} />
+                                    {metadata.seriesNames.map((series: string, idx: number) => (
+                                        <Area key={series} type="monotone" dataKey={series} stackId={selectedChartType === 'stacked-area' ? 'a' : undefined} stroke={colors[idx]} fill={colors[idx]} fillOpacity={0.6} />
                                     ))}
                                 </>
                             ) : (
@@ -229,7 +224,7 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                                     return `${n.length > 15 ? n.substring(0, 15) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
                                 }}
                             >
-                                {chartData.map((_entry: any, index: number) => (
+                                {chartData.map((entry: any, index: number) => (
                                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                                 ))}
                             </Pie>
@@ -249,8 +244,8 @@ export const ChartModalDisplay: React.FC<ChartModalDisplayProps> = ({
                             {metadata.isMultiSeries ? (
                                 <>
                                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                                    {(metadata.seriesNames || []).map((series: string, idx: number) => (
-                                        <Radar key={series} name={series} dataKey={series} stroke={colors[idx % colors.length]} fill={colors[idx % colors.length]} fillOpacity={0.6} />
+                                    {metadata.seriesNames.map((series: string, idx: number) => (
+                                        <Radar key={series} name={series} dataKey={series} stroke={colors[idx]} fill={colors[idx]} fillOpacity={0.6} />
                                     ))}
                                 </>
                             ) : (

@@ -58,17 +58,13 @@ export const db = {
         stateToSave = {
           ...data,
           batches: (data.batches as any[]).map(b => {
-            const meta = { ...b };
-            delete (meta as any).rows;
-            delete (meta as any).f;
-            delete (meta as any).d;
-            delete (meta as any)._c;
+            const { rows, f, d, _c, ...meta } = b;
             return meta; // Only metadata stays in appState
           })
         };
       }
 
-      mainStore.put(stateToSave, KEY_NAME);
+      const request = mainStore.put(stateToSave, KEY_NAME);
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

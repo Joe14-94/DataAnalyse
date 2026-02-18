@@ -3,7 +3,7 @@ import React from 'react';
 import { Dataset, PivotResult, PivotStyleRule, ConditionalFormattingRule, PivotMetric, AggregationType } from '../../types';
 import { formatPivotOutput } from '../../logic/pivotEngine';
 import { getCellStyle } from '../../utils/pivotFormatting';
-import { formatPercentage } from '../../utils/temporalComparison';
+import { formatCurrency, formatPercentage } from '../../utils/temporalComparison';
 
 interface PivotFooterProps {
    pivotData: PivotResult | null;
@@ -80,20 +80,24 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
    }, [pivotData?.colHeaders, effectiveMetrics]);
 
    // BOLT OPTIMIZATION: Pre-calculate sticky positions and total width for row fields
-   const { totalRowFieldsWidth } = React.useMemo(() => {
+   const { rowFieldLeftPositions, totalRowFieldsWidth } = React.useMemo(() => {
+      const positions: number[] = [];
       let currentLeft = 0;
       (rowFields || []).forEach(f => {
+         positions.push(currentLeft);
          currentLeft += columnWidths[`row_${f}`] || 150;
       });
-      return { totalRowFieldsWidth: currentLeft };
+      return { rowFieldLeftPositions: positions, totalRowFieldsWidth: currentLeft };
    }, [rowFields, columnWidths]);
 
-   const { totalGroupFieldsWidth } = React.useMemo(() => {
+   const { groupFieldLeftPositions, totalGroupFieldsWidth } = React.useMemo(() => {
+      const positions: number[] = [];
       let currentLeft = 0;
       (rowFields || []).forEach(f => {
+         positions.push(currentLeft);
          currentLeft += columnWidths[`group_${f}`] || 150;
       });
-      return { totalGroupFieldsWidth: currentLeft };
+      return { groupFieldLeftPositions: positions, totalGroupFieldsWidth: currentLeft };
    }, [rowFields, columnWidths]);
 
    // BOLT OPTIMIZATION: Memoized metric label map for fast lookup
@@ -261,9 +265,7 @@ export const PivotFooter: React.FC<PivotFooterProps> = ({
                         }}
                         onClick={() => {
                            const value = typeof pivotData.grandTotal === 'object' ? Object.values(pivotData.grandTotal)[0] : pivotData.grandTotal;
-                           if (handleDrilldown) {
-                              handleDrilldown([], 'Total', value, '');
-                           }
+                           handleDrilldown && handleDrilldown([], 'Total', value, '');
                         }}
                      >
                         {typeof pivotData.grandTotal === 'object' ? (

@@ -3,7 +3,6 @@ import { X, Calendar, Database, Check } from 'lucide-react';
 import { Dataset, ImportBatch, TemporalComparisonSource } from '../../types';
 import { formatDateFr } from '../../utils';
 import { extractYearFromDate } from '../../utils/temporalComparison';
-import { notify } from '../../utils/common';
 
 interface TemporalSourceModalProps {
     isOpen: boolean;
@@ -83,7 +82,7 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
             setSelectedBatchIds(prev => prev.filter(id => id !== batchId));
         } else {
             if (selectedBatchIds.length >= 4) {
-                notify.warning('Maximum 4 sources');
+                alert('Maximum 4 sources');
                 return;
             }
 
@@ -100,12 +99,12 @@ export const TemporalSourceModal: React.FC<TemporalSourceModalProps> = ({
 
     const handleSave = () => {
         if (selectedBatchIds.length < 2) {
-            notify.warning('Sélectionnez au moins 2 sources à comparer');
+            alert('Sélectionnez au moins 2 sources à comparer');
             return;
         }
 
         if (!referenceId) {
-            notify.warning('Sélectionnez une source de référence');
+            alert('Sélectionnez une source de référence');
             return;
         }
 

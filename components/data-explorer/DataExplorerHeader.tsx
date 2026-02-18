@@ -157,7 +157,7 @@ export const DataExplorerHeader: React.FC<DataExplorerHeaderProps> = ({
                 )}
 
                 {activeBatchFilter && (
-                    <Button variant="danger" onClick={() => deleteBatch(activeBatchFilter)} className="whitespace-nowrap bg-red-100 text-red-700 border-red-200 hover:bg-red-200"><Trash2 className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Supprimer l'import</span></Button>
+                    <Button variant="danger" onClick={() => { if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cet import ? Cette action est irréversible.")) { deleteBatch(activeBatchFilter); clearFilters(); } }} className="whitespace-nowrap bg-red-100 text-red-700 border-red-200 hover:bg-red-200"><Trash2 className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Supprimer l'import</span></Button>
                 )}
 
                 <Button variant="outline" onClick={handleExportFullCSV} disabled={processedRowsCount === 0}><Download className="w-4 h-4 md:mr-2" /><span className="hidden md:inline">Export</span></Button>

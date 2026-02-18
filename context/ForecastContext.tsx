@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import {
     Forecast,
     ForecastVersion,
@@ -7,7 +7,10 @@ import {
     ForecastModule,
     ForecastReconciliationReport,
     ForecastVarianceAnalysis,
-    RollingForecastSnapshot
+    RollingForecastSnapshot,
+    ForecastType,
+    ForecastMethod,
+    ForecastStatus
 } from '../types';
 import { generateId } from '../utils';
 

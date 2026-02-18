@@ -1,5 +1,6 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { Dataset, FieldConfig, CalculatedField } from '../types';
+import { generateId } from '../utils';
 
 interface DatasetContextType {
   datasets: Dataset[];

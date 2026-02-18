@@ -56,7 +56,7 @@ export const readTextFile = (file: File, encoding: 'auto' | 'UTF-8' | 'windows-1
           const decoder = new TextDecoder('utf-8', { fatal: true });
           const text = decoder.decode(buffer);
           resolve(text);
-        } catch {
+        } catch (err) {
           console.warn("Détection Auto : Echec UTF-8, bascule vers Windows-1252.");
           const decoder = new TextDecoder('windows-1252');
           resolve(decoder.decode(buffer));
@@ -132,7 +132,7 @@ export const mapDataToSchema = (
   mapping: Record<number, string | 'ignore'>
 ): DataRow[] => {
   const activeMappings = Object.entries(mapping)
-    .filter(([, fieldKey]) => fieldKey !== 'ignore')
+    .filter(([_, fieldKey]) => fieldKey !== 'ignore')
     .map(([colIndexStr, fieldKey]) => ({
       colIndex: parseInt(colIndexStr, 10),
       fieldKey: fieldKey as string

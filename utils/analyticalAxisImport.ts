@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { AxisValue } from '../types';
+import { AnalyticalAxis, AxisValue } from '../types';
 import { generateId } from '../utils';
 
 export interface AnalyticalAxisImportData {

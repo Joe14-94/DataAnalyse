@@ -420,42 +420,19 @@ export const applySort = (
   data: DataRow[],
   fields: { field: string; direction: 'asc' | 'desc' }[]
 ): DataRow[] => {
-  if (fields.length === 0) return [...data];
   const sorted = [...data];
-
-  // BOLT OPTIMIZATION: Fast path for single-field sorting to avoid loop and destructuring overhead.
-  if (fields.length === 1) {
-    const { field, direction } = fields[0];
-    const isAsc = direction === 'asc';
-    sorted.sort((a, b) => {
-      const aVal = a[field];
-      const bVal = b[field];
-
-      if (aVal < bVal) return isAsc ? -1 : 1;
-      if (aVal > bVal) return isAsc ? 1 : -1;
-      return 0;
-    });
-    return sorted;
-  }
-
-  // BOLT OPTIMIZATION: Hoist metadata to avoid repeated object access and destructuring inside the comparator.
-  const fieldsLen = fields.length;
-  const fieldNames = new Array(fieldsLen);
-  const multipliers = new Int8Array(fieldsLen);
-
-  for (let i = 0; i < fieldsLen; i++) {
-    fieldNames[i] = fields[i].field;
-    multipliers[i] = fields[i].direction === 'asc' ? 1 : -1;
-  }
-
   sorted.sort((a, b) => {
-    for (let i = 0; i < fieldsLen; i++) {
-      const field = fieldNames[i];
+    for (const { field, direction } of fields) {
       const aVal = a[field];
       const bVal = b[field];
 
-      if (aVal < bVal) return -1 * multipliers[i];
-      if (aVal > bVal) return 1 * multipliers[i];
+      let comparison = 0;
+      if (aVal < bVal) comparison = -1;
+      else if (aVal > bVal) comparison = 1;
+
+      if (comparison !== 0) {
+        return direction === 'asc' ? comparison : -comparison;
+      }
     }
     return 0;
   });
@@ -468,24 +445,21 @@ export const applySort = (
 export const applyDistinct = (data: DataRow[]): DataRow[] => {
   const seen = new Set<string>();
   const result: DataRow[] = [];
-  const len = data.length;
 
-  for (let i = 0; i < len; i++) {
-    const row = data[i];
-    // BOLT OPTIMIZATION: Use Array.join with ASCII Unit Separator for faster, safer key generation.
-    // Avoids slow string concatenation in a loop and handles potential separator collisions in data.
-    const values: unknown[] = [];
+  data.forEach(row => {
+    // BOLT OPTIMIZATION: Avoid JSON.stringify for distinct.
+    // We build a key from values. We use row.id if available.
+    let key = '';
     for (const k in row) {
       if (k === 'id') continue;
-      values.push(row[k] ?? '');
+      key += (row[k] ?? '') + '|';
     }
-    const key = values.join('\x1F');
 
     if (!seen.has(key)) {
       seen.add(key);
       result.push(row);
     }
-  }
+  });
 
   return result;
 };

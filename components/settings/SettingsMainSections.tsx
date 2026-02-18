@@ -2,6 +2,7 @@ import React from 'react';
 import { Stethoscope, CheckCircle2, XCircle, Layout as LayoutIcon, Table2, Database, Calendar, Edit2, Trash2, Check, X, History, WifiOff } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { formatDateFr } from '../../utils';
 
 interface DiagnosticsSectionProps {
     handleRunDiagnostics: () => void;

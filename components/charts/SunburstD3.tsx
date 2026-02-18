@@ -80,7 +80,7 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
     const tooltip = d3.select(tooltipRef.current);
 
     // Draw Arcs
-    svg.append("g")
+    const path = svg.append("g")
       .selectAll("path")
       .data(root.descendants().filter(d => d.depth))
       .join("path")

@@ -1,6 +1,7 @@
 import React from 'react';
 import { MousePointerClick, Palette } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { SpecificDashboardItem } from '../../types';
 
 interface SelectionOverlayProps {
     itemsCount: number;

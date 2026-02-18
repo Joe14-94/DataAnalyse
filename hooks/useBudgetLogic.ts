@@ -2,8 +2,6 @@ import { useReducer, useCallback, useRef, ChangeEvent } from 'react';
 import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { BudgetVersion } from '../types';
-import { notify } from '../utils/common';
-import { useConfirm } from './useConfirm';
 import {
     readBudgetExcelFile,
     readBudgetCSVFile,
@@ -15,7 +13,8 @@ import {
     readAnalyticalAxisExcelFile,
     readAnalyticalAxisCSVFile,
     convertImportToAxisValues,
-    exportAxisValuesToExcel
+    exportAxisValuesToExcel,
+    downloadAnalyticalAxisTemplate
 } from '../utils/analyticalAxisImport';
 
 export type BudgetTab = 'list' | 'editor' | 'comparison' | 'workflow' | 'templates' | 'referentials';
@@ -153,13 +152,11 @@ function budgetReducer(state: BudgetState, action: BudgetAction): BudgetState {
 
 export const useBudgetLogic = () => {
     const [state, dispatch] = useReducer(budgetReducer, initialState);
-    const confirmProps = useConfirm();
-    const { confirm } = confirmProps;
     const {
         budgets, templates,
-        addBudget, deleteBudget,
-        addVersion, updateVersion,
-        addLine, deleteLine, updateLineValue,
+        addBudget, updateBudget, deleteBudget,
+        addVersion, updateVersion, deleteVersion, setActiveVersion, duplicateVersion,
+        addLine, updateLine, deleteLine, updateLineValue,
         submitVersion, validateVersion, rejectVersion,
         lockBudget, unlockBudget,
         compareVersions,
@@ -263,17 +260,12 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'SET_EDITING_CELL', payload: { id: null, value: '' } });
     }, []);
 
-    const handleDeleteLine = useCallback(async (lineId: string) => {
+    const handleDeleteLine = useCallback((lineId: string) => {
         if (!state.selectedBudgetId || !state.selectedVersionId) return;
-        const ok = await confirm({
-            title: 'Supprimer la ligne',
-            message: 'Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?',
-            variant: 'danger'
-        });
-        if (ok) {
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?')) {
             deleteLine(state.selectedBudgetId, state.selectedVersionId, lineId);
         }
-    }, [state.selectedBudgetId, state.selectedVersionId, deleteLine, confirm]);
+    }, [state.selectedBudgetId, state.selectedVersionId, deleteLine]);
 
     const handleImportFile = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -294,7 +286,7 @@ export const useBudgetLogic = () => {
                 throw new Error('Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv');
             }
 
-            const newLines = convertImportToBudgetLines(importData);
+            const newLines = convertImportToBudgetLines(importData, selectedBudget.chartOfAccountsId);
 
             if (newLines.length === 0) {
                 throw new Error('Aucune ligne budgétaire trouvée dans le fichier');
@@ -308,7 +300,7 @@ export const useBudgetLogic = () => {
             }
 
             dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showImportModal', value: false } });
-            notify.success(`${newLines.length} ligne(s) budgétaire(s) importée(s) avec succès !`);
+            alert(`${newLines.length} ligne(s) budgétaire(s) importée(s) avec succès !`);
         } catch (error) {
             dispatch({ type: 'SET_IMPORT_ERROR', payload: error instanceof Error ? error.message : 'Erreur lors de l\'import' });
         } finally {
@@ -341,7 +333,7 @@ export const useBudgetLogic = () => {
 
     const handleCreateTemplate = useCallback(() => {
         if (!state.templateName.trim()) {
-            notify.warning('Veuillez saisir un nom pour le modèle');
+            alert('Veuillez saisir un nom pour le modèle');
             return;
         }
 
@@ -365,24 +357,19 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'RESET_TEMPLATE_FORM' });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showTemplateModal', value: false } });
 
-        notify.success('Modèle créé avec succès !');
+        alert('Modèle créé avec succès !');
     }, [state.templateName, state.templateDescription, state.templateCategory, state.templateSourceBudgetId, budgets, addTemplate]);
 
-    const handleDeleteTemplate = useCallback(async (templateId: string, templateName: string) => {
-        const ok = await confirm({
-            title: 'Supprimer le modèle',
-            message: `Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`,
-            variant: 'danger'
-        });
-        if (ok) {
+    const handleDeleteTemplate = useCallback((templateId: string, templateName: string) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le modèle "${templateName}" ?`)) {
             deleteTemplate(templateId);
         }
-    }, [deleteTemplate, confirm]);
+    }, [deleteTemplate]);
 
     const handleUseTemplate = useCallback((templateId: string) => {
         const template = templates.find(t => t.id === templateId);
         if (!template) {
-            notify.error('Modèle non trouvé');
+            alert('Modèle non trouvé');
             return;
         }
 
@@ -434,7 +421,7 @@ export const useBudgetLogic = () => {
                 dispatch({ type: 'SET_SELECTED_VERSION', payload: version.id });
                 dispatch({ type: 'SET_ACTIVE_TAB', payload: 'editor' });
 
-                notify.success(`Budget "${newBudgetName}" créé avec ${template.accountCodes.length} comptes !`);
+                alert(`Budget "${newBudgetName}" créé avec ${template.accountCodes.length} comptes !`);
             }
         }, 100);
     }, [templates, chartsOfAccounts, fiscalCalendars, addBudget, budgets, addLine]);
@@ -454,7 +441,7 @@ export const useBudgetLogic = () => {
         if (!state.editingTemplateId) return;
 
         if (!state.templateName.trim()) {
-            notify.warning('Veuillez saisir un nom pour le modèle');
+            alert('Veuillez saisir un nom pour le modèle');
             return;
         }
 
@@ -473,17 +460,17 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'RESET_TEMPLATE_FORM' });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showEditTemplateModal', value: false } });
 
-        notify.success('Modèle modifié avec succès !');
+        alert('Modèle modifié avec succès !');
     }, [state.editingTemplateId, state.templateName, state.templateDescription, state.templateCategory, templates, deleteTemplate, addTemplate]);
 
     const handleCreateAxis = useCallback(() => {
         if (!state.newAxisCode.trim() || !state.newAxisName.trim()) {
-            notify.warning('Veuillez saisir un code et un nom pour l\'axe');
+            alert('Veuillez saisir un code et un nom pour l\'axe');
             return;
         }
 
         if (analyticalAxes.some(axis => axis.code === state.newAxisCode.trim())) {
-            notify.error('Un axe avec ce code existe déjà');
+            alert('Un axe avec ce code existe déjà');
             return;
         }
 
@@ -499,7 +486,7 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'RESET_AXIS_FORM' });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showNewAxisModal', value: false } });
 
-        notify.success('Axe analytique créé avec succès !');
+        alert('Axe analytique créé avec succès !');
     }, [state.newAxisCode, state.newAxisName, state.newAxisMandatory, analyticalAxes, addAnalyticalAxis]);
 
     const handleAxisFileSelect = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
@@ -507,7 +494,7 @@ export const useBudgetLogic = () => {
         if (!file) return;
 
         if (!state.selectedAxisId) {
-            notify.warning('Veuillez sélectionner un axe analytique');
+            alert('Veuillez sélectionner un axe analytique');
             return;
         }
 
@@ -531,7 +518,7 @@ export const useBudgetLogic = () => {
 
             dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showAxisImportModal', value: false } });
             dispatch({ type: 'SET_AXIS_FIELD', payload: { field: 'selectedAxisId', value: '' } });
-            notify.success(`Import réussi ! ${newValues.length} valeur(s) importée(s).`);
+            alert(`Import réussi ! ${newValues.length} valeur(s) importée(s).`);
 
         } catch (error) {
             dispatch({ type: 'SET_AXIS_FIELD', payload: { field: 'axisImportError', value: error instanceof Error ? error.message : 'Erreur lors de l\'import' } });
@@ -549,23 +536,18 @@ export const useBudgetLogic = () => {
 
         const values = getAxisValues(axisId);
         if (values.length === 0) {
-            notify.info('Aucune valeur à exporter pour cet axe');
+            alert('Aucune valeur à exporter pour cet axe');
             return;
         }
 
         exportAxisValuesToExcel(values, axis.name);
     }, [analyticalAxes, getAxisValues]);
 
-    const handleDeleteAxisValue = useCallback(async (valueId: string, valueName: string) => {
-        const ok = await confirm({
-            title: 'Supprimer la valeur',
-            message: `Êtes-vous sûr de vouloir supprimer la valeur "${valueName}" ?`,
-            variant: 'danger'
-        });
-        if (ok) {
+    const handleDeleteAxisValue = useCallback((valueId: string, valueName: string) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer la valeur "${valueName}" ?`)) {
             deleteAxisValue(valueId);
         }
-    }, [deleteAxisValue, confirm]);
+    }, [deleteAxisValue]);
 
     return {
         state,
@@ -611,7 +593,6 @@ export const useBudgetLogic = () => {
             unlockBudget,
             deleteBudget,
             compareVersions
-        },
-        confirmProps
+        }
     };
 };

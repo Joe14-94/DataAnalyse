@@ -1,13 +1,14 @@
 
-import { logger } from "../utils/common";
-import { Dataset, ImportBatch, FilterRule } from '../types';
-import { parseSmartNumber } from '../utils';
-import { getChartColors, generateGradient } from './pivotToChart';
+import { DashboardWidget, Dataset, ImportBatch, FilterRule, PivotConfig } from '../types';
+import { parseSmartNumber, evaluateFormula, generateId } from '../utils';
+import { calculatePivotData } from './pivotEngine';
+import { transformPivotToChartData, transformPivotToTreemapData, getChartColors, generateGradient } from './pivotToChart';
+import { calculateTemporalComparison, detectDateColumn } from '../utils/temporalComparison';
 
 export const applyPivotFilters = (rows: any[], filters: FilterRule[] | undefined, dataset: Dataset) => {
    if (!filters || filters.length === 0) return rows;
 
-   logger.log('🔍 applyPivotFilters START:', {
+   console.log('🔍 applyPivotFilters START:', {
       totalRows: rows.length,
       filterCount: filters.length,
       filters: filters.map(f => ({ field: f.field, operator: f.operator, value: f.value })),
@@ -43,7 +44,7 @@ export const applyPivotFilters = (rows: any[], filters: FilterRule[] | undefined
       });
    });
 
-   logger.log('🔍 applyPivotFilters END:', {
+   console.log('🔍 applyPivotFilters END:', {
       filteredRows: filteredRows.length,
       removedRows: rows.length - filteredRows.length
    });

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { parseSmartNumber, evaluateFormula, detectColumnType, getGroupedLabel, mapDataToSchema } from '../utils';
-import { logger } from '../utils/common';
 
 describe('Parser de Formules Sécurisé', () => {
   it('devrait calculer des formules arithmétiques simples', () => {
@@ -208,7 +207,7 @@ describe('Mapping de Données (mapDataToSchema)', () => {
 
     expect(result).toHaveLength(rowCount);
     expect(result[0]['field-0']).toBe(true);
-    logger.log(`⏱️ mapDataToSchema (1000 rows, 10 cols): ${(end - start).toFixed(2)}ms`);
+    console.log(`⏱️ mapDataToSchema (1000 rows, 10 cols): ${(end - start).toFixed(2)}ms`);
   });
 });
 
@@ -225,7 +224,7 @@ describe('Précision et Arrondis', () => {
   });
 
   it('devrait gérer les grands nombres', () => {
-    const large = 99999999.12345678;
+    const large = 999999999.123456789;
     const result = parseSmartNumber(String(large));
     expect(result).toBeCloseTo(large, 2);
   });
