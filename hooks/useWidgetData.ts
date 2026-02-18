@@ -1,8 +1,7 @@
-import { logger } from "../utils/common";
 
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
-import { DashboardWidget, Dataset, PivotConfig } from '../types';
+import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
 import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { transformPivotToChartData, transformPivotToTreemapData, transformPivotToSunburstData, transformPivotToHierarchicalTreemap, getChartColors, generateGradient } from '../logic/pivotToChart';
@@ -78,7 +77,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
 
          // Enrichissement calculé si nécessaire
          let baseRows = targetBatch.rows;
-         logger.log('📊 BEFORE CALCULATED FIELDS:', {
+         console.log('📊 BEFORE CALCULATED FIELDS:', {
             rowCount: baseRows.length,
             hasCalculatedFields: !!dataset?.calculatedFields && dataset.calculatedFields.length > 0,
             calculatedFieldsCount: dataset?.calculatedFields?.length || 0,
@@ -95,14 +94,14 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
                return enriched;
             });
 
-            logger.log('📊 AFTER CALCULATED FIELDS:', {
+            console.log('📊 AFTER CALCULATED FIELDS:', {
                sampleRowAfter: baseRows[0],
                portefeuilleField: baseRows[0]?.['Portefeuille']
             });
          }
 
          // Appliquer les filtres du TCD
-         logger.log('📊 WIDGET FILTERS DEBUG:', {
+         console.log('📊 WIDGET FILTERS DEBUG:', {
             hasFilters: !!pc.filters && pc.filters.length > 0,
             filterCount: pc.filters?.length || 0,
             filters: pc.filters,
@@ -111,9 +110,9 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             datasetName: dataset?.name
          });
 
-         const workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
+         let workingRows = applyPivotFilters(baseRows, pc.filters, dataset);
 
-         logger.log('📊 WIDGET AFTER FILTERS:', {
+         console.log('📊 WIDGET AFTER FILTERS:', {
             workingRowsCount: workingRows.length,
             firstRow: workingRows[0],
             sampleFilteredOut: baseRows.find(r => !workingRows.includes(r))
@@ -284,7 +283,8 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             };
          }
 
-         const chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
+         let chartData;
+         chartData = transformPivotToChartData(pivotResult, fullPivotConfig, {
             chartType: pivotChart.chartType,
             hierarchyLevel: pivotChart.hierarchyLevel,
             limit: pivotChart.limit,
@@ -326,7 +326,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
       if (dsBatches.length === 0) return { error: 'Aucune donnée sur la période' };
 
       let targetBatch = dsBatches[dsBatches.length - 1];
-      const prevBatch = dsBatches.length > 1 ? dsBatches[dsBatches.length - 2] : null;
+      let prevBatch = dsBatches.length > 1 ? dsBatches[dsBatches.length - 2] : null;
 
       if (source.mode === 'specific' && source.batchId) {
          const specific = dsBatches.find(b => b.id === source.batchId);
@@ -394,7 +394,7 @@ export const useWidgetData = (widget: DashboardWidget, globalDateRange: { start:
             if (metric === 'count' || metric === 'distinct') counts[key] = (counts[key] || 0) + 1;
             else if (metric === 'sum' && valueField) counts[key] = (counts[key] || 0) + parseVal(row, valueField);
          });
-         const sorted = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, limit || 10);
+         let sorted = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, limit || 10);
          return { current: sorted, max: sorted.length > 0 ? sorted[0].value : 0, unit: currentUnit, colors: standardColors };
       }
 

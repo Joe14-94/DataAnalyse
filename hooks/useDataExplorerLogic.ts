@@ -2,8 +2,6 @@ import { useMemo, useEffect, useRef, useReducer } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
-import { useConfirm } from './useConfirm';
-import { notify } from '../utils/common';
 import {
     formatDateFr,
     evaluateFormula,
@@ -194,8 +192,6 @@ export function useDataExplorerLogic() {
     const location = useLocation();
     const navigate = useNavigate();
     const [state, dispatch] = useReducer(dataExplorerReducer, initialState);
-    const confirmProps = useConfirm();
-    const { confirm } = confirmProps;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const isInitializedRef = useRef<string | null>(null);
@@ -451,26 +447,16 @@ export function useDataExplorerLogic() {
         dispatch({ type: 'SET_SELECTED_COL', payload: state.renamingValue });
     };
 
-    const handleDeleteColumn = async () => {
+    const handleDeleteColumn = () => {
         if (!currentDataset || !state.selectedCol) return;
         const isCalculated = currentDataset.calculatedFields?.find(f => f.name === state.selectedCol);
         if (isCalculated) {
-            const ok = await confirm({
-                title: 'Supprimer le champ calculé',
-                message: `Supprimer le champ calculé "${state.selectedCol}" ?`,
-                variant: 'danger'
-            });
-            if (ok) {
+            if (window.confirm(`Supprimer le champ calculé "${state.selectedCol}" ?`)) {
                 removeCalculatedField(currentDataset.id, isCalculated.id);
                 dispatch({ type: 'SET_SELECTED_COL', payload: null });
             }
         } else {
-            const ok = await confirm({
-                title: 'Supprimer la colonne',
-                message: `ATTENTION : Supprimer la colonne "${state.selectedCol}" effacera définitivement cette donnée. Continuer ?`,
-                variant: 'danger'
-            });
-            if (ok) {
+            if (window.confirm(`ATTENTION : Supprimer la colonne "${state.selectedCol}" effacera définitivement cette donnée. Continuer ?`)) {
                 deleteDatasetField(currentDataset.id, state.selectedCol);
                 dispatch({ type: 'SET_SELECTED_COL', payload: null });
             }
@@ -480,7 +466,7 @@ export function useDataExplorerLogic() {
     const handleApplyVlookup = () => {
         const { vlookupConfig } = state;
         if (!currentDataset || !vlookupConfig.targetDatasetId || !vlookupConfig.primaryKey || !vlookupConfig.secondaryKey || vlookupConfig.columnsToAdd.length === 0 || !vlookupConfig.newColumnName.trim()) {
-            notify.warning("Veuillez remplir tous les champs requis");
+            alert("Veuillez remplir tous les champs requis");
             return;
         }
 
@@ -494,7 +480,7 @@ export function useDataExplorerLogic() {
         );
 
         if (!success) {
-            notify.error("Le dataset cible n'a pas de données");
+            alert("Le dataset cible n'a pas de données");
             return;
         }
 
@@ -503,7 +489,7 @@ export function useDataExplorerLogic() {
         dispatch({ type: 'SET_VLOOKUP_CONFIG', payload: initialState.vlookupConfig });
         dispatch({ type: 'SET_VLOOKUP_DRAWER_OPEN', payload: false });
 
-        notify.success(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
+        alert(`Colonne "${vlookupConfig.newColumnName}" ajoutée avec succès !`);
     };
 
     const handleDeleteRow = (row: DataRow, e: React.MouseEvent) => {
@@ -522,7 +508,7 @@ export function useDataExplorerLogic() {
     // --- Data Processing ---
     // BOLT OPTIMIZATION: Cache for row-level processing to avoid O(N) re-calculation of formulas
     // We use WeakMap with the original row reference to ensure perfect cache invalidation and no memory leaks.
-    const rowProcessCacheRef = useRef<WeakMap<object, DataRow>>(new WeakMap());
+    const rowProcessCacheRef = useRef<WeakMap<object, any>>(new WeakMap());
     const lastFormulasKeyRef = useRef<string>('');
 
     // BOLT OPTIMIZATION: Separate filtered batches to prevent rawExtendedRows from changing when unrelated datasets change
@@ -547,7 +533,7 @@ export function useDataExplorerLogic() {
             }
         }
         return result;
-    }, [currentDataset, currentDatasetBatches]);
+    }, [currentDataset?.id, currentDatasetBatches]);
 
     // 2. Full processed rows (Calculated Fields & Blending)
     const allRows = useMemo(() => {
@@ -615,7 +601,7 @@ export function useDataExplorerLogic() {
             rowProcessCacheRef.current.set(r._raw, extendedRow);
             return extendedRow;
         });
-    }, [rawExtendedRows, currentDataset, state.blendingConfig, datasets, batches, state]);
+    }, [rawExtendedRows, currentDataset?.calculatedFields, state.blendingConfig, datasets]);
 
     const displayFields = useMemo(() => {
         if (!currentDataset) return [];
@@ -630,7 +616,7 @@ export function useDataExplorerLogic() {
             }
         }
         return primFields;
-    }, [currentDataset, state, datasets]);
+    }, [currentDataset, state.blendingConfig, datasets]);
 
     const processedRows = useMemo(() => {
         if (!currentDataset) return [];
@@ -783,7 +769,7 @@ export function useDataExplorerLogic() {
 
         cols.push({ key: '_actions', width: 60 });
         return cols;
-    }, [displayFields, currentDataset, state]);
+    }, [displayFields, currentDataset, state.columnWidths]);
 
     const rowVirtualizer = useVirtualizer({
         count: processedRows.length,
@@ -918,7 +904,6 @@ export function useDataExplorerLogic() {
         deleteBatch,
         reorderDatasetFields,
         navigate,
-        getCellStyle,
-        confirmProps
+        getCellStyle
     };
 }

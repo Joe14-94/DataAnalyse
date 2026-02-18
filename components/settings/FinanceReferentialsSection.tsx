@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, FileText, GitBranch, CalendarDays, Users, Plus, Trash2, Check, X } from 'lucide-react';
+import { Building2, FileText, GitBranch, CalendarDays, Users, Plus, Edit2, Trash2, Check, X } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ChartOfAccounts, AnalyticalAxis, FiscalCalendar, MasterDataItem, MasterDataType } from '../../types/finance';

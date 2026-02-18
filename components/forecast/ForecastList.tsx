@@ -2,9 +2,7 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { TrendingUp, Plus, Calendar, Eye, Edit2, Trash2, RefreshCw } from 'lucide-react';
-import { notify } from '../../utils/common';
-import { useConfirm } from '../../hooks/useConfirm';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { ForecastLine } from '../../types';
 
 interface ForecastListProps {
     forecasts: any[];
@@ -23,16 +21,8 @@ export const ForecastList: React.FC<ForecastListProps> = ({
     onDeleteForecast,
     onCreateForecast
 }) => {
-    const { confirm, ...confirmProps } = useConfirm();
-
     return (
         <div className="space-y-6">
-            <ConfirmDialog
-                isOpen={confirmProps.isOpen}
-                onClose={confirmProps.handleCancel}
-                onConfirm={confirmProps.handleConfirm}
-                {...confirmProps.options}
-            />
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="border-l-4 border-l-brand-500">
@@ -70,20 +60,13 @@ export const ForecastList: React.FC<ForecastListProps> = ({
                         const year = new Date().getFullYear();
                         const defaultChart = chartsOfAccounts[0];
                         if (!defaultChart) {
-                            notify.warning('Veuillez d\'abord créer un plan comptable dans les paramètres.');
+                            alert('Veuillez d\'abord créer un plan comptable dans les paramètres.');
                             return;
                         }
                         const name = prompt('Nom du forecast:', `Forecast ${year}`);
                         if (name) {
-                            confirm({
-                                title: 'Type de Forecast',
-                                message: 'Voulez-vous activer le Rolling forecast (12 mois glissants) ?',
-                                confirmLabel: 'Oui, Rolling',
-                                cancelLabel: 'Non, Fixe',
-                                variant: 'info'
-                            }).then(isRolling => {
-                                onCreateForecast(name, 'monthly', year, defaultChart.id, isRolling);
-                            });
+                            const isRolling = window.confirm('Rolling forecast (12 mois glissants) ?');
+                            onCreateForecast(name, 'monthly', year, defaultChart.id, isRolling);
                         }
                     }}
                 >
@@ -109,20 +92,13 @@ export const ForecastList: React.FC<ForecastListProps> = ({
                                 const year = new Date().getFullYear();
                                 const defaultChart = chartsOfAccounts[0];
                                 if (!defaultChart) {
-                                    notify.warning('Veuillez d\'abord créer un plan comptable.');
+                                    alert('Veuillez d\'abord créer un plan comptable.');
                                     return;
                                 }
                                 const name = prompt('Nom du forecast:', `Forecast ${year}`);
                                 if (name) {
-                                    confirm({
-                                        title: 'Type de Forecast',
-                                        message: 'Activer le Rolling forecast ?',
-                                        confirmLabel: 'Activer',
-                                        cancelLabel: 'Laisser fixe',
-                                        variant: 'info'
-                                    }).then(isRolling => {
-                                        onCreateForecast(name, 'monthly', year, defaultChart.id, isRolling);
-                                    });
+                                    const isRolling = window.confirm('Rolling forecast ?');
+                                    onCreateForecast(name, 'monthly', year, defaultChart.id, isRolling);
                                 }
                             }}
                         >
@@ -206,13 +182,8 @@ export const ForecastList: React.FC<ForecastListProps> = ({
                                         variant="outline"
                                         size="sm"
                                         className="text-red-600 border-red-200"
-                                        onClick={async () => {
-                                            const ok = await confirm({
-                                                title: 'Supprimer le forecast',
-                                                message: `Supprimer "${forecast.name}" ?`,
-                                                variant: 'danger'
-                                            });
-                                            if (ok) {
+                                        onClick={() => {
+                                            if (window.confirm(`Supprimer "${forecast.name}" ?`)) {
                                                 onDeleteForecast(forecast.id);
                                             }
                                         }}

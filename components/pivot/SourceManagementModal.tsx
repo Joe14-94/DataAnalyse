@@ -2,8 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Database, Link as LinkIcon, Plus, Trash2, AlertCircle, Check } from 'lucide-react';
 import { generateId } from '../../utils';
 import { Modal } from '../ui/Modal';
-import { useConfirm } from '../../hooks/useConfirm';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface PivotSourceConfig {
     id: string;
@@ -47,7 +45,6 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
     primaryDataset,
     onSourcesChange
 }) => {
-    const { confirm, ...confirmProps } = useConfirm();
     const [localSources, setLocalSources] = useState<PivotSourceConfig[]>(sources);
     const [isAddingSource, setIsAddingSource] = useState(false);
     const [newSource, setNewSource] = useState<{
@@ -97,15 +94,10 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
         setNewSource({ targetId: '', key1: '', key2: '', joinType: 'left' });
     };
 
-    const handleRemoveSource = async (sourceId: string) => {
+    const handleRemoveSource = (sourceId: string) => {
         const source = localSources.find(s => s.id === sourceId);
         if (source?.isPrimary) {
-            const ok = await confirm({
-                title: 'Réinitialiser les sources',
-                message: "Supprimer la source principale réinitialisera tout. Continuer ?",
-                variant: 'danger'
-            });
-            if (ok) {
+            if (window.confirm("Supprimer la source principale réinitialisera tout. Continuer ?")) {
                 setLocalSources([]);
             }
         } else {
@@ -194,12 +186,6 @@ export const SourceManagementModal: React.FC<SourceManagementModalProps> = ({
                 </>
             }
         >
-            <ConfirmDialog
-                isOpen={confirmProps.isOpen}
-                onClose={confirmProps.handleCancel}
-                onConfirm={confirmProps.handleConfirm}
-                {...confirmProps.options}
-            />
             <div className="space-y-ds-4">
                 {/* Sources existantes */}
                 {localSources.length > 0 && (

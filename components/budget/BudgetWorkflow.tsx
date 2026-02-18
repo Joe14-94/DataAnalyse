@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Clock, CheckCircle, XCircle, FileText, Calendar, Users, Eye, Edit2, Upload, Lock } from 'lucide-react';
-import { Budget } from '../../types';
+import { Budget, BudgetVersion } from '../../types';
 
 interface BudgetWorkflowProps {
     budgets: Budget[];

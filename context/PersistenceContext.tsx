@@ -1,5 +1,5 @@
 
-import { createContext, useContext } from 'react';
+import React, { createContext, useContext } from 'react';
 import { AppState } from '../types';
 
 export interface PersistenceContextType {

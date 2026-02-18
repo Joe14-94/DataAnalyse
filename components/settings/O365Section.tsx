@@ -13,8 +13,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Cloud,
   CloudOff,
+  RefreshCw,
   Download,
   Upload,
+  Link2,
   Trash2,
   CheckCircle,
   AlertCircle,
@@ -24,9 +26,6 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Modal } from '../ui/Modal';
 import { o365Service } from '../../services/o365Service';
-import { logger, notify } from '../../utils/common';
-import { useConfirm } from '../../hooks/useConfirm';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { O365User, BackupMetadata } from '../../types/o365';
 import type { AppState } from '../../types';
 
@@ -39,7 +38,6 @@ export const O365Section: React.FC<O365SectionProps> = ({
   currentState,
   onRestoreBackup,
 }) => {
-  const { confirm, ...confirmProps } = useConfirm();
   // État local
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<O365User | null>(null);
@@ -69,7 +67,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
         setCurrentUser(user);
       }
     } catch (err) {
-      logger.error('[O365Section] Check auth failed:', err);
+      console.error('[O365Section] Check auth failed:', err);
     }
   };
 
@@ -84,7 +82,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setIsAuthenticated(true);
     } catch (err: any) {
       setError(err.message || 'Échec de la connexion');
-      logger.error('[O365Section] Login failed:', err);
+      console.error('[O365Section] Login failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +100,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setBackups([]);
     } catch (err: any) {
       setError(err.message || 'Échec de la déconnexion');
-      logger.error('[O365Section] Logout failed:', err);
+      console.error('[O365Section] Logout failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -132,10 +130,10 @@ export const O365Section: React.FC<O365SectionProps> = ({
 
       await o365Service.saveBackupToOneDrive(filename, dataToBackup);
 
-      notify.success('Sauvegarde OneDrive réussie !');
+      alert('✅ Sauvegarde OneDrive réussie !');
     } catch (err: any) {
       setError(err.message || 'Échec de la sauvegarde');
-      logger.error('[O365Section] Save failed:', err);
+      console.error('[O365Section] Save failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -152,7 +150,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setShowBackupsModal(true);
     } catch (err: any) {
       setError(err.message || 'Échec du chargement de la liste');
-      logger.error('[O365Section] List backups failed:', err);
+      console.error('[O365Section] List backups failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -160,14 +158,13 @@ export const O365Section: React.FC<O365SectionProps> = ({
 
   // Restaurer un backup
   const handleRestoreBackup = async (backup: BackupMetadata) => {
-    const ok = await confirm({
-      title: 'Restaurer le backup',
-      message: `Voulez-vous vraiment restaurer le backup "${backup.name}" ?\n\nCela écrasera vos données actuelles.`,
-      variant: 'warning',
-      confirmLabel: 'Restaurer'
-    });
-
-    if (!ok) return;
+    if (
+      !confirm(
+        `Voulez-vous vraiment restaurer le backup "${backup.name}" ?\n\nCela écrasera vos données actuelles.`
+      )
+    ) {
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -176,11 +173,11 @@ export const O365Section: React.FC<O365SectionProps> = ({
       const data = await o365Service.loadBackupFromOneDrive(backup.id);
       onRestoreBackup(data);
       setShowBackupsModal(false);
-      notify.success('Restauration réussie !');
+      alert('✅ Restauration réussie ! La page va se recharger.');
       window.location.reload();
     } catch (err: any) {
       setError(err.message || 'Échec de la restauration');
-      logger.error('[O365Section] Restore failed:', err);
+      console.error('[O365Section] Restore failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -188,14 +185,9 @@ export const O365Section: React.FC<O365SectionProps> = ({
 
   // Supprimer un backup
   const handleDeleteBackup = async (backup: BackupMetadata) => {
-    const ok = await confirm({
-      title: 'Supprimer le backup',
-      message: `Supprimer définitivement "${backup.name}" de OneDrive ?`,
-      variant: 'danger',
-      confirmLabel: 'Supprimer'
-    });
-
-    if (!ok) return;
+    if (!confirm(`Supprimer définitivement "${backup.name}" de OneDrive ?`)) {
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -205,10 +197,10 @@ export const O365Section: React.FC<O365SectionProps> = ({
       // Rafraîchir la liste
       const updatedBackups = await o365Service.listBackups();
       setBackups(updatedBackups);
-      notify.success('Backup supprimé');
+      alert('✅ Backup supprimé');
     } catch (err: any) {
       setError(err.message || 'Échec de la suppression');
-      logger.error('[O365Section] Delete failed:', err);
+      console.error('[O365Section] Delete failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -262,12 +254,6 @@ export const O365Section: React.FC<O365SectionProps> = ({
 
   return (
     <>
-      <ConfirmDialog
-        isOpen={confirmProps.isOpen}
-        onClose={confirmProps.handleCancel}
-        onConfirm={confirmProps.handleConfirm}
-        {...confirmProps.options}
-      />
       <Card className="p-6">
         <div className="flex items-center gap-3 mb-4">
           <Cloud className="w-6 h-6 text-[#0078D4]" />

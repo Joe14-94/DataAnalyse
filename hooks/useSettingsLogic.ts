@@ -1,12 +1,10 @@
-import { useRef, useReducer } from 'react';
+import { useState, useRef, useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useSettings as useUISettings } from '../context/SettingsContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { runSelfDiagnostics } from '../utils';
-import { AppState, DiagnosticSuite, MasterDataType } from '../types';
-import { notify } from '../utils/common';
-import { useConfirm } from './useConfirm';
+import { AppState, DiagnosticSuite, CalculatedField, Dataset, MasterDataItem, MasterDataType } from '../types';
 
 type SettingsAction =
     | { type: 'SET_DIAG_RESULTS'; payload: DiagnosticSuite[] | null }
@@ -111,7 +109,6 @@ function settingsReducer(state: SettingsState, action: SettingsAction): Settings
 }
 
 export function useSettingsLogic() {
-    const { confirm, ...confirmProps } = useConfirm();
     const {
         getBackupJson,
         importBackup,
@@ -129,10 +126,11 @@ export function useSettingsLogic() {
         savedMappings
     } = useData();
 
-    const { uiPrefs } = useUISettings();
+    const { uiPrefs, updateUIPrefs, resetUIPrefs } = useUISettings();
 
     const {
         chartsOfAccounts,
+        addChartOfAccounts,
         setDefaultChartOfAccounts,
         deleteChartOfAccounts,
         updateChartOfAccounts,
@@ -184,7 +182,7 @@ export function useSettingsLogic() {
                         .then(m => m.o365Service.isSharePackage(content));
 
                     if (isSharePackage) {
-                        notify.info(`Import de contenu partagé détecté`, `Type: ${parsed.type} | Nom: ${parsed.name}`);
+                        alert(`📤 Import de contenu partagé détecté !\n\nType: ${parsed.type}\nNom: ${parsed.name}\nPartagé par: ${parsed.sharedBy}\nDate: ${new Date(parsed.sharedAt).toLocaleString('fr-FR')}\n\nLe contenu va être importé.`);
                         const shareContent = parsed.content;
                         dispatch({ type: 'SET_RESTORE_FILE_CONTENT', payload: JSON.stringify(shareContent) });
                         dispatch({ type: 'SET_RESTORE_AVAILABLE_DATA', payload: shareContent });
@@ -194,8 +192,8 @@ export function useSettingsLogic() {
                         dispatch({ type: 'SET_RESTORE_AVAILABLE_DATA', payload: parsed });
                         dispatch({ type: 'SET_BACKUP_MODAL_MODE', payload: 'restore' });
                     }
-                } catch {
-                    notify.error('Fichier invalide');
+                } catch (err) {
+                    alert('Fichier invalide');
                 }
             }
         };
@@ -207,11 +205,11 @@ export function useSettingsLogic() {
         if (!state.restoreFileContent) return;
         const success = await importBackup(state.restoreFileContent, keys);
         if (success) {
-            notify.success('Restauration effectuée avec succès !');
+            alert('Restauration effectuée avec succès !');
             dispatch({ type: 'SET_BACKUP_MODAL_MODE', payload: null });
             dispatch({ type: 'SET_RESTORE_FILE_CONTENT', payload: null });
         } else {
-            notify.error('Erreur lors de la restauration.');
+            alert('Erreur lors de la restauration.');
         }
     };
 
@@ -219,44 +217,28 @@ export function useSettingsLogic() {
         const jsonContent = JSON.stringify(data);
         const success = await importBackup(jsonContent, Object.keys(data) as (keyof AppState)[]);
         if (!success) {
-            notify.error('Erreur lors de la restauration depuis OneDrive.');
-        } else {
-            notify.success('Restauration depuis OneDrive effectuée !');
+            alert('Erreur lors de la restauration depuis OneDrive.');
         }
     };
 
-    const handleLoadDemo = async () => {
+    const handleLoadDemo = () => {
         if (batches.length > 0) {
-            const ok = await confirm({
-                title: 'Charger les données de test',
-                message: "Cette action va remplacer vos données actuelles par des données de test. Continuer ?",
-                variant: 'warning'
-            });
-            if (!ok) return;
+            if (!window.confirm("Cette action va remplacer vos données actuelles par des données de test. Continuer ?")) {
+                return;
+            }
         }
         loadDemoData();
         navigate('/');
     };
 
-    const handleReset = async () => {
-        const ok = await confirm({
-            title: 'Réinitialisation complète',
-            message: "ATTENTION : Cette action va effacer TOUTES les données de l'application localement. Êtes-vous sûr ?",
-            variant: 'danger',
-            confirmLabel: 'Tout effacer'
-        });
-        if (ok) {
+    const handleReset = () => {
+        if (window.confirm("ATTENTION : Cette action va effacer TOUTES les données de l'application localement. Êtes-vous sûr ?")) {
             clearAll();
         }
     };
 
-    const handleDeleteDataset = async (id: string, name: string) => {
-        const ok = await confirm({
-            title: 'Supprimer la typologie',
-            message: `Êtes-vous sûr de vouloir supprimer définitivement la typologie "${name}" et tout son historique d'imports ? Cette action est irréversible.`,
-            variant: 'danger'
-        });
-        if (ok) {
+    const handleDeleteDataset = (id: string, name: string) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement la typologie "${name}" et tout son historique d'imports ? Cette action est irréversible.`)) {
             deleteDataset(id);
         }
     };
@@ -287,29 +269,19 @@ export function useSettingsLogic() {
         }
     };
 
-    const handleDeleteAnalysis = async (id: string, name: string) => {
-        const ok = await confirm({
-            title: 'Supprimer l\'analyse',
-            message: `Êtes-vous sûr de vouloir supprimer définitivement l'analyse "${name}" ?`,
-            variant: 'danger'
-        });
-        if (ok) {
+    const handleDeleteAnalysis = (id: string, name: string) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'analyse "${name}" ?`)) {
             deleteAnalysis(id);
         }
     };
 
-    const handleDeleteChart = async (id: string, name: string) => {
+    const handleDeleteChart = (id: string, name: string) => {
         const chart = chartsOfAccounts.find(c => c.id === id);
         if (chart?.isDefault && chartsOfAccounts.length > 1) {
-            notify.warning('Impossible de supprimer le plan comptable par défaut');
+            alert('Impossible de supprimer le plan comptable par défaut. Veuillez d\'abord définir un autre plan comme par défaut.');
             return;
         }
-        const ok = await confirm({
-            title: 'Supprimer le plan comptable',
-            message: `Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`,
-            variant: 'danger'
-        });
-        if (ok) {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer le plan comptable "${name}" et tous ses comptes (${chart?.accounts.length} comptes) ? Cette action est irréversible.`)) {
             deleteChartOfAccounts(id);
         }
     };
@@ -324,7 +296,7 @@ export function useSettingsLogic() {
 
     const handleCreateAxis = () => {
         if (!state.axisForm.code || !state.axisForm.name) {
-            notify.warning('Veuillez remplir le code et le nom de l\'axe');
+            alert('Veuillez remplir le code et le nom de l\'axe');
             return;
         }
         addAnalyticalAxis({
@@ -341,7 +313,7 @@ export function useSettingsLogic() {
 
     const handleCreateCalendar = () => {
         if (!state.calendarForm.startDate || !state.calendarForm.endDate) {
-            notify.warning('Veuillez remplir les dates de début et fin');
+            alert('Veuillez remplir les dates de début et fin');
             return;
         }
 
@@ -386,7 +358,7 @@ export function useSettingsLogic() {
 
     const handleCreateMasterData = () => {
         if (!state.masterDataForm.code || !state.masterDataForm.name) {
-            notify.warning('Veuillez remplir le code et le nom');
+            alert('Veuillez remplir le code et le nom');
             return;
         }
 
@@ -446,7 +418,6 @@ export function useSettingsLogic() {
         deleteBatch,
         updateDatasetName,
         updateAnalysis,
-        updateChartOfAccounts,
-        confirmProps
+        updateChartOfAccounts
     };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseDateValue, filterDataByPeriod, aggregateDataByGroup, formatCurrency, formatPercentage } from '../utils/temporalComparison';
+import { parseDateValue, filterDataByPeriod, aggregateDataByGroup, calculateTemporalComparison, formatCurrency, formatPercentage } from '../utils/temporalComparison';
 import { DataRow } from '../types';
 
 describe('utils/temporalComparison.ts', () => {

@@ -1,4 +1,4 @@
-import { useReducer, useMemo } from 'react';
+import { useReducer, useState, useMemo } from 'react';
 import { useForecast } from '../context/ForecastContext';
 import { useReferentials } from '../context/ReferentialContext';
 import { ForecastType } from '../types';
@@ -74,13 +74,14 @@ export const useForecastLogic = () => {
     const [state, dispatch] = useReducer(forecastReducer, initialState);
     const {
         forecasts,
-        addForecast, deleteForecast,
-        addVersion,
-        addLine, deleteLine, updateLineValue,
-        addDriver, deleteDriver,
+        addForecast, updateForecast, deleteForecast,
+        addVersion, updateVersion, setActiveVersion,
+        addLine, updateLine, deleteLine, updateLineValue,
+        addDriver, updateDriver, deleteDriver, updateDriverValue,
         createRollingSnapshot, getRollingSnapshots,
-        generateMLPredictions,
-        reconciliationReports
+        generateMLPredictions, detectSeasonality, calculateTrend,
+        reconciliationReports, createReconciliationReport,
+        submitVersion, validateVersion
     } = useForecast();
     const { chartsOfAccounts, fiscalCalendars } = useReferentials();
 
@@ -132,6 +133,9 @@ export const useForecastLogic = () => {
         chartId: string,
         isRolling: boolean
     ) => {
+        const today = new Date();
+        const referenceDate = today.toISOString().split('T')[0];
+
         addForecast({
             name,
             type,

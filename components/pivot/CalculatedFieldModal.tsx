@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Calculator, Plus, FunctionSquare, Database, Sparkles, Check, Trash2, ArrowUp, ArrowDown, Layers, Copy } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Calculator, Plus, Info, FunctionSquare, Database, Sparkles, Check, ChevronDown, ChevronUp, BookOpen, Trash2, ArrowUp, ArrowDown, Wand2, Type as TypeIcon, Scissors, Layers, MessageSquare, Copy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { evaluateFormula, generateId } from '../../utils';
@@ -26,6 +26,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
 
     const [previewResult, setPreviewResult] = useState<{ value: any; error?: string } | null>(null);
     const [copied, setCopied] = useState(false);
+    const [showExamples, setShowExamples] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,7 +64,7 @@ export const CalculatedFieldModal: React.FC<CalculatedFieldModalProps> = ({ isOp
                     } else {
                         setPreviewResult({ value: res });
                     }
-                } catch (_err) {
+                } catch (e) {
                     setPreviewResult({ value: null, error: "Erreur de calcul" });
                 }
             } else {

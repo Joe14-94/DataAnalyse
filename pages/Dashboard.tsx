@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useWidgets, useDatasets } from '../context/DataContext';
 import { X } from 'lucide-react';
 import { DashboardWidget } from '../types';
-import { useNavigate } from 'react-router-dom';
 
 import { WidgetCard } from '../components/dashboard/WidgetCard';
 import { WidgetDisplay } from '../components/dashboard/WidgetDisplay';
