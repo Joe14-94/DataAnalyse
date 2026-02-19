@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 13-02-2026-01
-**Dernière mise à jour** : 13/02/2026
+**Version de référence** : 18-02-2026-01
+**Dernière mise à jour** : 18/02/2026
 
 ---
 
@@ -118,6 +118,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Undo / Redo** | Historique global des actions sur 20 niveaux. | 2026-02-10 | UX |
 | **Focus Trap** | Accessibilité clavier sur tous les modaux (WCAG). | 2026-02-13 | Accessibilité |
 | **Standard text-xs** | Uniformisation des tailles de texte (min 12px). | 2026-02-14 | Design |
+| **Accessibilité Barre d'outils** | Standardisation des contrôles de décimales avec icônes et ARIA labels. | 2026-02-18 | Accessibilité |
 | **Escape Key** | Fermeture systématique des modaux via la touche Echap. | 2026-02-15 | UX |
 | **Cache de Calcul** | Optimisation des performances via `FORMULA_CACHE`. | 2026-01-31 | Performance |
 | **Virtualisation** | Affichage de 100k+ lignes sans latence (Bi-directionnel). | 2026-01-15 | Performance |
@@ -143,6 +144,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 - **2026-02-22** : Support de la sélection de cellules sur les lignes de "Total" (standard et temporel).
 - **2026-02-22** : Optimisation du pipeline de comparaison temporelle (passage en boucle unique).
 - **2026-02-20** : Support multi-métriques dans le mode comparaison temporelle du TCD.
+- **2026-02-18** : Standardisation des boutons de contrôle des décimales dans la barre d'outils Data Explorer (remplacement du texte par des icônes `Plus`/`Minus` et ajout de labels ARIA pour l'accessibilité).
 - **2026-02-18** : Ajout de la fonction "Copier" dans l'aperçu du `CalculatedFieldModal`.
 - **2026-02-16** : Autoriser le TCD sans métriques (affichage des dimensions uniquement).
 - **2026-02-15** : Ajout du bouton "Réinitialiser" complet dans le Studio d'Analyse (sources, filtres, TCD).
