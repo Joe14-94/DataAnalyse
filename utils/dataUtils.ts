@@ -3,7 +3,7 @@ import { parseSmartNumber } from './numberUtils';
 import { parseDateValue, jsToExcelDate } from './dateUtils';
 
 // Updated version
-export const APP_VERSION = "18-02-2026-01";
+export const APP_VERSION = "23-02-2026-01";
 
 /**
  * Compresse un batch de données en format colonnaire pour économiser de l'espace

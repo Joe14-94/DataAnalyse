@@ -421,21 +421,42 @@ export const applySort = (
   fields: { field: string; direction: 'asc' | 'desc' }[]
 ): DataRow[] => {
   const sorted = [...data];
-  sorted.sort((a, b) => {
-    for (const { field, direction } of fields) {
+  if (sorted.length <= 1 || fields.length === 0) return sorted;
+
+  const fieldsLen = fields.length;
+  // BOLT OPTIMIZATION: Hoist sorting metadata to avoid repeated direction checks and loop overhead.
+  const preparedFields = new Array(fieldsLen);
+  for (let i = 0; i < fieldsLen; i++) {
+    preparedFields[i] = {
+      field: fields[i].field,
+      asc: fields[i].direction === 'asc'
+    };
+  }
+
+  // Fast-path for single-field sorting to avoid loop overhead
+  if (fieldsLen === 1) {
+    const { field, asc } = preparedFields[0];
+    sorted.sort((a, b) => {
       const aVal = a[field];
       const bVal = b[field];
+      if (aVal < bVal) return asc ? -1 : 1;
+      if (aVal > bVal) return asc ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Multi-field sort with optimized loop
+    sorted.sort((a, b) => {
+      for (let i = 0; i < fieldsLen; i++) {
+        const pf = preparedFields[i];
+        const aVal = a[pf.field];
+        const bVal = b[pf.field];
 
-      let comparison = 0;
-      if (aVal < bVal) comparison = -1;
-      else if (aVal > bVal) comparison = 1;
-
-      if (comparison !== 0) {
-        return direction === 'asc' ? comparison : -comparison;
+        if (aVal < bVal) return pf.asc ? -1 : 1;
+        if (aVal > bVal) return pf.asc ? 1 : -1;
       }
-    }
-    return 0;
-  });
+      return 0;
+    });
+  }
   return sorted;
 };
 
