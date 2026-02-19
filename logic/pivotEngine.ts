@@ -145,13 +145,22 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   // --- PHASE 2 : AGREGATION ---
 
   // Pre-calculate baseline stats to avoid .map() in initStats
-  const baseAggValues = metricConfigs.map(mc => (mc.aggType === 'min' ? Infinity : mc.aggType === 'max' ? -Infinity : (mc.aggType === 'list' ? 'SET' : 0)));
+  const COMPLEX_AGGS = ['median', 'stddev', 'variance', 'percentile25', 'percentile75', 'countDistinct', 'first', 'last'];
+
+  const baseAggValues = metricConfigs.map(mc => {
+      const type = mc.aggType;
+      if (type === 'min') return Infinity;
+      if (type === 'max') return -Infinity;
+      if (type === 'list' || type === 'countDistinct') return 'SET';
+      if (COMPLEX_AGGS.includes(type)) return 'ARRAY';
+      return 0;
+  });
 
   const initStats = () => {
       const rowTotalMetrics = new Array(numMetrics);
       for (let j = 0; j < numMetrics; j++) {
           const base = baseAggValues[j];
-          rowTotalMetrics[j] = base === 'SET' ? new Set() : base;
+          rowTotalMetrics[j] = base === 'SET' ? new Set() : base === 'ARRAY' ? [] : base;
       }
 
       return {
@@ -181,7 +190,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               colMetricVals = new Array(numMetrics);
               for (let j = 0; j < numMetrics; j++) {
                   const base = baseAggValues[j];
-                  colMetricVals[j] = base === 'SET' ? new Set() : base;
+                  colMetricVals[j] = base === 'SET' ? new Set() : base === 'ARRAY' ? [] : base;
               }
               colMetrics.set(colKey, colMetricVals);
           }
@@ -189,6 +198,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           for (let mIdx = 0; mIdx < numMetrics; mIdx++) {
               const mc = metricConfigs[mIdx];
               const val = mc.aggType === 'count' ? 1 : row.metricVals[mIdx];
+              const raw = row.rawVals[mIdx];
               const aggType = mc.aggType;
               
               // 2.1 Mise à jour Totaux Ligne
@@ -201,12 +211,15 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               } else if (aggType === 'max') {
                   if (val > rowTotalMetrics[mIdx]) rowTotalMetrics[mIdx] = val;
                   if (val > colMetricVals[mIdx]) colMetricVals[mIdx] = val;
-              } else if (aggType === 'list') {
-                  if (row.rawVals[mIdx]) {
-                      const strVal = String(row.rawVals[mIdx]);
+              } else if (aggType === 'list' || aggType === 'countDistinct') {
+                  if (raw !== undefined && raw !== null) {
+                      const strVal = String(raw);
                       (rowTotalMetrics[mIdx] as Set<string>).add(strVal);
                       (colMetricVals[mIdx] as Set<string>).add(strVal);
                   }
+              } else if (COMPLEX_AGGS.includes(aggType)) {
+                  rowTotalMetrics[mIdx].push(val);
+                  colMetricVals[mIdx].push(val);
               }
           }
 
@@ -229,14 +242,40 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           return arr.join(', ');
       };
 
+      const calculateComplexVal = (vals: number[], type: string) => {
+          if (!vals || vals.length === 0) return undefined;
+          if (type === 'first') return vals[0];
+          if (type === 'last') return vals[vals.length - 1];
+
+          const sorted = [...vals].sort((a, b) => a - b);
+          if (type === 'median') {
+              const mid = Math.floor(sorted.length / 2);
+              return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+          }
+          if (type === 'percentile25') return sorted[Math.floor(sorted.length * 0.25)];
+          if (type === 'percentile75') return sorted[Math.floor(sorted.length * 0.75)];
+
+          if (type === 'stddev' || type === 'variance') {
+              const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+              const variance = vals.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / vals.length;
+              return type === 'variance' ? variance : Math.sqrt(variance);
+          }
+          return undefined;
+      };
+
       metricConfigs.forEach((mc, mIdx) => {
           let valTotal = stats.rowTotalMetrics[mIdx];
+          const type = mc.aggType;
 
-          if (mc.aggType === 'avg') {
+          if (type === 'avg') {
              valTotal = stats.count > 0 ? valTotal / stats.count : undefined;
-          } else if (mc.aggType === 'list') {
+          } else if (type === 'list') {
              valTotal = formatList(valTotal);
-          } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(valTotal)) {
+          } else if (type === 'countDistinct') {
+             valTotal = (valTotal as Set<string>).size;
+          } else if (COMPLEX_AGGS.includes(type)) {
+             valTotal = calculateComplexVal(valTotal as number[], type);
+          } else if ((type === 'min' || type === 'max') && !isFinite(valTotal)) {
              valTotal = undefined;
           }
 
@@ -246,38 +285,41 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
           // Use first metric for row-level sorting if needed
           let rawTotalVal = 0;
           if (typeof valTotal === 'number') rawTotalVal = valTotal;
-          else if (mc.aggType === 'list' && stats.rowTotalMetrics[mIdx] instanceof Set) rawTotalVal = (stats.rowTotalMetrics[mIdx] as Set<string>).size;
+          else if (type === 'list' && stats.rowTotalMetrics[mIdx] instanceof Set) rawTotalVal = (stats.rowTotalMetrics[mIdx] as Set<string>).size;
 
           rawMetrics.set(`TOTAL\x1F${metricLabel}`, rawTotalVal);
 
           if (mIdx === 0) {
               rawRowTotal = rawTotalVal;
-              // Compatibilité pour 'value' qui trie par le grand total de la première métrique
               rawMetrics.set('value', rawTotalVal);
           }
 
-          // BOLT OPTIMIZATION: Only iterate over columns that actually have data for this group
-          // This changes complexity from O(Groups * TotalColumns) to O(Rows)
           stats.colMetrics.forEach((colMetricVals: any[], h: string) => {
               let val = colMetricVals[mIdx];
               const count = stats.colCounts.get(h) || 1;
               let rawColVal = 0;
 
               if (val !== undefined) {
-                  if (mc.aggType === 'avg') {
+                  if (type === 'avg') {
                       val = val / count;
                       rawColVal = val;
-                  } else if (mc.aggType === 'list') {
+                  } else if (type === 'list') {
                       rawColVal = (val as Set<string>).size;
                       val = formatList(val);
-                  } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(val)) {
+                  } else if (type === 'countDistinct') {
+                      val = (val as Set<string>).size;
+                      rawColVal = val;
+                  } else if (COMPLEX_AGGS.includes(type)) {
+                      val = calculateComplexVal(val as number[], type);
+                      rawColVal = typeof val === 'number' ? val : 0;
+                  } else if ((type === 'min' || type === 'max') && !isFinite(val)) {
                       val = undefined;
                       rawColVal = 0;
                   } else if (typeof val === 'number') {
                       rawColVal = val;
                   }
               } else {
-                  if (mc.aggType === 'list') val = '-';
+                  if (type === 'list') val = '-';
                   rawColVal = 0;
               }
 

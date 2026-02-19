@@ -7,6 +7,7 @@ import {
     notify
 } from '../utils';
 import { RawImportData, FieldConfig } from '../types';
+import { profileDataset, DatasetProfile } from '../logic/dataProfiling';
 
 export const useImportLogic = () => {
     const {
@@ -51,8 +52,9 @@ export const useImportLogic = () => {
     // Conflict Resolution
     const [updateMode, setUpdateMode] = useState<'merge' | 'overwrite'>('merge');
 
-    // Success Message
+    // Success Message & Profiling
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [lastImportProfile, setLastImportProfile] = useState<DatasetProfile | null>(null);
 
     // --- Effects ---
     useEffect(() => {
@@ -340,7 +342,11 @@ export const useImportLogic = () => {
             updateSavedMappings(newLearnedMappings);
         }
 
-        // 4. Sauvegarde
+        // 4. Profilage (avant sauvegarde pour le résumé)
+        const profile = profileDataset(finalRows);
+        setLastImportProfile(profile);
+
+        // 5. Sauvegarde
         addBatch(finalDatasetId, date, finalRows);
         switchDataset(finalDatasetId);
 
@@ -382,6 +388,7 @@ export const useImportLogic = () => {
         detectedDatasetId,
         updateMode, setUpdateMode,
         successMessage, setSuccessMessage,
+        lastImportProfile, setLastImportProfile,
 
         // Data
         datasets,

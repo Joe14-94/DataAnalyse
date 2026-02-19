@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import {
-    RotateCcw, ArrowRight, Check, X, AlertTriangle
+    RotateCcw, ArrowRight, Check, X, AlertTriangle, Sparkles, BarChart3, Info
 } from 'lucide-react';
 import { useImportLogic } from '../hooks/useImportLogic';
 import { ImportSourceSelector } from '../components/import/ImportSourceSelector';
@@ -33,6 +33,7 @@ export const Import: React.FC = () => {
         detectedDatasetId,
         updateMode, setUpdateMode,
         successMessage, setSuccessMessage,
+        lastImportProfile, setLastImportProfile,
 
         // Data
         datasets,
@@ -59,12 +60,42 @@ export const Import: React.FC = () => {
     const renderInputStep = () => (
         <div className="space-y-6">
             {successMessage && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative flex items-center animate-in fade-in slide-in-from-top-2">
-                    <Check className="w-5 h-5 mr-2" />
-                    <span>{successMessage}</span>
-                    <button onClick={() => setSuccessMessage(null)} className="absolute right-3 top-3 text-green-600 hover:text-green-800">
-                        <X className="w-4 h-4" />
-                    </button>
+                <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl relative animate-in fade-in slide-in-from-top-2 shadow-sm">
+                    <div className="flex items-start gap-4">
+                        <div className="bg-green-100 p-2 rounded-full text-green-600 shrink-0">
+                            <Check className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 pr-8">
+                            <h4 className="font-bold mb-1">{successMessage}</h4>
+
+                            {lastImportProfile && (
+                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                                        <div className="text-[10px] uppercase font-bold text-green-600 mb-1 flex items-center gap-1.5"><BarChart3 className="w-3 h-3" /> Qualité</div>
+                                        <div className="text-xl font-black">{Math.round(lastImportProfile.qualityScore)}%</div>
+                                    </div>
+                                    <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                                        <div className="text-[10px] uppercase font-bold text-green-600 mb-1 flex items-center gap-1.5"><Info className="w-3 h-3" /> Colonnes</div>
+                                        <div className="text-xl font-black">{lastImportProfile.columnCount}</div>
+                                    </div>
+                                    <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                                        <div className="text-[10px] uppercase font-bold text-green-600 mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Score</div>
+                                        <div className="text-xl font-black">{lastImportProfile.qualityScore > 90 ? 'Excellent' : 'Bon'}</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <p className="mt-3 text-xs font-medium text-green-600">
+                                Vous pouvez maintenant consulter vos données dans l'onglet "Données" ou créer une analyse dans le "Studio".
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => { setSuccessMessage(null); setLastImportProfile(null); }}
+                            className="absolute right-4 top-4 text-green-400 hover:text-green-600 p-1 hover:bg-green-100 rounded-full transition-all"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
             )}
 

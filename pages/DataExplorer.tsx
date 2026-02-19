@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { Database } from 'lucide-react';
+import { Database, Sparkles } from 'lucide-react';
 import { useDataExplorerLogic } from '../hooks/useDataExplorerLogic';
 import { DataExplorerHeader } from '../components/data-explorer/DataExplorerHeader';
 import { DataExplorerToolbar } from '../components/data-explorer/DataExplorerToolbar';
 import { DataExplorerGrid } from '../components/data-explorer/DataExplorerGrid';
-import { ConditionalFormattingDrawer, VlookupDrawer, DetailsDrawer, ColumnManagementDrawer } from '../components/data-explorer/DataExplorerDrawers';
+import { ConditionalFormattingDrawer, VlookupDrawer, DetailsDrawer, ColumnManagementDrawer, DataProfilingDrawer } from '../components/data-explorer/DataExplorerDrawers';
 import { DeleteRowModal, EditModeToolbar } from '../components/data-explorer/DataExplorerModals';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -44,6 +44,9 @@ export const DataExplorer: React.FC = () => {
         handleDeleteRow,
         confirmDeleteRow,
         handleExportFullCSV,
+        handleRemoveDuplicates,
+        handleMissingValues,
+        datasetProfile,
         deleteBatch,
         reorderDatasetFields,
         navigate,
@@ -181,6 +184,18 @@ export const DataExplorer: React.FC = () => {
             />
 
             <div className="flex-1 flex min-h-0 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden relative">
+                {datasetProfile && (
+                    <button
+                        onClick={() => dispatch({ type: 'SET_PROFILING_DRAWER_OPEN', payload: true })}
+                        className="absolute bottom-4 right-4 z-30 p-3 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-110 group animate-bounce"
+                        title="Analyser la qualité des données"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                        <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-500 whitespace-nowrap text-sm font-bold">
+                            Analyse Qualité
+                        </span>
+                    </button>
+                )}
                 <DataExplorerGrid
                     tableContainerRef={tableContainerRef}
                     rowVirtualizer={rowVirtualizer}
@@ -253,6 +268,14 @@ export const DataExplorer: React.FC = () => {
                     onClose={() => dispatch({ type: 'SET_COLUMN_DRAWER_OPEN', payload: false })}
                     currentDataset={currentDataset}
                     reorderDatasetFields={reorderDatasetFields}
+                />
+
+                <DataProfilingDrawer
+                    isOpen={state.isProfilingDrawerOpen}
+                    onClose={() => dispatch({ type: 'SET_PROFILING_DRAWER_OPEN', payload: false })}
+                    profile={datasetProfile}
+                    onRemoveDuplicates={handleRemoveDuplicates}
+                    onHandleMissingValues={handleMissingValues}
                 />
             </div>
         </div>

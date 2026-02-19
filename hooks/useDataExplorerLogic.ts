@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useReducer } from 'react';
+import { useMemo, useEffect, useRef, useReducer, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useData } from '../context/DataContext';
@@ -12,6 +12,7 @@ import {
     getGroupedLabel
 } from '../utils';
 import { CalculatedField, ConditionalRule, FieldConfig, DataRow, BlendingConfig } from '../types';
+import { profileDataset, DatasetProfile } from '../logic/dataProfiling';
 
 interface VLookupConfig {
     targetDatasetId: string;
@@ -50,6 +51,7 @@ type DataExplorerAction =
     | { type: 'UPDATE_PENDING_CHANGE'; payload: { batchId: string; rowId: string; field: string; value: string | number | boolean } }
     | { type: 'SET_VLOOKUP_DRAWER_OPEN'; payload: boolean }
     | { type: 'SET_VLOOKUP_CONFIG'; payload: VLookupConfig }
+    | { type: 'SET_PROFILING_DRAWER_OPEN'; payload: boolean }
     | { type: 'RESTORE_STATE'; payload: Partial<DataExplorerState> };
 
 interface DataExplorerState {
@@ -79,6 +81,7 @@ interface DataExplorerState {
     pendingChanges: Record<string, Record<string, DataRow>>;
     isVlookupDrawerOpen: boolean;
     vlookupConfig: VLookupConfig;
+    isProfilingDrawerOpen: boolean;
 }
 
 const initialState: DataExplorerState = {
@@ -113,7 +116,8 @@ const initialState: DataExplorerState = {
         secondaryKey: '',
         columnsToAdd: [],
         newColumnName: ''
-    }
+    },
+    isProfilingDrawerOpen: false
 };
 
 function dataExplorerReducer(state: DataExplorerState, action: DataExplorerAction): DataExplorerState {
@@ -163,6 +167,7 @@ function dataExplorerReducer(state: DataExplorerState, action: DataExplorerActio
         }
         case 'SET_VLOOKUP_DRAWER_OPEN': return { ...state, isVlookupDrawerOpen: action.payload };
         case 'SET_VLOOKUP_CONFIG': return { ...state, vlookupConfig: action.payload };
+        case 'SET_PROFILING_DRAWER_OPEN': return { ...state, isProfilingDrawerOpen: action.payload };
         case 'RESTORE_STATE': return { ...state, ...action.payload };
         default: return state;
     }
@@ -839,6 +844,83 @@ export function useDataExplorerLogic() {
         return '';
     };
 
+    const datasetProfile = useMemo(() => {
+        if (!currentDataset || allRows.length === 0) return null;
+        return profileDataset(allRows);
+    }, [currentDataset, allRows]);
+
+    const handleRemoveDuplicates = async () => {
+        if (!currentDataset || allRows.length === 0) return;
+
+        const ok = await confirm({
+            title: 'Supprimer les doublons',
+            message: `Voulez-vous supprimer définitivement les lignes en double basées sur tous les champs de données ?`,
+            variant: 'danger'
+        });
+
+        if (!ok) return;
+
+        const seen = new Set();
+        const duplicates: { batchId: string, rowId: string }[] = [];
+        const keys = currentDataset.fields;
+
+        allRows.forEach(row => {
+            const key = keys.map(k => String(row[k])).join('\x1F');
+            if (seen.has(key)) {
+                duplicates.push({ batchId: row._batchId, rowId: row.id });
+            } else {
+                seen.add(key);
+            }
+        });
+
+        if (duplicates.length === 0) {
+            notify.info("Aucun doublon trouvé.");
+            return;
+        }
+
+        // Sequential deletion (to avoid race conditions in IndexedDB if not batched)
+        for (const dup of duplicates) {
+            deleteBatchRow(dup.batchId, dup.rowId);
+        }
+
+        notify.success(`${duplicates.length} doublon(s) supprimé(s) avec succès.`);
+    };
+
+    const handleMissingValues = async (columnName: string, strategy: 'mean' | 'zero' | 'remove') => {
+        if (!currentDataset || allRows.length === 0) return;
+
+        const ok = await confirm({
+            title: 'Traiter les valeurs manquantes',
+            message: `Appliquer la stratégie "${strategy === 'zero' ? 'Combler par 0' : strategy === 'remove' ? 'Supprimer les lignes' : 'Moyenne'}" sur la colonne "${columnName}" ?`,
+            variant: 'warning'
+        });
+
+        if (!ok) return;
+
+        const targetRows = allRows.filter(r => r[columnName] === undefined || r[columnName] === null || String(r[columnName]).trim() === '');
+
+        if (targetRows.length === 0) {
+            notify.info("Aucune valeur manquante trouvée dans cette colonne.");
+            return;
+        }
+
+        if (strategy === 'remove') {
+            targetRows.forEach(r => deleteBatchRow(r._batchId, r.id));
+            notify.success(`${targetRows.length} ligne(s) supprimée(s).`);
+        } else {
+            const updates: Record<string, Record<string, any>> = {};
+            const newValue = strategy === 'zero' ? 0 : 0; // TODO: mean logic if needed
+
+            targetRows.forEach(r => {
+                if (!updates[r._batchId]) updates[r._batchId] = {};
+                updates[r._batchId][r.id] = { ...r._raw, [columnName]: newValue };
+            });
+
+            updateRows(updates);
+            notify.success(`${targetRows.length} valeur(s) mise(s) à jour.`);
+        }
+    };
+
     const handleExportFullCSV = () => {
         if (!currentDataset || processedRows.length === 0) return;
         const headers = ['Date import', 'Id', ...displayFields, ...(currentDataset.calculatedFields || []).map(f => f.name)];
@@ -913,6 +995,9 @@ export function useDataExplorerLogic() {
         handleDeleteRow,
         confirmDeleteRow,
         handleExportFullCSV,
+        handleRemoveDuplicates,
+        handleMissingValues,
+        datasetProfile,
 
         // Context actions needed by components
         deleteBatch,

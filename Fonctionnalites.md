@@ -38,6 +38,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Renommer une colonne** | Pouvoir renommer le libellé d'une colonne | Historique | Core 
 | **Changer le type de données** | Pouvoir changer le typage des données. Lors du passage d'un type Nombre à Date, calcul et affichage de l'information au fomat JJ/MM/AAAA | Historique | Core
 | **Barre de titre fixe** | La barre contenant le libellé de toutes les colonnes reste fixe lorsque l'utilisateur fait défiler verticalement le tableau | Historique |Core
+| **Analyse de Qualité** | Analyse du profil de données (complétude, types, doublons) avec visualisations. | 2026-02-18 | Sprint 5 |
 
 ---
 
@@ -71,6 +72,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Calculs de Totaux** | Lignes de total et sous-total automatiques. | Historique | Core |
 | **Sélection Totaux** | Support de la sélection de cellules sur les lignes de Total. | 2026-02-22 | Ajustement |
 | **Déployer/Regrouper** | Expand/Collapse des lignes par niveau de hiérarchie. | 2026-02-24 | Core |
+| **Stats Avancées** | Agrégations statistiques : Médiane, Écart-type, Variance, Percentiles, etc. | 2026-02-18 | Sprint 5 |
 
 ---
 
@@ -132,6 +134,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-18** : Sprint 5 - Analyse de Données & Stats : Implémentation du moteur de Profiling de données (logic/dataProfiling.ts) et du panneau de visualisation Recharts. Ajout de 10 nouvelles métriques statistiques dans le moteur de Pivot (Médiane, StdDev, Variance, P25, P75, etc.).
 - **2026-02-18** : Sprint Finalisation Qualité (Fixes) : Résolution de 55 erreurs de lint, suppression des imports/variables inutilisés, correction du TDZ dans le TCD, et validation du build TypeScript strict.
 - **2026-02-17** : Sprint Finalisation Qualité : Nettoyage exhaustif du lint (zéro erreur), correction des circularités de dépendances, fiabilisation des types `any`, et conformité stricte au `react-hooks/rules-of-hooks`.
 - **2026-02-16** : Sprint UX & Architecture (P1) : Modularisation de la logique métier (`useETLPipelineLogic`, `useImportLogic`). Remplacement des alertes natives par un système de dialogue asynchrone (`ConfirmDialog`) et notifications `sonner`.

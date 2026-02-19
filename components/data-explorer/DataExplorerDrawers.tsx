@@ -1,8 +1,10 @@
 import React from 'react';
-import { Palette, X, Plus, Trash2, ArrowRight, Link as LinkIcon, AlertTriangle, History, GitCommit, Columns, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import { Palette, X, Plus, Trash2, ArrowRight, Link as LinkIcon, AlertTriangle, History, GitCommit, Columns, ArrowUp, ArrowDown, Info, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { formatDateFr } from '../../utils';
 import { Dataset, ConditionalRule, DataRow } from '../../types';
+import { DataProfilingPanel } from './DataProfilingPanel';
+import { DatasetProfile } from '../../logic/dataProfiling';
 
 interface ConditionalFormattingDrawerProps {
     isOpen: boolean;
@@ -81,6 +83,39 @@ export const ConditionalFormattingDrawer: React.FC<ConditionalFormattingDrawerPr
                         </div>
                         <button onClick={handleAddConditionalRule} className="w-full py-2 bg-purple-600 text-white text-sm font-bold rounded shadow-sm hover:bg-purple-700 transition-colors">Ajouter cette règle</button>
                     </div>
+                </div>
+            </div>
+        </>
+    );
+};
+
+interface DataProfilingDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    profile: DatasetProfile | null;
+    onRemoveDuplicates?: () => void;
+    onHandleMissingValues?: (columnName: string, strategy: 'mean' | 'zero' | 'remove') => void;
+}
+
+export const DataProfilingDrawer: React.FC<DataProfilingDrawerProps> = ({
+    isOpen, onClose, profile, onRemoveDuplicates, onHandleMissingValues
+}) => {
+    if (!isOpen || !profile) return null;
+    return (
+        <>
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity" onClick={onClose} />
+            <div className="fixed inset-y-0 right-0 w-full md:w-[800px] bg-white shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300 border-l border-slate-200">
+                <div className="absolute top-4 right-4 z-10">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                    <DataProfilingPanel
+                        profile={profile}
+                        onRemoveDuplicates={onRemoveDuplicates}
+                        onHandleMissingValues={onHandleMissingValues}
+                    />
                 </div>
             </div>
         </>

@@ -2,7 +2,9 @@
 import { DataRow, FilterRule } from './common';
 import { Dataset, FieldConfig } from './dataset';
 
-export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
+export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list'
+  | 'median' | 'stddev' | 'variance' | 'percentile25' | 'percentile75'
+  | 'countDistinct' | 'first' | 'last';
 export type SortBy = 'label' | 'value' | string;
 export type SortOrder = 'asc' | 'desc';
 export type DateGrouping = 'none' | 'year' | 'quarter' | 'month';
@@ -120,7 +122,7 @@ export interface TemporalComparisonConfig {
   deltaFormat: 'value' | 'percentage';
   groupByFields: string[];
   valueField: string;
-  aggType: 'sum' | 'count' | 'avg' | 'min' | 'max';
+  aggType: AggregationType;
   metrics?: PivotMetric[];
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';

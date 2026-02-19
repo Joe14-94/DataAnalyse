@@ -526,8 +526,13 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                  isCalculated={!!calcField}
                                  onEdit={calcField && openEditCalcModal ? () => openEditCalcModal(calcField) : undefined}
                               />
-                              <div className="grid grid-cols-5 gap-0.5 mt-1">
-                                 {['sum', 'count', 'avg', 'min', 'max'].map(t => (
+                              <div className="grid grid-cols-4 gap-0.5 mt-1">
+                                 {[
+                                    'sum', 'count', 'avg', 'min', 'max',
+                                    'median', 'stddev', 'variance',
+                                    'percentile25', 'percentile75', 'countDistinct',
+                                    'first', 'last', 'list'
+                                 ].map(t => (
                                     <button
                                        key={t}
                                        onClick={() => {
@@ -535,9 +540,14 @@ export const PivotSidePanel: React.FC<PivotSidePanelProps> = (props) => {
                                           n[idx] = { ...n[idx], aggType: t as any };
                                           setMetrics(n);
                                        }}
-                                       className={`px-0.5 py-0.5 text-xs uppercase rounded border ${m.aggType === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                       className={`px-0.5 py-0.5 text-[8px] uppercase rounded border transition-colors ${m.aggType === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                                       title={t}
                                     >
-                                       {t.substring(0, 3)}
+                                       {t === 'countDistinct' ? 'DCNT' :
+                                        t === 'percentile25' ? 'P25' :
+                                        t === 'percentile75' ? 'P75' :
+                                        t === 'stddev' ? 'STDEV' :
+                                        t.substring(0, 4)}
                                     </button>
                                  ))}
                               </div>
