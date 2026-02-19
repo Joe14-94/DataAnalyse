@@ -131,7 +131,7 @@ export const DataExplorerToolbar: React.FC<DataExplorerToolbarProps> = ({
                             <BarChart data={distributionData}>
                                 <Tooltip
                                     cursor={{ fill: '#f1f5f9' }}
-                                    contentStyle={{ fontSize: '10px', padding: '4px', borderRadius: '4px' }}
+                                    contentStyle={{ fontSize: '12px', padding: '4px', borderRadius: '4px' }}
                                     formatter={(value: number) => [value, 'Occurrences']}
                                 />
                                 <Bar dataKey="value" fill="#0d9488" radius={[2, 2, 0, 0]} />

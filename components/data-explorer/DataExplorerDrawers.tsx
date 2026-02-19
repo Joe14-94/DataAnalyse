@@ -218,7 +218,9 @@ export const VlookupDrawer: React.FC<VlookupDrawerProps> = ({
                                     </label>
                                     <button
                                         onClick={handleToggleAll}
-                                        className="text-[10px] font-bold text-brand-600 hover:text-brand-700 uppercase tracking-tight"
+                                        className="text-xs font-bold text-brand-600 hover:text-brand-700 uppercase tracking-tight"
+                                        aria-label={filteredFields.every(f => vlookupConfig.columnsToAdd.includes(f)) ? 'Tout décocher les colonnes filtrées' : 'Tout cocher les colonnes filtrées'}
+                                        title={filteredFields.every(f => vlookupConfig.columnsToAdd.includes(f)) ? 'Tout décocher les colonnes filtrées' : 'Tout cocher les colonnes filtrées'}
                                     >
                                         {filteredFields.every(f => vlookupConfig.columnsToAdd.includes(f)) ? 'Tout décocher' : 'Tout cocher'}
                                     </button>
