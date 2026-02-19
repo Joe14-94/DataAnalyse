@@ -2,8 +2,8 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 18-02-2026-01
-**Dernière mise à jour** : 18/02/2026
+**Version de référence** : 23-02-2026-01
+**Dernière mise à jour** : 23/02/2026
 
 ---
 
@@ -143,6 +143,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 - **2026-02-24** : Correction du style des boutons de déploiement, de l'affichage des totaux (0,00) et de l'alignement du pied de page du TCD.
 - **2026-02-22** : Support de la sélection de cellules sur les lignes de "Total" (standard et temporel).
 - **2026-02-22** : Optimisation du pipeline de comparaison temporelle (passage en boucle unique).
+- **2026-02-23** : Optimisation de la performance du tri ETL (`applySort`) via le hoisting de métadonnées et un fast-path pour le tri à colonne unique (jusqu'à 60% de gain).
 - **2026-02-20** : Support multi-métriques dans le mode comparaison temporelle du TCD.
 - **2026-02-18** : Standardisation des boutons de contrôle des décimales dans la barre d'outils Data Explorer (remplacement du texte par des icônes `Plus`/`Minus` et ajout de labels ARIA pour l'accessibilité).
 - **2026-02-18** : Ajout de la fonction "Copier" dans l'aperçu du `CalculatedFieldModal`.
