@@ -76,7 +76,9 @@ export const DataExplorer: React.FC = () => {
                 <Database className="w-12 h-12 text-slate-300 mb-4" />
                 <p className="text-slate-600 font-medium">Aucun tableau sélectionné</p>
                 <div className="mt-4">
+                    <label htmlFor="dataset-select" className="sr-only">Sélectionner un tableau</label>
                     <select
+                        id="dataset-select"
                         className="appearance-none bg-white border border-slate-300 text-slate-700 text-sm rounded-md py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
                         value=""
                         onChange={(e) => {

@@ -2,7 +2,7 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 23-02-2026-01
+**Version de référence** : 23-02-2026-02
 **Dernière mise à jour** : 23/02/2026
 
 ---
@@ -133,6 +133,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-23** : Harmonisation UI/UX et Accessibilité (Correction des tailles de police non conformes, ajout de labels ARIA sur les actions groupées et support lecteur d'écran sur les sélections vides).
 - **2026-02-15** : Amélioration de l'UX du drawer VLOOKUP (ajout d'une barre de recherche de colonnes, bouton de sélection/désélection groupée et uniformisation des composants Checkbox).
 - **2026-02-13** : Audit technique senior (Architecture SPA) : Décomposition des hooks complexes (`usePivotExport`, `usePivotDrilldown`), harmonisation UTC des dates, optimisation des dédoublonnages (O(N)) et amélioration de l'accessibilité clavier dans le TCD.
 - **2026-02-15** : Optimisation de la performance des jointures ETL (`applyJoin`) via le hoisting des mappings de clés.

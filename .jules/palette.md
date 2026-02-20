@@ -9,3 +9,7 @@
 ## 2026-02-18 - [Standardizing Toolbar Icon Controls]
 **Learning:** Dense toolbars often use character-based controls (like "+" and "-") for space efficiency, but these lack visual targets and accessibility metadata. Replacing them with Lucide icons combined with explicit `title` and `aria-label` improves both discovery and screen reader support.
 **Action:** Always replace text-based controls in toolbars with standardized icons and ensure they have descriptive `title` and `aria-label` attributes.
+
+## 2026-02-23 - [Design System Font Size Enforcement]
+**Learning:** Recharts tooltips and custom bulk-action buttons often default to or use hardcoded small font sizes (10px) that violate accessibility standards and design system rules. Enforcing a minimum of 12px (text-xs) across all components, including chart overlays, is necessary for WCAG compliance.
+**Action:** Always check Recharts `contentStyle` and raw HTML buttons for hardcoded pixel font sizes and replace them with standard Tailwind classes or 12px equivalents.
