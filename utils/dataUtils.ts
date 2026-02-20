@@ -95,34 +95,57 @@ export const areHeadersSimilar = (target: string[], candidate: string[]): boolea
   return ratio > 0.75 || (isSubset && normCandidate.length > 1);
 };
 
+// BOLT OPTIMIZATION: Global cache for aggregation values to avoid redundant parsing/conversions
+const AGGREGATION_VALUE_CACHE = new Map<string, number>();
+const MAX_AGG_CACHE_SIZE = 10000;
+
 /**
  * Prépare une valeur pour l'agrégation numérique (TCD).
  * Gère les dates (conversion en numéro de série Excel) et les nombres.
+ * BOLT OPTIMIZATION: Added global result caching for repeating values.
  */
 export const getValueForAggregation = (val: any, fieldConfig?: FieldConfig): number => {
   // Defensive: explicitly handle empty values by returning 0
   if (val === undefined || val === null || val === '' || val === '-' || val === '(Vide)') return 0;
 
+  // Handle numeric values first - BOLT FIX: Corrected priority to handle date-typed numbers
+  if (typeof val === 'number') {
+    if (fieldConfig?.type === 'date') {
+      const d = parseDateValue(val);
+      return (d && !isNaN(d.getTime())) ? jsToExcelDate(d) : 0;
+    }
+    return (isNaN(val) || !isFinite(val)) ? 0 : val;
+  }
+
+  // BOLT OPTIMIZATION: Result caching for repeating string values
+  const cacheKey = fieldConfig ? `${fieldConfig.type}:${fieldConfig.unit}:${val}` : String(val);
+  const cached = AGGREGATION_VALUE_CACHE.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  let result = 0;
+
   if (fieldConfig?.type === 'date') {
     const d = parseDateValue(val);
-    if (d && !isNaN(d.getTime())) return jsToExcelDate(d);
-    return 0;
+    result = (d && !isNaN(d.getTime())) ? jsToExcelDate(d) : 0;
+  } else {
+    // Si c'est une chaîne qui ressemble à une date et que le type n'est pas spécifié,
+    // on tente quand même une détection pour éviter le mangling de parseSmartNumber
+    const strVal = String(val).trim();
+    if (strVal.includes('/') || strVal.includes('-')) {
+      const d = parseDateValue(val);
+      if (d && !isNaN(d.getTime())) {
+        result = jsToExcelDate(d);
+      } else {
+        result = parseSmartNumber(val, fieldConfig?.unit);
+      }
+    } else {
+      result = parseSmartNumber(val, fieldConfig?.unit);
+    }
   }
 
-  if (typeof val === 'number') {
-    if (isNaN(val) || !isFinite(val)) return 0;
-    return val;
-  }
-
-  // Si c'est une chaîne qui ressemble à une date et que le type n'est pas spécifié,
-  // on tente quand même une détection pour éviter le mangling de parseSmartNumber
-  const strVal = String(val).trim();
-  if (strVal.includes('/') || strVal.includes('-')) {
-    const d = parseDateValue(val);
-    if (d && !isNaN(d.getTime())) return jsToExcelDate(d);
-  }
-
-  return parseSmartNumber(val, fieldConfig?.unit);
+  if (AGGREGATION_VALUE_CACHE.size > MAX_AGG_CACHE_SIZE) AGGREGATION_VALUE_CACHE.clear();
+  AGGREGATION_VALUE_CACHE.set(cacheKey, result);
+  return result;
 };
 
 /**
@@ -239,6 +262,10 @@ export const prepareFilters = (filters: any[]) => {
     let preparedValue = f.value;
     const isArrayIn = (f.operator === 'in' || !f.operator) && (Array.isArray(f.value) || typeof f.value === 'string');
 
+    // BOLT OPTIMIZATION: Pre-calculate cleanField to avoid repeated regex in getRowValue
+    const prefixMatch = f.field.match(/^\[.*?\] (.*)$/);
+    const cleanField = prefixMatch ? prefixMatch[1] : f.field;
+
     if (f.operator === 'gt' || f.operator === 'lt') {
       preparedValue = parseSmartNumber(f.value);
     } else if (isArrayIn) {
@@ -259,18 +286,26 @@ export const prepareFilters = (filters: any[]) => {
     } else if (typeof f.value === 'string' && f.operator !== 'in') {
       preparedValue = f.value.toLowerCase();
     }
-    return { ...f, preparedValue, isArrayIn };
+    return { ...f, preparedValue, isArrayIn, cleanField };
   });
 };
 
 /**
  * Applique un filtre préparé sur une ligne de données
+ * BOLT OPTIMIZATION: Hoisted regex-based field lookup and added result caching for string ops.
  */
 export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean => {
-  if (preparedFilters.length === 0) return true;
+  const len = preparedFilters.length;
+  if (len === 0) return true;
 
-  for (const f of preparedFilters) {
-    const rowVal = getRowValue(row, f.field);
+  for (let i = 0; i < len; i++) {
+    const f = preparedFilters[i];
+
+    // BOLT OPTIMIZATION: Direct access with fallback to avoid getRowValue regex overhead
+    let rowVal = row[f.field];
+    if (rowVal === undefined && f.cleanField !== f.field) {
+      rowVal = row[f.cleanField];
+    }
 
     if (f.isArrayIn && f.preparedValue instanceof Set) {
       if (f.preparedValue.size > 0 && !f.preparedValue.has(String(rowVal))) {
@@ -289,9 +324,13 @@ export const applyPreparedFilters = (row: any, preparedFilters: any[]): boolean 
     const strRowVal = String(rowVal || '').toLowerCase();
     const strFilterVal = String(f.preparedValue || '');
 
-    if (f.operator === 'starts_with' && !strRowVal.startsWith(strFilterVal)) return false;
-    if (f.operator === 'contains' && !strRowVal.includes(strFilterVal)) return false;
-    if (f.operator === 'eq' && strRowVal !== strFilterVal) return false;
+    if (f.operator === 'starts_with') {
+      if (!strRowVal.startsWith(strFilterVal)) return false;
+    } else if (f.operator === 'contains') {
+      if (!strRowVal.includes(strFilterVal)) return false;
+    } else if (f.operator === 'eq') {
+      if (strRowVal !== strFilterVal) return false;
+    }
   }
 
   return true;
