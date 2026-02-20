@@ -13,3 +13,7 @@
 ## 2026-02-23 - [Design System Font Size Enforcement]
 **Learning:** Recharts tooltips and custom bulk-action buttons often default to or use hardcoded small font sizes (10px) that violate accessibility standards and design system rules. Enforcing a minimum of 12px (text-xs) across all components, including chart overlays, is necessary for WCAG compliance.
 **Action:** Always check Recharts `contentStyle` and raw HTML buttons for hardcoded pixel font sizes and replace them with standard Tailwind classes or 12px equivalents.
+
+## 2026-02-23 - [Metadata and Inline Action Standardization]
+**Learning:** Metadata consistency (versioning and copyright) and standardizing accessibility labels for inline editing actions (Confirm/Cancel) significantly improves the professional feel and usability of the administration pages.
+**Action:** Always verify that inline icon buttons for "Confirm" and "Cancel" have matching aria-labels and titles, and ensure the application version and copyright year are updated in each iteration.

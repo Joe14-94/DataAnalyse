@@ -30,8 +30,8 @@ interface DataExplorerGridProps {
 }
 
 export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
-    tableContainerRef, rowVirtualizer, colVirtualizer, processedRows, displayFields, allColumns, currentDataset,
-    sortConfig, handleHeaderClick, columnWidths, handleResizeStart,
+    tableContainerRef, rowVirtualizer, colVirtualizer, processedRows, allColumns, currentDataset,
+    sortConfig, handleHeaderClick, handleResizeStart,
     showColumnBorders, showFilters, columnFilters, handleColumnFilterChange,
     isEditMode, pendingChanges, handleCellEdit, handleRowClick, handleDeleteRow,
     getCellStyle, selectedCol
@@ -144,7 +144,7 @@ export const DataExplorerGrid: React.FC<DataExplorerGridProps> = ({
         if (field === '_actions') {
             return (
                 <div key={`${rowIndex}-${virtualCol.key}`} role="gridcell" className="px-3 py-2 text-right" style={{ position: 'absolute', top: 0, left: virtualCol.start, width: virtualCol.size, height: '100%' }}>
-                    <button type="button" onClick={(e) => handleDeleteRow(row, e)} className="text-slate-300 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" onClick={(e) => handleDeleteRow(row, e)} className="text-slate-300 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors" title="Supprimer la ligne" aria-label="Supprimer la ligne"><Trash2 className="w-4 h-4" /></button>
                 </div>
             );
         }
