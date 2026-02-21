@@ -2,7 +2,6 @@ import React from 'react';
 import { Stethoscope, CheckCircle2, XCircle, Layout as LayoutIcon, Table2, Database, Calendar, Edit2, Trash2, Check, X, History, WifiOff } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { formatDateFr } from '../../utils';
 
 interface DiagnosticsSectionProps {
     handleRunDiagnostics: () => void;
@@ -75,8 +74,8 @@ export const SavedAnalysesSection: React.FC<SavedAnalysesSectionProps> = ({
                                     {editingAnalysisId === analysis.id ? (
                                         <div className="flex items-center gap-2">
                                             <input type="text" className="border rounded px-2 py-1 text-sm font-bold flex-1" value={editAnalysisName} onChange={(e) => setEditAnalysisName(e.target.value)} autoFocus />
-                                            <button onClick={saveEditingAnalysis} className="bg-brand-100 p-1.5 rounded"><Check className="w-4 h-4" /></button>
-                                            <button onClick={cancelEditingAnalysis} className="bg-slate-100 p-1.5 rounded"><X className="w-4 h-4" /></button>
+                                            <button onClick={saveEditingAnalysis} className="bg-brand-100 p-1.5 rounded text-brand-700 hover:bg-brand-200 transition-colors" title="Confirmer le renommage" aria-label="Confirmer le renommage"><Check className="w-4 h-4" /></button>
+                                            <button onClick={cancelEditingAnalysis} className="bg-slate-100 p-1.5 rounded text-slate-600 hover:bg-slate-200 transition-colors" title="Annuler" aria-label="Annuler"><X className="w-4 h-4" /></button>
                                         </div>
                                     ) : (
                                         <h4 className="font-bold text-slate-800 truncate">{analysis.name}</h4>
@@ -129,8 +128,8 @@ export const DatasetsSection: React.FC<DatasetsSectionProps> = ({
                                 {editingDatasetId === ds.id ? (
                                     <div className="flex items-center gap-2">
                                         <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm font-bold flex-1" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
-                                        <button onClick={saveEditing} className="bg-brand-100 p-1.5 rounded"><Check className="w-4 h-4" /></button>
-                                        <button onClick={cancelEditing} className="bg-slate-100 p-1.5 rounded"><X className="w-4 h-4" /></button>
+                                        <button onClick={saveEditing} className="bg-brand-100 p-1.5 rounded text-brand-700 hover:bg-brand-200 transition-colors" title="Confirmer le renommage" aria-label="Confirmer le renommage"><Check className="w-4 h-4" /></button>
+                                        <button onClick={cancelEditing} className="bg-slate-100 p-1.5 rounded text-slate-600 hover:bg-slate-200 transition-colors" title="Annuler" aria-label="Annuler"><X className="w-4 h-4" /></button>
                                     </div>
                                 ) : (
                                     <h4 className="font-bold text-slate-800">{ds.name}</h4>

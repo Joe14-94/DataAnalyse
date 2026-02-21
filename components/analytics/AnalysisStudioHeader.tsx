@@ -106,8 +106,8 @@ export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
                 ) : (
                     <div className="flex items-center gap-1 animate-in fade-in bg-white border border-brand-300 rounded-md p-0.5">
                         <input type="text" className="p-1.5 text-xs border-none focus:ring-0 w-32 bg-transparent text-slate-900" placeholder="Nom..." value={analysisName} onChange={e => onSetAnalysisName(e.target.value)} autoFocus />
-                        <button onClick={onSaveAnalysis} className="p-1 bg-brand-600 text-white rounded hover:bg-brand-700" aria-label="Confirmer l'enregistrement"><Check className="w-3 h-3" /></button>
-                        <button onClick={() => onSetSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300" aria-label="Annuler"><X className="w-3 h-3" /></button>
+                        <button onClick={onSaveAnalysis} className="p-1 bg-brand-600 text-white rounded hover:bg-brand-700 transition-colors" title="Confirmer l'enregistrement" aria-label="Confirmer l'enregistrement"><Check className="w-3 h-3" /></button>
+                        <button onClick={() => onSetSaving(false)} className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300 transition-colors" title="Annuler" aria-label="Annuler"><X className="w-3 h-3" /></button>
                     </div>
                 )}
 
