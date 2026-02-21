@@ -17,3 +17,7 @@
 ## 2026-02-23 - [Metadata and Inline Action Standardization]
 **Learning:** Metadata consistency (versioning and copyright) and standardizing accessibility labels for inline editing actions (Confirm/Cancel) significantly improves the professional feel and usability of the administration pages.
 **Action:** Always verify that inline icon buttons for "Confirm" and "Cancel" have matching aria-labels and titles, and ensure the application version and copyright year are updated in each iteration.
+
+## 2026-02-24 - [Semantic Tabbed Switchers]
+**Learning:** Using simple buttons for mode switching (like Snapshot vs. Trend) lacks the semantic structure of a tabbed interface. Implementing `role="tablist"` and `role="tab"` with `aria-selected` provides much clearer context for screen reader users about the mutually exclusive nature of the modes.
+**Action:** Always use ARIA tab roles for mutually exclusive view switches and ensure all interactive elements in headers have explicit `aria-label` attributes if they lack visible text labels.
