@@ -37,3 +37,7 @@
 ## 2026-02-23 - [Optimize ETL Sorting Pipeline]
 **Learning:** `applySort` was a bottleneck due to repeatedly destructuring sort fields and checking directions inside the comparison function ($O(N \log N * M)$). Hoisting sorting metadata and implementing a specialized fast-path for single-field sorting achieved a ~60% speedup for the most common use cases. Always ensure a new array reference is returned to maintain reactivity in React-based UIs.
 **Action:** Implement specialized fast-paths for common cases (like N=1) in algorithms called frequently on large datasets. Always preserve immutability in utility functions.
+
+## 2026-02-23 - [Optimize ETL Formula Calculation & String Splitting]
+**Learning:** `applyCalculate` was suffering from O(N) repeated formula cache lookups and repeated string operations (trimming). Hoisting the evaluator once before the loop and inlining common rounding logic achieved a ~18% speedup. In `applySplit`, replacing `forEach` with a standard `for` loop for column assignment provided a ~17% speedup by reducing closure overhead. Surprisingly, for `applyMerge`, the original `.map().join()` was faster than manual string concatenation in this environment.
+**Action:** Always hoist formula compilation and expensive evaluator lookups out of O(N) loops. When modifying core ETL steps, ensure schema consistency by always adding the target column even on failure. Benchmarking is essential as built-in methods like `.map().join()` can be highly optimized by the engine.
