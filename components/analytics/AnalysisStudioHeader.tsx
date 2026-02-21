@@ -28,7 +28,7 @@ interface AnalysisStudioHeaderProps {
     batches: any[];
     startDate: string;
     endDate: string;
-    onSetDates: (dates: { start?: string, end?: string }) => void;
+    onSetDates: (dates: { startDate?: string, endDate?: string }) => void;
 }
 
 export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
@@ -148,9 +148,9 @@ export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
                 ) : (
                     <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto p-1 ml-2">
                         <CalendarRange className="w-4 h-4 text-slate-500" />
-                        <input type="date" value={startDate} onChange={(e) => onSetDates({ start: e.target.value })} className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700" />
+                        <input type="date" value={startDate} onChange={(e) => onSetDates({ startDate: e.target.value })} className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700" />
                         <span className="text-slate-400 text-sm">à</span>
-                        <input type="date" value={endDate} onChange={(e) => onSetDates({ end: e.target.value })} className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700" />
+                        <input type="date" value={endDate} onChange={(e) => onSetDates({ endDate: e.target.value })} className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700" />
                     </div>
                 )}
             </div>

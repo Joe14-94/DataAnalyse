@@ -44,7 +44,7 @@ interface AnalysisStudioState {
 type AnalysisStudioAction =
     | { type: 'SET_MODE'; payload: AnalysisMode }
     | { type: 'SET_BATCH_ID'; payload: string }
-    | { type: 'SET_DATES'; payload: { start?: string, end?: string } }
+    | { type: 'SET_DATES'; payload: { startDate?: string, endDate?: string } }
     | { type: 'SET_DIMENSION'; payload: string }
     | { type: 'SET_METRIC'; payload: { target: 1 | 2, metric: MetricType | 'none' } }
     | { type: 'SET_VALUE_FIELD'; payload: { target: 1 | 2, field: string } }
@@ -186,8 +186,8 @@ export const useAnalysisStudioLogic = () => {
 
         if (batches.length > 0) {
             const sortedDates = batches.map(b => b.date).sort();
-            if (!state.startDate) dispatch({ type: 'SET_DATES', payload: { start: sortedDates[0] } });
-            if (!state.endDate) dispatch({ type: 'SET_DATES', payload: { end: sortedDates[sortedDates.length - 1] } });
+            if (!state.startDate) dispatch({ type: 'SET_DATES', payload: { startDate: sortedDates[0] } });
+            if (!state.endDate) dispatch({ type: 'SET_DATES', payload: { endDate: sortedDates[sortedDates.length - 1] } });
         }
 
         if (fields.length > 0 && (!state.dimension || !fields.includes(state.dimension))) {
