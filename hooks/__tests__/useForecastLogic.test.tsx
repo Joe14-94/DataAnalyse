@@ -4,6 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useForecastLogic } from '../useForecastLogic';
 import * as ForecastContext from '../../context/ForecastContext';
 import * as ReferentialContext from '../../context/ReferentialContext';
+import { ConfirmProvider } from '../../context/ConfirmContext';
 import { BrowserRouter } from 'react-router-dom';
 import React from 'react';
 
@@ -26,7 +27,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <ConfirmProvider>
+    <BrowserRouter>{children}</BrowserRouter>
+  </ConfirmProvider>
 );
 
 describe('useForecastLogic', () => {
