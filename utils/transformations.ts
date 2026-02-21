@@ -1,5 +1,5 @@
 import { DataRow, FilterCondition, JoinType, ETLAggregationType } from '../types';
-import { generateId, evaluateFormula } from '../utils';
+import { generateId, evaluateFormula, getFormulaEvaluator } from '../utils';
 
 /**
  * Applique un filtre sur les données
@@ -487,6 +487,7 @@ export const applyDistinct = (data: DataRow[]): DataRow[] => {
 
 /**
  * Split d'une colonne
+ * BOLT OPTIMIZATION: Use for loop instead of forEach and avoid unnecessary allocations.
  */
 export const applySplit = (
   data: DataRow[],
@@ -495,14 +496,15 @@ export const applySplit = (
   newColumns: string[],
   limit?: number
 ): DataRow[] => {
+  const newColsLen = newColumns.length;
   return data.map(row => {
-    const value = String(row[column] || '');
+    const value = String(row[column] ?? '');
     const parts = limit ? value.split(separator, limit) : value.split(separator);
 
     const newRow: DataRow = { ...row };
-    newColumns.forEach((colName, index) => {
-      newRow[colName] = parts[index] || '';
-    });
+    for (let i = 0; i < newColsLen; i++) {
+      newRow[newColumns[i]] = parts[i] ?? '';
+    }
 
     return newRow;
   });
@@ -528,16 +530,43 @@ export const applyMerge = (
 
 /**
  * Colonne calculée (formule sécurisée via FormulaParser)
+ * BOLT OPTIMIZATION: Hoisted formula evaluator and type checks out of the loop.
  */
 export const applyCalculate = (
   data: DataRow[],
   newColumn: string,
   formula: string
 ): DataRow[] => {
+  let evaluator: ((row: any) => any) | null = null;
+
+  try {
+    evaluator = getFormulaEvaluator(formula);
+  } catch {
+    // Fallback if compilation fails
+  }
+
+  // BOLT FIX: Ensure the new column is always added even if formula is empty or invalid
+  // to maintain schema consistency in the ETL pipeline.
+  if (!evaluator) {
+    return data.map(row => ({
+      ...row,
+      [newColumn]: null
+    }));
+  }
+
+  const ev = evaluator;
   return data.map(row => {
     try {
-      // Évaluer l'expression de manière sécurisée avec le FormulaParser
-      const result = evaluateFormula(row, formula);
+      let result = evaluator(row);
+
+      // BOLT OPTIMIZATION: Inlined the common rounding logic from evaluateFormula
+      if (typeof result === 'number') {
+        if (!isFinite(result) || isNaN(result)) {
+          result = null;
+        } else {
+          result = Math.round(result * 10000) / 10000;
+        }
+      }
 
       return {
         ...row,

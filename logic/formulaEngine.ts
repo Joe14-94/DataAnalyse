@@ -378,17 +378,27 @@ class FormulaCompiler {
   }
 }
 
-export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean' | 'date'): number | string | boolean | null => {
+/**
+ * Récupère ou compile l'évaluateur pour une formule
+ * BOLT OPTIMIZATION: Exposed to allow hoisting evaluator lookup out of loops.
+ */
+export const getFormulaEvaluator = (formula: string): Evaluator | null => {
   if (!formula || !formula.trim()) return null;
 
+  let evaluator = COMPILE_CACHE.get(formula);
+  if (!evaluator) {
+    const tokens = FormulaCompiler.tokenize(formula);
+    const compiler = new FormulaCompiler(tokens);
+    evaluator = compiler.compile();
+    COMPILE_CACHE.set(formula, evaluator);
+  }
+  return evaluator;
+};
+
+export const evaluateFormula = (row: any, formula: string, outputType?: 'number' | 'text' | 'boolean' | 'date'): number | string | boolean | null => {
   try {
-    let evaluator = COMPILE_CACHE.get(formula);
-    if (!evaluator) {
-      const tokens = FormulaCompiler.tokenize(formula);
-      const compiler = new FormulaCompiler(tokens);
-      evaluator = compiler.compile();
-      COMPILE_CACHE.set(formula, evaluator);
-    }
+    const evaluator = getFormulaEvaluator(formula);
+    if (!evaluator) return null;
 
     const result = evaluator(row);
 
