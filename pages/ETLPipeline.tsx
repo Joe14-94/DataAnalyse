@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { notify } from '../utils/notify';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import {
@@ -810,7 +811,7 @@ export const ETLPipeline: React.FC = () => {
 
         if (activePipelineId) {
             updatePipeline(activePipelineId, { name: pipelineName, nodes, connections: [] });
-            alert('Pipeline mis à jour !');
+            notify.success('Pipeline mis à jour !');
         } else {
             const id = addPipeline({
                 name: pipelineName,
@@ -818,7 +819,7 @@ export const ETLPipeline: React.FC = () => {
                 connections: []
             });
             setActivePipelineId(id);
-            alert('Pipeline sauvegardé !');
+            notify.success('Pipeline sauvegardé !');
         }
     };
 

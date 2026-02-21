@@ -1,4 +1,5 @@
 import React from 'react';
+import { notify } from '../utils/notify';
 import { useBudgetLogic } from '../hooks/useBudgetLogic';
 import { BudgetHeader } from '../components/budget/BudgetHeader';
 import { BudgetTabs } from '../components/budget/BudgetTabs';
@@ -37,7 +38,7 @@ export const Budget: React.FC = () => {
                         const year = new Date().getFullYear();
                         const defaultChart = chartsOfAccounts[0];
                         if (!defaultChart) {
-                            alert('Veuillez d\'abord créer un plan comptable dans les paramètres.');
+                            notify.error('Veuillez d\'abord créer un plan comptable dans les paramètres.');
                             return;
                         }
                         const budgetName = prompt('Nom du budget:', `Budget ${year}`);
@@ -67,7 +68,7 @@ export const Budget: React.FC = () => {
                                 const year = new Date().getFullYear();
                                 const defaultChart = chartsOfAccounts[0];
                                 if (!defaultChart) {
-                                    alert('Veuillez d\'abord créer un plan comptable dans les paramètres.');
+                                    notify.error('Veuillez d\'abord créer un plan comptable dans les paramètres.');
                                     return;
                                 }
                                 const budgetName = prompt('Nom du budget:', `Budget ${year}`);
@@ -143,7 +144,7 @@ export const Budget: React.FC = () => {
                                 const budget = budgets.find(b => b.id === bid);
                                 const version = budget?.versions.find(v => v.id === vid);
                                 if (version?.lines.length === 0) {
-                                    alert('Impossible de soumettre un budget vide.');
+                                    notify.error('Impossible de soumettre un budget vide.');
                                     return;
                                 }
                                 if (window.confirm(`Soumettre pour validation ?`)) {

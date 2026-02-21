@@ -1,4 +1,5 @@
 
+import { notify } from '../utils/notify';
 import { Dataset, PivotMetric, FieldConfig, TemporalComparisonConfig, TemporalComparisonResult, PivotResult, TemporalComparisonSource, DataRow } from '../types';
 import { exportView, exportPivotToHTML, formatDateLabelForDisplay } from '../utils';
 import { formatPivotOutput } from '../logic/pivotEngine';
@@ -54,7 +55,7 @@ export const usePivotExport = ({
                     fieldConfigs: primaryDataset?.fieldConfigs
                 });
             } else {
-                alert("Aucune donnée à exporter");
+                notify.error("Aucune donnée à exporter");
             }
         } else {
             exportView(format, 'pivot-export-container', `TCD - ${primaryDataset?.name || 'Analyse'}`, companyLogo, mode);
@@ -63,17 +64,17 @@ export const usePivotExport = ({
 
     const handleExportSpreadsheet = (format: 'xlsx' | 'csv') => {
         if (!primaryDataset) {
-            alert("Veuillez sélectionner un dataset");
+            notify.error("Veuillez sélectionner un dataset");
             return;
         }
 
         if (!isTemporalMode && !pivotData) {
-            alert("Aucune donnée à exporter");
+            notify.error("Aucune donnée à exporter");
             return;
         }
 
         if (isTemporalMode && (!temporalResults || temporalResults.length === 0)) {
-            alert("Aucune donnée à exporter");
+            notify.error("Aucune donnée à exporter");
             return;
         }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { TrendingUp, Plus, Calendar, Eye, Edit2, Trash2, RefreshCw } from 'lucide-react';
+import { notify } from '../../utils/notify';
 import { ForecastLine } from '../../types';
 
 interface ForecastListProps {
@@ -60,7 +61,7 @@ export const ForecastList: React.FC<ForecastListProps> = ({
                         const year = new Date().getFullYear();
                         const defaultChart = chartsOfAccounts[0];
                         if (!defaultChart) {
-                            alert('Veuillez d\'abord créer un plan comptable dans les paramètres.');
+                            notify.error('Veuillez d\'abord créer un plan comptable dans les paramètres.');
                             return;
                         }
                         const name = prompt('Nom du forecast:', `Forecast ${year}`);
@@ -92,7 +93,7 @@ export const ForecastList: React.FC<ForecastListProps> = ({
                                 const year = new Date().getFullYear();
                                 const defaultChart = chartsOfAccounts[0];
                                 if (!defaultChart) {
-                                    alert('Veuillez d\'abord créer un plan comptable.');
+                                    notify.error('Veuillez d\'abord créer un plan comptable.');
                                     return;
                                 }
                                 const name = prompt('Nom du forecast:', `Forecast ${year}`);

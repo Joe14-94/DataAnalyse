@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { notify } from '../utils/notify';
 import { useData } from '../context/DataContext';
 import { parseRawData, mapDataToSchema, areHeadersSimilar, detectUnit, detectColumnType, readExcelFile, readTextFile } from '../utils';
 import { Button } from '../components/ui/Button';
@@ -127,13 +128,13 @@ export const Import: React.FC = () => {
       }
 
       if (result.totalRows === 0) {
-        alert("Le fichier semble vide ou mal formaté.");
+        notify.error("Le fichier semble vide ou mal formaté.");
       } else {
         processImportData(result);
       }
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de la lecture du fichier. Vérifiez le format.");
+      notify.error("Erreur lors de la lecture du fichier. Vérifiez le format.");
     } finally {
       setIsProcessingFile(false);
     }
@@ -181,7 +182,7 @@ export const Import: React.FC = () => {
            setSuccessMessage(`${removed} doublons supprimés.`);
         }
      } else {
-        alert("Aucun doublon trouvé sur cette colonne.");
+        notify.success("Aucun doublon trouvé sur cette colonne.");
      }
   };
 

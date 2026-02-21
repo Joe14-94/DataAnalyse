@@ -130,7 +130,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
 
       await o365Service.saveBackupToOneDrive(filename, dataToBackup);
 
-      alert('✅ Sauvegarde OneDrive réussie !');
+      notify.success('Sauvegarde OneDrive réussie !');
     } catch (err: any) {
       setError(err.message || 'Échec de la sauvegarde');
       console.error('[O365Section] Save failed:', err);
@@ -173,7 +173,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       const data = await o365Service.loadBackupFromOneDrive(backup.id);
       onRestoreBackup(data);
       setShowBackupsModal(false);
-      alert('✅ Restauration réussie ! La page va se recharger.');
+      notify.success('Restauration réussie ! La page va se recharger.');
       window.location.reload();
     } catch (err: any) {
       setError(err.message || 'Échec de la restauration');
@@ -197,7 +197,7 @@ export const O365Section: React.FC<O365SectionProps> = ({
       // Rafraîchir la liste
       const updatedBackups = await o365Service.listBackups();
       setBackups(updatedBackups);
-      alert('✅ Backup supprimé');
+      notify.success('Backup supprimé');
     } catch (err: any) {
       setError(err.message || 'Échec de la suppression');
       console.error('[O365Section] Delete failed:', err);

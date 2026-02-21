@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "claude/**"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  ci:
+    name: Type-check · Lint · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 1. Type-check ──────────────────────────────────────────────
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
+
+      # ── 2. Lint ────────────────────────────────────────────────────
+      - name: ESLint
+        run: npx eslint . --max-warnings 0
+
+      # ── 3. Tests ───────────────────────────────────────────────────
+      - name: Vitest
+        run: npx vitest run --reporter=verbose
+
+      # ── 4. Build ───────────────────────────────────────────────────
+      - name: Vite build
+        run: npm run build

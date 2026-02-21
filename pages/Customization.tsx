@@ -4,6 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Trash2, Image as ImageIcon, Palette, UploadCloud, AlertCircle, CheckCircle2, Check, Type, Layout as LayoutIcon, Maximize2, RotateCcw } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { notify } from '../utils/notify';
 
 export const Customization: React.FC = () => {
   const { companyLogo, updateCompanyLogo } = useData();
@@ -14,7 +15,7 @@ export const Customization: React.FC = () => {
       if (file) {
           // Validation de taille (1Mo max)
           if (file.size > 1024 * 1024) { 
-              alert("Le fichier est trop volumineux. La taille maximum est de 1 Mo.");
+              notify.error("Le fichier est trop volumineux. La taille maximum est de 1 Mo.");
               return;
           }
 

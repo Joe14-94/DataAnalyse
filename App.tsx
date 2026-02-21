@@ -1,5 +1,6 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { DataProvider } from './context/DataContext';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   return (
     <DataProvider>
       <HashRouter>
+        <Toaster richColors position="top-right" />
         <Layout>
           <ErrorBoundary name="Application">
             <React.Suspense fallback={<LoadingPage />}>
