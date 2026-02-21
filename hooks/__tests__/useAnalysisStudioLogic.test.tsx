@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAnalysisStudioLogic } from '../useAnalysisStudioLogic';
 import * as DataContext from '../../context/DataContext';
+import { ConfirmProvider } from '../../context/ConfirmContext';
 import { BrowserRouter } from 'react-router-dom';
 import React from 'react';
 
@@ -21,7 +22,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <ConfirmProvider>
+    <BrowserRouter>{children}</BrowserRouter>
+  </ConfirmProvider>
 );
 
 describe('useAnalysisStudioLogic', () => {

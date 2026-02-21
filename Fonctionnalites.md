@@ -2,7 +2,7 @@
 
 Ce document est le référentiel unique de DataScope. Il liste toutes les fonctionnalités disponibles, classées par page du menu, ainsi que l'historique des ajustements et modifications demandés. Ce document sert de base pour les tests de non-régression.
 
-**Version de référence** : 23-02-2026-03
+**Version de référence** : 23-02-2026-04
 **Dernière mise à jour** : 23/02/2026
 
 ---
@@ -125,6 +125,8 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 | **Ascenseurs Fins** | Réduction de la largeur des scrollbars (3px) pour plus de finesse. | 2026-02-12 | UX |
 | **Format des dates** | Toutes les dates sont au format Français | Historique | Core
 | **Utilisation des majuscules** | Les majuscules sont utilisées en respectant les règles d'usage en Français |Historique | Core
+| **Toasts & Notifications** | Système de notifications moderne avec Toasts (sonner) remplaçant les alertes natives. | 2026-02-23 | UX |
+| **Confirmation Modale** | Système de confirmation asynchrone (Promises) avec design system cohérent remplaçant confirm(). | 2026-02-23 | UX |
 
 ---
 
@@ -133,6 +135,7 @@ Ce document est le référentiel unique de DataScope. Il liste toutes les foncti
 *Cette section récapitule les modifications spécifiques demandées pour éviter les régressions sur les détails fins.*
 
 ### Février 2026
+- **2026-02-23** : Remplacement massif des `alert()` et `confirm()` natifs par un système moderne de Toasts (`sonner`) et de modales de confirmation asynchrones. Mise à jour de la version système (v23-02-2026-04).
 - **2026-02-23** : Standardisation de l'accessibilité des boutons d'actions inline (Check/X) et mise à jour des métadonnées système (v23-02-2026-03).
 - **2026-02-23** : Harmonisation UI/UX et Accessibilité (Correction des tailles de police non conformes, ajout de labels ARIA sur les actions groupées et support lecteur d'écran sur les sélections vides).
 - **2026-02-15** : Amélioration de l'UX du drawer VLOOKUP (ajout d'une barre de recherche de colonnes, bouton de sélection/désélection groupée et uniformisation des composants Checkbox).

@@ -4,6 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useSettingsLogic } from '../useSettingsLogic';
 import * as DataContext from '../../context/DataContext';
 import * as ReferentialContext from '../../context/ReferentialContext';
+import { ConfirmProvider } from '../../context/ConfirmContext';
 import { BrowserRouter } from 'react-router-dom';
 import React from 'react';
 
@@ -30,7 +31,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <ConfirmProvider>
+    <BrowserRouter>{children}</BrowserRouter>
+  </ConfirmProvider>
 );
 
 import * as SettingsContext from '../../context/SettingsContext';
