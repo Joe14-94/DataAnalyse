@@ -80,18 +80,21 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                         name={pieName}
                         cx="50%"
                         cy="50%"
-                        innerRadius={chartType === 'donut' ? '45%' : 0}
-                        outerRadius="75%"
-                        paddingAngle={2}
-                        label={({ name, percent }) => {
+                        innerRadius={chartType === 'donut' ? '50%' : 0}
+                        outerRadius="80%"
+                        paddingAngle={0}
+                        stroke="none"
+                        strokeWidth={0}
+                        label={({ name, value, percent }) => {
                            const n = name || '';
-                           return `${n.length > 12 ? n.substring(0, 12) + '...' : n} (${(percent * 100).toFixed(0)}%)`;
+                           const labelName = n.length > 12 ? n.substring(0, 12) + '...' : n;
+                           return `${labelName} (${Number(value).toLocaleString()}, ${(percent * 100).toFixed(0)}%)`;
                         }}
                         labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                         isAnimationActive={false}
                      >
-                        {chartData.map((entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="#fff" strokeWidth={2} />
+                        {chartData.map((_entry: any, index: number) => (
+                           <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="none" />
                         ))}
                      </Pie>
                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }} />
@@ -387,15 +390,22 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={chartType === 'donut' ? 40 : 0}
-                  outerRadius={60}
-                  paddingAngle={2}
+                  innerRadius={chartType === 'donut' ? '50%' : 0}
+                  outerRadius="80%"
+                  paddingAngle={0}
                   dataKey="value"
                   onClick={handleChartClick}
                   className="cursor-pointer"
+                  stroke="none"
+                  strokeWidth={0}
+                  label={({ name, value, percent }) => {
+                     const n = name || '';
+                     const labelName = n.length > 12 ? n.substring(0, 12) + '...' : n;
+                     return `${labelName} (${Number(value).toLocaleString()}, ${(percent * 100).toFixed(0)}%)`;
+                  }}
                >
-                  {chartData.map((entry: any, index: number) => (
-                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  {chartData.map((_entry: any, index: number) => (
+                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="none" />
                   ))}
                </Pie>
                <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />

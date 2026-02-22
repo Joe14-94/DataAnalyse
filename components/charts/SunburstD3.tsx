@@ -66,10 +66,10 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
     const arc = d3.arc<d3.HierarchyRectangularNode<HierarchyNode>>()
       .startAngle(d => d.x0)
       .endAngle(d => d.x1)
-      .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
+      .padAngle(0)
       .padRadius(radius / 2)
       .innerRadius(d => d.y0)
-      .outerRadius(d => d.y1 - 1);
+      .outerRadius(d => d.y1);
 
     const svg = d3.select(svgRef.current)
       .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
@@ -80,7 +80,7 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
     const tooltip = d3.select(tooltipRef.current);
 
     // Draw Arcs
-    const path = svg.append("g")
+    svg.append("g")
       .selectAll("path")
       .data(root.descendants().filter(d => d.depth))
       .join("path")
@@ -155,10 +155,13 @@ export const SunburstD3: React.FC<SunburstD3Props> = ({
         return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
       })
       .attr("dy", "0.35em")
-      .attr("class", "text-xs fill-white font-medium drop-shadow-md")
+      .attr("class", "text-[8px] fill-white font-medium drop-shadow-md")
       .text(d => {
         const name = d.data.name || '';
-        return name.length > 15 ? name.substring(0, 12) + '...' : name;
+        const val = d.value?.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) || '0';
+        const percent = ((d.value || 0) / totalValue * 100).toFixed(0) + '%';
+        const labelName = name.length > 10 ? name.substring(0, 8) + '...' : name;
+        return `${labelName} (${val}, ${percent})`;
       });
 
     // Center Text (Total)
