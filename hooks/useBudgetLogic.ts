@@ -1,4 +1,5 @@
 import { notify } from '../utils/notify';
+import { logAudit } from '../services/auditService';
 import { useReducer, useCallback, useRef, ChangeEvent } from 'react';
 import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
@@ -18,7 +19,7 @@ import {
     downloadAnalyticalAxisTemplate
 } from '../utils/analyticalAxisImport';
 
-export type BudgetTab = 'list' | 'editor' | 'comparison' | 'workflow' | 'templates' | 'referentials';
+export type BudgetTab = 'list' | 'editor' | 'comparison' | 'workflow' | 'templates' | 'referentials' | 'audit';
 
 interface BudgetState {
     activeTab: BudgetTab;
@@ -204,6 +205,7 @@ export const useBudgetLogic = () => {
             startDate,
             endDate
         });
+        logAudit({ module: 'budget', action: 'create', entityId: `budget_${fiscalYear}_${Date.now()}`, entityName: name });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showNewBudgetModal', value: false } });
     }, [addBudget]);
 
@@ -229,6 +231,7 @@ export const useBudgetLogic = () => {
             lines: [],
             isActive: false
         });
+        logAudit({ module: 'budget', action: 'add_version', entityId: state.selectedBudgetId, entityName: selectedBudget.name, details: `Version ${newVersionNumber} créée` });
     }, [state.selectedBudgetId, selectedBudget, addVersion]);
 
     const handleAddLine = useCallback((accountCode: string) => {
@@ -242,6 +245,7 @@ export const useBudgetLogic = () => {
             periodValues: {},
             isLocked: false
         });
+        logAudit({ module: 'budget', action: 'add_line', entityId: state.selectedBudgetId, entityName: account.label, details: `Compte ${account.code} ajouté` });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showNewLineModal', value: false } });
         dispatch({ type: 'SET_ACCOUNT_SEARCH', payload: '' });
     }, [state.selectedBudgetId, state.selectedVersionId, selectedChart, addLine]);
@@ -265,6 +269,7 @@ export const useBudgetLogic = () => {
         if (!state.selectedBudgetId || !state.selectedVersionId) return;
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?')) {
             deleteLine(state.selectedBudgetId, state.selectedVersionId, lineId);
+            logAudit({ module: 'budget', action: 'delete_line', entityId: state.selectedBudgetId, entityName: lineId, details: `Ligne ${lineId} supprimée` });
         }
     }, [state.selectedBudgetId, state.selectedVersionId, deleteLine]);
 
@@ -587,12 +592,32 @@ export const useBudgetLogic = () => {
             handleAxisFileSelect,
             handleExportAxisValues,
             handleDeleteAxisValue,
-            submitVersion,
-            validateVersion,
-            rejectVersion,
-            lockBudget,
+            submitVersion: (budgetId: string, versionId: string, userId: string) => {
+                const b = budgets.find(x => x.id === budgetId);
+                submitVersion(budgetId, versionId, userId);
+                logAudit({ module: 'budget', action: 'submit', entityId: budgetId, entityName: b?.name ?? budgetId, userId, details: `Version ${versionId} soumise` });
+            },
+            validateVersion: (budgetId: string, versionId: string, userId: string) => {
+                const b = budgets.find(x => x.id === budgetId);
+                validateVersion(budgetId, versionId, userId);
+                logAudit({ module: 'budget', action: 'validate', entityId: budgetId, entityName: b?.name ?? budgetId, userId, details: `Version ${versionId} validée` });
+            },
+            rejectVersion: (budgetId: string, versionId: string, userId: string, reason: string) => {
+                const b = budgets.find(x => x.id === budgetId);
+                rejectVersion(budgetId, versionId, userId, reason);
+                logAudit({ module: 'budget', action: 'reject', entityId: budgetId, entityName: b?.name ?? budgetId, userId, details: reason });
+            },
+            lockBudget: (budgetId: string) => {
+                const b = budgets.find(x => x.id === budgetId);
+                lockBudget(budgetId);
+                logAudit({ module: 'budget', action: 'lock', entityId: budgetId, entityName: b?.name ?? budgetId });
+            },
+            deleteBudget: (budgetId: string) => {
+                const b = budgets.find(x => x.id === budgetId);
+                deleteBudget(budgetId);
+                logAudit({ module: 'budget', action: 'delete', entityId: budgetId, entityName: b?.name ?? budgetId });
+            },
             unlockBudget,
-            deleteBudget,
             compareVersions
         }
     };

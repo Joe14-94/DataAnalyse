@@ -2,7 +2,7 @@
 import { DataRow, FilterRule } from './common';
 import { Dataset, FieldConfig } from './dataset';
 
-export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list';
+export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'list' | 'median' | 'percentile' | 'stddev' | 'variance' | 'countdistinct';
 export type SortBy = 'label' | 'value' | string;
 export type SortOrder = 'asc' | 'desc';
 export type DateGrouping = 'none' | 'year' | 'quarter' | 'month';
@@ -21,6 +21,7 @@ export interface PivotMetric {
   field: string;
   aggType: AggregationType;
   label?: string;
+  percentileN?: number;
   formatting?: Partial<FieldConfig>;
 }
 

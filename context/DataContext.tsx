@@ -47,6 +47,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Undo/Redo history for dashboard widgets
+  const historyRef = useRef<DashboardWidget[][]>([]);
+  const historyIndexRef = useRef<number>(-1);
+  const isUndoRedoRef = useRef<boolean>(false); // flag to avoid recording undo/redo itself as history
+  const MAX_HISTORY = 30;
+
   // --- COMPUTED ---
   const currentDataset = useMemo(() => (datasets || []).find(d => d.id === currentDatasetId) || null, [datasets, currentDatasetId]);
 
@@ -666,12 +672,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [batches]);
 
   // --- WIDGET ACTIONS ---
-  const addDashboardWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
-    const newWidget = { ...widget, id: generateId() };
-    setDashboardWidgets(prev => [...prev, newWidget]);
+  const pushToHistory = useCallback((widgets: DashboardWidget[]) => {
+    if (isUndoRedoRef.current) return;
+    // Truncate any forward history
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    historyRef.current.push(widgets.map(w => ({ ...w, config: { ...w.config } })));
+    if (historyRef.current.length > MAX_HISTORY) {
+      historyRef.current.shift();
+    } else {
+      historyIndexRef.current++;
+    }
   }, []);
 
+  const addDashboardWidget = useCallback((widget: Omit<DashboardWidget, 'id'>) => {
+    pushToHistory(dashboardWidgets);
+    const newWidget = { ...widget, id: generateId() };
+    setDashboardWidgets(prev => [...prev, newWidget]);
+  }, [pushToHistory, dashboardWidgets]);
+
   const duplicateDashboardWidget = useCallback((widgetId: string) => {
+    pushToHistory(dashboardWidgets);
     setDashboardWidgets(prev => {
       const widgetIndex = prev.findIndex(w => w.id === widgetId);
       if (widgetIndex === -1) return prev;
@@ -688,17 +708,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       newWidgets.splice(widgetIndex + 1, 0, newWidget);
       return newWidgets;
     });
-  }, []);
+  }, [pushToHistory, dashboardWidgets]);
 
   const updateDashboardWidget = useCallback((widgetId: string, updates: Partial<DashboardWidget>) => {
+    pushToHistory(dashboardWidgets);
     setDashboardWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, ...updates } : w));
-  }, []);
+  }, [pushToHistory, dashboardWidgets]);
 
   const removeDashboardWidget = useCallback((widgetId: string) => {
+    pushToHistory(dashboardWidgets);
     setDashboardWidgets(prev => prev.filter(w => w.id !== widgetId));
-  }, []);
+  }, [pushToHistory, dashboardWidgets]);
 
   const moveDashboardWidget = useCallback((widgetId: string, direction: 'left' | 'right') => {
+    pushToHistory(dashboardWidgets);
     setDashboardWidgets(prev => {
       const widgets = [...prev];
       const idx = widgets.findIndex(w => w.id === widgetId);
@@ -710,19 +733,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       [widgets[idx], widgets[swapIdx]] = [widgets[swapIdx], widgets[idx]];
       return widgets;
     });
-  }, []);
+  }, [pushToHistory, dashboardWidgets]);
 
   const reorderDashboardWidgets = useCallback((startIndex: number, endIndex: number) => {
+    pushToHistory(dashboardWidgets);
     setDashboardWidgets(prev => {
       const result = Array.from(prev);
       const [removed] = result.splice(startIndex, 1);
       result.splice(endIndex, 0, removed);
       return result;
     });
-  }, []);
+  }, [pushToHistory, dashboardWidgets]);
 
   const resetDashboard = useCallback(() => {
+    pushToHistory(dashboardWidgets);
     setDashboardWidgets([]);
+  }, [pushToHistory, dashboardWidgets]);
+
+  const undoWidgets = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    historyIndexRef.current--;
+    isUndoRedoRef.current = true;
+    setDashboardWidgets(historyRef.current[historyIndexRef.current] || []);
+    setTimeout(() => { isUndoRedoRef.current = false; }, 0);
+  }, []);
+
+  const redoWidgets = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    historyIndexRef.current++;
+    isUndoRedoRef.current = true;
+    setDashboardWidgets(historyRef.current[historyIndexRef.current] || []);
+    setTimeout(() => { isUndoRedoRef.current = false; }, 0);
   }, []);
 
   const setDashboardFilter = useCallback((field: string, value: any) => {
@@ -893,13 +934,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset
   }), [datasets, currentDataset, currentDatasetId, switchDataset, createDataset, updateDatasetName, deleteDataset, addFieldToDataset, deleteDatasetField, renameDatasetField, updateDatasetConfigs, addCalculatedField, removeCalculatedField, updateCalculatedField, reorderDatasetFields, createDerivedDataset]);
 
+  // Global keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        undoWidgets();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        e.preventDefault();
+        redoWidgets();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoWidgets, redoWidgets]);
+
   const batchValue = useMemo(() => ({
     batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup
   }), [batches, filteredBatches, addBatch, deleteBatch, deleteBatchRow, updateRows, enrichBatchesWithLookup]);
 
   const widgetValue = useMemo(() => ({
-    dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters
-  }), [dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters]);
+    dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters,
+    undoWidgets, redoWidgets, historyRef, historyIndexRef
+  }), [dashboardWidgets, dashboardFilters, addDashboardWidget, duplicateDashboardWidget, updateDashboardWidget, removeDashboardWidget, moveDashboardWidget, reorderDashboardWidgets, resetDashboard, setDashboardFilter, clearDashboardFilters, undoWidgets, redoWidgets]);
 
   const analyticsValue = useMemo(() => ({
     savedAnalyses, lastPivotState, lastAnalyticsState, lastDataExplorerState, saveAnalysis, updateAnalysis, deleteAnalysis, savePivotState, saveAnalyticsState, saveDataExplorerState

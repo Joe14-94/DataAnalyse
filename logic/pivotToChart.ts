@@ -945,6 +945,26 @@ export const getChartTypeConfig = (chartType: ChartType) => {
       label: 'Entonnoir',
       description: 'Graphique en entonnoir',
       bestFor: 'Etapes de conversion et processus'
+    },
+    'scatter': {
+      label: 'Nuage de points',
+      description: 'Graphique en nuage de points',
+      bestFor: 'Corrélations et distributions bivariées'
+    },
+    'waterfall': {
+      label: 'Cascade',
+      description: 'Graphique en cascade',
+      bestFor: 'Décomposition des variations cumulées'
+    },
+    'boxplot': {
+      label: 'Boîte à moustaches',
+      description: 'Graphique boîte à moustaches',
+      bestFor: 'Distribution statistique et outliers'
+    },
+    'heatmap': {
+      label: 'Carte de chaleur',
+      description: 'Carte de chaleur matricielle',
+      bestFor: 'Densité et intensité sur deux dimensions'
     }
   };
 

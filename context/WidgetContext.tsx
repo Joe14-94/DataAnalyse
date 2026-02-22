@@ -13,6 +13,10 @@ interface WidgetContextType {
   resetDashboard: () => void;
   setDashboardFilter: (field: string, value: any) => void;
   clearDashboardFilters: () => void;
+  undoWidgets: () => void;
+  redoWidgets: () => void;
+  historyRef: React.MutableRefObject<DashboardWidget[][]>;
+  historyIndexRef: React.MutableRefObject<number>;
 }
 
 export const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
