@@ -347,16 +347,18 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 data={snapshotData.data}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={chartType === 'donut' ? 60 : 0}
-                                outerRadius={100}
-                                paddingAngle={2}
+                                innerRadius={chartType === 'donut' ? "50%" : 0}
+                                outerRadius="80%"
+                                paddingAngle={0}
                                 dataKey="value"
-                                stroke="#fff"
-                                strokeWidth={2}
-                                label={({ name, percent }: { name: string; percent: number }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                stroke="none"
+                                strokeWidth={0}
+                                label={({ name, value, percent }: { name: string; value: number; percent: number }) =>
+                                    `${name} (${value.toLocaleString()}, ${(percent * 100).toFixed(0)}%)`
+                                }
                             >
                                 {snapshotData.data.map((_, index: number) => (
-                                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} stroke="none" />
                                 ))}
                             </Pie>
                             <Tooltip contentStyle={tooltipStyle} formatter={(val: number | string) => formatChartValue(Number(val), commonPivotConfig)} />
@@ -453,11 +455,16 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                 cx="50%"
                                 cy="50%"
                                 innerRadius={0}
-                                outerRadius={60}
-                                fill="#8884d8"
+                                outerRadius={segment ? "40%" : "80%"}
+                                paddingAngle={0}
+                                stroke="none"
+                                strokeWidth={0}
+                                label={!segment ? ({ name, value, percent }: { name: string; value: number; percent: number }) =>
+                                    `${name} (${value.toLocaleString()}, ${(percent * 100).toFixed(0)}%)`
+                                : undefined}
                             >
                                 {snapshotData.data.map((_, index: number) => (
-                                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} stroke="none" />
                                 ))}
                             </Pie>
                             {segment && (
@@ -466,15 +473,22 @@ export const AnalysisStudioMain: React.FC<AnalysisStudioMainProps> = ({
                                     dataKey="value"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={70}
-                                    outerRadius={100}
+                                    innerRadius="40%"
+                                    outerRadius="80%"
+                                    paddingAngle={0}
+                                    stroke="none"
+                                    strokeWidth={0}
+                                    label={({ name, value, percent }: { name: string; value: number; percent: number }) =>
+                                        `${name} (${value.toLocaleString()}, ${(percent * 100).toFixed(0)}%)`
+                                    }
                                 >
                                     {snapshotData.data.flatMap((_, idx: number) => snapshotData.series.map((s: string, sIdx: number) => (
-                                        <Cell key={`cell-outer-${idx}-${sIdx}`} fill={chartColors[sIdx % chartColors.length]} />
+                                        <Cell key={`cell-outer-${idx}-${sIdx}`} fill={chartColors[sIdx % chartColors.length]} stroke="none" />
                                     )))}
                                 </Pie>
                             )}
                             <Tooltip contentStyle={tooltipStyle} />
+                            <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
                         </PieChart>
                     </ResponsiveContainer>
                 );
