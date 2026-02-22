@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Check, Download, Upload, Database, Table2, Layout, Settings as SettingsIcon, Building2, Wallet, TrendingUp, Filter, Workflow, Search } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { notify } from '../../utils/notify';
 import { AppState } from '../../types';
 import { Modal } from '../ui/Modal';
 
@@ -41,7 +42,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ mode, is
 
   const handleConfirm = () => {
     if (selectedKeys.length === 0) {
-      alert("Veuillez sélectionner au moins un type de données.");
+      notify.error("Veuillez sélectionner au moins un type de données.");
       return;
     }
     onConfirm(selectedKeys);

@@ -1,3 +1,4 @@
+import { notify } from '../utils/notify';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -350,7 +351,7 @@ export const usePivotLogic = () => {
                     setAggType(agg);
                 }
             } else {
-                alert("Limite de 15 métriques atteinte");
+                notify.warning("Limite de 15 métriques atteinte");
             }
         }
         else if (targetZone === 'filter' && !filters.some(f => f.field === field)) setFilters(prev => [...prev, { field, operator: 'in', value: [] }]);
@@ -568,7 +569,7 @@ export const usePivotLogic = () => {
         });
         setIsSpecificDashboardModalOpen(false);
         setSpecificDashboardItems([]);
-        alert("Rapport ajouté à votre tableau de bord !");
+        notify.info("Rapport ajouté à votre tableau de bord !");
         navigate('/dashboard');
     };
 
@@ -690,7 +691,7 @@ export const usePivotLogic = () => {
             createDerivedDataset(name, false, config, fields, rows);
         }
 
-        alert(`Le Dataset "${name}" a été créé avec succès.`);
+        notify.success(`Le Dataset "${name}" a été créé avec succès.`);
         navigate('/data');
     };
 

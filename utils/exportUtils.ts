@@ -1,4 +1,5 @@
 import { formatDateLabelForDisplay } from './common';
+import { notify } from './notify';
 
 /**
  * EXPORT UTILS
@@ -15,7 +16,7 @@ export const exportView = async (
 ) => {
   const element = document.getElementById(elementId);
   if (!element) {
-    alert('Élément introuvable pour l\'export');
+    notify.error('Élément introuvable pour l\'export');
     return;
   }
 
@@ -127,7 +128,7 @@ export const exportView = async (
 
     } catch (err) {
       console.error('Export Error', err);
-      alert('Erreur lors de la génération de l\'export');
+      notify.error('Erreur lors de la génération de l\'export');
     }
   }
 
@@ -207,7 +208,7 @@ export const exportView = async (
 
     } catch (err) {
       console.error('HTML Export Error', err);
-      alert('Erreur lors de l\'export HTML');
+      notify.error('Erreur lors de l\'export HTML');
     }
   }
 };
@@ -499,6 +500,6 @@ export const exportPivotToHTML = (
 
   } catch (err) {
     console.error('Pivot HTML Export Error', err);
-    alert('Erreur lors de l\'export HTML du TCD');
+    notify.error('Erreur lors de l\'export HTML du TCD');
   }
 };

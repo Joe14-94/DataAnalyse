@@ -1,3 +1,4 @@
+import { notify } from '../utils/notify';
 import { useReducer, useCallback, useRef, ChangeEvent } from 'react';
 import { useBudget } from '../context/BudgetContext';
 import { useReferentials } from '../context/ReferentialContext';
@@ -300,7 +301,7 @@ export const useBudgetLogic = () => {
             }
 
             dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showImportModal', value: false } });
-            alert(`${newLines.length} ligne(s) budgétaire(s) importée(s) avec succès !`);
+            notify.success(`${newLines.length} ligne(s) budgétaire(s) importée(s) avec succès !`);
         } catch (error) {
             dispatch({ type: 'SET_IMPORT_ERROR', payload: error instanceof Error ? error.message : 'Erreur lors de l\'import' });
         } finally {
@@ -333,7 +334,7 @@ export const useBudgetLogic = () => {
 
     const handleCreateTemplate = useCallback(() => {
         if (!state.templateName.trim()) {
-            alert('Veuillez saisir un nom pour le modèle');
+            notify.error('Veuillez saisir un nom pour le modèle');
             return;
         }
 
@@ -357,7 +358,7 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'RESET_TEMPLATE_FORM' });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showTemplateModal', value: false } });
 
-        alert('Modèle créé avec succès !');
+        notify.success('Modèle créé avec succès !');
     }, [state.templateName, state.templateDescription, state.templateCategory, state.templateSourceBudgetId, budgets, addTemplate]);
 
     const handleDeleteTemplate = useCallback((templateId: string, templateName: string) => {
@@ -369,7 +370,7 @@ export const useBudgetLogic = () => {
     const handleUseTemplate = useCallback((templateId: string) => {
         const template = templates.find(t => t.id === templateId);
         if (!template) {
-            alert('Modèle non trouvé');
+            notify.error('Modèle non trouvé');
             return;
         }
 
@@ -421,7 +422,7 @@ export const useBudgetLogic = () => {
                 dispatch({ type: 'SET_SELECTED_VERSION', payload: version.id });
                 dispatch({ type: 'SET_ACTIVE_TAB', payload: 'editor' });
 
-                alert(`Budget "${newBudgetName}" créé avec ${template.accountCodes.length} comptes !`);
+                notify.success(`Budget "${newBudgetName}" créé avec ${template.accountCodes.length} comptes !`);
             }
         }, 100);
     }, [templates, chartsOfAccounts, fiscalCalendars, addBudget, budgets, addLine]);
@@ -441,7 +442,7 @@ export const useBudgetLogic = () => {
         if (!state.editingTemplateId) return;
 
         if (!state.templateName.trim()) {
-            alert('Veuillez saisir un nom pour le modèle');
+            notify.error('Veuillez saisir un nom pour le modèle');
             return;
         }
 
@@ -460,17 +461,17 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'RESET_TEMPLATE_FORM' });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showEditTemplateModal', value: false } });
 
-        alert('Modèle modifié avec succès !');
+        notify.success('Modèle modifié avec succès !');
     }, [state.editingTemplateId, state.templateName, state.templateDescription, state.templateCategory, templates, deleteTemplate, addTemplate]);
 
     const handleCreateAxis = useCallback(() => {
         if (!state.newAxisCode.trim() || !state.newAxisName.trim()) {
-            alert('Veuillez saisir un code et un nom pour l\'axe');
+            notify.error('Veuillez saisir un code et un nom pour l\'axe');
             return;
         }
 
         if (analyticalAxes.some(axis => axis.code === state.newAxisCode.trim())) {
-            alert('Un axe avec ce code existe déjà');
+            notify.error('Un axe avec ce code existe déjà');
             return;
         }
 
@@ -486,7 +487,7 @@ export const useBudgetLogic = () => {
         dispatch({ type: 'RESET_AXIS_FORM' });
         dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showNewAxisModal', value: false } });
 
-        alert('Axe analytique créé avec succès !');
+        notify.success('Axe analytique créé avec succès !');
     }, [state.newAxisCode, state.newAxisName, state.newAxisMandatory, analyticalAxes, addAnalyticalAxis]);
 
     const handleAxisFileSelect = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
@@ -494,7 +495,7 @@ export const useBudgetLogic = () => {
         if (!file) return;
 
         if (!state.selectedAxisId) {
-            alert('Veuillez sélectionner un axe analytique');
+            notify.error('Veuillez sélectionner un axe analytique');
             return;
         }
 
@@ -518,7 +519,7 @@ export const useBudgetLogic = () => {
 
             dispatch({ type: 'TOGGLE_MODAL', payload: { modal: 'showAxisImportModal', value: false } });
             dispatch({ type: 'SET_AXIS_FIELD', payload: { field: 'selectedAxisId', value: '' } });
-            alert(`Import réussi ! ${newValues.length} valeur(s) importée(s).`);
+            notify.success(`Import réussi ! ${newValues.length} valeur(s) importée(s).`);
 
         } catch (error) {
             dispatch({ type: 'SET_AXIS_FIELD', payload: { field: 'axisImportError', value: error instanceof Error ? error.message : 'Erreur lors de l\'import' } });
@@ -536,7 +537,7 @@ export const useBudgetLogic = () => {
 
         const values = getAxisValues(axisId);
         if (values.length === 0) {
-            alert('Aucune valeur à exporter pour cet axe');
+            notify.error('Aucune valeur à exporter pour cet axe');
             return;
         }
 

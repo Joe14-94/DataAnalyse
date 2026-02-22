@@ -2,8 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 // --- Treemap Content ---
-export const TreemapContent = (props: any) => {
-    const { x, y, width, height, name, index, colors } = props;
+interface TreemapContentProps {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    name?: string;
+    index?: number;
+    colors?: string[];
+}
+
+export const TreemapContent = (props: TreemapContentProps) => {
+    const { x = 0, y = 0, width = 0, height = 0, name, index = 0, colors } = props;
     const fill = colors ? colors[index % colors.length] : '#64748b';
     const displayName = name || 'N/A';
 

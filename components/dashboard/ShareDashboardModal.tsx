@@ -21,9 +21,9 @@ interface ShareDashboardModalProps {
   onClose: () => void;
   dashboardName: string;
   widgets: DashboardWidget[];
-  datasets?: any[];
-  batches?: any[];
-  uiPrefs?: any;
+  datasets?: import('../../types').Dataset[];
+  batches?: import('../../types').ImportBatch[];
+  uiPrefs?: Record<string, unknown>;
 }
 
 export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
@@ -92,9 +92,9 @@ export const ShareDashboardModal: React.FC<ShareDashboardModalProps> = ({
       );
 
       setShareMetadata(metadata);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[ShareDashboardModal] Share failed:', err);
-      setError(err.message || 'Échec du partage');
+      setError(err instanceof Error ? err.message : 'Échec du partage');
     } finally {
       setIsSharing(false);
     }

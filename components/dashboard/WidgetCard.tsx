@@ -14,7 +14,7 @@ interface WidgetCardProps {
    setOpenMenuWidgetId: (id: string | null) => void;
    setFullscreenWidgetId: (id: string | null) => void;
    handleExportImage: (id: string, title: string) => void;
-   handleExportCSV: (data: any, title: string) => void;
+   handleExportCSV: (data: unknown, title: string) => void;
    handleDragStart: (e: React.DragEvent, index: number) => void;
    handleDragOver: (e: React.DragEvent) => void;
    handleDrop: (e: React.DragEvent, targetIndex: number) => void;
