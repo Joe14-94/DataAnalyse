@@ -17,6 +17,15 @@ import { ErrorBoundary } from '../ErrorBoundary';
 // ChartEntry: flexible recharts data point shape
 type ChartEntry = Record<string, string | number | undefined>;
 
+// ReportItem: shape produced by the 'report' widget data source
+interface ReportItem {
+   id?: string | number;
+   label?: string;
+   value?: string | number;
+   rowPath?: string[];
+   colLabel?: string;
+}
+
 interface WidgetDisplayProps {
    widget: DashboardWidget;
    data: unknown;
@@ -48,7 +57,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       }
 
       // Collecter toutes les clés de séries de manière exhaustive à travers tous les points de données
-      const seriesKeys = Array.from(new Set(chartData.flatMap((_d: ChartEntry) =>
+      const seriesKeys = Array.from(new Set(chartData.flatMap((d: ChartEntry) =>
          Object.keys(d).filter(k => k !== 'name' && k !== 'value' && k !== 'size' && k !== 'rowTotal')
       ))) as string[];
 
@@ -207,11 +216,11 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                <ResponsiveContainer width="100%" height="100%">
                   <Treemap data={treemapDisplayData} dataKey="size" stroke="#fff" content={<TreemapContent colors={colors} />} isAnimationActive={false}>
                      <Tooltip
-                        content={({ active, payload }: { active?: boolean; payload?: { value?: number; name?: string }[] }) => {
+                        content={({ active, payload }: { active?: boolean; payload?: { value?: number; name?: string; payload?: Record<string, unknown> }[] }) => {
                            if (!active || !payload || !payload.length) return null;
-                           const d = payload[0].payload;
-                           const path = d.path || [d.name];
-                           const value = d.value || d.size || 0;
+                           const d = payload[0].payload as Record<string, unknown>;
+                           const path = (d.path as string[] | undefined) || ([d.name] as string[]);
+                           const value = (d.value ?? d.size ?? 0) as number;
                            return (
                               <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', fontSize: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                                  <p style={{ fontWeight: 600, marginBottom: 2 }}>{path.join(' > ')}</p>
@@ -249,7 +258,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       const items = data.items || [];
       return (
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1 h-full overflow-y-auto custom-scrollbar">
-            {items.map((item: ChartEntry) => (
+            {items.map((item: ReportItem) => (
                <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
                   <div className="mb-2">
                      <h5 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-1 truncate" title={item.label}>{item.label}</h5>
@@ -257,7 +266,7 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                   </div>
                   <div className="text-xl font-black text-slate-800 tracking-tight font-mono truncate">{item.value}</div>
                   <div className="mt-2 pt-2 border-t border-slate-200/50">
-                     <p className="text-xs text-slate-400 italic truncate">{item.rowPath[item.rowPath.length-1]} | {item.colLabel}</p>
+                     <p className="text-xs text-slate-400 italic truncate">{item.rowPath?.[item.rowPath.length - 1]} | {item.colLabel}</p>
                   </div>
                </div>
             ))}
@@ -274,9 +283,11 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
    }
 
    const { unit } = data;
-   const handleChartClick = (e: Record<string, unknown>) => {
-      if (!e || !e.activePayload || !e.activePayload.length) return;
-      if (widget.config.dimension && e.activePayload[0].payload.name) setDashboardFilter(widget.config.dimension, e.activePayload[0].payload.name);
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   const handleChartClick = (e: any) => {
+      if (!e?.activePayload?.length) return;
+      if (widget.config.dimension && e.activePayload[0]?.payload?.name)
+         setDashboardFilter(widget.config.dimension, e.activePayload[0].payload.name);
    };
 
    if (widget.type === 'kpi') {
