@@ -81,8 +81,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
       const user = await o365Service.login();
       setCurrentUser(user);
       setIsAuthenticated(true);
-    } catch (err: any) {
-      setError(err.message || 'Échec de la connexion');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Échec de la connexion');
       console.error('[O365Section] Login failed:', err);
     } finally {
       setIsLoading(false);
@@ -99,8 +99,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setCurrentUser(null);
       setIsAuthenticated(false);
       setBackups([]);
-    } catch (err: any) {
-      setError(err.message || 'Échec de la déconnexion');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Échec de la déconnexion');
       console.error('[O365Section] Logout failed:', err);
     } finally {
       setIsLoading(false);
@@ -132,8 +132,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
       await o365Service.saveBackupToOneDrive(filename, dataToBackup);
 
       notify.success('Sauvegarde OneDrive réussie !');
-    } catch (err: any) {
-      setError(err.message || 'Échec de la sauvegarde');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Échec de la sauvegarde');
       console.error('[O365Section] Save failed:', err);
     } finally {
       setIsLoading(false);
@@ -149,8 +149,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
       const backupsList = await o365Service.listBackups();
       setBackups(backupsList);
       setShowBackupsModal(true);
-    } catch (err: any) {
-      setError(err.message || 'Échec du chargement de la liste');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Échec du chargement de la liste');
       console.error('[O365Section] List backups failed:', err);
     } finally {
       setIsLoading(false);
@@ -176,8 +176,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
       setShowBackupsModal(false);
       notify.success('Restauration réussie ! La page va se recharger.');
       window.location.reload();
-    } catch (err: any) {
-      setError(err.message || 'Échec de la restauration');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Échec de la restauration');
       console.error('[O365Section] Restore failed:', err);
     } finally {
       setIsLoading(false);
@@ -199,8 +199,8 @@ export const O365Section: React.FC<O365SectionProps> = ({
       const updatedBackups = await o365Service.listBackups();
       setBackups(updatedBackups);
       notify.success('Backup supprimé');
-    } catch (err: any) {
-      setError(err.message || 'Échec de la suppression');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Échec de la suppression');
       console.error('[O365Section] Delete failed:', err);
     } finally {
       setIsLoading(false);

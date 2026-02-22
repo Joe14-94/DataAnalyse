@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { useBatches, useDatasets, useWidgets } from '../context/DataContext';
-import { DashboardWidget, Dataset, PivotConfig, FilterRule } from '../types';
+import { DashboardWidget, Dataset, PivotConfig, FilterRule, PivotResult, TemporalComparisonResult, TemporalComparisonSource, DataRow } from '../types';
 import { parseSmartNumber, evaluateFormula } from '../utils';
 import { calculatePivotData } from '../logic/pivotEngine';
 import { transformPivotToChartData, transformPivotToTreemapData, transformPivotToSunburstData, transformPivotToHierarchicalTreemap, getChartColors, generateGradient } from '../logic/pivotToChart';
