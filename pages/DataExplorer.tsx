@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Database } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Database, Activity } from 'lucide-react';
 import { useDataExplorerLogic } from '../hooks/useDataExplorerLogic';
 import { DataExplorerHeader } from '../components/data-explorer/DataExplorerHeader';
 import { DataExplorerToolbar } from '../components/data-explorer/DataExplorerToolbar';
@@ -7,6 +7,7 @@ import { DataExplorerGrid } from '../components/data-explorer/DataExplorerGrid';
 import { ConditionalFormattingDrawer, VlookupDrawer, DetailsDrawer, ColumnManagementDrawer } from '../components/data-explorer/DataExplorerDrawers';
 import { DeleteRowModal, EditModeToolbar } from '../components/data-explorer/DataExplorerModals';
 import { CalculatedFieldModal } from '../components/pivot/CalculatedFieldModal';
+import { DataProfilingPanel } from '../components/data-explorer/DataProfilingPanel';
 
 export const DataExplorer: React.FC = () => {
     const {
@@ -49,6 +50,8 @@ export const DataExplorer: React.FC = () => {
         navigate,
         getCellStyle
     } = useDataExplorerLogic();
+
+    const [showProfiling, setShowProfiling] = useState(false);
 
     const activeBatchFilter = state.columnFilters['_batchId'] ? state.columnFilters['_batchId'].replace(/^=/, '') : null;
     const activeBatchDate = activeBatchFilter ? batches.find(b => b.id === activeBatchFilter)?.date : null;
@@ -105,6 +108,18 @@ export const DataExplorer: React.FC = () => {
                 onClose={() => dispatch({ type: 'SET_DELETE_CONFIRM_ROW', payload: null })}
                 onConfirm={confirmDeleteRow}
             />
+
+            {/* Profiling toggle */}
+            <div className="absolute top-4 right-4 z-40">
+              <button
+                onClick={() => setShowProfiling(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow transition-colors"
+                title="Profil de qualité des données"
+              >
+                <Activity className="w-3.5 h-3.5" />
+                Profil qualité
+              </button>
+            </div>
 
             <DataExplorerHeader
                 currentDataset={currentDataset}
@@ -240,6 +255,17 @@ export const DataExplorer: React.FC = () => {
                     reorderDatasetFields={reorderDatasetFields}
                 />
             </div>
+
+            {showProfiling && currentDataset && (
+              <div className="fixed inset-y-0 right-0 w-full md:w-[640px] bg-white border-l border-slate-200 shadow-2xl z-50 overflow-y-auto custom-scrollbar">
+                <DataProfilingPanel
+                  rows={processedRows}
+                  fields={currentDataset.fields}
+                  fieldConfigs={currentDataset.fieldConfigs}
+                  onClose={() => setShowProfiling(false)}
+                />
+              </div>
+            )}
         </div>
     );
 };

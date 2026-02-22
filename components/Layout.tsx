@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Upload, Settings, Database, PieChart, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Palette, DollarSign, TrendingUp, Workflow } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, Database, PieChart, Table2, HardDrive, ArrowDownWideNarrow, HelpCircle, Save, ChevronLeft, ChevronRight, Palette, DollarSign, TrendingUp, Workflow, Undo2, Redo2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useData } from '../context/DataContext';
+import { useData, useWidgets } from '../context/DataContext';
 import { APP_VERSION } from '../utils';
 import { OnboardingTour } from './OnboardingTour';
 
@@ -14,6 +14,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const path = location.pathname;
   const { datasets, batches, getBackupJson, companyLogo } = useData();
+  const { undoWidgets, redoWidgets, historyRef, historyIndexRef } = useWidgets();
+  const [, forceUpdate] = useState(0);
   const [storageUsed, setStorageUsed] = useState<string>('0 MB');
   const [storagePercent, setStoragePercent] = useState<number>(0);
 
@@ -138,6 +140,35 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </nav>
 
         <div className={`p-ds-4 border-t border-border-default hidden md:flex flex-col bg-canvas/50 space-y-2 ${isCollapsed ? 'items-center' : ''}`}>
+          {/* Undo/Redo buttons */}
+          <div className={`flex gap-1 ${isCollapsed ? 'flex-col' : ''}`}>
+            <button
+              onClick={() => { undoWidgets(); forceUpdate(n => n + 1); }}
+              disabled={historyIndexRef.current <= 0}
+              className={`flex items-center justify-center gap-1 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+                  ${isCollapsed ? 'w-8 h-8 p-0' : 'flex-1 px-2'}
+              `}
+              title={`Annuler (Ctrl+Z) — ${Math.max(0, historyIndexRef.current)} étape(s)`}
+            >
+              <Undo2 className="w-3 h-3 shrink-0" />
+              {!isCollapsed && <span>Annuler</span>}
+              {!isCollapsed && historyIndexRef.current > 0 && (
+                <span className="ml-auto text-[10px] bg-brand-100 text-brand-700 px-1 rounded">{historyIndexRef.current}</span>
+              )}
+            </button>
+            <button
+              onClick={() => { redoWidgets(); forceUpdate(n => n + 1); }}
+              disabled={historyIndexRef.current >= historyRef.current.length - 1}
+              className={`flex items-center justify-center gap-1 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+                  ${isCollapsed ? 'w-8 h-8 p-0' : 'flex-1 px-2'}
+              `}
+              title={`Rétablir (Ctrl+Y) — ${Math.max(0, historyRef.current.length - 1 - historyIndexRef.current)} étape(s)`}
+            >
+              <Redo2 className="w-3 h-3 shrink-0" />
+              {!isCollapsed && <span>Rétablir</span>}
+            </button>
+          </div>
+
           <button
             onClick={handleQuickSave}
             className={`flex items-center justify-center gap-1.5 bg-surface hover:bg-brand-50 border border-border-default hover:border-brand-200 text-txt-secondary hover:text-brand-700 text-xs font-bold py-1.5 rounded transition-colors

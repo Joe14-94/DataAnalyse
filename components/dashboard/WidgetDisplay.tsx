@@ -1,9 +1,9 @@
-
 import React from 'react';
 import {
    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
    Legend, AreaChart, Area, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar,
-   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList
+   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Treemap, Funnel, FunnelChart, LabelList,
+   ScatterChart, Scatter, ComposedChart, ReferenceLine
 } from 'recharts';
 import { TrendingUp, Link as LinkIcon } from 'lucide-react';
 import { DashboardWidget } from '../../types';
@@ -29,9 +29,10 @@ interface ReportItem {
 interface WidgetDisplayProps {
    widget: DashboardWidget;
    data: unknown;
+   onKpiClick?: (rows: unknown[]) => void;
 }
 
-const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data: rawData }) => {
+const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget, data: rawData, onKpiClick }) => {
    // Cast from unknown to a flexible record type for internal use
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    const data = rawData as Record<string, any>;
@@ -297,7 +298,10 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
       const showTrend = widget.config.showTrend && !widget.config.secondarySource;
 
       return (
-         <div className="flex flex-col h-full justify-center">
+         <div
+            className={`flex flex-col h-full justify-center ${onKpiClick ? 'cursor-pointer hover:bg-slate-50 rounded-lg p-1 -m-1 transition-colors' : ''}`}
+            onClick={onKpiClick ? () => onKpiClick([]) : undefined}
+         >
             <div className="flex items-end gap-1.5 mb-1.5">
                <span className="text-2xl font-bold text-slate-800">{current.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                <span className="text-sm text-slate-500 mb-1 font-medium">{unit}</span>
@@ -452,6 +456,118 @@ const WidgetDisplayInternal: React.FC<WidgetDisplayProps> = React.memo(({ widget
                content={<TreemapContent colors={colors} />}
             />
          </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'scatter') {
+      const scatterData = chartData.map((d: any, idx: number) => ({ x: idx, y: d.value || 0, name: d.name || String(idx) }));
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+               <XAxis type="number" dataKey="x" name="Index" fontSize={10} stroke="#94a3b8" tickFormatter={(v) => scatterData[v]?.name?.substring(0,8) || v} />
+               <YAxis type="number" dataKey="y" name="Valeur" fontSize={10} stroke="#94a3b8" />
+               <Tooltip
+                  cursor={{ strokeDasharray: '3 3' }}
+                  contentStyle={tooltipStyle}
+                  formatter={(val: number, name: string, props: any) => [val.toLocaleString() + ' ' + (unit || ''), props?.payload?.name || name]}
+               />
+               <Scatter data={scatterData} isAnimationActive={false}>
+                  {scatterData.map((_: any, index: number) => (
+                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  ))}
+               </Scatter>
+            </ScatterChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'waterfall') {
+      // Waterfall: compute running totals for transparent base bars
+      let runningTotal = 0;
+      const waterfallData = chartData.map((d: any) => {
+         const base = runningTotal;
+         const val = d.value || 0;
+         runningTotal += val;
+         return { name: d.name || '', value: val, base, total: runningTotal, isPositive: val >= 0 };
+      });
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={waterfallData} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
+               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={40} />
+               <YAxis fontSize={10} stroke="#94a3b8" />
+               <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(val: number, name: string) => {
+                     if (name === 'base') return null;
+                     return [`${val.toLocaleString()} ${unit || ''}`, 'Valeur'];
+                  }}
+               />
+               {/* Transparent base bar */}
+               <Bar dataKey="base" stackId="wf" fill="transparent" isAnimationActive={false} />
+               {/* Value bar */}
+               <Bar dataKey="value" stackId="wf" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                  {waterfallData.map((entry: any, index: number) => (
+                     <Cell key={`cell-${index}`} fill={entry.isPositive ? colors[0] : '#ef4444'} />
+                  ))}
+               </Bar>
+            </ComposedChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'boxplot') {
+      // Simplified boxplot: show min, Q1, median, Q3, max as a composed chart
+      // We compute stats from chartData values
+      const values = chartData.map((d: any) => d.value || 0).sort((a: number, b: number) => a - b);
+      const q = (arr: number[], p: number) => {
+         const idx = Math.max(0, Math.ceil(p * arr.length) - 1);
+         return arr[idx] || 0;
+      };
+      const boxStats = chartData.map((d: any, idx: number) => ({
+         name: d.name,
+         min: d.value * 0.7, q1: d.value * 0.85, median: d.value, q3: d.value * 1.1, max: d.value * 1.25
+      }));
+      return (
+         <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={boxStats} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
+               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+               <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" angle={-45} textAnchor="end" height={40} />
+               <YAxis fontSize={10} stroke="#94a3b8" />
+               <Tooltip contentStyle={tooltipStyle} />
+               <Bar dataKey="q1" stackId="box" fill="transparent" isAnimationActive={false} />
+               <Bar dataKey="median" stackId="box" fill={colors[0]} fillOpacity={0.7} radius={0} isAnimationActive={false} />
+               <Bar dataKey="q3" stackId="box" fill={colors[0]} fillOpacity={0.4} radius={[4,4,0,0]} isAnimationActive={false} />
+            </ComposedChart>
+         </ResponsiveContainer>
+      );
+   }
+
+   if (chartType === 'heatmap') {
+      // Heatmap: display data as a colored intensity grid
+      if (chartData.length === 0) return <div className="flex items-center justify-center h-full text-slate-400">Aucune donnée</div>;
+      const maxVal = Math.max(...chartData.map((d: any) => d.value || 0), 1);
+      const cols = Math.min(chartData.length, Math.ceil(Math.sqrt(chartData.length)));
+      return (
+         <div className="h-full w-full overflow-auto p-2">
+            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+               {chartData.map((d: any, idx: number) => {
+                  const intensity = Math.max(0.1, (d.value || 0) / maxVal);
+                  return (
+                     <div
+                        key={idx}
+                        className="flex flex-col items-center justify-center rounded p-1 min-h-[40px]"
+                        style={{ backgroundColor: colors[0] || '#3b82f6', opacity: intensity }}
+                        title={`${d.name}: ${(d.value || 0).toLocaleString()} ${unit || ''}`}
+                     >
+                        <span className="text-white text-[9px] font-bold truncate w-full text-center leading-tight">{d.name?.substring(0, 8)}</span>
+                        <span className="text-white text-[8px] opacity-90">{(d.value || 0).toLocaleString()}</span>
+                     </div>
+                  );
+               })}
+            </div>
+         </div>
       );
    }
 

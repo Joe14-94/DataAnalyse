@@ -1,6 +1,5 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
-import { useWidgets, useDatasets } from '../context/DataContext';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useWidgets, useDatasets, useBatches } from '../context/DataContext';
 import { X } from 'lucide-react';
 import { DashboardWidget } from '../types';
 
@@ -10,6 +9,7 @@ import { WidgetDrawer } from '../components/dashboard/WidgetDrawer';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { DashboardFilters } from '../components/dashboard/DashboardFilters';
 import { ShareDashboardModal } from '../components/dashboard/ShareDashboardModal';
+import { DrillThroughDrawer } from '../components/dashboard/DrillThroughDrawer';
 import { useWidgetData } from '../hooks/useWidgetData';
 import { useExport } from '../hooks/useExport';
 import { o365Service } from '../services/o365Service';
@@ -27,6 +27,7 @@ export const Dashboard: React.FC = () => {
    } = useWidgets();
 
    const { datasets } = useDatasets();
+   const { batches } = useBatches();
    const [isEditMode, setIsEditMode] = useState(false);
    const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
    const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
@@ -50,6 +51,10 @@ export const Dashboard: React.FC = () => {
    // PHASE 1 - Partage collaboratif
    const [showShareModal, setShowShareModal] = useState(false);
    const [isO365Authenticated, setIsO365Authenticated] = useState(false);
+
+   // DRILL-THROUGH STATE (P2.4)
+   const [drillWidget, setDrillWidget] = useState<DashboardWidget | null>(null);
+   const [drillRows, setDrillRows] = useState<any[]>([]);
 
    // Vérifier l'authentification O365 au montage
    useEffect(() => {
@@ -155,6 +160,23 @@ export const Dashboard: React.FC = () => {
       setDraggedWidgetIndex(null);
    };
 
+   // DRILL-THROUGH HANDLER (P2.4)
+   const handleKpiDrill = useCallback((widget: DashboardWidget) => {
+      const { source, filterField, filterValue } = widget.config;
+      if (!source?.datasetId) return;
+      const ds = datasets.find(d => d.id === source.datasetId);
+      if (!ds) return;
+      const dsBatches = batches.filter(b => b.datasetId === source.datasetId);
+      if (dsBatches.length === 0) return;
+      const latestBatch = dsBatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      let rows = latestBatch.rows;
+      if (filterField && filterValue) {
+         rows = rows.filter(r => String(r[filterField]) === String(filterValue));
+      }
+      setDrillWidget(widget);
+      setDrillRows(rows);
+   }, [batches, datasets]);
+
    const availableFields = useMemo(() => {
       if (!tempWidget.config?.source?.datasetId) return [];
       return datasets.find(d => d.id === tempWidget.config?.source?.datasetId)?.fields || [];
@@ -236,6 +258,7 @@ export const Dashboard: React.FC = () => {
                         duplicateDashboardWidget={duplicateDashboardWidget}
                         openEditWidget={openEditWidget}
                         removeDashboardWidget={removeDashboardWidget}
+                        onKpiClick={handleKpiDrill}
                      />
                   ))}
                </div>
@@ -264,6 +287,15 @@ export const Dashboard: React.FC = () => {
             batches={[]} // TODO: Récupérer les batches associés aux datasets
             uiPrefs={undefined} // TODO: Récupérer les uiPrefs
          />
+
+         {/* P2.4 - Drill-through drawer */}
+         {drillWidget && (
+            <DrillThroughDrawer
+               widget={drillWidget}
+               rows={drillRows}
+               onClose={() => { setDrillWidget(null); setDrillRows([]); }}
+            />
+         )}
       </div>
    );
 };

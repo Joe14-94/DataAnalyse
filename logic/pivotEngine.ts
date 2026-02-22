@@ -69,6 +69,27 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   const hasAvgMetric = metricConfigs.some(m => m.aggType === 'avg');
   const numMetrics = metricConfigs.length;
 
+  // Statistical helpers
+  const computeMedian = (arr: number[]): number => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  };
+  const computePercentile = (arr: number[], p: number): number => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const idx = Math.max(0, Math.ceil((p / 100) * sorted.length) - 1);
+      return sorted[idx];
+  };
+  const computeStddev = (arr: number[]): number => {
+      if (arr.length < 2) return 0;
+      const mean = arr.reduce((s, v) => s + v, 0) / arr.length;
+      return Math.sqrt(arr.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / arr.length);
+  };
+  const statAggTypes = new Set(['median', 'percentile', 'stddev', 'variance', 'countdistinct']);
+  const hasStatMetric = metricConfigs.some(m => statAggTypes.has(m.aggType));
+
   // Optimisation 1.1 : Pré-calcul des valeurs de filtres
   // BOLT MEASUREMENT: Using Set for 'in' filters reduces complexity from O(N*M) to O(N+M)
   // For 10k rows and 100 filter items, this saves ~1M operations per pivot calculation.
@@ -145,13 +166,19 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
   // --- PHASE 2 : AGREGATION ---
 
   // Pre-calculate baseline stats to avoid .map() in initStats
-  const baseAggValues = metricConfigs.map(mc => (mc.aggType === 'min' ? Infinity : mc.aggType === 'max' ? -Infinity : (mc.aggType === 'list' ? 'SET' : 0)));
+  const baseAggValues = metricConfigs.map(mc => {
+      if (mc.aggType === 'min') return Infinity;
+      if (mc.aggType === 'max') return -Infinity;
+      if (mc.aggType === 'list' || mc.aggType === 'countdistinct') return 'SET';
+      if (statAggTypes.has(mc.aggType)) return 'ARR';
+      return 0;
+  });
 
   const initStats = () => {
       const rowTotalMetrics = new Array(numMetrics);
       for (let j = 0; j < numMetrics; j++) {
           const base = baseAggValues[j];
-          rowTotalMetrics[j] = base === 'SET' ? new Set() : base;
+          rowTotalMetrics[j] = base === 'SET' ? new Set() : base === 'ARR' ? [] : base;
       }
 
       return {
@@ -181,7 +208,7 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
               colMetricVals = new Array(numMetrics);
               for (let j = 0; j < numMetrics; j++) {
                   const base = baseAggValues[j];
-                  colMetricVals[j] = base === 'SET' ? new Set() : base;
+                  colMetricVals[j] = base === 'SET' ? new Set() : base === 'ARR' ? [] : base;
               }
               colMetrics.set(colKey, colMetricVals);
           }
@@ -206,6 +233,17 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                       const strVal = String(row.rawVals[mIdx]);
                       (rowTotalMetrics[mIdx] as Set<string>).add(strVal);
                       (colMetricVals[mIdx] as Set<string>).add(strVal);
+                  }
+              } else if (aggType === 'countdistinct') {
+                  if (row.rawVals[mIdx] !== null && row.rawVals[mIdx] !== undefined) {
+                      (rowTotalMetrics[mIdx] as Set<any>).add(row.rawVals[mIdx]);
+                      (colMetricVals[mIdx] as Set<any>).add(row.rawVals[mIdx]);
+                  }
+              } else if (statAggTypes.has(aggType)) {
+                  // median, percentile, stddev, variance -- accumulate raw values
+                  if (!isNaN(val) && isFinite(val)) {
+                      (rowTotalMetrics[mIdx] as number[]).push(val);
+                      (colMetricVals[mIdx] as number[]).push(val);
                   }
               }
           }
@@ -236,6 +274,17 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
              valTotal = stats.count > 0 ? valTotal / stats.count : undefined;
           } else if (mc.aggType === 'list') {
              valTotal = formatList(valTotal);
+          } else if (mc.aggType === 'countdistinct') {
+             valTotal = (valTotal as Set<any>).size;
+          } else if (mc.aggType === 'median') {
+             valTotal = computeMedian(valTotal as number[]);
+          } else if (mc.aggType === 'percentile') {
+             valTotal = computePercentile(valTotal as number[], mc.percentileN ?? 90);
+          } else if (mc.aggType === 'stddev') {
+             valTotal = computeStddev(valTotal as number[]);
+          } else if (mc.aggType === 'variance') {
+             const sd = computeStddev(valTotal as number[]);
+             valTotal = sd * sd;
           } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(valTotal)) {
              valTotal = undefined;
           }
@@ -270,6 +319,22 @@ export const calculatePivotData = (config: PivotConfig): PivotResult | null => {
                   } else if (mc.aggType === 'list') {
                       rawColVal = (val as Set<string>).size;
                       val = formatList(val);
+                  } else if (mc.aggType === 'countdistinct') {
+                      rawColVal = (val as Set<any>).size;
+                      val = rawColVal;
+                  } else if (mc.aggType === 'median') {
+                      val = computeMedian(val as number[]);
+                      rawColVal = typeof val === 'number' ? val : 0;
+                  } else if (mc.aggType === 'percentile') {
+                      val = computePercentile(val as number[], mc.percentileN ?? 90);
+                      rawColVal = typeof val === 'number' ? val : 0;
+                  } else if (mc.aggType === 'stddev') {
+                      val = computeStddev(val as number[]);
+                      rawColVal = typeof val === 'number' ? val : 0;
+                  } else if (mc.aggType === 'variance') {
+                      const sd = computeStddev(val as number[]);
+                      val = sd * sd;
+                      rawColVal = typeof val === 'number' ? val : 0;
                   } else if ((mc.aggType === 'min' || mc.aggType === 'max') && !isFinite(val)) {
                       val = undefined;
                       rawColVal = 0;

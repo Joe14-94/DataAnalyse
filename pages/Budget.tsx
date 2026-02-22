@@ -9,6 +9,7 @@ import { BudgetComparison } from '../components/budget/BudgetComparison';
 import { BudgetWorkflow } from '../components/budget/BudgetWorkflow';
 import { BudgetTemplates } from '../components/budget/BudgetTemplates';
 import { BudgetReferentials } from '../components/budget/BudgetReferentials';
+import { AuditTrailPanel } from '../components/budget/AuditTrailPanel';
 import { BudgetModals } from '../components/budget/BudgetModals';
 
 export const Budget: React.FC = () => {
@@ -182,6 +183,10 @@ export const Budget: React.FC = () => {
                             onExportAxis={handlers.handleExportAxisValues}
                             onDeleteAxisValue={handlers.handleDeleteAxisValue}
                         />
+                    )}
+
+                    {state.activeTab === 'audit' && (
+                        <AuditTrailPanel filterModule="budget" />
                     )}
                 </div>
             </div>

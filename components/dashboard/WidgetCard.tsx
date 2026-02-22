@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MoreVertical, Maximize2, Image as ImageIcon, FileText, GripHorizontal, Move, Copy, Settings, Trash2 } from 'lucide-react';
 import { DashboardWidget } from '../../types';
@@ -22,6 +21,7 @@ interface WidgetCardProps {
    duplicateDashboardWidget: (id: string) => void;
    openEditWidget: (w: DashboardWidget) => void;
    removeDashboardWidget: (id: string) => void;
+   onKpiClick?: (widget: DashboardWidget) => void;
 }
 
 export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
@@ -29,7 +29,8 @@ export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
    openMenuWidgetId, setOpenMenuWidgetId, setFullscreenWidgetId,
    handleExportImage, handleExportCSV,
    handleDragStart, handleDragOver, handleDrop,
-   updateDashboardWidget, duplicateDashboardWidget, openEditWidget, removeDashboardWidget
+   updateDashboardWidget, duplicateDashboardWidget, openEditWidget, removeDashboardWidget,
+   onKpiClick
 }) => {
    const widgetData = useWidgetData(widget, globalDateRange);
 
@@ -93,7 +94,11 @@ export const WidgetCard: React.FC<WidgetCardProps> = React.memo(({
             )}
             <h3 className="text-sm font-bold text-slate-500 mb-1.5 uppercase tracking-wider truncate" title={widget.title}>{widget.title}</h3>
             <div className="flex-1 min-h-0 pointer-events-none md:pointer-events-auto">
-               <WidgetDisplay widget={widget} data={widgetData} />
+               <WidgetDisplay
+                  widget={widget}
+                  data={widgetData}
+                  onKpiClick={widget.type === 'kpi' && onKpiClick ? () => onKpiClick(widget) : undefined}
+               />
             </div>
          </div>
       </div>

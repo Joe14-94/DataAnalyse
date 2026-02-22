@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Edit2, GitBranch, CheckCircle, Copy, Filter } from 'lucide-react';
+import { FileText, Edit2, GitBranch, CheckCircle, Copy, Filter, Clock } from 'lucide-react';
 import { BudgetTab } from '../../hooks/useBudgetLogic';
 
 interface BudgetTabsProps {
@@ -14,7 +14,8 @@ export const BudgetTabs: React.FC<BudgetTabsProps> = ({ activeTab, onTabChange }
         { id: 'comparison' as const, label: 'Comparaison', icon: GitBranch },
         { id: 'workflow' as const, label: 'Workflow', icon: CheckCircle },
         { id: 'templates' as const, label: 'Modèles', icon: Copy },
-        { id: 'referentials' as const, label: 'Référentiels', icon: Filter }
+        { id: 'referentials' as const, label: 'Référentiels', icon: Filter },
+        { id: 'audit' as const, label: 'Audit Trail', icon: Clock }
     ];
 
     return (

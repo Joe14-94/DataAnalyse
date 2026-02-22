@@ -24,6 +24,7 @@
     "./context/**/*.tsx", 
     "./logic/**/*.ts",
     "./hooks/**/*.ts",
+    "./services/**/*.ts",
     "./utils/**/*.ts"
   ],
   "exclude": ["node_modules", "src", "vitest.config.ts", "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"]
