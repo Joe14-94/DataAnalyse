@@ -51,6 +51,7 @@ export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
                         <select
                             className="appearance-none bg-white border-0 text-slate-500 text-xs font-medium py-0 pr-6 pl-0 focus:outline-none cursor-pointer hover:text-slate-700"
                             value={currentDatasetId || ''}
+                            aria-label="Sélectionner le tableau de données"
                             onChange={(e) => {
                                 if (e.target.value === '__NEW__') onNavigate('/import');
                                 else onSwitchDataset(e.target.value);
@@ -67,14 +68,18 @@ export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
                 </div>
             </div>
 
-            <div className="flex p-1 bg-slate-100 rounded-lg self-center">
+            <div className="flex p-1 bg-slate-100 rounded-lg self-center" role="tablist" aria-label="Mode d'analyse">
                 <button
+                    role="tab"
+                    aria-selected={mode === 'snapshot'}
                     onClick={() => onSetMode('snapshot')}
                     className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'snapshot' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     Analyse Instantanée
                 </button>
                 <button
+                    role="tab"
+                    aria-selected={mode === 'trend'}
                     onClick={() => onSetMode('trend')}
                     className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${mode === 'trend' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
@@ -86,6 +91,7 @@ export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
                 <div className="relative">
                     <select
                         className="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2 pr-8 min-w-[130px]"
+                        aria-label="Charger une vue sauvegardée"
                         onChange={(e) => { if (e.target.value) onLoadAnalysis(e.target.value); e.target.value = ""; }}
                         defaultValue=""
                     >
@@ -141,16 +147,33 @@ export const AnalysisStudioHeader: React.FC<AnalysisStudioHeaderProps> = ({
 
                 {mode === 'snapshot' ? (
                     <div className="flex items-center gap-2 w-full xl:w-auto ml-2">
-                        <select className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2 min-w-[200px]" value={selectedBatchId} onChange={(e) => onSetBatchId(e.target.value)}>
+                        <select
+                            className="flex-1 sm:flex-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2 min-w-[200px]"
+                            value={selectedBatchId}
+                            aria-label="Sélectionner la période (batch)"
+                            onChange={(e) => onSetBatchId(e.target.value)}
+                        >
                             {batches.map(b => <option key={b.id} value={b.id}>{formatDateFr(b.date)} ({b.rows.length} lignes)</option>)}
                         </select>
                     </div>
                 ) : (
                     <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto p-1 ml-2">
                         <CalendarRange className="w-4 h-4 text-slate-500" />
-                        <input type="date" value={startDate} onChange={(e) => onSetDates({ startDate: e.target.value })} className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700" />
+                        <input
+                            type="date"
+                            value={startDate}
+                            aria-label="Date de début"
+                            onChange={(e) => onSetDates({ startDate: e.target.value })}
+                            className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
+                        />
                         <span className="text-slate-400 text-sm">à</span>
-                        <input type="date" value={endDate} onChange={(e) => onSetDates({ endDate: e.target.value })} className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700" />
+                        <input
+                            type="date"
+                            value={endDate}
+                            aria-label="Date de fin"
+                            onChange={(e) => onSetDates({ endDate: e.target.value })}
+                            className="text-sm border border-slate-300 rounded p-1.5 bg-slate-50 text-slate-700"
+                        />
                     </div>
                 )}
             </div>
