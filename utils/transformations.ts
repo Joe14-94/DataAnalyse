@@ -583,6 +583,8 @@ export const applyCalculate = (
 
 /**
  * Applique un Pivot sur les données
+ * BOLT OPTIMIZATION: Single-pass aggregation using accumulators to avoid storing all values in arrays.
+ * Reduces memory pressure and CPU time for large datasets.
  */
 export const applyPivot = (
   data: DataRow[],
@@ -593,29 +595,81 @@ export const applyPivot = (
 ): DataRow[] => {
   if (!index || !columns || !values) return data;
 
-  const pivotMap = new Map<string, Map<string, any[]>>();
+  const pivotMap = new Map<string, Map<string, any>>();
   const allColumns = new Set<string>();
+  const dataLen = data.length;
 
-  data.forEach(row => {
+  for (let i = 0; i < dataLen; i++) {
+    const row = data[i];
     const idxVal = String(row[index] ?? '(Vide)');
     const colVal = String(row[columns] ?? '(Vide)');
     const val = row[values];
 
     allColumns.add(colVal);
 
-    if (!pivotMap.has(idxVal)) pivotMap.set(idxVal, new Map());
-    const rowMap = pivotMap.get(idxVal)!;
-    if (!rowMap.has(colVal)) rowMap.set(colVal, []);
-    rowMap.get(colVal)!.push(val);
-  });
+    let rowMap = pivotMap.get(idxVal);
+    if (rowMap === undefined) {
+      rowMap = new Map();
+      pivotMap.set(idxVal, rowMap);
+    }
+
+    let stats = rowMap.get(colVal);
+    if (stats === undefined) {
+      stats = {
+        sum: 0,
+        count: 0,
+        numCount: 0,
+        min: Infinity,
+        max: -Infinity,
+        first: undefined,
+        last: undefined,
+        hasValue: false
+      };
+      rowMap.set(colVal, stats);
+    }
+
+    if (val !== null && val !== undefined) {
+      if (!stats.hasValue) {
+        stats.first = val;
+        stats.hasValue = true;
+      }
+      stats.last = val;
+      stats.count++;
+
+      const num = Number(val);
+      if (!isNaN(num)) {
+        stats.numCount++;
+        stats.sum += num;
+        if (num < stats.min) stats.min = num;
+        if (num > stats.max) stats.max = num;
+      }
+    }
+  }
 
   const result: DataRow[] = [];
+  const allColsArr = Array.from(allColumns);
+  const allColsLen = allColsArr.length;
+
   pivotMap.forEach((rowMap, idxVal) => {
     const newRow: DataRow = { id: generateId(), [index]: idxVal };
-    allColumns.forEach(col => {
-      const vals = rowMap.get(col) || [];
-      newRow[col] = calculateAggregation(vals, aggFunc);
-    });
+    for (let i = 0; i < allColsLen; i++) {
+      const col = allColsArr[i];
+      const stats = rowMap.get(col);
+
+      let finalVal: any = null;
+      if (stats !== undefined && (stats.hasValue || stats.count > 0)) {
+        switch (aggFunc) {
+          case 'sum': finalVal = stats.numCount > 0 ? stats.sum : 0; break;
+          case 'avg': finalVal = stats.numCount > 0 ? stats.sum / stats.numCount : null; break;
+          case 'count': finalVal = stats.count; break;
+          case 'min': finalVal = stats.numCount > 0 ? stats.min : null; break;
+          case 'max': finalVal = stats.numCount > 0 ? stats.max : null; break;
+          case 'first': finalVal = stats.first; break;
+          case 'last': finalVal = stats.last; break;
+        }
+      }
+      newRow[col] = finalVal;
+    }
     result.push(newRow);
   });
 
@@ -624,6 +678,7 @@ export const applyPivot = (
 
 /**
  * Applique un Unpivot sur les données
+ * BOLT OPTIMIZATION: Use standard for loops and hoist metadata to avoid closure overhead and repeated lookups.
  */
 export const applyUnpivot = (
   data: DataRow[],
@@ -633,20 +688,26 @@ export const applyUnpivot = (
   valueName: string = 'value'
 ): DataRow[] => {
   const result: DataRow[] = [];
+  const dataLen = data.length;
+  const valVarsLen = valueVars.length;
+  const idVarsLen = idVars.length;
 
-  data.forEach(row => {
-    valueVars.forEach(vVar => {
+  for (let i = 0; i < dataLen; i++) {
+    const row = data[i];
+    for (let j = 0; j < valVarsLen; j++) {
+      const vVar = valueVars[j];
       if (vVar in row) {
         const newRow: DataRow = { id: generateId() };
-        idVars.forEach(idVar => {
+        for (let k = 0; k < idVarsLen; k++) {
+          const idVar = idVars[k];
           newRow[idVar] = row[idVar];
-        });
+        }
         newRow[varName] = vVar;
         newRow[valueName] = row[vVar];
         result.push(newRow);
       }
-    });
-  });
+    }
+  }
 
   return result;
 };
